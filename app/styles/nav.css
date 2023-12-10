@@ -1,0 +1,20 @@
+.nav-item {
+  @apply h-full px-2 py-1 flex justify-center items-center font-semibold opacity-off hover:opacity-bold transition-opacity duration-200;
+
+  &.selected {
+    @apply opacity-bold;
+  }
+}
+
+.article-preview {
+  @apply hidden;
+
+  #main-header:has(.nav-item:hover) > &:last-child,
+  &:hover {
+    @apply flex;
+  }
+
+  & > .preview-box {
+    @apply w-120 aspect-square mx-2 bg-light-tertiary;
+  }
+}
