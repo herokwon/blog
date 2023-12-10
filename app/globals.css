@@ -1,31 +1,38 @@
+@import "./styles/nav.css";
+
 @tailwind base;
 @tailwind components;
+@tailwind utilities;
 
 :root {
-    --light-foreground: black;
-    --light-primary-background: rgb(245, 245, 245);
-    --light-secondary-background: rgb(229, 229, 229);
-    --light-tertiary-background: rgb(212, 212, 212);
+  --light-foreground: black;
+  --light-primary-background: rgb(245, 245, 245);
+  --light-secondary-background: rgb(229, 229, 229);
+  --light-tertiary-background: rgb(212, 212, 212);
 
-    --dark-foreground: rgb(245, 245, 245);
-    --dark-primary-background: #121212;
-    --dark-secondary-background: rgb(38, 38, 38);
-    --dark-tertiary-background: rgb(64, 64, 64);
+  --dark-foreground: rgb(245, 245, 245);
+  --dark-primary-background: #121212;
+  --dark-secondary-background: rgb(38, 38, 38);
+  --dark-tertiary-background: rgb(64, 64, 64);
 }
 
 @layer base {
-    html, body {
-        @apply w-full h-auto min-h-screen;
-    }
+  html,
+  body {
+    @apply w-full h-auto min-h-screen;
+  }
 
-    html {
-        @apply font-sans-kr;
-    }
+  html {
+    @apply font-sans-kr;
+  }
 
-    body {
-        @apply text-light bg-light-primary;
-    }
+  body {
+    @apply text-light bg-light-primary;
+  }
 }
 
 @layer components {
+}
+
+@layer utilities {
 }
