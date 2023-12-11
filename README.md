@@ -37,6 +37,7 @@
 **_2023.12.11_**
 
 - darkmode 적용 :point_right: [@dea0a3d](https://github.com/herokwon/blog/commit/dea0a3d16e32deca9e42323d442d586b94c51d3c)
+- Button 컴포넌트화 :point_right: [@8116373](https://github.com/herokwon/blog/commit/81163733cd5270307cb4225de2cc6e133f1b501b)
 
 <br />
 <br />
