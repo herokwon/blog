@@ -1,12 +1,20 @@
 'use client'
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { BlogTheme, updateTheme } from "../lib/theme";
 import { navItem } from "../data/navItem";
-import { Search } from "lucide-react";
+import { Moon, Search, Sun } from "lucide-react";
 import Link from "next/link";
 
-export default function Nav() {
+export default function Nav({ initTheme }:{initTheme: BlogTheme }) {
     const pathname = usePathname();
+    const [theme, setTheme] = useState<BlogTheme>(initTheme);
+
+    useEffect(() => {
+        document.documentElement.className = theme;
+        updateTheme(theme);
+    }, [theme]);
 
     return (
         <header id="main-header" className="w-full h-48 px-4 backdrop-blur-lg sticky top-0 left-0 z-[99]">
@@ -27,6 +35,10 @@ export default function Nav() {
                     )}
                 </nav>
                 <div className="flex justify-end items-center flex-1">
+                    <button type="button" className="w-36 h-36 mx-2 flex justify-center items-center rounded-full hover:bg-light-tertiary dark:hover:bg-dark-tertiary relative" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                        <Sun className="scale-100 dark:scale-0 transition-transform duration-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1] dark:-z-[1]" />
+                        <Moon className="scale-0 dark:scale-100 transition-transform duration-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-[1] dark:z-[1]" />
+                    </button>
                     <button type="button" className="w-36 h-36 flex justify-center items-center rounded-full hover:bg-light-tertiary">
                         <Search />
                     </button>

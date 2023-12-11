@@ -5,6 +5,7 @@ const height0_2000: { [key: string]: string } = Object.assign(Array.from(Array(2
 const opacity0_200: { [key: string]: string } = Object.assign(Array.from(Array(201)).map((_, i) => `${(i / 100).toFixed(2)} `));
 
 const config: Config = {
+    darkMode: 'class',
     content: [
         './pages/**/*.{js,ts,jsx,tsx,mdx}',
         './components/**/*.{js,ts,jsx,tsx,mdx}',
