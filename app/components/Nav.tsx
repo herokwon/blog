@@ -6,6 +6,7 @@ import { BlogTheme, updateTheme } from "../lib/theme";
 import { navItem } from "../data/navItem";
 import { Moon, Search, Sun } from "lucide-react";
 import Link from "next/link";
+import Button from "./Button";
 
 export default function Nav({ initTheme }:{initTheme: BlogTheme }) {
     const pathname = usePathname();
@@ -20,11 +21,11 @@ export default function Nav({ initTheme }:{initTheme: BlogTheme }) {
         <header id="main-header" className="w-full h-48 px-4 backdrop-blur-lg sticky top-0 left-0 z-[99]">
             <div className="w-full max-w-screen-lg h-full mx-auto flex justify-between items-center">
                 <div className="h-full flex justify-start items-center flex-1">
-                    <Link href={navItem[0].path}>
+                    <Link href={navItem[0].path} className="max-md:absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 max-md:z-[1]">
                         <h1 className="text-blue-500">All of IT</h1>
                     </Link>
                 </div>
-                <nav className="h-full flex justify-center items-center">
+                <nav className="h-full hidden md:flex justify-center items-center">
                     {navItem.slice(1).map((item, index) =>
                         <Link
                             key={index}
@@ -34,14 +35,14 @@ export default function Nav({ initTheme }:{initTheme: BlogTheme }) {
                         </Link>
                     )}
                 </nav>
-                <div className="flex justify-end items-center flex-1">
-                    <button type="button" className="w-36 h-36 mx-2 flex justify-center items-center rounded-full hover:bg-light-tertiary dark:hover:bg-dark-tertiary relative" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                <div className="h-full flex justify-end items-center flex-1">
+                    <Button innerType="icon" className="relative" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                         <Sun className="scale-100 dark:scale-0 transition-transform duration-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1] dark:-z-[1]" />
                         <Moon className="scale-0 dark:scale-100 transition-transform duration-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-[1] dark:z-[1]" />
-                    </button>
-                    <button type="button" className="w-36 h-36 flex justify-center items-center rounded-full hover:bg-light-tertiary">
+                    </Button>
+                    <Button innerType="icon">
                         <Search />
-                    </button>
+                    </Button>
                 </div>
             </div>
             <section className="article-preview absolute top-full left-1/2 -translate-x-1/2 z-[99]">
