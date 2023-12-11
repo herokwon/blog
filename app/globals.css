@@ -27,7 +27,7 @@
   }
 
   body {
-    @apply text-light bg-light-primary;
+    @apply text-light bg-light-primary dark:text-dark dark:bg-dark-primary;
   }
 }
 
