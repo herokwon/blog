@@ -1,14 +1,21 @@
 # All of IT
 
+<br />
+<br />
+
 ## 동기: Motivation
 
 배움이나 삶 속에서는 특정 순간에만 느낄 수 있는 깊은 깨달음이 있습니다.
 
 하지만 기억에 의존하여 그것들을 흡수하거나 표현하기에는 아쉽게 손실되는 부분이 분명 존재합니다.
 
+<br />
+
 > _공부한 내용, 문제 상황과 해결 과정들 뿐만 아니라 한 인간으로서 지니는 가치관과 이를 통해 세상을 바라보는 시선까지_
 
-이 모든 것들을 기록하기 위한 공간을 직접 구현하고자 하였고 해당 공간의 Identity를 **_All of IT_** 으로 하였습니다.
+<br />
+
+이 모든 것들을 기록하기 위한 공간을 직접 구현하고자 하였고 해당 공간의 이름이자 Identity를 **_All of IT_** 으로 하였습니다.
 
 <br />
 <br />
@@ -24,6 +31,12 @@
 **_2023.12.10_**
 
 - navigation 생성 :point_right: [@9622a7b](https://github.com/herokwon/blog/commit/9622a7ba8a764d44d6effe94a7250aaa847f2195)
+
+<br />
+
+**_2023.12.11_**
+
+- darkmode 적용 :point_right: [@dea0a3d](https://github.com/herokwon/blog/commit/dea0a3d16e32deca9e42323d442d586b94c51d3c)
 
 <br />
 <br />
