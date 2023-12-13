@@ -17,13 +17,27 @@ export class ArticlesResponse {
 export class SummaryResponse {
     constructor(
         private _summaryPieces: string[], 
-        private _nextCursor: string | null
+        private _summaryLength: number,
+        private _nextCursor: string | null,
     ) {};
     
     get summaryPieces(): string[] { 
         return this._summaryPieces; 
     }
-    get nextCursor(): string | null { 
+    get summaryLength(): number {
+        return this._summaryLength;
+    }
+    get nextCursor(): string | null {
         return this._nextCursor;
+    }
+
+    set summaryPieces(elem: string) {
+        this._summaryPieces = [...this.summaryPieces, elem];
+    }
+    set summaryLength(length: number) {
+        this._summaryLength = length;
+    }
+    set nextCursor(cursor: string | null) {
+        this._nextCursor = cursor;
     }
 };
