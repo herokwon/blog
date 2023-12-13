@@ -48,8 +48,9 @@
   - Summary :point_right: [@b37a974](https://github.com/herokwon/blog/commit/b37a974fbec62286bb64452abf6c340befa24472)
   - Categories & Tags :point_right: [@f658b32](https://github.com/herokwon/blog/commit/f658b325807eb01ddf81f4bf6f637ee554ee1dd2)
   - Block(s) :point_right: [@432977e](https://github.com/herokwon/blog/commit/432977e8525c5d773a9b7fffe87e9344f5056edc)
-  <br />  
-  :point_right: 참고 : [API Reference | Notion Developers](https://developers.notion.so/reference)
+  <br />
+  
+  :point_right: [**_API Reference | Notion Developers_**](https://developers.notion.so/reference)
 
 
 <br />
