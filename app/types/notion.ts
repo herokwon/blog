@@ -1,4 +1,4 @@
-import { BlockObjectResponse, PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { BlockObjectResponse, PageObjectResponse, QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
 
 export class ArticlesResponse {
     constructor(
@@ -59,3 +59,5 @@ export class BlocksResponse {
         this._nextCursor = cursor;
     }
 };
+
+export type DatabaseQueryParameters = Omit<QueryDatabaseParameters, "database_id">

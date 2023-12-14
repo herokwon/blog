@@ -1,19 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { baseQuery, notionDatabaseUrl, postHeaders } from "@/app/data/notion";
+import { DatabaseQueryParameters } from "@/app/types/notion";
+import { notionDatabaseUrl, postHeaders } from "@/app/data/notion";
 import { PageObjectResponse, QueryDatabaseResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export const GET = async (req: NextRequest) => {
     const pageSize: string | null = req.nextUrl.searchParams.get("page_size");
+
+    const paramsQuery: DatabaseQueryParameters = {
+        filter: {
+            property: "Status",
+            status: {
+                equals: "Published",
+            },
+        },
+        sorts: [
+            {
+                property: "Date",
+                direction: "descending",
+            },
+        ],
+        page_size: pageSize ? parseInt(pageSize) : 9,
+    };
 
     try {
         const response = await fetch(`${notionDatabaseUrl}/query`, {
             method: "POST",
             headers: postHeaders,
             next: { revalidate: 0 },
-            body: JSON.stringify({
-                ...baseQuery,
-                page_size: pageSize ?? 9,
-            }),
+            body: JSON.stringify(paramsQuery),
         });
 
         if (!response.ok) throw new Error(response.statusText);
@@ -33,15 +47,25 @@ export const GET = async (req: NextRequest) => {
 export const POST = async (req: NextRequest) => {
     const { nextCursor }: { nextCursor: string | null } = await req.json();
 
-    const paramsQuery = {
-            filter: {
-                "and": [
-                    baseQuery.filter,
-                    updateParamsQuery(req.nextUrl.searchParams),
-                ],
+    const paramsQuery: DatabaseQueryParameters = {
+        filter: {
+            and: [
+                {
+                    property: "Status",
+                    status: {
+                        equals: "Published",
+                    },
+                },
+                updateParamsQuery(req.nextUrl.searchParams),
+            ],
+        },
+        sorts: [
+            {
+                property: "Date",
+                direction: "descending",
             },
-            sorts: baseQuery.sorts,
-            page_size: 9,
+        ],
+        page_size: 9,
     }
 
     try {
@@ -54,7 +78,7 @@ export const POST = async (req: NextRequest) => {
                 start_cursor: nextCursor,
             } : paramsQuery),
         });
-    
+
         if (!response.ok) throw new Error(response.statusText);
 
         const responseData: QueryDatabaseResponse = await response.json();
