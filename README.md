@@ -52,6 +52,13 @@
   
   :point_right: [**_API Reference | Notion Developers_**](https://developers.notion.so/reference)
 
+<br />
+
+**_2023.12.14_**
+
+- Database Query를 위한 매개변수 타입 정의 :point_right: [@c176e87](https://github.com/herokwon/blog/commit/c176e8752db83566afa8116a9fe0ebcc45d71c77)
+  - TypeScript Omit(유틸리티 타입) → Notion SDK 타입에서 특정 Key를 생략한 타입 정의 및 API 적용
+  - 참고 : [TypeScript: Documentation - Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
 
 <br />
 <br />
