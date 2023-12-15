@@ -11,3 +11,11 @@ export const postHeaders = {
     ...getHeaders,
     "Content-Type": "application/json",
 };
+
+export const ArticleCategory = {
+    dev: "개발",
+    growth: "성장",
+    theory: "이론",
+    column: "칼럼",
+    life: "일상",
+};
