@@ -43,14 +43,14 @@
 
 **_2023.12.12 ~ 13_**
 
-- Notion Data Fetch API 추가  
+- Notion Data Fetch API 추가
+- Notion Data Fetch API 추가
   - Articles :point_right: [@2627717](https://github.com/herokwon/blog/commit/2627717eb79a8c476481ad27c235c530af1d1959)
   - Summary :point_right: [@b37a974](https://github.com/herokwon/blog/commit/b37a974fbec62286bb64452abf6c340befa24472)
   - Categories & Tags :point_right: [@f658b32](https://github.com/herokwon/blog/commit/f658b325807eb01ddf81f4bf6f637ee554ee1dd2)
   - Block(s) :point_right: [@432977e](https://github.com/herokwon/blog/commit/432977e8525c5d773a9b7fffe87e9344f5056edc)
-  <br />
-  
-  :point_right: [**_API Reference | Notion Developers_**](https://developers.notion.so/reference)
+  - 참고 : [API Reference | Notion Developers](https://developers.notion.so/reference)
+  - 참고 : [API Reference | Notion Developers](https://developers.notion.so/reference)
 
 <br />
 
@@ -59,6 +59,22 @@
 - Database Query를 위한 매개변수 타입 정의 :point_right: [@c176e87](https://github.com/herokwon/blog/commit/c176e8752db83566afa8116a9fe0ebcc45d71c77)
   - TypeScript Omit(유틸리티 타입) → Notion SDK 타입에서 특정 Key를 생략한 타입 정의 및 API 적용
   - 참고 : [TypeScript: Documentation - Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+
+<br />
+
+**_2023.12.15_**
+
+- Articles (list & container) Component 추가 :point_right: [@dc582f6](https://github.com/herokwon/blog/commit/dc582f69093cafdcf44a5c6d5051969b4349e8b4)
+  - Notion API 응답 데이터 타입을 위한 새로운 타입 정의
+    - 참고 : [TypeScript: Documentation - Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+  - Notion API 응답 데이터 활용을 위한 유틸리티 함수 추가
+  - 외부 이미지 사용을 위한 Next.js 환경 설정 업데이트
+    - 참고 : [Components: \<Image> | Next.js](https://nextjs.org/docs/app/api-reference/components/image#remotepatterns)
+- library 폴더 업데이트 :point_right: [@b1b539f](https://github.com/herokwon/blog/commit/b1b539fa2828d80b97bf349a61121d64ff19fa20)
+  - `lib/data` : 데이터, 상수 등
+  - `lib/functions` : 주요 기능 관련 함수
+  - `lib/utils`: 유틸리티 함수
+- Node.js 환경에 따른 baseUrl 설정 :point_right: [@558e44e](https://github.com/herokwon/blog/commit/558e44eff04e6a7e2a49c6f18ee95909dc4bddab)
 
 <br />
 <br />
