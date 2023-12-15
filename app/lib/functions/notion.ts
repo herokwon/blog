@@ -1,5 +1,6 @@
 import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "../../types/notion";
+import { baseUrl } from "../data/api";
 
 export const extractArticleProperties = (properties: object): ArticleProperty => {
     const propertyEntries = Object.keys(properties).map((property) => {
@@ -39,7 +40,7 @@ export const extractArticleProperties = (properties: object): ArticleProperty =>
 
 export const arrangeArticleSummary = async (id: string) => {
     try {
-        const response = await fetch("http://localhost:3000/api/database/article/summary", {
+        const response = await fetch(`${baseUrl}/api/database/article/summary`, {
             method: "POST",
             body: JSON.stringify({
                 pageId: id
