@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SummaryResponse } from "@/app/types/notion";
-import { getHeaders, notionBlockUrl } from "@/app/data/notion";
+import { getHeaders, notionBlockUrl } from "@/app/lib/data/notion";
 import { BlockObjectResponse, ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
 
 const minLength = 200;

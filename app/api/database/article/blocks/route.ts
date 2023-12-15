@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getHeaders, notionBlockUrl } from "@/app/data/notion";
+import { getHeaders, notionBlockUrl } from "@/app/lib/data/notion";
 import { BlocksResponse } from "@/app/types/notion";
 import { BlockObjectResponse, ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
 

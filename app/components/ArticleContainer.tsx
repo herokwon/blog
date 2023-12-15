@@ -3,8 +3,8 @@
 import { MouseEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArticleProperty } from "../types/notion";
-import { ArticleCategory } from "../data/notion";
-import { arrangeArticleSummary } from "../lib/notion";
+import { ArticleCategory } from "../lib/data/notion";
+import { arrangeArticleSummary } from "../lib/functions/notion";
 import { getDate } from "../lib/utils/getDate";
 import Link from "next/link";
 import Image from "next/image";

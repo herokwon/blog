@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getHeaders, notionBlockUrl } from "@/app/data/notion";
+import { getHeaders, notionBlockUrl } from "@/app/lib/data/notion";
 import { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export const POST = async (request: NextRequest) => {
