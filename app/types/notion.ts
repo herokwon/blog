@@ -1,4 +1,4 @@
-import { BlockObjectResponse, PageObjectResponse, QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
+import { BlockObjectResponse, DatePropertyItemObjectResponse, FilesPropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, PageObjectResponse, QueryDatabaseParameters, RichTextItemResponse, RichTextPropertyItemObjectResponse, SelectPropertyItemObjectResponse, StatusPropertyItemObjectResponse, TitlePropertyItemObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export class ArticlesResponse {
     constructor(
@@ -60,4 +60,25 @@ export class BlocksResponse {
     }
 };
 
-export type DatabaseQueryParameters = Omit<QueryDatabaseParameters, "database_id">
+export type DatabaseQueryParameters = Omit<QueryDatabaseParameters, "database_id">;
+
+export type SelectPropertyItem = Omit<SelectPropertyItemObjectResponse, "object">;
+export type MultiSelectPropertyItem = Omit<MultiSelectPropertyItemObjectResponse, "object">;
+export type StatusPropertyItem = Omit<StatusPropertyItemObjectResponse, "object">;
+export type TitlePropertyItem = Omit<TitlePropertyItemObjectResponse, "object">;
+export type DatePropertyItem = Omit<DatePropertyItemObjectResponse, "object">;
+export type RichTextPropertyItem = Omit<RichTextPropertyItemObjectResponse, "object">;
+export type FilesPropertyItem = Omit<FilesPropertyItemObjectResponse, "object">;
+
+export interface ArticleProperty {
+    Category: string;
+    Title: string;
+    Date: string;
+    Description: string;
+    Tag: { name: string }[];
+    Thumbnail: {
+        url: string;
+        expiry_time?: string;
+    };
+    Status: string;
+};
