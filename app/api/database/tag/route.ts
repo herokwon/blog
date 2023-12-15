@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getHeaders, notionDatabaseUrl } from "@/app/data/notion";
+import { getHeaders, notionDatabaseUrl } from "@/app/lib/data/notion";
 import { DatabaseObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export const GET = async () => {

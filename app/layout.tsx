@@ -1,6 +1,6 @@
 import "./globals.css";
 import { Noto_Sans_KR } from "next/font/google";
-import { getTheme, updateTheme } from "./lib/theme";
+import { getTheme, updateTheme } from "./lib/functions/theme";
 import Nav from "./components/Nav";
 
 const noto_sans_kr = Noto_Sans_KR({

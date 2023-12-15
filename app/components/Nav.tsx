@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { BlogTheme, updateTheme } from "../lib/theme";
-import { navItem } from "../data/navItem";
+import { BlogTheme, updateTheme } from "../lib/functions/theme";
+import { navItem } from "../lib/data/navItem";
 import { Moon, Search, Sun } from "lucide-react";
 import Link from "next/link";
 import Button from "./Button";
 
-export default function Nav({ initTheme }:{initTheme: BlogTheme }) {
+export default function Nav({ initTheme }: { initTheme: BlogTheme }) {
     const pathname = usePathname();
     const [theme, setTheme] = useState<BlogTheme>(initTheme);
 

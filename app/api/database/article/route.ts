@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DatabaseQueryParameters } from "@/app/types/notion";
-import { notionDatabaseUrl, postHeaders } from "@/app/data/notion";
+import { notionDatabaseUrl, postHeaders } from "@/app/lib/data/notion";
 import { PageObjectResponse, QueryDatabaseResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export const GET = async (req: NextRequest) => {
