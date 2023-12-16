@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SummaryResponse } from "@/app/types/notion";
 import { getHeaders, notionBlockUrl } from "@/app/lib/data/notion";
-import { BlockObjectResponse, ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
+import { BlockObjectResponse, ListBlockChildrenResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+import { convertRichToPlain } from "@/app/lib/functions/notion";
 
 const minLength = 200;
 
@@ -9,7 +10,7 @@ export const POST = async (req: NextRequest) => {
     try {
         const { pageId }: { pageId: string } = await req.json();
 
-        const summaryResponse = new SummaryResponse([], 0, null);
+        const summaryResponse = new SummaryResponse([], null);
 
         do {
             const response = await fetch(`${notionBlockUrl}/${pageId}/children?page_size=10${summaryResponse.nextCursor ? `&start_cursor=${summaryResponse.nextCursor}` : ""}`, {
@@ -25,71 +26,41 @@ export const POST = async (req: NextRequest) => {
             const blocks = responseData.results as BlockObjectResponse[];
             summaryResponse.nextCursor = responseData.has_more ? responseData.next_cursor : null;
 
-            summaryResponse.summaryPieces.push(...updateSummaryPieces(blocks, summaryResponse).summaryPieces);
+            summaryResponse.items.push(...updatelist(blocks));
 
-            if (summaryResponse.summaryLength > minLength) {
-                return NextResponse.json({ summary: summaryResponse.summaryPieces.join(" ") });
+            if (summaryResponse.length() > minLength) {
+                return NextResponse.json({ summary: summaryResponse.getSummary() });
             }
-        } while (summaryResponse.summaryLength <= minLength);
+        } while (summaryResponse.length() <= minLength || summaryResponse.nextCursor !== null);
 
-        return NextResponse.json({ summary: summaryResponse.summaryPieces.join(" ") });
+        return NextResponse.json({ summary: summaryResponse.getSummary() });
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return NextResponse.json({ status: 500, statusText: message });
     }
 };
 
-const updateSummaryPieces = (blocks: BlockObjectResponse[], summaryResponse: SummaryResponse) => {
+const updatelist = (blocks: BlockObjectResponse[]) => {
+    const textItems: string[] = [];
+    let textLength = 0;
+
     for (const block of blocks) {
-        switch (block.type) {
-            case "heading_1":
-                block.heading_1.rich_text.forEach((item) => {
-                    summaryResponse.summaryPieces.push(item.plain_text);
-                    summaryResponse.summaryLength += item.plain_text.length;
-                });
-                break;
-            case "heading_2":
-                block.heading_2.rich_text.forEach((item) => {
-                    summaryResponse.summaryPieces.push(item.plain_text);
-                    summaryResponse.summaryLength += item.plain_text.length;
-                });
-                break;
-            case "heading_3":
-                block.heading_3.rich_text.forEach((item) => {
-                    summaryResponse.summaryPieces.push(item.plain_text);
-                    summaryResponse.summaryLength += item.plain_text.length;
-                });
-                break;
-            case "paragraph":
-                block.paragraph.rich_text.forEach((item) => {
-                    summaryResponse.summaryPieces.push(item.plain_text);
-                    summaryResponse.summaryLength += item.plain_text.length;
-                });
-                break;
-            case "callout":
-                block.callout.rich_text.forEach((item) => {
-                    summaryResponse.summaryPieces.push(item.plain_text);
-                    summaryResponse.summaryLength += item.plain_text.length;
-                });
-                break;
-            case "code":
-                block.code.rich_text.forEach((item) => {
-                    summaryResponse.summaryPieces.push(item.plain_text);
-                    summaryResponse.summaryLength += item.plain_text.length;
-                });
-                break;
-            case "quote":
-                block.quote.rich_text.forEach((item) => {
-                    summaryResponse.summaryPieces.push(item.plain_text);
-                    summaryResponse.summaryLength += item.plain_text.length;
-                });
-                break;
-            default:
-                break;
+        if (block.type === "heading_1" ||
+            block.type === "heading_2" ||
+            block.type === "heading_3" ||
+            block.type === "paragraph" ||
+            block.type === "code" ||
+            block.type === "callout" ||
+            block.type === "quote") {
+            const richText: RichTextItemResponse[] = block[block.type].rich_text
+            const plainText = convertRichToPlain(richText);
+
+            textItems.push(plainText);
+            textLength += plainText.length;
         }
 
-        if (summaryResponse.summaryLength > minLength) return summaryResponse;
+        if (textLength > minLength) return textItems;
     }
 
-    return summaryResponse;
+    return textItems;
 };
