@@ -1,65 +1,5 @@
 import { BlockObjectResponse, DatePropertyItemObjectResponse, FilesPropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, PageObjectResponse, QueryDatabaseParameters, RichTextItemResponse, RichTextPropertyItemObjectResponse, SelectPropertyItemObjectResponse, StatusPropertyItemObjectResponse, TitlePropertyItemObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-export class ArticlesResponse {
-    constructor(
-        private _articles: PageObjectResponse[],
-        private _nextCursor: string | null
-    ) { };
-
-    get articles(): PageObjectResponse[] {
-        return this._articles;
-    }
-    get nextCursor(): string | null {
-        return this._nextCursor;
-    }
-};
-
-export class SummaryResponse {
-    constructor(
-        private _summaryPieces: string[],
-        private _summaryLength: number,
-        private _nextCursor: string | null,
-    ) { };
-
-    get summaryPieces(): string[] {
-        return this._summaryPieces;
-    }
-    get summaryLength(): number {
-        return this._summaryLength;
-    }
-    get nextCursor(): string | null {
-        return this._nextCursor;
-    }
-
-    set summaryPieces(elem: string) {
-        this._summaryPieces = [...this.summaryPieces, elem];
-    }
-    set summaryLength(length: number) {
-        this._summaryLength = length;
-    }
-    set nextCursor(cursor: string | null) {
-        this._nextCursor = cursor;
-    }
-};
-
-export class BlocksResponse {
-    constructor(
-        private _blocks: BlockObjectResponse[],
-        private _nextCursor: string | null,
-    ) { };
-
-    get blocks(): BlockObjectResponse[] {
-        return this._blocks;
-    }
-    get nextCursor(): string | null {
-        return this._nextCursor;
-    }
-
-    set nextCursor(cursor: string | null) {
-        this._nextCursor = cursor;
-    }
-};
-
 export type DatabaseQueryParameters = Omit<QueryDatabaseParameters, "database_id">;
 
 export type SelectPropertyItem = Omit<SelectPropertyItemObjectResponse, "object">;
@@ -82,3 +22,67 @@ export interface ArticleProperty {
     };
     Status: string;
 };
+
+class NotionApiResponse {
+    constructor(
+        public nextCursor: string | null) { };
+}
+
+interface ItemsLength {
+    length: () => number;
+};
+
+export class ArticleResponse extends NotionApiResponse implements ItemsLength {
+    constructor(
+        private _items: PageObjectResponse[],
+        nextCursor: string | null) {
+        super(nextCursor);
+    };
+
+    get items(): PageObjectResponse[] {
+        return this._items;
+    };
+
+    length() {
+        return this.items.length;
+    }
+};
+
+export class SummaryResponse extends NotionApiResponse implements ItemsLength {
+    constructor(
+        private _items: string[],
+        nextCursor: string | null) {
+        super(nextCursor);
+    };
+
+    get items(): string[] {
+        return this._items;
+    };
+
+    getSummary() {
+        return this.items.map((item) => item).join(" ");
+    };
+
+    length() {
+        return this.getSummary().length;
+    };
+};
+
+export class BlockResponse extends NotionApiResponse implements ItemsLength {
+    constructor(
+        private _items: BlockObjectResponse[],
+        nextCursor: string | null
+    ) {
+        super(nextCursor);
+    };
+
+    get items(): BlockObjectResponse[] {
+        return this._items;
+    }
+
+    length() {
+        return this._items.length;
+    }
+};
+
+export type CategoryTagResponse = { name: string }[];
