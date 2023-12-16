@@ -33,6 +33,13 @@
 }
 
 @layer components {
+  .main-wrapper {
+    @apply w-full px-4;
+  }
+
+  .section-wrapper {
+    @apply w-full max-w-screen-lg py-4 mx-auto;
+  }
 }
 
 @layer utilities {
