@@ -14,10 +14,10 @@ interface Button extends HTMLAttributes<HTMLButtonElement> {
 export default function Button({ innerType, children, ...props }: Button) {
     if (innerType === "icon") {
         return (
-            <button {...props} className={`w-28 md:w-36 h-28 md:h-36 p-2 flex justify-center items-center rounded-full hover:bg-light-tertiary dark:hover:bg-dark-tertiary ${props.className ?? ""}`}>
+            <button {...props} className={`w-36 h-36 p-2 flex justify-center items-center rounded-full hover:bg-light-tertiary dark:hover:bg-dark-tertiary ${props.className ?? ""}`}>
                 {children}
             </button>
-         );
+        );
     }
 
     return (
