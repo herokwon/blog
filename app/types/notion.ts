@@ -85,4 +85,5 @@ export class BlockResponse extends NotionApiResponse implements ItemsLength {
     }
 };
 
-export type CategoryTagResponse = { name: string }[];
+export type CategoryResponse = { category: string }[];
+export type TagResponse = { tag: string }[];
