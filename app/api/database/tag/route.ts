@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getHeaders, notionDatabaseUrl } from "@/app/lib/data/notion";
 import { DatabaseObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { CategoryTagResponse } from "@/app/types/notion";
 
 export const GET = async () => {
     try {
@@ -17,7 +18,7 @@ export const GET = async () => {
 
         if (tagProperty.type !== "multi_select") throw new Error("Wrong Access");
 
-        const tags = tagProperty.multi_select.options.map(({ name }) => ({ name }));
+        const tags: CategoryTagResponse = tagProperty.multi_select.options.map(({ name }) => ({ name }));
         return NextResponse.json({ tags: tags });
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

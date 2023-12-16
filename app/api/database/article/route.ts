@@ -13,12 +13,10 @@ export const GET = async (req: NextRequest) => {
                 equals: "Published",
             },
         },
-        sorts: [
-            {
-                property: "Date",
-                direction: "descending",
-            },
-        ],
+        sorts: [{
+            property: "Date",
+            direction: "descending",
+        }],
         page_size: pageSize ? parseInt(pageSize) : 9,
     };
 
@@ -35,7 +33,7 @@ export const GET = async (req: NextRequest) => {
         const responseData: QueryDatabaseResponse = await response.json();
 
         return NextResponse.json({
-            articles: responseData.results as PageObjectResponse[],
+            items: responseData.results as PageObjectResponse[],
             nextCursor: responseData.has_more ? responseData.next_cursor : null,
         });
     } catch (error) {
@@ -84,7 +82,7 @@ export const POST = async (req: NextRequest) => {
         const responseData: QueryDatabaseResponse = await response.json();
 
         return NextResponse.json({
-            articles: responseData.results as PageObjectResponse[],
+            items: responseData.results as PageObjectResponse[],
             nextCursor: responseData.has_more ? responseData.next_cursor : null,
         });
     } catch (error) {

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getHeaders, notionBlockUrl } from "@/app/lib/data/notion";
-import { BlocksResponse } from "@/app/types/notion";
+import { BlockResponse } from "@/app/types/notion";
 import { BlockObjectResponse, ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export const POST = async (request: NextRequest) => {
     const { pageId }: { pageId?: string } = await request.json();
-    const blocksResponse = new BlocksResponse([], null);
 
     try {
         if (!pageId) throw new Error("No parameters");
+
+        const blocksResponse = new BlockResponse([], null);
 
         do {
             const response = await fetch(`${notionBlockUrl}/${pageId}/children${blocksResponse.nextCursor ? `?start_cursor=${blocksResponse.nextCursor}` : ""}`, {
@@ -21,12 +22,12 @@ export const POST = async (request: NextRequest) => {
 
             const responseData: ListBlockChildrenResponse = await response.json();
 
-            blocksResponse.blocks.push(...responseData.results as BlockObjectResponse[]);
+            blocksResponse.items.push(...responseData.results as BlockObjectResponse[]);
             blocksResponse.nextCursor = responseData.has_more ? responseData.next_cursor : null;
         } while (blocksResponse.nextCursor);
 
         return NextResponse.json({
-            blocks: blocksResponse.blocks,
+            items: blocksResponse.items,
             nextCursor: blocksResponse.nextCursor
         });
     } catch (error) {
