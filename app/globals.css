@@ -30,11 +30,51 @@
   body {
     @apply text-light bg-light-primary dark:text-dark dark:bg-dark-primary;
   }
+
+  h1 {
+    @apply font-extrabold;
+  }
+
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold;
+  }
+
+  h1 {
+    @apply text-[1.6rem];
+  }
+
+  h2 {
+    @apply text-[1.48rem];
+  }
+
+  h3 {
+    @apply text-[1.36rem];
+  }
+
+  h4 {
+    @apply text-[1.24rem];
+  }
+
+  h5 {
+    @apply text-[1.12rem];
+  }
+
+  h6 {
+    @apply text-[1rem];
+  }
 }
 
 @layer components {
+  #wrapper {
+    @apply w-full min-h-screen;
+  }
+
   .main-wrapper {
-    @apply w-full;
+    @apply w-full min-h-screen;
   }
 
   .section-wrapper {
