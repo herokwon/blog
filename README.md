@@ -75,6 +75,14 @@
 - Node.js 환경에 따른 baseUrl 설정 :point_right: [@558e44e](https://github.com/herokwon/blog/commit/558e44eff04e6a7e2a49c6f18ee95909dc4bddab)
 
 <br />
+
+**_2023.12.16 ~ 17_**
+
+- Page-Header 생성 :point_right: [@74336da](https://github.com/herokwon/blog/commit/74336da1ce1000ae4783e32bd1c67c01cd32f3d7)
+  - Posts 카테고리 일부 변경 (성장 → 회고)
+  - 이미지 파일 추가
+
+<br />
 <br />
 
 ## 기술: Skills
