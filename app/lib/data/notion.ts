@@ -14,8 +14,8 @@ export const postHeaders = {
 
 export const ArticleCategory = {
     dev: "개발",
-    growth: "성장",
-    theory: "이론",
+    retrospect: "회고",
+    study: "공부",
     column: "칼럼",
     life: "일상",
 };

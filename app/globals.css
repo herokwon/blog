@@ -34,11 +34,15 @@
 
 @layer components {
   .main-wrapper {
-    @apply w-full px-4;
+    @apply w-full;
   }
 
   .section-wrapper {
-    @apply w-full max-w-screen-lg py-4 mx-auto;
+    @apply w-full px-4 py-4;
+  }
+
+  .section-container {
+    @apply w-full max-w-screen-lg mx-auto;
   }
 }
 
