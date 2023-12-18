@@ -38,16 +38,29 @@
 }
 
 .article-sub-container {
-  @apply w-full h-48 grid grid-cols-[48px_minmax(0,_1fr)] gap-x-2;
+  @apply w-full h-60 px-2 py-1 grid grid-cols-[60px_minmax(0,_1fr)] gap-x-1;
 
   & > div:last-child > .article-info {
     &:first-child {
-      @apply text-[0.88rem] line-clamp-1;
+      @apply text-[1rem] line-clamp-1 relative z-[1];
+      @apply after:w-0 after:h-full after:bg-yellow-400 after:content-[""] after:transition-[width] after:duration-200 after:absolute after:bottom-0 after:left-0 after:-z-[1];
     }
 
     &:last-child {
       & > :first-child {
-        @apply text-white bg-blue-400 dark:bg-blue-600 font-semibold;
+        @apply text-white bg-blue-400 font-semibold;
+      }
+    }
+  }
+
+  &:hover {
+    > div:first-child {
+      @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
+    }
+
+    > div:last-child > .article-info {
+      &:first-child {
+        @apply after:w-full;
       }
     }
   }
