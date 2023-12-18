@@ -10,8 +10,17 @@ export type DatePropertyItem = Omit<DatePropertyItemObjectResponse, "object">;
 export type RichTextPropertyItem = Omit<RichTextPropertyItemObjectResponse, "object">;
 export type FilesPropertyItem = Omit<FilesPropertyItemObjectResponse, "object">;
 
+export const ArticleCategory = {
+    dev: "개발",
+    retrospect: "회고",
+    study: "공부",
+    column: "칼럼",
+    life: "일상",
+} as const;
+type ArticleCategory = typeof ArticleCategory[keyof typeof ArticleCategory];
+
 export interface ArticleProperty {
-    Category: string;
+    Category: keyof typeof ArticleCategory;
     Title: string;
     Date: string;
     Description: string;
@@ -85,5 +94,5 @@ export class BlockResponse extends NotionApiResponse implements ItemsLength {
     }
 };
 
-export type CategoryResponse = { category: string }[];
+export type CategoryResponse = { category: keyof typeof ArticleCategory }[];
 export type TagResponse = { tag: string }[];
