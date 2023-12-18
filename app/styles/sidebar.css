@@ -1,5 +1,9 @@
 #sidebar {
-  @apply bg-black/80 md:bg-gradient-to-r md:from-black/80 md:to-transparent;
+  background: linear-gradient(90deg, rgb(18 18 18 / 0.8), transparent);
+
+  @media not all and (min-width: 768px) {
+    @apply bg-black/80;
+  }
 }
 
 #sidebar:has(.sidebar-btn.active),
@@ -12,5 +16,5 @@
 }
 
 .sidebar-container {
-  @apply w-full px-4 py-2 rounded-lg bg-light-secondary;
+  @apply w-full px-4 py-2 mb-4 rounded-lg text-light bg-light-primary;
 }
