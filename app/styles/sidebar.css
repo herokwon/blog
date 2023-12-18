@@ -1,0 +1,16 @@
+#sidebar {
+  @apply bg-black/80 md:bg-gradient-to-r md:from-black/80 md:to-transparent;
+}
+
+#sidebar:has(.sidebar-btn.active),
+#sidebar:has(.sidebar-btn.active) > aside {
+  pointer-events: all;
+}
+
+#sidebar .sidebar-btn > span {
+  @apply bg-[var(--dark-foreground)];
+}
+
+.sidebar-container {
+  @apply w-full px-4 py-2 rounded-lg bg-light-secondary;
+}

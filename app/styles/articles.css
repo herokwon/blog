@@ -36,3 +36,19 @@
     @apply w-full aspect-[4/3];
   }
 }
+
+.article-sub-container {
+  @apply w-full h-48 grid grid-cols-[48px_minmax(0,_1fr)] gap-x-2;
+
+  & > div:last-child > .article-info {
+    &:first-child {
+      @apply text-[0.88rem] line-clamp-1;
+    }
+
+    &:last-child {
+      & > :first-child {
+        @apply text-white bg-blue-400 dark:bg-blue-600 font-semibold;
+      }
+    }
+  }
+}
