@@ -32,15 +32,17 @@ export default function Nav({ initTheme }: { initTheme: BlogTheme }) {
 
     return (
         <header id="main-header" className={`w-full h-48 px-4 flex items-center ${isScrolled ? "bg-light-primary dark:bg-dark-primary" : "text-dark"} transition-all duration-200 fixed top-0 left-0 z-[99]`}>
-            <Button innerType="text" className={`sidebar-btn ${isScrolled ? "scrolled" : ""} ${sidebarActive ? "active" : ""}`}
-                onClick={() => setSidebarActive(true)}>
-                <div>
-                    <span />
-                    <span />
-                    <span />
-                </div>
-            </Button>
-            <div className="w-full max-w-screen-lg h-full mx-auto flex justify-between items-center relative">
+            <div className="h-full flex items-center flex-1">
+                <Button innerType="text" className={`sidebar-btn ${isScrolled ? "scrolled" : ""} ${sidebarActive ? "active" : ""}`}
+                    onClick={() => setSidebarActive(true)}>
+                    <div>
+                        <span />
+                        <span />
+                        <span />
+                    </div>
+                </Button>
+            </div>
+            <div className="w-full max-w-screen-lg h-full mx-auto flex justify-between items-center flex-[4] md:relative">
                 <div className="h-full flex justify-start items-center flex-1">
                     <Link href={navItem[0].path} className="md:mx-2 max-md:absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 max-md:z-[1]">
                         <h1 className="text-blue-500">All of IT</h1>
@@ -62,7 +64,7 @@ export default function Nav({ initTheme }: { initTheme: BlogTheme }) {
                     )}
                 </section>
             </div>
-            <div className="h-full flex items-center">
+            <div className="h-full flex justify-end items-center flex-1">
                 <Button innerType="icon" className={`${isScrolled ? "" : "hover:bg-neutral-500"}`}>
                     <Search />
                 </Button>
