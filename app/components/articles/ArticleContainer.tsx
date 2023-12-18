@@ -2,13 +2,12 @@
 
 import { MouseEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArticleCategory } from "@/app/lib/data/notion";
 import { ArticleProperty } from "@/app/types/notion";
 import { arrangeArticleSummary } from "@/app/lib/functions/notion";
 import { getDate } from "@/app/lib/utils/getDate";
 import Link from "next/link";
 import Image from "next/image";
-import Button from "../Button";
+import CategoryButton from "./CategoryButton";
 
 type ArticlePartialProperty = Pick<ArticleProperty, "Category" | "Title" | "Date" | "Thumbnail">;
 
@@ -37,9 +36,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
         <Link href={`/posts/${Category}/${encodeURIComponent(Title)}`} className="article-container group">
             <div className="w-full px-2 py-4">
                 <div className="article-info flex justify-between items-center">
-                    <Button innerType="text" onClick={handleCategoryClick}>
-                        {ArticleCategory[Category]}
-                    </Button>
+                    <CategoryButton category={Category} />
                     <p className="px-2 py-1">{getDate(Date)}</p>
                 </div>
                 <h2 className="article-info line-clamp-1 text-xl font-semibold">{Title}</h2>
