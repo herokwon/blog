@@ -30,7 +30,7 @@
 
 **_2023.12.10_**
 
-- navigation 생성 :point_right: [@9622a7b](https://github.com/herokwon/blog/commit/9622a7ba8a764d44d6effe94a7250aaa847f2195)
+- navigation 추가 :point_right: [@9622a7b](https://github.com/herokwon/blog/commit/9622a7ba8a764d44d6effe94a7250aaa847f2195)
 
 <br />
 
@@ -78,9 +78,15 @@
 
 **_2023.12.16 ~ 17_**
 
-- Page-Header 생성 :point_right: [@74336da](https://github.com/herokwon/blog/commit/74336da1ce1000ae4783e32bd1c67c01cd32f3d7)
+- Page-Header 추가 :point_right: [@74336da](https://github.com/herokwon/blog/commit/74336da1ce1000ae4783e32bd1c67c01cd32f3d7)
   - Posts 카테고리 일부 변경 (성장 → 회고)
   - 이미지 파일 추가
+
+<br />
+
+**_2023.12.18_**
+
+- Sidebar 추가 :point_right: [@6e3b6b5](https://github.com/herokwon/blog/commit/6e3b6b59a49698826537ef9a22b8c4a8012ecd31)
 
 <br />
 <br />
