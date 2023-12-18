@@ -1,17 +1,15 @@
 'use client'
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { extractArticleProperties } from "../lib/functions/notion";
-import { ArticleCategory } from "../lib/data/notion";
-import { getDate } from "../lib/utils/getDate";
 import { navItem } from "../lib/data/navItem";
 import { ArrowRightCircle } from "lucide-react";
 import useSidebar from "../store/sidebarStore";
 import Button from "./Button";
 import Link from "next/link";
-import Image from "next/image";
-import { useEffect } from "react";
+import ArticleSubContainer from "./articles/ArticleSubContainer";
 
 export default function Sidebar({ latestArticles }: { latestArticles: PageObjectResponse[] }) {
     const pathname = usePathname();
@@ -53,22 +51,12 @@ export default function Sidebar({ latestArticles }: { latestArticles: PageObject
                             const properties = extractArticleProperties(article.properties);
 
                             return (
-                                <Link key={article.id}
-                                    href={`/posts/${properties.Category}/${encodeURIComponent(properties.Title)}`}
-                                    className="article-sub-container">
-                                    <div className="h-full aspect-square rounded-lg opacity-bold shadow-2xl overflow-hidden transition-all duration-200 relative">
-                                        <Image src={properties.Thumbnail.url} fill sizes="1x" className="object-cover object-center" alt="article-thumbnail" />
-                                    </div>
-                                    <div className="h-full flex flex-col justify-between items-start">
-                                        <h3 className="article-info">{properties.Title}</h3>
-                                        <div className="article-info w-full flex justify-between items-center text-[0.72rem]">
-                                            <Button innerType="text" style={{ padding: "0.1875rem 0.375rem" }}>
-                                                {ArticleCategory[properties.Category]}
-                                            </Button>
-                                            <span>{getDate(properties.Date)}</span>
-                                        </div>
-                                    </div>
-                                </Link>
+                                <ArticleSubContainer
+                                    key={article.id}
+                                    Category={properties.Category}
+                                    Title={properties.Title}
+                                    Date={properties.Date}
+                                    Thumbnail={properties.Thumbnail} />
                             );
                         })}
                     </article>
