@@ -89,6 +89,14 @@
 - Sidebar 추가 :point_right: [@6e3b6b5](https://github.com/herokwon/blog/commit/6e3b6b59a49698826537ef9a22b8c4a8012ecd31)
 
 <br />
+
+**_2023.12.19_**
+
+- articles 관련 컴포넌트 그룹화 (`components/articles`) :point_right: [@630e671](https://github.com/herokwon/blog/commit/630e671c9b4a766652d6ca2cec400fb43ded8c49)
+- Catebory Button Component 추가 :point_right: [@24e2651](https://github.com/herokwon/blog/commit/24e26513760ae78b1669014f3737608a49eaf1b6)
+- Article Category 상수 관리 방식 변경 (**_object_** → **_const assertion_**) :point_right: [@286a49b](https://github.com/herokwon/blog/commit/286a49b1c1d3119b30c1a8e19952869899d1ac14)
+
+<br />
 <br />
 
 ## 기술: Skills
