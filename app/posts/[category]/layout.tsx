@@ -14,7 +14,7 @@ export default function CategoryLayout({ params, children }: { params: { categor
     return (
         <main className="main-wrapper">
             <PageHeader title={ArticleCategory[params.category]}>
-                <Image src={`/images/${params.category}.png`} fill sizes="1x" className="object-cover object-center opacity-25" alt="header-image" />
+                <Image src={`/images/${params.category}.png`} fill sizes="1x" className="object-cover object-center opacity-25" alt="header-image" priority />
             </PageHeader>
             {children}
         </main>
