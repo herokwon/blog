@@ -48,7 +48,7 @@
   - Summary :point_right: [@b37a974](https://github.com/herokwon/blog/commit/b37a974fbec62286bb64452abf6c340befa24472)
   - Categories & Tags :point_right: [@f658b32](https://github.com/herokwon/blog/commit/f658b325807eb01ddf81f4bf6f637ee554ee1dd2)
   - Block(s) :point_right: [@432977e](https://github.com/herokwon/blog/commit/432977e8525c5d773a9b7fffe87e9344f5056edc)
-  - 참고 : [API Reference | Notion Developers](https://developers.notion.so/reference)
+    - 참고 : [API Reference | Notion Developers](https://developers.notion.so/reference)
 
 <br />
 
@@ -56,7 +56,7 @@
 
 - Database Query를 위한 매개변수 타입 정의 :point_right: [@c176e87](https://github.com/herokwon/blog/commit/c176e8752db83566afa8116a9fe0ebcc45d71c77)
   - TypeScript Omit(유틸리티 타입) → Notion SDK 타입에서 특정 Key를 생략한 타입 정의 및 API 적용
-  - 참고 : [TypeScript: Documentation - Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+    - 참고 : [TypeScript: Documentation - Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
 
 <br />
 
@@ -98,7 +98,7 @@
 
 <br />
 
-**_2023.12.19_**
+**_2023.12.20_**
 
 - External Image Rendering hook 추가 :point_right: [@6e1ee24](https://github.com/herokwon/blog/commit/6e1ee24fe4a9bc1bff7ea381ce19b5737b9e577c)
   - Notion 및 외부 이미지 렌더링 & 리렌더링(유효기간 만료 등) 상태 관리
