@@ -106,7 +106,7 @@ const updateParamsQuery = (params: URLSearchParams) => {
             return {
                 property: "Title",
                 title: {
-                    equals: params.get("title")
+                    equals: decodeURIComponent(params.get("title"))
                 }
             };
         case "tag" in paramsObject:
