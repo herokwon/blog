@@ -97,6 +97,14 @@
 - Article Category 상수 관리 방식 변경 (**_object_** → **_const assertion_**) :point_right: [@286a49b](https://github.com/herokwon/blog/commit/286a49b1c1d3119b30c1a8e19952869899d1ac14)
 
 <br />
+
+**_2023.12.19_**
+
+- External Image Rendering hook 추가 :point_right: [@6e1ee24](https://github.com/herokwon/blog/commit/6e1ee24fe4a9bc1bff7ea381ce19b5737b9e577c)
+  - Notion 및 외부 이미지 렌더링 & 리렌더링(유효기간 만료 등) 상태 관리
+- Loading UI - Spinner 추가 :point_right: [@9fbf115](https://github.com/herokwon/blog/commit/9fbf115b8ac4ee78c6ea3dd3e69eda03cbb53446)
+
+<br />
 <br />
 
 ## 기술: Skills
