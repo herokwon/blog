@@ -1,13 +1,13 @@
 'use client'
 
-import { MouseEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ArticleProperty } from "@/app/types/notion";
 import { arrangeArticleSummary } from "@/app/lib/functions/notion";
 import { getDate } from "@/app/lib/utils/getDate";
 import Link from "next/link";
 import Image from "next/image";
 import CategoryButton from "./CategoryButton";
+import useThumbnail from "@/app/hooks/useThumbnail";
 
 type ArticlePartialProperty = Pick<ArticleProperty, "Category" | "Title" | "Date" | "Thumbnail">;
 
@@ -16,18 +16,27 @@ interface ArticleContainer extends ArticlePartialProperty {
 }
 
 export default function ArticleContainer({ id, Category, Title, Date, Thumbnail }: ArticleContainer) {
-    const router = useRouter();
     const [summary, setSummary] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const { thumbnailUrl, reload, reloading, setReloading } = useThumbnail(Thumbnail.url, Title);
 
-    const handleCategoryClick = (e: MouseEvent) => {
-        e.preventDefault();
-        router.push(`/${Category}`);
+    const handleImageLoad = () => {
+        const load = setTimeout(() => {
+            setLoading(false);
+            setReloading(false);
+            clearTimeout(load);
+        }, 500);
+    };
+
+    const handleImageError = () => {
+        setReloading(true);
+        reload();
     };
 
     useEffect(() => {
         arrangeArticleSummary(id).then((value) => {
             setSummary(value);
-        }).catch((e) => {
+        }).catch(() => {
             setSummary(null);
         })
     }, [id]);
@@ -43,7 +52,8 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                 <p className="article-info opacity-off line-clamp-3">{summary}</p>
             </div>
             <div className="opacity-bold dark:opacity-off dark:group-hover:opacity-bold transition-opacity duration-200 relative">
-                <Image src={Thumbnail.url} fill sizes="1x" className="object-cover object-center" alt="article-thumbnail" />
+                <Image src={thumbnailUrl} fill sizes="1x" className={`object-cover object-center ${(loading || reloading) ? "opacity-off" : ""}`} alt="article-thumbnail"
+                    onLoad={handleImageLoad} onError={handleImageError} priority />
             </div>
         </Link>
     );
