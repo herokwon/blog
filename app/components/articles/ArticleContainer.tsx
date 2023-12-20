@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import CategoryButton from "./CategoryButton";
 import useThumbnail from "@/app/hooks/useThumbnail";
+import Spinner from "../Spinner";
 
 type ArticlePartialProperty = Pick<ArticleProperty, "Category" | "Title" | "Date" | "Thumbnail">;
 
@@ -52,6 +53,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                 <p className="article-info opacity-off line-clamp-3">{summary}</p>
             </div>
             <div className="opacity-bold dark:opacity-off dark:group-hover:opacity-bold transition-opacity duration-200 relative">
+                {(loading || reloading) && <Spinner className="absolute top-0 left-0 z-10" />}
                 <Image src={thumbnailUrl} fill sizes="1x" className={`object-cover object-center ${(loading || reloading) ? "opacity-off" : ""}`} alt="article-thumbnail"
                     onLoad={handleImageLoad} onError={handleImageError} priority />
             </div>
