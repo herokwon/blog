@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import CategoryButton from "./CategoryButton";
 import useThumbnail from "@/app/hooks/useThumbnail";
+import Spinner from "../Spinner";
 
 type ArticleSubContainer = Pick<ArticleProperty, "Category" | "Title" | "Date" | "Thumbnail">;
 
@@ -30,6 +31,7 @@ export default function ArticleSubContainer({ Category, Title, Date, Thumbnail }
     return (
         <Link href={`/posts/${Category}/${encodeURIComponent(Title)}`} className="article-sub-container">
             <div className="h-full aspect-square rounded-lg opacity-bold shadow-2xl overflow-hidden transition-all duration-200 relative">
+                {(loading || reloading) && <Spinner className="absolute top-0 left-0 z-10" />}
                 <Image src={thumbnailUrl} fill sizes="1x" className={`object-cover object-center ${(loading || reloading) ? "opacity-off" : ""}`} alt="article-thumbnail"
                     onLoad={handleImageLoad} onError={handleImageError} priority />
             </div>
