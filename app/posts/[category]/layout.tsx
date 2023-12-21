@@ -1,7 +1,5 @@
 import { baseUrl } from "@/app/lib/data/api";
-import { ArticleCategory, CategoryResponse } from "@/app/types/notion";
-import PageHeader from "@/app/components/PageHeader";
-import Image from "next/image";
+import { CategoryResponse } from "@/app/types/notion";
 
 export const generateStaticParams = async () => {
     const response = await fetch(`${baseUrl}/api/database/category`);
@@ -10,12 +8,9 @@ export const generateStaticParams = async () => {
     return categories;
 };
 
-export default function CategoryLayout({ params, children }: { params: { category: keyof typeof ArticleCategory }; children: React.ReactNode }) {
+export default function CategoryLayout({ children }: { children: React.ReactNode }) {
     return (
         <main className="main-wrapper">
-            <PageHeader title={ArticleCategory[params.category]}>
-                <Image src={`/images/${params.category}.png`} fill sizes="1x" className="object-cover object-center opacity-25" alt="header-image" priority />
-            </PageHeader>
             {children}
         </main>
     );

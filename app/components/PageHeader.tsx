@@ -1,13 +1,23 @@
-export default function PageHeader({ title, children }: { title?: string; children: React.ReactNode }) {
+'use client'
+
+import Image from "next/image";
+import useThumbnail from "../hooks/useThumbnail";
+import Spinner from "./Spinner";
+
+export default function PageHeader({ imageUrl, title, children }: { imageUrl?: string; title?: string; children: React.ReactNode }) {
+    const thumbnail = imageUrl ? useThumbnail(imageUrl, title) : null;
+
     return (
         <section className="w-full h-[75vh] mb-4 relative">
-            <div className="w-full h-full absolute top-0 left-0 z-0 bg-dark-secondary">
+            {thumbnail &&
+                <div className="w-full h-full absolute top-0 left-0 z-0 bg-dark-secondary">
+                    {thumbnail.imgLoading && <Spinner className="text-dark absolute top-0 left-0 z-10" />}
+                    <Image src={thumbnail.imgUrl} fill sizes="1x" className={`object-cover object-center ${thumbnail.imgLoading ? "brightness-[25%] opacity-10" : ""} opacity-10`} alt="header-image"
+                        onLoad={thumbnail.handleImgLoad} onError={thumbnail.handleImgError} priority />
+                </div>}
+            <div className="w-full h-full absolute top-0 left-0 z-10">
                 {children}
             </div>
-            {title &&
-                <div className="w-full my-4 absolute bottom-0 left-0 z-[1]">
-                    <h1 className="text-center text-dark">{title}</h1>
-                </div>}
         </section>
     );
 }
