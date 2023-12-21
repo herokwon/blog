@@ -1,11 +1,13 @@
 import { baseUrl } from "@/app/lib/data/api";
-import { extractArticleProperties } from "@/app/lib/functions/notion";
 import { ArticleResponse } from "@/app/types/notion";
-import ArticleContainer from "@/app/components/ArticleContainer";
-import ArticleList from "@/app/components/ArticleList";
+import { extractArticleProperties } from "@/app/lib/functions/notion";
+import ArticleContainer from "@/app/components/articles/ArticleContainer";
+import ArticleList from "@/app/components/articles/ArticleList";
 
 export default async function Category({ params }: { params: { category: string } }) {
-    const response = await fetch(`${baseUrl}/api/database/article?category=${params.category}`, {
+    const fetchUrl: RequestInfo = `${baseUrl}/api/database/article?category=${params.category}`;
+
+    const response = await fetch(fetchUrl, {
         method: "POST",
         body: JSON.stringify({
             nextCursor: null,
@@ -21,7 +23,7 @@ export default async function Category({ params }: { params: { category: string 
     return (
         <section className="section-wrapper">
             <section className="section-container">
-                <ArticleList>
+                <ArticleList fetchUrl={fetchUrl} nextCursor={articleData.nextCursor}>
                     {articleData.items.map((article) => {
                         const properties = extractArticleProperties(article.properties);
 
