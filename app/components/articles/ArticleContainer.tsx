@@ -33,7 +33,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
         <Link href={`/posts/${Category}/${encodeURIComponent(Title)}`} className="article-container group">
             <div className="w-full px-2 py-4">
                 <div className="article-info flex justify-between items-center">
-                    <CategoryButton category={Category} />
+                    <CategoryButton category={Category} className="dark:bg-blue-600" />
                     <p className="px-2 py-1">{getDate(Date)}</p>
                 </div>
                 <h2 className="article-info line-clamp-1 text-xl font-semibold">{Title}</h2>

@@ -13,12 +13,8 @@
 
     > .article-info {
       &:first-child {
-        & > :first-child {
-          @apply text-[0.8rem] dark:bg-blue-600;
-        }
-
         & > :last-child {
-          @apply text-center text-[0.72rem];
+          @apply text-[0.72rem];
         }
       }
 
@@ -43,19 +39,13 @@
   & > div:last-child > .article-info {
     &:first-child {
       @apply text-[1rem] line-clamp-1 relative z-[1];
-      @apply after:w-0 after:h-full after:bg-yellow-400 after:content-[""] after:transition-[width] after:duration-200 after:absolute after:bottom-0 after:left-0 after:-z-[1];
-    }
-
-    &:last-child {
-      & > :first-child {
-        @apply text-white bg-blue-400 font-semibold;
-      }
+      @apply after:w-0 after:h-full dark:after:h-3 after:bg-yellow-400 after:content-[""] after:transition-[width] after:duration-200 after:absolute after:bottom-0 after:left-0 after:-z-[1];
     }
   }
 
   &:hover {
     > div:first-child {
-      @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
+      @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)] dark:shadow-[4px_12px_30px_6px_rgba(245,245,245,0.36)];
     }
 
     > div:last-child > .article-info {
@@ -67,5 +57,5 @@
 }
 
 .article-category {
-  @apply text-white bg-blue-400 font-semibold;
+  @apply text-[0.8rem] text-white bg-blue-500 font-semibold;
 }
