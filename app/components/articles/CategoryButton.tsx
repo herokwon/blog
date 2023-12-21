@@ -14,7 +14,7 @@ export default function CategoryButton({ category, style }: { category: keyof ty
     };
 
     return (
-        <Button innerType="text" onClick={handleCategoryClick} style={style ?? null}>
+        <Button innerType="text" className="article-category" onClick={handleCategoryClick} style={style ?? null}>
             {ArticleCategory[category]}
         </Button>
     );

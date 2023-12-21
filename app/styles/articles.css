@@ -14,7 +14,7 @@
     > .article-info {
       &:first-child {
         & > :first-child {
-          @apply text-[0.8rem] text-white bg-blue-400 dark:bg-blue-600 font-semibold;
+          @apply text-[0.8rem] dark:bg-blue-600;
         }
 
         & > :last-child {
@@ -64,4 +64,8 @@
       }
     }
   }
+}
+
+.article-category {
+  @apply text-white bg-blue-400 font-semibold;
 }
