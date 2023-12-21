@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import { baseUrl } from "@/app/lib/data/api";
 import { ArticleCategory, ArticleResponse } from "@/app/types/notion";
+import ArticleContent from "@/app/components/articles/ArticleContent";
 
 export default async function ContentPage({ params }: { params: { category: keyof typeof ArticleCategory; title: string; } }) {
-    const response = await fetch(`${baseUrl}/api/database/article`, {
+    const response = await fetch(`${baseUrl}/api/database/article?title=${decodeURIComponent(params.title)}`, {
         method: "POST",
         body: JSON.stringify({
-            title: decodeURIComponent(params.title),
+            nextCursor: null,
         }),
     });
 
@@ -17,8 +18,7 @@ export default async function ContentPage({ params }: { params: { category: keyo
 
     return (
         <section className="section-wrapper">
-            <article className="section-container">
-            </article>
+            <ArticleContent id={articleData.items[0].id} />
         </section>
     );
 }

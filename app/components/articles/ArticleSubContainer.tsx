@@ -25,7 +25,7 @@ export default function ArticleSubContainer({ Category, Title, Date, Thumbnail }
             <div className="h-full flex flex-col justify-between items-start">
                 <h3 className="article-info">{Title}</h3>
                 <div className="article-info w-full flex justify-between items-center text-[0.72rem]">
-                    <CategoryButton category={Category} style={{ padding: "0.1875rem 0.375rem" }} />
+                    <CategoryButton category={Category} className="px-1.5 py-[0.1875rem]" />
                     <span>{getDate(Date)}</span>
                 </div>
             </div>

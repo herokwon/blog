@@ -1,20 +1,20 @@
 'use client'
 
 import { ArticleCategory } from "@/app/types/notion";
-import { CSSProperties, MouseEvent } from "react";
+import { HTMLAttributes, MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../Button";
 
-export default function CategoryButton({ category, style }: { category: keyof typeof ArticleCategory; style?: CSSProperties }) {
+export default function CategoryButton({ category, ...props }: { category: keyof typeof ArticleCategory } & HTMLAttributes<HTMLButtonElement>) {
     const router = useRouter();
 
     const handleCategoryClick = (e: MouseEvent) => {
         e.preventDefault();
-        router.push(`/posts/${category}`)
+        router.push(`/posts/${category}`);
     };
 
     return (
-        <Button innerType="text" className="article-category" onClick={handleCategoryClick} style={style ?? null}>
+        <Button innerType="text" {...props} className={`article-category ${props.className ?? ""}`} onClick={handleCategoryClick}>
             {ArticleCategory[category]}
         </Button>
     );
