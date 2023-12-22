@@ -9,7 +9,6 @@ import useSidebar from "../store/sidebarStore";
 import Link from "next/link";
 import Button from "./Button";
 
-
 export default function Nav({ initTheme }: { initTheme: BlogTheme }) {
     const pathname = usePathname();
     const [theme, setTheme] = useState<BlogTheme>(initTheme);

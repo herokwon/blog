@@ -44,29 +44,33 @@ export const GET = async (req: NextRequest) => {
 
 export const POST = async (req: NextRequest) => {
     const { nextCursor }: { nextCursor: string | null } = await req.json();
-
-    const paramsQuery: DatabaseQueryParameters = {
-        filter: {
-            and: [
-                {
-                    property: "Status",
-                    status: {
-                        equals: "Published",
-                    },
-                },
-                updateParamsQuery(req.nextUrl.searchParams),
-            ],
-        },
-        sorts: [
-            {
-                property: "Date",
-                direction: "descending",
-            },
-        ],
-        page_size: 9,
-    }
+    const params = req.nextUrl.searchParams;
 
     try {
+        const filterObject = updateParamsQuery(params);
+
+        if (!filterObject) throw new Error("No parameters!");
+
+        const paramsQuery: DatabaseQueryParameters = {
+            filter: {
+                and: [
+                    {
+                        property: "Status",
+                        status: {
+                            equals: "Published",
+                        },
+                    },
+                    filterObject,
+                ],
+            },
+            sorts: [
+                {
+                    property: "Date",
+                    direction: "descending",
+                },
+            ],
+            page_size: 9,
+        }
         const response = await fetch(`${notionDatabaseUrl}/query`, {
             method: "POST",
             headers: postHeaders,
@@ -91,29 +95,46 @@ export const POST = async (req: NextRequest) => {
     }
 };
 
-const updateParamsQuery = (params: URLSearchParams) => {
+const updateParamsQuery = (params: URLSearchParams): {
+    property: string;
+    select: {
+        equals: string;
+    }
+} | {
+    property: string;
+    title: {
+        equals: string;
+    }
+} | {
+    property: string;
+    multi_select: {
+        contains: string;
+    }
+} | undefined => {
     const paramsObject = Object.fromEntries(params.entries());
+
+    if (!("category" in paramsObject) && !("title" in paramsObject) && !("tag" in paramsObject)) return;
 
     switch (true) {
         case "category" in paramsObject:
             return {
                 property: "Category",
                 select: {
-                    equals: params.get("category")
+                    equals: params.get("category") ?? ""
                 }
             };
         case "title" in paramsObject:
             return {
                 property: "Title",
                 title: {
-                    equals: decodeURIComponent(params.get("title"))
+                    equals: decodeURIComponent(params.get("title") ?? "")
                 }
             };
-        case "tag" in paramsObject:
+        default:
             return {
                 property: "Tag",
                 multi_select: {
-                    contains: params.get("tag")
+                    contains: params.get("tag") ?? ""
                 }
             };
     }

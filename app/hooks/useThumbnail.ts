@@ -5,8 +5,8 @@ import { baseUrl } from "../lib/data/api";
 import { ArticleResponse } from "../types/notion";
 import { extractArticleProperties } from "../lib/functions/notion";
 
-const useThumbnail = (url: string, title: string | null) => {
-    const [imgUrl, setImgUrl] = useState<string>(url);
+const useThumbnail = (url: string | null, title: string | null) => {
+    const [imgUrl, setImgUrl] = useState<string | null>(url);
     const [imgLoading, setImgLoading] = useState<boolean>(true);
 
     const handleImgError = async () => {
@@ -29,7 +29,7 @@ const useThumbnail = (url: string, title: string | null) => {
                 const articleData = new ArticleResponse(articleResponse.items, null);
 
                 const properties = extractArticleProperties(articleData.items[0].properties);
-                setImgUrl(properties.Thumbnail.url);
+                setImgUrl(properties.Thumbnail.url ?? "");
             }
         }
     };
