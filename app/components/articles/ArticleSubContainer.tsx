@@ -16,17 +16,17 @@ export default function ArticleSubContainer({ Category, Title, Date, Thumbnail }
     const { imgUrl, imgLoading, handleImgLoad, handleImgError } = useThumbnail(Thumbnail.url, Title);
 
     return (
-        <Link href={`/posts/${Category}/${encodeURIComponent(Title)}`} className="article-sub-container">
+        <Link href={Title ? `/posts/${Category}/${encodeURIComponent(Title)}` : ""} className="article-sub-container">
             <div className="h-full aspect-square rounded-lg opacity-bold shadow-2xl overflow-hidden transition-all duration-200 relative">
-                {imgLoading && <Spinner className="absolute top-0 left-0 z-10" />}
-                <Image src={imgUrl} fill sizes="1x" className={`object-cover object-center ${imgLoading ? "opacity-off" : ""}`} alt="article-thumbnail"
+                {imgLoading ? <Spinner className="absolute top-0 left-0 z-10" /> : null}
+                <Image src={imgUrl ?? Thumbnail.url ?? ""} fill className={`object-cover object-center ${imgLoading ? "opacity-off" : ""}`} alt="article-thumbnail"
                     onLoad={handleImgLoad} onError={handleImgError} priority />
             </div>
             <div className="h-full flex flex-col justify-between items-start">
                 <h3 className="article-info">{Title}</h3>
                 <div className="article-info w-full flex justify-between items-center text-[0.72rem]">
                     <CategoryButton category={Category} className="px-1.5 py-[0.1875rem]" />
-                    <span>{getDate(Date)}</span>
+                    {Date ? <span>{getDate(Date)}</span> : null}
                 </div>
             </div>
         </Link>

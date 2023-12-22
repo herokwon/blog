@@ -24,7 +24,7 @@ export const getDate = (date: string): string | null => {
             case timeDifference >= oneMonth && timeDifference < oneYear:
                 const months = Math.floor(timeDifference / oneMonth);
                 return `${months}개월 전`;
-            case timeDifference > oneYear:
+            default:
                 const years = Math.floor(timeDifference / oneYear);
                 return `${years}년 전`;
         }

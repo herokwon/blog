@@ -3,17 +3,17 @@ import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectProper
 import { baseUrl } from "../data/api";
 
 export const extractArticleProperties = (properties: object): ArticleProperty => {
-    const propertyEntries = Object.keys(properties).map((property) => {
+    const propertyEntries = Object.keys(properties).map((property: keyof ArticleProperty) => {
         switch (property) {
             case "Category":
                 const categoryItem: SelectPropertyItem = properties["Category"];
-                return [property, categoryItem.select.name];
+                return [property, categoryItem.select?.name ?? null];
             case "Title":
                 const titleItem: TitlePropertyItem = properties["Title"];
                 return [property, titleItem.title[0].text.content as string];
             case "Date":
                 const dateItem: DatePropertyItem = properties["Date"];
-                return [property, dateItem.date.start];
+                return [property, dateItem.date?.start ?? null];
             case "Description":
                 const descriptionItem: RichTextPropertyItem = properties["Description"];
                 return [property, descriptionItem.rich_text[0].text.content as string];
@@ -23,15 +23,13 @@ export const extractArticleProperties = (properties: object): ArticleProperty =>
             case "Thumbnail":
                 const thumbnailItem: FilesPropertyItem = properties["Thumbnail"];
                 const thumbnailFileItem: {
-                    url: string;
+                    url: string | null;
                     expiry_time?: string;
-                } = thumbnailItem.files[0].type === "file" ? thumbnailItem.files[0].file : thumbnailItem.files[0].external;
+                } = thumbnailItem.files[0].type === "file" ? thumbnailItem.files[0].file : thumbnailItem.files[0].type === "external" ? thumbnailItem.files[0].external : { url: null };
                 return [property, thumbnailFileItem];
             case "Status":
                 const statusItem: StatusPropertyItem = properties["Status"];
-                return [property, statusItem.status.name];
-            default:
-                return;
+                return [property, statusItem.status?.name ?? null];
         }
     });
 

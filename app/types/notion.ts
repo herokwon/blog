@@ -21,12 +21,12 @@ type ArticleCategory = typeof ArticleCategory[keyof typeof ArticleCategory];
 
 export interface ArticleProperty {
     Category: keyof typeof ArticleCategory;
-    Title: string;
-    Date: string;
-    Description: string;
+    Title: string | null;
+    Date: string | null;
+    Description: string | null;
     Tag: { name: string }[];
     Thumbnail: {
-        url: string;
+        url: string | null;
         expiry_time?: string;
     };
     Status: string;
