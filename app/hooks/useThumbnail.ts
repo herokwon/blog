@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react";
-import { baseUrl } from "../lib/data/api";
+import { fetchArticle } from "../lib/databases";
 import { ArticleResponse } from "../types/notion";
 import { extractArticleProperties } from "../lib/functions/notion";
 
@@ -16,21 +16,11 @@ const useThumbnail = (url: string | null, title: string | null) => {
             setImgUrl("");
             setImgUrl(url);
         } else {
-            const response = await fetch(`${baseUrl}/api/database/article?title=${encodeURIComponent(title)}`, {
-                method: "POST",
-                body: JSON.stringify({
-                    nextCursor: null,
-                }),
-            });
+            const response = await fetchArticle({ title: title });
+            const articleData = new ArticleResponse(response.items, response.nextCursor);
+            const properties = extractArticleProperties(articleData.items[0].properties);
 
-            if (response.ok) {
-                const articleResponse: ArticleResponse = await response.json();
-
-                const articleData = new ArticleResponse(articleResponse.items, null);
-
-                const properties = extractArticleProperties(articleData.items[0].properties);
-                setImgUrl(properties.Thumbnail.url ?? "");
-            }
+            setImgUrl(properties.Thumbnail.url);
         }
     };
 

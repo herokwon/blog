@@ -2,39 +2,30 @@
 
 import { useState } from "react";
 import { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { ArticleResponse } from "@/app/types/notion";
+import { ArticleCategory } from "@/app/types/notion";
+import { fetchArticle } from "@/app/lib/databases";
 import { extractArticleProperties } from "@/app/lib/functions/notion";
 import { Plus } from "lucide-react";
 import ArticleContainer from "./ArticleContainer";
 import Button from "../Button";
 
 interface ArticleList {
-    fetchUrl: RequestInfo;
+    category: keyof typeof ArticleCategory;
     nextCursor: string | null;
     children: React.ReactNode;
 };
 
-export default function ArticleList({ fetchUrl, nextCursor, children }: ArticleList) {
+export default function ArticleList({ category, nextCursor, children }: ArticleList) {
     const [moreArticles, setMoreArticles] = useState<PageObjectResponse[]>([]);
     const [currentCursor, setCurrentCursor] = useState<string | null>(nextCursor);
 
     const fetchArticles = async () => {
         if (!currentCursor) return;
 
-        const response = await fetch(fetchUrl, {
-            method: "POST",
-            body: JSON.stringify({
-                nextCursor: currentCursor,
-            }),
-        });
+        const response = await fetchArticle({ category: category, startCursor: nextCursor ?? undefined });
 
-        if (!response.ok) throw new Error(response.statusText);
-
-        const articleResponse: ArticleResponse = await response.json();
-        const articleData = new ArticleResponse(articleResponse.items, articleResponse.nextCursor);
-
-        setMoreArticles([...moreArticles, ...articleData.items]);
-        setCurrentCursor(articleData.nextCursor);
+        setMoreArticles([...moreArticles, ...response.items]);
+        setCurrentCursor(response.nextCursor);
     };
 
     return (

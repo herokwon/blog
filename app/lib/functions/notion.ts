@@ -1,6 +1,6 @@
 import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "../../types/notion";
-import { baseUrl } from "../data/api";
+import { fetchSummary } from "../databases";
 
 export const extractArticleProperties = (properties: object): ArticleProperty => {
     const propertyEntries = Object.keys(properties).map((property: keyof ArticleProperty) => {
@@ -36,24 +36,11 @@ export const extractArticleProperties = (properties: object): ArticleProperty =>
     return Object.fromEntries(propertyEntries);
 };
 
-export const arrangeArticleSummary = async (id: string) => {
-    try {
-        const response = await fetch(`${baseUrl}/api/database/article/summary`, {
-            method: "POST",
-            body: JSON.stringify({
-                pageId: id
-            })
-        });
-
-        if (!response.ok) throw new Error();
-
-        const responseData: { summary: string } = await response.json();
-        return responseData.summary;
-    } catch {
-        return null;
-    }
+export const arrangeArticleSummary = async (id: string): Promise<string> => {
+    const { summary } = await fetchSummary(id);
+    return summary;
 };
 
-export const convertRichToPlain = (rich_text: RichTextItemResponse[]) => {
+export const convertRichToPlain = (rich_text: RichTextItemResponse[]): string => {
     return rich_text.map((text) => text.plain_text).join("");
 };

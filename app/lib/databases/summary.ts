@@ -1,46 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
+'use server'
+
 import { SummaryResponse } from "@/app/types/notion";
-import { getHeaders, notionBlockUrl } from "@/app/lib/data/notion";
+import { getHeaders, notionBlockUrl } from "../data/notion";
 import { BlockObjectResponse, ListBlockChildrenResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
-import { convertRichToPlain } from "@/app/lib/functions/notion";
+import { convertRichToPlain } from "../functions/notion";
 
 const minLength = 200;
 
-export const POST = async (req: NextRequest) => {
+export const fetchSummary = async (pageId: string): Promise<{ summary: string }> => {
+    const summaryResponse = new SummaryResponse([], null);
+
     try {
-        const { pageId }: { pageId: string } = await req.json();
-
-        const summaryResponse = new SummaryResponse([], null);
-
         do {
-            const response = await fetch(`${notionBlockUrl}/${pageId}/children?page_size=10${summaryResponse.nextCursor ? `&start_cursor=${summaryResponse.nextCursor}` : ""}`, {
+            const requestUrl =
+                `${notionBlockUrl}/${pageId}/children?page_size=9` +
+                (summaryResponse.nextCursor ? `&start_cursor=${summaryResponse.nextCursor}` : "");
+
+            const response = await fetch(requestUrl, {
                 method: "GET",
                 headers: getHeaders,
-                next: { revalidate: 0 }
+                next: { revalidate: 0 },
             });
 
             if (!response.ok) throw new Error(response.statusText);
 
             const responseData: ListBlockChildrenResponse = await response.json();
-
             const blocks = responseData.results as BlockObjectResponse[];
+
             summaryResponse.nextCursor = responseData.has_more ? responseData.next_cursor : null;
+            summaryResponse.items.push(...extractSummary(blocks));
 
-            summaryResponse.items.push(...updatelist(blocks));
+            if (summaryResponse.length() >= 200) return { summary: summaryResponse.getSummary() };
+        } while (summaryResponse.length() < minLength || summaryResponse.nextCursor !== null);
 
-            if (summaryResponse.length() > minLength) {
-                return NextResponse.json({ summary: summaryResponse.getSummary() });
-            }
-        } while (summaryResponse.length() <= minLength || summaryResponse.nextCursor !== null);
-
-        return NextResponse.json({ summary: summaryResponse.getSummary() });
+        return { summary: summaryResponse.getSummary() };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        return NextResponse.json({ status: 500, statusText: message });
+        throw new Error(message);
     }
 };
 
-const updatelist = (blocks: BlockObjectResponse[]) => {
+const extractSummary = (blocks: BlockObjectResponse[]): string[] => {
     const textItems: string[] = [];
     let textLength = 0;
 

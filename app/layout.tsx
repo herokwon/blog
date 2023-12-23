@@ -1,10 +1,10 @@
 import "./globals.css";
 import { Noto_Sans_KR } from "next/font/google";
+import { ArticleResponse } from "./types/notion";
+import { fetchArticle } from "./lib/databases";
 import { getTheme, updateTheme } from "./lib/functions/theme";
-import { baseUrl } from "./lib/data/api";
 import Nav from "./components/Nav";
 import Sidebar from "./components/Sidebar";
-import { ArticleResponse } from "./types/notion";
 
 const noto_sans_kr = Noto_Sans_KR({
     weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
@@ -14,13 +14,11 @@ const noto_sans_kr = Noto_Sans_KR({
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
     const savedTheme = await getTheme();
+
     if (!savedTheme) updateTheme("light");
 
-    const response = await fetch(`${baseUrl}/api/database/article?page_size=3`);
-
-    const articleResponse: ArticleResponse = await response.json();
-
-    // const articleData = new ArticleResponse(articleResponse.items, null);
+    const response = await fetchArticle({ pageSize: 3 });
+    const articleData = new ArticleResponse(response.items, response.nextCursor);
 
     return (
         <html lang="ko" className={savedTheme ?? "light"}>
@@ -28,7 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </head>
             <body className={noto_sans_kr.variable}>
                 <Nav initTheme={savedTheme ?? "light"} />
-                <Sidebar latestArticles={articleResponse.items} />
+                <Sidebar latestArticles={articleData.items} />
                 {children}
             </body>
         </html>

@@ -1,10 +1,7 @@
-import { baseUrl } from "@/app/lib/data/api";
-import { CategoryResponse } from "@/app/types/notion";
+import { fetchAllCategories } from "@/app/lib/databases/category";
 
 export const generateStaticParams = async () => {
-    const response = await fetch(`${baseUrl}/api/database/category`);
-    const { categories }: { categories: CategoryResponse } = await response.json();
-
+    const { categories } = await fetchAllCategories();
     return categories;
 };
 

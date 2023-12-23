@@ -77,7 +77,7 @@ export class SummaryResponse extends NotionApiResponse implements ItemsLength {
     };
 };
 
-export class BlockResponse extends NotionApiResponse implements ItemsLength {
+export class BlockResponse extends NotionApiResponse {
     constructor(
         private _items: BlockObjectResponse[],
         nextCursor: string | null
@@ -87,10 +87,6 @@ export class BlockResponse extends NotionApiResponse implements ItemsLength {
 
     get items(): BlockObjectResponse[] {
         return this._items;
-    }
-
-    length() {
-        return this._items.length;
     }
 };
 
