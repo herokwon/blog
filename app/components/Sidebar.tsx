@@ -15,16 +15,16 @@ export default function Sidebar({ latestArticles }: { latestArticles: PageObject
     const pathname = usePathname();
     const { sidebarActive, setSidebarActive } = useSidebar();
 
-    useEffect(() => {
-        if (sidebarActive) setSidebarActive(false);
-    }, [pathname]);
+    const handleItemClick = () => {
+        setSidebarActive(false);
+    };
 
     return (
         <section id="sidebar" className={`w-full min-w-screen h-full min-h-screen ${sidebarActive ? "" : "opacity-0 pointer-events-none"} overflow-y-scroll overscroll-none transition-opacity duration-200 fixed top-0 left-0 z-[100]`}>
             <aside className="w-345 h-full pl-4">
                 <div className="w-full h-48 flex items-center">
                     <Button innerType="text" className={`sidebar-btn ${sidebarActive ? "active" : ""}`}
-                        onClick={() => setSidebarActive(false)}>
+                        onClick={handleItemClick}>
                         <div>
                             <span />
                             <span />
@@ -38,7 +38,7 @@ export default function Sidebar({ latestArticles }: { latestArticles: PageObject
                             key={index}
                             href={item.path}
                             className={`nav-item ${pathname === item.path ? "selected" : ""} w-full flex justify-between items-center group`}
-                            onClick={() => setSidebarActive(false)}>
+                            onClick={handleItemClick}>
                             {item.title}
                             <ArrowRightCircle size={20} className={`invisible ${pathname === item.path ? "selected" : "group-hover:visible"}`} />
                         </Link>
@@ -56,7 +56,8 @@ export default function Sidebar({ latestArticles }: { latestArticles: PageObject
                                     Category={properties.Category}
                                     Title={properties.Title}
                                     Date={properties.Date}
-                                    Thumbnail={properties.Thumbnail} />
+                                    Thumbnail={properties.Thumbnail}
+                                    onClick={handleItemClick} />
                             );
                         })}
                     </article>

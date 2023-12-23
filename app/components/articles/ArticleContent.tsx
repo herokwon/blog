@@ -1,22 +1,10 @@
-import { baseUrl } from "@/app/lib/data/api";
 import { BlockResponse } from "@/app/types/notion";
+import { fetchBlocks } from "@/app/lib/databases";
 import Block from "../contents/Block";
 
 export default async function ArticleContent({ id }: { id: string }) {
-    const blockData = new BlockResponse([], null);
-
-    do {
-        const response = await fetch(`${baseUrl}/api/database/article/blocks`, {
-            method: "POST",
-            body: JSON.stringify({
-                pageId: id,
-            }),
-        });
-
-        const blockResponse: BlockResponse = await response.json();
-        blockData.items.push(...blockResponse.items);
-        blockData.nextCursor = blockResponse.nextCursor;
-    } while (blockData.nextCursor);
+    const response = await fetchBlocks(id);
+    const blockData = new BlockResponse(response.items, response.nextCursor);
 
     return (
         <article className="article-content section-container">
