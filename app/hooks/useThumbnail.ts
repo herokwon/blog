@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from "react";
-import { fetchArticle } from "../lib/databases";
+
 import { ArticleResponse } from "../types/notion";
+import { fetchArticle } from "../lib/databases";
 import { extractArticleProperties } from "../lib/functions/notion";
 
 const useThumbnail = (url: string | null, title: string | null) => {

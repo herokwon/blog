@@ -1,7 +1,8 @@
 'use server'
 
-import { ArticleCategory, DatabaseQueryParameters } from "@/app/types/notion";
 import { PageObjectResponse, QueryDatabaseResponse } from "@notionhq/client/build/src/api-endpoints";
+
+import { ArticleCategory, DatabaseQueryParameters } from "@/app/types/notion";
 import { notionDatabaseUrl, postHeaders } from "../data/notion";
 
 interface FetchArticle {

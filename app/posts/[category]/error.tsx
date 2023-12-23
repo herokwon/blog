@@ -1,7 +1,8 @@
 'use client'
 
-import Button from "@/app/components/Button";
 import { RotateCcw } from "lucide-react";
+
+import Button from "@/app/components/Button";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }, reset: () => void }) {
     return (

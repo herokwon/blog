@@ -1,5 +1,6 @@
 import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
-import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "../../types/notion";
+
+import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "@/app/types/notion";
 import { fetchSummary } from "../databases";
 
 export const extractArticleProperties = (properties: object): ArticleProperty => {

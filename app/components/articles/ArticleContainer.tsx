@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+
 import { ArticleProperty } from "@/app/types/notion";
 import { arrangeArticleSummary } from "@/app/lib/functions/notion";
 import { getDate } from "@/app/lib/utils/getDate";
 import useThumbnail from "@/app/hooks/useThumbnail";
-import Link from "next/link";
-import Image from "next/image";
 import CategoryButton from "./CategoryButton";
 import Spinner from "../Spinner";
 
