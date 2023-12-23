@@ -1,8 +1,9 @@
 'use server'
 
+import { BlockObjectResponse, ListBlockChildrenResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { SummaryResponse } from "@/app/types/notion";
 import { getHeaders, notionBlockUrl } from "../data/notion";
-import { BlockObjectResponse, ListBlockChildrenResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import { convertRichToPlain } from "../functions/notion";
 
 const minLength = 200;

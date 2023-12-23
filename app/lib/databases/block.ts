@@ -1,8 +1,9 @@
 'use server'
 
+import { BlockObjectResponse, ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { BlockResponse } from "@/app/types/notion";
 import { getHeaders, notionBlockUrl } from "../data/notion";
-import { BlockObjectResponse, ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export const fetchBlocks = async (pageId: string): Promise<{
     items: BlockObjectResponse[];

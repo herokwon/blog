@@ -1,5 +1,6 @@
-import "./globals.css";
 import { Noto_Sans_KR } from "next/font/google";
+
+import "./globals.css";
 import { ArticleResponse } from "./types/notion";
 import { fetchArticle } from "./lib/databases";
 import { getTheme, updateTheme } from "./lib/functions/theme";

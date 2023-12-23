@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { ArrowRightCircle } from "lucide-react";
+import Link from "next/link";
+
 import { extractArticleProperties } from "../lib/functions/notion";
 import { navItem } from "../lib/data/navItem";
-import { ArrowRightCircle } from "lucide-react";
 import useSidebar from "../store/sidebarStore";
 import Button from "./Button";
-import Link from "next/link";
 import ArticleSubContainer from "./articles/ArticleSubContainer";
 
 export default function Sidebar({ latestArticles }: { latestArticles: PageObjectResponse[] }) {

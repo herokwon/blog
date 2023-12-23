@@ -1,6 +1,7 @@
 'use client'
 
 import Image from "next/image";
+
 import useThumbnail from "../hooks/useThumbnail";
 import Spinner from "./Spinner";
 

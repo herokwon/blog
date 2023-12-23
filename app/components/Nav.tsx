@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { Moon, Search, Sun } from "lucide-react";
+import Link from "next/link";
+
 import { BlogTheme, updateTheme } from "../lib/functions/theme";
 import { navItem } from "../lib/data/navItem";
-import { Moon, Search, Sun } from "lucide-react";
 import useSidebar from "../store/sidebarStore";
-import Link from "next/link";
 import Button from "./Button";
 
 export default function Nav({ initTheme }: { initTheme: BlogTheme }) {
