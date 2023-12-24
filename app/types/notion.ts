@@ -92,3 +92,5 @@ export class BlockResponse extends NotionApiResponse {
 
 export type CategoryResponse = { category: keyof typeof ArticleCategory }[];
 export type TagResponse = { tag: string }[];
+
+export type RichTextColors = RichTextItemResponse["annotations"]["color"];

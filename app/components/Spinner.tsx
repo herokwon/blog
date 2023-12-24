@@ -1,9 +1,11 @@
 import { HTMLAttributes } from "react";
 import { Loader2 } from "lucide-react";
 
-export default function Spinner({ ...props }: HTMLAttributes<HTMLDivElement>) {
+type SpinnerClassName = Pick<HTMLAttributes<HTMLDivElement>, "className">;
+
+export default function Spinner({ className }: SpinnerClassName) {
     return (
-        <div {...props} className={`w-full h-full flex justify-center items-center ${props.className ?? ""}`}>
+        <div className={`w-full h-full flex justify-center items-center ${className ?? ""}`}>
             <Loader2 className="rotate" />
         </div>
     );
