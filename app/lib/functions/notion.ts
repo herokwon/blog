@@ -1,6 +1,6 @@
 import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "@/app/types/notion";
+import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextColors, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "@/app/types/notion";
 import { fetchSummary } from "../databases";
 
 export const extractArticleProperties = (properties: object): ArticleProperty => {
@@ -42,6 +42,28 @@ export const arrangeArticleSummary = async (id: string): Promise<string> => {
     return summary;
 };
 
-export const convertRichToPlain = (rich_text: RichTextItemResponse[]): string => {
-    return rich_text.map((text) => text.plain_text).join("");
+export const convertRichToPlain = (richText: RichTextItemResponse[]) => {
+    return richText.map((text) => text.plain_text).join("");
+};
+
+const extractRichTextColor = (color: RichTextColors) => {
+    if (color.includes("background")) {
+        return `bg-${color.replace("_background", "")}-500`;
+    } else {
+        return `text-${color}-500`;
+    }
+};
+
+export const extractRichTextStyle = (richText: RichTextItemResponse): string => {
+    const annotations = richText.annotations;
+    const styles: string[] = [];
+
+    if (annotations.bold) styles.push("font-semibold");
+    if (annotations.italic) styles.push("italic");
+    if (annotations.strikethrough) styles.push("line-through");
+    if (annotations.underline) styles.push("underline");
+
+    if (annotations.color !== "default") styles.push(extractRichTextColor(annotations.color));
+
+    return styles.join(" ");
 };
