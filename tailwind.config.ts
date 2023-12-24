@@ -23,6 +23,10 @@ const config: Config = {
             },
             width: width0_2000,
             height: height0_2000,
+            margin: {
+                'block': '1rem',
+                'content': '0.25rem',
+            },
             opacity: {
                 ...opacity0_200,
                 'bold': '87%',
