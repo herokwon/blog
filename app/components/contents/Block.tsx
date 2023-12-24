@@ -1,4 +1,8 @@
 import { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import Heading from "./Heading";
+import Paragraph from "./Paragraph";
+import Images from "./Image";
+import Quote from "./Quote";
 
 interface BlockProps {
     block: BlockObjectResponse;
@@ -37,13 +41,13 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "file":
             return null;
         case "heading_1":
-            return null;
+            return <Heading block={block} />;
         case "heading_2":
-            return null;
+            return <Heading block={block} />;
         case "heading_3":
-            return null;
+            return <Heading block={block} />;
         case "image":
-            return null;
+            return <Images block={block} />;
         case "link_preview":
             return null;
         case "link_to_page":
@@ -51,11 +55,11 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "numbered_list_item":
             return null;
         case "paragraph":
-            return null;
+            return <Paragraph block={block} />;
         case "pdf":
             return null;
         case "quote":
-            return null;
+            return <Quote block={block} />;
         case "synced_block":
             return null;
         case "table":
