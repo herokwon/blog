@@ -1,0 +1,41 @@
+.article-content {
+  &--indent {
+    @apply pl-4;
+  }
+
+  &--heading {
+    @apply max-w-max my-block;
+
+    &:is(h1) {
+      @apply text-[1.64rem];
+    }
+
+    &:is(h2) {
+      @apply text-[1.32rem];
+    }
+
+    &:is(h3) {
+      @apply text-[1rem];
+    }
+  }
+
+  &--link {
+    @apply text-blue-600 dark:text-blue-500 hover:underline hover:underline-offset-2;
+  }
+
+  &--inline-code {
+    @apply px-1.5 py-0.5 rounded-md font-semibold text-[0.88rem] bg-light-tertiary dark:bg-dark-tertiary;
+  }
+
+  &--paragraph {
+    @apply w-full h-max min-h-[1rem] my-content;
+  }
+
+  &--quote {
+    @apply w-full min-h-[1rem] pl-4 my-block opacity-off relative;
+
+    &:before {
+      @apply w-4 h-full mr-2 content-[''] bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)] opacity-normal absolute top-1/2 left-0 -translate-y-1/2;
+    }
+  }
+}
