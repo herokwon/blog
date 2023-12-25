@@ -1,7 +1,7 @@
 import { TableBlockObjectResponse, TableRowBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { fetchBlocks } from "@/app/lib/databases";
-import TableRow from "./TableRow";
+import TableRow from "./TableHeader";
 
 export default async function Table({ block }: { block: TableBlockObjectResponse }) {
     const children = block.has_children ? await fetchBlocks(block.id) : null;

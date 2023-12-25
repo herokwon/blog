@@ -5,12 +5,12 @@ import Paragraph from "./Paragraph";
 import Quote from "./Quote";
 import Code from "./Code";
 import Callout from "./Callout";
-import ColumnList from "./ColumnList";
-import Column from "./Column";
+import ColumnList from "./columns/ColumnList";
+import Column from "./columns/Column";
 import Equation from "./Equation";
 import List from "./List";
-import Table from "./Table";
 import Toggle from "./Toggle";
+import Table from "./tables/Table";
 
 interface BlockProps {
     block: BlockObjectResponse;
