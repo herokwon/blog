@@ -10,18 +10,22 @@
     "@notionhq/client": "^2.2.14",
     "@svgr/webpack": "^8.1.0",
     "autoprefixer": "^10.4.16",
+    "katex": "^0.16.9",
     "lucide-react": "^0.294.0",
     "next": "latest",
     "postcss": "^8.4.32",
     "postcss-import": "^15.1.0",
     "postcss-nesting": "^12.0.1",
+    "prismjs": "^1.29.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwindcss": "^3.3.6",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@types/katex": "^0.16.7",
     "@types/node": "20.8.10",
+    "@types/prismjs": "^1.26.3",
     "@types/react": "18.2.33",
     "@types/react-dom": "18.2.14",
     "typescript": "^5.2.2"
