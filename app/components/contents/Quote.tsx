@@ -12,7 +12,10 @@ export default async function Quote({ block }: { block: QuoteBlockObjectResponse
             <RichText richTexts={block.quote.rich_text} />
             {children?.items.map((item, index) =>
                 <div className="article-content--indent" key={index}>
-                    <Block block={item} blocks={children?.items} index={index} />
+                    <Block
+                        block={item}
+                        blocks={children?.items}
+                        index={index} />
                 </div>)}
         </div>
     );

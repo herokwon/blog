@@ -1,8 +1,9 @@
 import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { extractRichTextStyle } from "@/app/lib/functions/notion";
-import CodeText from "./CodeText";
-import LinkText from "./LinkText";
+import { renderKatex } from "@/app/lib/functions/katex";
+import CodeText from "./texts/CodeText";
+import LinkText from "./texts/LinkText";
 
 export default function RichText({ richTexts }: { richTexts: RichTextItemResponse[] }) {
     return richTexts.map((richText, index) => {
@@ -18,7 +19,7 @@ export default function RichText({ richTexts }: { richTexts: RichTextItemRespons
                             {richText.text.content}
                         </span> :
                         richText.type === "equation" ?
-                            <span className={`article-content--equation ${textStyle}`} /> :
+                            <span className={`article-content--equation ${textStyle}`} dangerouslySetInnerHTML={{ __html: renderKatex(richText.equation.expression) }} /> :
                             <span className={`article-content--mentioin ${textStyle}`} />}
                 </LinkText>
             </CodeText>
