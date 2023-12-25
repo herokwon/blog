@@ -105,6 +105,49 @@
 - Loading UI - Spinner 추가 :point_right: [@9fbf115](https://github.com/herokwon/blog/commit/9fbf115b8ac4ee78c6ea3dd3e69eda03cbb53446)
 
 <br />
+
+**_2023.12.21_**
+
+- Read more 버튼이 있는 infinite scroll 구현 :point_right: [@8fe17c0](https://github.com/herokwon/blog/commit/8fe17c098ece3b24cdd6f29c58c1840fea859e16)
+- Article-Content 페이지 추가
+  - 페이지 생성 :point_right: [@893b1dd](https://github.com/herokwon/blog/commit/893b1dd6a0d0097cb8fbe2d844084d24ccc3f8f8)
+  - 데이터 적용 :point_right: [@cd43b8e](https://github.com/herokwon/blog/commit/cd43b8e97539fdbd747e150c1c05a4293eac8874)
+- Article-Content 페이지 Page-Header 적용 :point_right: [@20f9a8c](https://github.com/herokwon/blog/commit/20f9a8c663eb2ca4b1f14fbdc98f7ff699aabd48)
+
+<br />
+
+**_2023.12.22_**
+
+- Typescript 설정 업데이트 - **_stictNullChecks_** :point_right: [@b601ed1](https://github.com/herokwon/blog/commit/b601ed1304e7bd56584cf0defc139f27699736ad)
+  - 참고 : [TypeScript: TSConfig Reference - Docs on every TSConfig option](https://www.typescriptlang.org/tsconfig#strictNullChecks)
+
+<br />
+
+**_2023.12.23_**
+
+- API Routes → Server Actions 적용 :point_right: [@0afd79f](https://github.com/herokwon/blog/commit/0afd79fcf2f9198753d4ea2ee2435ffc81973edf)
+- Module Import 구분 (internal / external) :point_right: [@3f0c9ba](https://github.com/herokwon/blog/commit/3f0c9ba12abcf246a99da976bab7b0490ba3be7a)
+- Next.js 환경 설정 업데이트 - `images/srcSet` 설정 :point_right: [@7d0659c](https://github.com/herokwon/blog/commit/7d0659ce14bb2bde7d216f68c3a800d356b9f42d)
+- Image-Header Component 추가 :point_right: [@6df929f](https://github.com/herokwon/blog/commit/6df929f710809f5fbf98428d62a4f19ed176e4bb)
+  - Page-Header 내 이미지 렌더링을 위한 리펙토링
+
+<br />
+
+**_2023.12.24_**
+
+- Normal Text Blocks 추가 :point_right: [@d5377dc](https://github.com/herokwon/blog/commit/d5377dc247452b4269b29203953fca30d72abc15)
+  - `Heading`, `Paragraph`, `RichText`, `Quote`
+
+<br />
+
+**_2023.12.25_**
+
+- Specific Text Blocks 추가 :point_right: [@d89f70e](https://github.com/herokwon/blog/commit/d89f70eba4414a897220de36786f77e1b3a7833b)
+  - `Callout`, `Code`, `Column`, `ColumnList`, `Equation`, `List(bulleted & numbered)`, `Table`, `TableRow`, `Toggle`
+  - Text Style Library 설치 및 적용
+    - 참고 : [**`prismjs`**](https://github.com/Prismjs/Prism) & [**`katex`**](https://github.com/katex/katex)
+
+<br />
 <br />
 
 ## 기술: Skills
