@@ -1,4 +1,4 @@
-import { BlockObjectResponse, DatePropertyItemObjectResponse, FilesPropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, PageObjectResponse, QueryDatabaseParameters, RichTextItemResponse, RichTextPropertyItemObjectResponse, SelectPropertyItemObjectResponse, StatusPropertyItemObjectResponse, TitlePropertyItemObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { BlockObjectResponse, BulletedListItemBlockObjectResponse, DatePropertyItemObjectResponse, FilesPropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, NumberedListItemBlockObjectResponse, PageObjectResponse, QueryDatabaseParameters, RichTextItemResponse, RichTextPropertyItemObjectResponse, SelectPropertyItemObjectResponse, StatusPropertyItemObjectResponse, TitlePropertyItemObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export type DatabaseQueryParameters = Omit<QueryDatabaseParameters, "database_id">;
 
@@ -94,3 +94,5 @@ export type CategoryResponse = { category: keyof typeof ArticleCategory }[];
 export type TagResponse = { tag: string }[];
 
 export type RichTextColors = RichTextItemResponse["annotations"]["color"];
+export type ListItemBlockObjectResponse = NumberedListItemBlockObjectResponse | BulletedListItemBlockObjectResponse;
+export type ListItemBlock<T> = T extends number ? NumberedListItemBlockObjectResponse : BulletedListItemBlockObjectResponse;

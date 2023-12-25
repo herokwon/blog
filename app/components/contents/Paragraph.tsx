@@ -14,7 +14,11 @@ export default async function Paragraph({ block }: { block: ParagraphBlockObject
                 null :
                 <p className="article-content--indent">
                     {children.items.map((item, index) =>
-                        <Block key={item.id} block={item} blocks={children.items} index={index} />)}
+                        <Block
+                            key={item.id}
+                            block={item}
+                            blocks={children.items}
+                            index={index} />)}
                 </p>}
         </p>
     );

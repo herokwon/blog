@@ -4,7 +4,7 @@
   }
 
   &--heading {
-    @apply max-w-max my-block;
+    @apply max-w-max pt-[48px] my-block;
 
     &:is(h1) {
       @apply text-[1.64rem];
@@ -24,7 +24,7 @@
   }
 
   &--inline-code {
-    @apply px-1.5 py-0.5 rounded-md font-semibold text-[0.88rem] bg-light-tertiary dark:bg-dark-tertiary;
+    @apply px-1.5 py-0.5 rounded-md font-semibold text-[0.9rem] bg-light-tertiary dark:bg-dark-tertiary;
   }
 
   &--paragraph {
@@ -36,6 +36,67 @@
 
     &:before {
       @apply w-4 h-full mr-2 content-[''] bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)] opacity-normal absolute top-1/2 left-0 -translate-y-1/2;
+    }
+  }
+
+  &--callout {
+    @apply py-4 rounded-lg text-[0.9rem] bg-light-secondary dark:bg-dark-secondary overflow-hidden relative;
+    &:before {
+      @apply w-4 h-full content-[""] bg-blue-500 absolute top-0 left-0 z-[1];
+    }
+  }
+
+  &--column {
+    @apply grid gap-y-4 justify-center items-center grid-rows-[repeat(auto-fill,_minmax(0,_1fr))] grid-cols-[minmax(0,_1fr)];
+
+    &-list {
+      @apply my-block grid justify-center items-center gap-x-4 md:gap-x-8 grid-cols-[repeat(auto-fill,_minmax(0,_1fr))];
+    }
+  }
+
+  &--code {
+    background: var(--dark-secondary-background) !important;
+  }
+
+  &--equation {
+    @apply my-content;
+  }
+
+  &--list {
+    &-bulleted {
+      @apply pl-4 mx-content list-disc;
+    }
+
+    &-numbered {
+      @apply pl-4 mx-content list-decimal;
+    }
+  }
+
+  &--toggle {
+    @apply w-full px-4 py-2 rounded-lg open:bg-light-secondary dark:open:bg-dark-secondary outline-none overflow-hidden transition-all duration-200;
+  }
+
+  &--table {
+    &-container {
+      @apply w-full rounded-lg;
+      @apply shadow-[0_0_0_2px_var(--light-tertiary-background)] dark:shadow-[0_0_0_2px_var(--dark-tertiary-background)];
+    }
+
+    @apply w-full rounded-lg text-[0.9rem] text-center border-hidden border-collapse overflow-hidden;
+
+    & th,
+    & tr,
+    & td {
+      @apply border border-[var(--light-tertiary-background)] dark:border-[var(--dark-tertiary-background)];
+    }
+
+    & th,
+    & td {
+      @apply px-2 py-1;
+    }
+
+    & th {
+      @apply bg-light-secondary dark:bg-dark-secondary;
     }
   }
 }
