@@ -1,8 +1,16 @@
 import { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import Heading from "./Heading";
 import Paragraph from "./Paragraph";
-import Images from "./Image";
 import Quote from "./Quote";
+import Code from "./Code";
+import Callout from "./Callout";
+import ColumnList from "./ColumnList";
+import Column from "./Column";
+import Equation from "./Equation";
+import List from "./List";
+import Table from "./Table";
+import Toggle from "./Toggle";
 
 interface BlockProps {
     block: BlockObjectResponse;
@@ -19,51 +27,81 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "breadcrumb":
             return null;
         case "bulleted_list_item":
-            return null;
+            return (
+                <List
+                    block={block}
+                    blocks={blocks}
+                    index={index} />
+            );
         case "callout":
-            return null;
+            return (
+                <Callout block={block} />
+            );
         case "child_database":
             return null;
         case "child_page":
             return null;
         case "code":
-            return null;
+            return (
+                <Code block={block} />
+            );
         case "column":
-            return null;
+            return (
+                <Column block={block} />
+            );
         case "column_list":
-            return null;
+            return (
+                <ColumnList block={block} />
+            );
         case "divider":
             return null;
         case "embed":
             return null;
         case "equation":
-            return null;
+            return (
+                <Equation block={block} />
+            );
         case "file":
             return null;
         case "heading_1":
-            return <Heading block={block} />;
+            return (
+                <Heading block={block} />
+            );
         case "heading_2":
-            return <Heading block={block} />;
+            return (
+                <Heading block={block} />
+            );
         case "heading_3":
-            return <Heading block={block} />;
+            return (
+                <Heading block={block} />
+            );
         case "image":
-            return <Images block={block} />;
+            return null;
         case "link_preview":
             return null;
         case "link_to_page":
             return null;
         case "numbered_list_item":
-            return null;
+            return (
+                <List
+                    block={block}
+                    blocks={blocks}
+                    index={index} />
+            );
         case "paragraph":
-            return <Paragraph block={block} />;
+            return (
+                <Paragraph block={block} />
+            );
         case "pdf":
             return null;
         case "quote":
-            return <Quote block={block} />;
+            return (
+                <Quote block={block} />
+            );
         case "synced_block":
             return null;
         case "table":
-            return null;
+            return <Table block={block} />;
         case "table_of_contents":
             return null;
         case "table_row":
@@ -73,7 +111,7 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "to_do":
             return null;
         case "toggle":
-            return null;
+            return <Toggle block={block} />;
         case "unsupported":
             return null;
         case "video":
