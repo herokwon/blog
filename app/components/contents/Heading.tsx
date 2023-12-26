@@ -2,7 +2,7 @@ import { Heading1BlockObjectResponse, Heading2BlockObjectResponse, Heading3Block
 import Link from "next/link";
 
 import { convertRichToPlain } from "@/app/lib/functions/notion";
-import RichText from "./RichText";
+import RichText from "./texts/RichText";
 
 type HeadingBlockObjectResponse = Heading1BlockObjectResponse | Heading2BlockObjectResponse | Heading3BlockObjectResponse;
 

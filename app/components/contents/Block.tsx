@@ -11,6 +11,10 @@ import Equation from "./Equation";
 import List from "./List";
 import Toggle from "./Toggle";
 import Table from "./tables/Table";
+import Images from "./Image";
+import getImageMetadata from "@/app/lib/utils/getImageMetadata";
+import { getImage } from "@/app/lib/functions/notion";
+import Video from "./Video";
 
 interface BlockProps {
     block: BlockObjectResponse;
@@ -76,7 +80,9 @@ export default async function Block({ block, blocks, index }: BlockProps) {
                 <Heading block={block} />
             );
         case "image":
-            return null;
+            const imgData = getImage(block);
+            const imgMetadata = await getImageMetadata(imgData.url);
+            return <Images block={block} imgData={imgData} imgMetadata={imgMetadata} />;
         case "link_preview":
             return null;
         case "link_to_page":
@@ -115,6 +121,6 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "unsupported":
             return null;
         case "video":
-            return null;
+            return <Video block={block} />;
     }
 }
