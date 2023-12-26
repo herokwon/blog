@@ -2,7 +2,7 @@ import { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { ListItemBlockObjectResponse, ListItemBlock } from "@/app/types/notion";
 import { fetchBlocks } from "@/app/lib/databases";
-import RichText from "./RichText";
+import RichText from "./texts/RichText";
 import Block from "./Block";
 
 export default function List({ block, blocks, index }: { block: ListItemBlockObjectResponse; blocks: BlockObjectResponse[]; index: number }) {

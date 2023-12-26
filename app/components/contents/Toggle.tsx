@@ -1,7 +1,7 @@
 import { ToggleBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { fetchBlocks } from "@/app/lib/databases";
-import RichText from "./RichText";
+import RichText from "./texts/RichText";
 import Block from "./Block";
 
 export default async function Toggle({ block }: { block: ToggleBlockObjectResponse }) {
