@@ -10,6 +10,8 @@
     "@notionhq/client": "^2.2.14",
     "@svgr/webpack": "^8.1.0",
     "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.0.4",
     "katex": "^0.16.9",
     "lucide-react": "^0.294.0",
     "next": "latest",
@@ -19,6 +21,7 @@
     "prismjs": "^1.29.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "sharp": "^0.33.1",
     "tailwindcss": "^3.3.6",
     "zustand": "^4.4.7"
   },
