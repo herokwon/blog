@@ -144,8 +144,18 @@
 
 - Specific Text Blocks 추가 :point_right: [@d89f70e](https://github.com/herokwon/blog/commit/d89f70eba4414a897220de36786f77e1b3a7833b)
   - `Callout`, `Code`, `Column`, `ColumnList`, `Equation`, `List(bulleted & numbered)`, `Table`, `TableRow`, `Toggle`
-  - Text Style Library 설치 및 적용
+  - Text Style Library 추가
     - 참고 : [**`prismjs`**](https://github.com/Prismjs/Prism) & [**`katex`**](https://github.com/katex/katex)
+
+<br />
+
+**_2023.12.26_**
+
+- Content Blocks Folder Segmentation :point_right: [@05aa5f4](https://github.com/herokwon/blog/commit/05aa5f49ed194de52fa301305fafa1be689e124b)
+- Media Blocks 추가 :point_right: [@e16ca46](https://github.com/herokwon/blog/commit/e16ca46578d828d5d346964b5bac2630187ed0ea)
+  - `Image`, `Video`
+  - sharp 라이브러리 추가
+    - 참고 : [sharp - High performance Node.js image processing](https://sharp.pixelplumbing.com/)
 
 <br />
 <br />
