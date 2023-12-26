@@ -1,4 +1,5 @@
 import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+import { ImageBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextColors, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "@/app/types/notion";
 import { fetchSummary } from "../databases";
@@ -66,4 +67,19 @@ export const extractRichTextStyle = (richText: RichTextItemResponse): string => 
     if (annotations.color !== "default") styles.push(extractRichTextColor(annotations.color));
 
     return styles.join(" ");
+};
+
+export const getImage = (block: ImageBlockObjectResponse): { url: string; expiring: boolean } => {
+    switch (block.image.type) {
+        case "external":
+            return {
+                url: block.image.external.url,
+                expiring: false,
+            };
+        case "file":
+            return {
+                url: block.image.file.url,
+                expiring: true,
+            };
+    }
 };
