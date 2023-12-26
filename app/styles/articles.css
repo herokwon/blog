@@ -4,12 +4,12 @@
 }
 
 .article-container {
-  @apply w-full h-auto rounded-lg overflow-hidden transition-all duration-200;
+  @apply w-full h-auto min-h-[calc((312px/4)*5)] rounded-lg overflow-hidden transition-all duration-200;
   @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] hover:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
   @apply hover:-translate-y-2;
 
   > div:first-child {
-    @apply grid gap-y-2 auto-rows-auto dark:bg-dark-secondary;
+    @apply w-full aspect-[2/1] grid gap-y-2 auto-rows-auto dark:bg-dark-secondary;
 
     > .article-info {
       &:first-child {
@@ -23,13 +23,13 @@
       }
 
       &:last-child {
-        @apply text-[0.8rem];
+        @apply min-h-[calc((0.8rem+0.4rem)*3)] text-[0.8rem];
       }
     }
   }
 
   > div:last-child {
-    @apply w-full aspect-[4/3];
+    @apply w-full aspect-[4/3] bg-light-secondary dark:bg-dark-secondary;
   }
 }
 

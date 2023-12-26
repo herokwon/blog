@@ -23,10 +23,20 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
     const { imgUrl, imgLoading, handleImgLoad, handleImgError } = useThumbnail(Thumbnail.url ?? null, Title);
 
     useEffect(() => {
+        if (!summary) setLoading(true);
+        else {
+            const load = setTimeout(() => {
+                setLoading(false);
+                clearTimeout(load);
+            }, 300);
+        }
+    }, [summary]);
+
+    useEffect(() => {
         arrangeArticleSummary(id).then((value) => {
             setSummary(value);
         }).catch(() => {
-            setSummary(null);
+            setSummary("데이터를 불러올 수 없습니다.");
         })
     }, [id]);
 
@@ -38,7 +48,11 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                     {Date ? <p className="px-2 py-1">{getDate(Date)}</p> : null}
                 </div>
                 <h2 className="article-info line-clamp-1 text-xl font-semibold">{Title}</h2>
-                <p className="article-info opacity-off line-clamp-3">{summary}</p>
+                <p className="article-info opacity-off line-clamp-3 relative">
+                    {loading ?
+                        <Spinner className="absolute top-0 left-0 z-10" /> :
+                        summary}
+                </p>
             </div>
             <div className="opacity-bold dark:opacity-off dark:group-hover:opacity-bold transition-opacity duration-200 relative">
                 {imgLoading ? <Spinner className="absolute top-0 left-0 z-10" /> : null}
