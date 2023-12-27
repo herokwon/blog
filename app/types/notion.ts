@@ -33,8 +33,13 @@ export const ArticleCategory = {
 } as const;
 type ArticleCategory = typeof ArticleCategory[keyof typeof ArticleCategory];
 
+export type ArticleCategoryKeywords = keyof typeof ArticleCategory;
+
+export type PreviewArticles = {
+    [key in ArticleCategoryKeywords]: ArticleProperty[];
+};
 export interface ArticleProperty {
-    Category: keyof typeof ArticleCategory;
+    Category: ArticleCategoryKeywords;
     Title: string | null;
     Date: string | null;
     Description: string | null;
@@ -104,7 +109,7 @@ export class BlockResponse extends NotionApiResponse {
     }
 };
 
-export type CategoryResponse = { category: keyof typeof ArticleCategory }[];
+export type CategoryResponse = { category: ArticleCategoryKeywords }[];
 export type TagResponse = { tag: string }[];
 
 export type RichTextColors = RichTextItemResponse["annotations"]["color"];

@@ -2,11 +2,11 @@
 
 import { PageObjectResponse, QueryDatabaseResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { ArticleCategory, DatabaseQueryParameters } from "@/app/types/notion";
+import { ArticleCategoryKeywords, DatabaseQueryParameters } from "@/app/types/notion";
 import { notionDatabaseUrl, postHeaders } from "../data/notion";
 
 interface FetchArticle {
-    category?: keyof typeof ArticleCategory;
+    category?: ArticleCategoryKeywords;
     title?: string;
     tags?: { tag: string }[];
     pageSize?: number;

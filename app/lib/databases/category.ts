@@ -3,7 +3,7 @@
 import { DatabaseObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { getHeaders, notionDatabaseUrl } from "../data/notion";
-import { ArticleCategory, CategoryResponse } from "@/app/types/notion";
+import { ArticleCategoryKeywords, CategoryResponse } from "@/app/types/notion";
 
 export const fetchAllCategories = async (): Promise<{ categories: CategoryResponse }> => {
     try {
@@ -20,7 +20,7 @@ export const fetchAllCategories = async (): Promise<{ categories: CategoryRespon
 
         if (categoryProperty.type !== "select") throw new Error("Wrong Access!");
 
-        return { categories: categoryProperty.select.options.map(({ name }) => ({ category: name as keyof typeof ArticleCategory })) };
+        return { categories: categoryProperty.select.options.map(({ name }) => ({ category: name as ArticleCategoryKeywords })) };
     } catch (error) {
         const message =
             error instanceof Error ?
