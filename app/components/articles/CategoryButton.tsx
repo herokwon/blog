@@ -3,10 +3,10 @@
 import { HTMLAttributes, MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 
-import { ArticleCategory } from "@/app/types/notion";
+import { ArticleCategory, ArticleCategoryKeywords } from "@/app/types/notion";
 import Button from "../Button";
 
-export default function CategoryButton({ category, ...props }: { category: keyof typeof ArticleCategory } & HTMLAttributes<HTMLButtonElement>) {
+export default function CategoryButton({ category, ...props }: { category: ArticleCategoryKeywords } & HTMLAttributes<HTMLButtonElement>) {
     const router = useRouter();
 
     const handleCategoryClick = (e: MouseEvent) => {
