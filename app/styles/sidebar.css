@@ -1,5 +1,5 @@
 #sidebar {
-  background: linear-gradient(90deg, rgb(18 18 18 / 0.8), transparent);
+  background: linear-gradient(270deg, rgb(18 18 18 / 0.8), transparent);
 
   @media not all and (min-width: 768px) {
     @apply bg-black/80;

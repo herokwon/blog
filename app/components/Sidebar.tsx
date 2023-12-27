@@ -8,29 +8,22 @@ import Link from "next/link";
 import { extractArticleProperties } from "../lib/functions/notion";
 import { navItem } from "../lib/data/navItem";
 import useSidebar from "../store/sidebarStore";
-import Button from "./Button";
+import SidebarBtn from "./SidebarBtn";
 import ArticleSubContainer from "./articles/ArticleSubContainer";
 
 export default function Sidebar({ latestArticles }: { latestArticles: PageObjectResponse[] }) {
     const pathname = usePathname();
     const { sidebarActive, setSidebarActive } = useSidebar();
 
-    const handleItemClick = () => {
+    const handleCloseSidebar = () => {
         setSidebarActive(false);
     };
 
     return (
         <section id="sidebar" className={`w-full min-w-screen h-full min-h-screen ${sidebarActive ? "" : "opacity-0 pointer-events-none"} overflow-y-scroll overscroll-none transition-opacity duration-200 fixed top-0 left-0 z-[100]`}>
-            <aside className="w-345 h-full pl-4">
-                <div className="w-full h-48 flex items-center">
-                    <Button innerType="text" className={`sidebar-btn ${sidebarActive ? "active" : ""}`}
-                        onClick={handleItemClick}>
-                        <div>
-                            <span />
-                            <span />
-                            <span />
-                        </div>
-                    </Button>
+            <aside className="w-345 h-full pr-4 ml-auto mr-0">
+                <div className="w-full h-48 flex justify-end items-center">
+                    <SidebarBtn className={sidebarActive ? "active" : ""} onClick={handleCloseSidebar} />
                 </div>
                 <nav className="sidebar-container flex md:hidden flex-col items-start">
                     {navItem.map((item, index) =>
@@ -38,7 +31,7 @@ export default function Sidebar({ latestArticles }: { latestArticles: PageObject
                             key={index}
                             href={item.path}
                             className={`nav-item ${pathname === item.path ? "selected" : ""} w-full flex justify-between items-center group`}
-                            onClick={handleItemClick}>
+                            onClick={handleCloseSidebar}>
                             {item.title}
                             <ArrowRightCircle size={20} className={`invisible ${pathname === item.path ? "selected" : "group-hover:visible"}`} />
                         </Link>
@@ -57,7 +50,7 @@ export default function Sidebar({ latestArticles }: { latestArticles: PageObject
                                     Title={properties.Title}
                                     Date={properties.Date}
                                     Thumbnail={properties.Thumbnail}
-                                    onClick={handleItemClick} />
+                                    onClick={handleCloseSidebar} />
                             );
                         })}
                     </article>
