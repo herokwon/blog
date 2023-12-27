@@ -4,14 +4,14 @@ import { useState } from "react";
 import { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Plus } from "lucide-react";
 
-import { ArticleCategory } from "@/app/types/notion";
+import { ArticleCategoryKeywords } from "@/app/types/notion";
 import { fetchArticle } from "@/app/lib/databases";
 import { extractArticleProperties } from "@/app/lib/functions/notion";
 import ArticleContainer from "./ArticleContainer";
 import Button from "../Button";
 
 interface ArticleList {
-    category: keyof typeof ArticleCategory;
+    category: ArticleCategoryKeywords;
     nextCursor: string | null;
     children: React.ReactNode;
 };

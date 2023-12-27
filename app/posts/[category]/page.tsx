@@ -1,13 +1,12 @@
-import { ArticleCategory, ArticleResponse } from "@/app/types/notion";
+import { ArticleCategory, ArticleCategoryKeywords, ArticleResponse } from "@/app/types/notion";
 import { fetchArticle } from "@/app/lib/databases";
 import { extractArticleProperties } from "@/app/lib/functions/notion";
 import PageHeader from "@/app/components/PageHeader";
 import ArticleContainer from "@/app/components/articles/ArticleContainer";
 import ArticleList from "@/app/components/articles/ArticleList";
 
-export default async function Category({ params }: { params: { category: keyof typeof ArticleCategory } }) {
+export default async function Category({ params }: { params: { category: ArticleCategoryKeywords } }) {
     const response = await fetchArticle({ category: params.category });
-
     const articleData = new ArticleResponse(response.items, response.nextCursor);
 
     return (

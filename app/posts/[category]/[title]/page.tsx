@@ -1,8 +1,8 @@
-import { ArticleCategory, ArticleResponse } from "@/app/types/notion";
+import { ArticleCategoryKeywords, ArticleResponse } from "@/app/types/notion";
 import { fetchArticle } from "@/app/lib/databases";
 import ArticleContent from "@/app/components/articles/ArticleContent";
 
-export default async function ContentPage({ params }: { params: { category: keyof typeof ArticleCategory; title: string; } }) {
+export default async function ContentPage({ params }: { params: { category: ArticleCategoryKeywords; title: string; } }) {
     const response = await fetchArticle({ title: decodeURIComponent(params.title) });
     const articleData = new ArticleResponse(response.items, response.nextCursor);
 

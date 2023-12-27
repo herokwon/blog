@@ -1,4 +1,4 @@
-import { ArticleCategory, ArticleResponse } from "@/app/types/notion";
+import { ArticleCategoryKeywords, ArticleResponse } from "@/app/types/notion";
 import { fetchArticle } from "@/app/lib/databases";
 import { extractArticleProperties } from "@/app/lib/functions/notion";
 import { getDate } from "@/app/lib/utils/getDate";
@@ -7,7 +7,7 @@ import CategoryButton from "@/app/components/articles/CategoryButton";
 
 interface ContentLayoutProps {
     params: {
-        category: keyof typeof ArticleCategory;
+        category: ArticleCategoryKeywords;
         title: string;
     };
     children: React.ReactNode;
@@ -15,8 +15,10 @@ interface ContentLayoutProps {
 
 export default async function ContentLayout({ params, children }: ContentLayoutProps) {
     const title = decodeURIComponent(params.title);
+
     const response = await fetchArticle({ title: title });
     const articleData = new ArticleResponse(response.items, response.nextCursor);
+
     const properties = extractArticleProperties(articleData.items[0].properties);
 
     return (
