@@ -156,6 +156,14 @@
   - `Image`, `Video`
   - sharp 라이브러리 추가
     - 참고 : [sharp - High performance Node.js image processing](https://sharp.pixelplumbing.com/)
+- `ArticleContainer` Layout Shift 줄이기 :point_right: [@979a6d3](https://github.com/herokwon/blog/commit/979a6d31d86c032c63d58de36c328e8ac4b47032)
+
+<br />
+
+**_2023.12.27_**
+
+- Navigation 리펙토링 :point_right: [@058f616](https://github.com/herokwon/blog/commit/058f616409efda905af43e40dd94cb3bb6d89279)
+  - 내용 : Navigation & Sidebar & Article Preview 업데이트 및 스타일 설정
 
 <br />
 <br />
