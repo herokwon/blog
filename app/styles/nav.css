@@ -7,15 +7,24 @@
 }
 
 .article-preview {
-  @apply hidden;
+  @apply w-full h-200 hidden absolute top-full left-1/2 -translate-x-1/2 z-[99];
 
-  #main-header:has(.nav-item:hover) > div:nth-child(2) > &:last-child,
+  #main-header:has(.nav-item:hover) > :nth-child(2) > &:last-child,
   &:hover {
-    @apply flex;
+    @apply block;
   }
 
-  & > .preview-box {
-    @apply w-120 aspect-square mx-2 bg-light-tertiary;
+  & > .preview-container {
+    @apply w-full h-200 grid grid-cols-[repeat(auto-fit,_200px)] gap-x-4 justify-center pointer-events-none invisible absolute top-0 left-1/2 -translate-x-1/2 -z-50;
+
+    &.active {
+      @apply visible z-50;
+      pointer-events: all;
+    }
+
+    & > .preview-box {
+      @apply w-200 aspect-square rounded-lg bg-light-secondary dark:bg-dark-secondary overflow-hidden;
+    }
   }
 }
 
