@@ -4,6 +4,7 @@ import "./globals.css";
 import { ArticleResponse } from "./types/notion";
 import { fetchArticle } from "./lib/databases";
 import { getTheme, updateTheme } from "./lib/functions/theme";
+import { fetchPreviewArticles } from "./lib/functions/article";
 import Nav from "./components/Nav";
 import Sidebar from "./components/Sidebar";
 
@@ -21,12 +22,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     const response = await fetchArticle({ pageSize: 3 });
     const articleData = new ArticleResponse(response.items, response.nextCursor);
 
+    const previewArticles = await fetchPreviewArticles();
+
     return (
         <html lang="ko" className={savedTheme ?? "light"}>
             <head>
             </head>
             <body className={noto_sans_kr.variable}>
-                <Nav initTheme={savedTheme ?? "light"} />
+                <Nav initTheme={savedTheme ?? "light"} previewArticles={previewArticles} />
                 <Sidebar latestArticles={articleData.items} />
                 {children}
             </body>
