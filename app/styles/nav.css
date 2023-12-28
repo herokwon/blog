@@ -7,7 +7,7 @@
 }
 
 .article-preview {
-  @apply w-full h-200 hidden absolute top-full left-1/2 -translate-x-1/2 z-[99];
+  @apply w-full max-w-[calc((200px*3)+(16px*2))] h-200 hidden absolute top-full left-1/2 -translate-x-1/2 z-[99];
 
   #main-header:has(.nav-item:hover) > :nth-child(2) > &:last-child,
   &:hover {
@@ -24,6 +24,10 @@
 
     & > .preview-box {
       @apply w-200 aspect-square rounded-lg bg-light-secondary dark:bg-dark-secondary overflow-hidden;
+
+      & > :first-child {
+        @apply bg-light-primary dark:bg-dark-primary;
+      }
     }
   }
 }
