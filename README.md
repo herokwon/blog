@@ -166,6 +166,16 @@
   - 내용 : Navigation & Sidebar & Article Preview 업데이트 및 스타일 설정
 
 <br />
+
+**_2023.12.28_**
+
+- Thumbnail hook 리펙토링 :point_right: [@ddd9839](https://github.com/herokwon/blog/commit/ddd983959bde2875dd60ba57a5e0e7b6f49f7d09)
+  - Static Import 추가
+    - 참고 : [Optimizing: Images | Next.js](https://nextjs.org/docs/app/building-your-application/optimizing/images)
+  - Article Info 스타일 재구성
+  - Database Type - ArticleSubProperty 추가
+
+<br />
 <br />
 
 ## 기술: Skills
