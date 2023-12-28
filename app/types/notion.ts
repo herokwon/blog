@@ -51,6 +51,8 @@ export interface ArticleProperty {
     Status: string;
 };
 
+export type ArticleSubProperty = Pick<ArticleProperty, "Category" | "Title" | "Date" | "Thumbnail">;
+
 class NotionApiResponse {
     constructor(
         public nextCursor: string | null) { };

@@ -1,5 +1,5 @@
 import { ArticleCategoryKeywords, PreviewArticles } from "@/app/types/notion";
-import PreviewBox from "../PreviewBox";
+import PreviewBox from "./PreviewBox";
 
 export default function ArticlePreview({ previewArticles, categoryCursor }: { previewArticles: PreviewArticles; categoryCursor: ArticleCategoryKeywords | null }) {
     return (

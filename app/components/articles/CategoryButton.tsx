@@ -15,7 +15,7 @@ export default function CategoryButton({ category, ...props }: { category: Artic
     };
 
     return (
-        <Button innerType="text" {...props} className={`article-category ${props.className ?? ""}`} onClick={handleCategoryClick}>
+        <Button innerType="text" {...props} className={`article-info--category ${props.className ?? ""}`} onClick={handleCategoryClick}>
             {ArticleCategory[category]}
         </Button>
     );

@@ -3,6 +3,28 @@
   grid-template-columns: repeat(auto-fill, minmax(321px, 1fr));
 }
 
+.article-info {
+  &--category {
+    @apply text-[0.8rem] text-white bg-blue-500 font-semibold;
+  }
+
+  &--title {
+    @apply text-center line-clamp-1;
+  }
+
+  &--summary {
+    @apply min-h-[calc((0.8rem+0.4rem)*3)] text-[0.8rem] line-clamp-3 opacity-off;
+  }
+
+  &--date {
+    @apply text-[0.72rem];
+  }
+
+  &--thumbnail {
+    @apply rounded-lg opacity-bold overflow-hidden transition-all duration-200 relative;
+  }
+}
+
 .article-container {
   @apply w-full h-auto min-h-[calc((312px/4)*5)] rounded-lg overflow-hidden transition-all duration-200;
   @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] hover:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
@@ -10,22 +32,6 @@
 
   > div:first-child {
     @apply w-full aspect-[2/1] grid gap-y-2 auto-rows-auto dark:bg-dark-secondary;
-
-    > .article-info {
-      &:first-child {
-        & > :last-child {
-          @apply text-[0.72rem];
-        }
-      }
-
-      &:nth-child(2) {
-        @apply text-center;
-      }
-
-      &:last-child {
-        @apply min-h-[calc((0.8rem+0.4rem)*3)] text-[0.8rem];
-      }
-    }
   }
 
   > div:last-child {
@@ -36,10 +42,11 @@
 .article-sub-container {
   @apply w-full h-60 px-2 py-1 grid grid-cols-[60px_minmax(0,_1fr)] gap-x-1;
 
-  & > div:last-child > .article-info {
-    &:first-child {
-      @apply text-[1rem] line-clamp-1 relative z-[1];
-      @apply after:w-0 after:h-full dark:after:h-3 after:bg-yellow-400 after:content-[""] after:transition-[width] after:duration-200 after:absolute after:bottom-0 after:left-0 after:-z-[1];
+  & .article-info--title {
+    @apply relative z-[1];
+
+    &:after {
+      @apply w-0 h-full dark:h-3 bg-yellow-400 content-[""] transition-[width] duration-200 absolute bottom-0 left-0 -z-[1];
     }
   }
 
@@ -48,14 +55,8 @@
       @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)] dark:shadow-[4px_12px_30px_6px_rgba(245,245,245,0.36)];
     }
 
-    > div:last-child > .article-info {
-      &:first-child {
-        @apply after:w-full;
-      }
+    & .article-info--title {
+      @apply after:w-full;
     }
   }
-}
-
-.article-category {
-  @apply text-[0.8rem] text-white bg-blue-500 font-semibold;
 }
