@@ -3,15 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 
-import { ArticleProperty } from "../types/notion";
-import { getDate } from "../lib/utils/getDate";
-import useThumbnail from "../hooks/useThumbnail";
-import Spinner from "./Spinner";
+import { ArticleSubProperty } from "@/app/types/notion";
+import { getDate } from "@/app/lib/utils/getDate";
+import useThumbnail from "@/app/hooks/useThumbnail";
+import Spinner from "../Spinner";
 
-type PreviewBox = Pick<ArticleProperty, "Category" | "Title" | "Date" | "Thumbnail">;
-
-export default function PreviewBox({ Category, Title, Date, Thumbnail }: PreviewBox) {
-    const { imgUrl, imgLoading, handleImgLoad, handleImgError } = useThumbnail(Thumbnail.url, Title);
+export default function PreviewBox({ Category, Title, Date, Thumbnail }: ArticleSubProperty) {
+    const { imgSrc, imgLoading, handleImgLoad, handleImgError } = useThumbnail(Thumbnail.url, Title);
 
     return (
         <Link
@@ -22,8 +20,8 @@ export default function PreviewBox({ Category, Title, Date, Thumbnail }: Preview
                     <Spinner className="absolute top-0 left-0 z-10" /> :
                     null}
                 <Image
-                    src={imgUrl ?? Thumbnail.url ?? ""}
-                    className="object-cover object-center"
+                    src={imgSrc ?? Thumbnail.url ?? ""}
+                    className={`object-cover object-center ${imgLoading ? "opacity-off" : ""}`}
                     fill
                     sizes="200px"
                     onLoad={handleImgLoad}
@@ -33,7 +31,7 @@ export default function PreviewBox({ Category, Title, Date, Thumbnail }: Preview
             <div className="w-full aspect-[4/1] flex flex-col items-center text-center">
                 <h2 className=" py-0.5 text-[0.96rem] line-clamp-1">{Title}</h2>
                 {Date ?
-                    <p className="py-0.5 text-[0.72rem]">{getDate(Date)}</p> :
+                    <span className="py-0.5 text-[0.72rem]">{getDate(Date)}</span> :
                     null}
             </div>
         </Link>
