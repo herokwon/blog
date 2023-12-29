@@ -19,6 +19,7 @@ import Pdf from "./Pdf";
 import Embed from "./Embed";
 import Divider from "./Divider";
 import ToDo from "./ToDo";
+import Bookmark from "./Bookmark";
 
 interface BlockProps {
     block: BlockObjectResponse;
@@ -31,7 +32,7 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "audio":
             return null;
         case "bookmark":
-            return null;
+            return <Bookmark block={block} />;
         case "breadcrumb":
             return null;
         case "bulleted_list_item":
