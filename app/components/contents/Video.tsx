@@ -47,12 +47,14 @@ const useVideo = (block: VideoBlockObjectResponse) => {
     const handleVideoError = async () => {
         setVideoLoading(true);
 
-        if (!video.expiring) return;
-
-        const response = await fetchBlock(block.id);
-        const updatedVideoData = getVideo(response.block as VideoBlockObjectResponse);
-
-        setVideoUrl(updatedVideoData.url);
+        if (!video.expiring) {
+            setVideoUrl("");
+            setVideoUrl(video.url);
+        } else {
+            const response = await fetchBlock(block.id);
+            const { url } = getVideo(response.block as VideoBlockObjectResponse);
+            setVideoUrl(url);
+        }
     };
 
     const handleVideoLoad = () => {
