@@ -112,7 +112,19 @@
     @apply w-full h-auto min-h-[100px] rounded-lg shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] dark:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)] overflow-hidden relative;
   }
 
-  &--video {
+  &--embed {
     @apply w-full aspect-video rounded-lg overflow-hidden;
+  }
+
+  &--bookmark {
+    @apply w-full h-100 flex rounded-lg overflow-hidden;
+
+    & > :first-child {
+      @apply w-3/4 h-full px-2 py-1;
+    }
+
+    & > :last-child {
+      @apply w-1/4 h-full;
+    }
   }
 }
