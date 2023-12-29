@@ -1,5 +1,7 @@
 import { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
+import { getImage } from "@/app/lib/functions/notion";
+import getImageMetadata from "@/app/lib/utils/getImageMetadata";
 import Heading from "./Heading";
 import Paragraph from "./Paragraph";
 import Quote from "./Quote";
@@ -12,9 +14,11 @@ import List from "./List";
 import Toggle from "./Toggle";
 import Table from "./tables/Table";
 import Images from "./Image";
-import getImageMetadata from "@/app/lib/utils/getImageMetadata";
-import { getImage } from "@/app/lib/functions/notion";
 import Video from "./Video";
+import Pdf from "./Pdf";
+import Embed from "./Embed";
+import Divider from "./Divider";
+import ToDo from "./ToDo";
 
 interface BlockProps {
     block: BlockObjectResponse;
@@ -38,51 +42,40 @@ export default async function Block({ block, blocks, index }: BlockProps) {
                     index={index} />
             );
         case "callout":
-            return (
-                <Callout block={block} />
-            );
+            return <Callout block={block} />
         case "child_database":
             return null;
         case "child_page":
             return null;
         case "code":
-            return (
-                <Code block={block} />
-            );
+            return <Code block={block} />
         case "column":
-            return (
-                <Column block={block} />
-            );
+            return <Column block={block} />
         case "column_list":
-            return (
-                <ColumnList block={block} />
-            );
+            return <ColumnList block={block} />
         case "divider":
-            return null;
+            return <Divider />;
         case "embed":
-            return null;
+            return <Embed block={block} />;
         case "equation":
-            return (
-                <Equation block={block} />
-            );
+            return <Equation block={block} />
         case "file":
             return null;
         case "heading_1":
-            return (
-                <Heading block={block} />
-            );
+            return <Heading block={block} />
         case "heading_2":
-            return (
-                <Heading block={block} />
-            );
+            return <Heading block={block} />
         case "heading_3":
-            return (
-                <Heading block={block} />
-            );
+            return <Heading block={block} />
         case "image":
             const imgData = getImage(block);
             const imgMetadata = await getImageMetadata(imgData.url);
-            return <Images block={block} imgData={imgData} imgMetadata={imgMetadata} />;
+            return (
+                <Images
+                    block={block}
+                    imgData={imgData}
+                    imgMetadata={imgMetadata} />
+            );
         case "link_preview":
             return null;
         case "link_to_page":
@@ -95,15 +88,11 @@ export default async function Block({ block, blocks, index }: BlockProps) {
                     index={index} />
             );
         case "paragraph":
-            return (
-                <Paragraph block={block} />
-            );
+            return <Paragraph block={block} />
         case "pdf":
-            return null;
+            return <Pdf block={block} />;
         case "quote":
-            return (
-                <Quote block={block} />
-            );
+            return <Quote block={block} />
         case "synced_block":
             return null;
         case "table":
@@ -115,7 +104,7 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "template":
             return null;
         case "to_do":
-            return null;
+            return <ToDo block={block} />
         case "toggle":
             return <Toggle block={block} />;
         case "unsupported":
