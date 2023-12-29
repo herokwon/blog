@@ -23,7 +23,7 @@ export default async function ContentLayout({ params, children }: ContentLayoutP
 
     return (
         <section className="main-wrapper">
-            <PageHeader imageUrl={properties.Thumbnail.url ?? ""} title={properties.Title ?? title}>
+            <PageHeader imageSrc={properties.Thumbnail.url ?? ""} title={properties.Title ?? title}>
                 <div className="w-full my-4 flex flex-col justify-center items-center absolute bottom-0 left-0 z-[1]">
                     <CategoryButton category={params.category} />
                     <h1 className="py-4 text-center text-dark">{title}</h1>
