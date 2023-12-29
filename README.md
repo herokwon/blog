@@ -176,6 +176,17 @@
   - Database Type - ArticleSubProperty 추가
 
 <br />
+
+**_2023.12.29_**
+
+- Content Blocks 추가 :point_right: [@0925493](https://github.com/herokwon/blog/commit/0925493b956b206bd5dfd0fadd4ae75ebdf9d212)
+  - `Bookmark`, `Divider`, `Embed`, `Pdf`, `ToDo`
+- Bookmark Content Details 업데이트 :point_right: [@672aa88](https://github.com/herokwon/blog/commit/672aa8894fe6bf5431c376622964d2e15db8a1e2)
+  - 페이지 제목, 설명, 아이콘, 대표 이미지 등 상세 데이터 적용
+  - 페이지 metadata를 위한 라이브러리 추가
+    - 참고 : [url-metadata](https://github.com/laurengarcia/url-metadata)
+
+<br />
 <br />
 
 ## 기술: Skills
