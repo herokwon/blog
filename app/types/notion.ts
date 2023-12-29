@@ -118,13 +118,21 @@ export type RichTextColors = RichTextItemResponse["annotations"]["color"];
 export type ListItemBlockObjectResponse = NumberedListItemBlockObjectResponse | BulletedListItemBlockObjectResponse;
 export type ListItemBlock<T> = T extends number ? NumberedListItemBlockObjectResponse : BulletedListItemBlockObjectResponse;
 
-export type ImageBlockData = {
+export interface ImageBlockData {
     url: string;
     expiring: boolean;
 };
 
-export type ImageMetadata = {
+export interface ImageMetadata {
     base64: string;
     width: number | undefined;
     height: number | undefined;
+};
+
+export interface BookmarkMetadata {
+    pageUrl: string;
+    title: string;
+    description: string;
+    faviconUrl: string;
+    imageUrl: string;
 };

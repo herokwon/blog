@@ -109,7 +109,8 @@
   }
 
   &--image {
-    @apply w-full h-auto min-h-[100px] rounded-lg shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] dark:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)] overflow-hidden relative;
+    @apply w-full h-auto min-h-[100px] rounded-lg overflow-hidden relative;
+    @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] dark:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
   }
 
   &--embed {
@@ -117,14 +118,6 @@
   }
 
   &--bookmark {
-    @apply w-full h-100 flex rounded-lg overflow-hidden;
-
-    & > :first-child {
-      @apply w-3/4 h-full px-2 py-1;
-    }
-
-    & > :last-child {
-      @apply w-1/4 h-full;
-    }
+    @apply w-full h-120 my-block flex rounded-lg border border-light-tertiary dark:border-dark-tertiary bg-light-secondary dark:bg-dark-secondary overflow-hidden;
   }
 }
