@@ -13,8 +13,7 @@ export default async function ArticleContent({ id }: { id: string }) {
                     key={index}
                     block={block}
                     blocks={blockData.items}
-                    index={index} />
-            )}
+                    index={index} />)}
         </article>
     );
 }

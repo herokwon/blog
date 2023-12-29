@@ -58,7 +58,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                         summary}
                 </p>
             </div>
-            <div className="article-info--thumbnail dark:opacity-off dark:group-hover:opacity-bold">
+            <div className="article-info--thumbnail rounded-none dark:opacity-off dark:group-hover:opacity-bold">
                 {imgLoading ?
                     <Spinner className="absolute top-0 left-0 z-10" /> :
                     null}

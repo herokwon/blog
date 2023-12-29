@@ -45,6 +45,14 @@ const config: Config = {
                 'dark-secondary': 'var(--dark-secondary-background)',
                 'dark-tertiary': 'var(--dark-tertiary-background)'
             },
+            borderColor: {
+                'light-primary': 'var(--light-primary-background)',
+                'light-secondary': 'var(--light-secondary-background)',
+                'light-tertiary': 'var(--light-tertiary-background)',
+                'dark-primary': 'var(--dark-primary-background)',
+                'dark-secondary': 'var(--dark-secondary-background)',
+                'dark-tertiary': 'var(--dark-tertiary-background)'
+            },
         },
     },
     plugins: [],
