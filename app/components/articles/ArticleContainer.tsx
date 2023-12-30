@@ -52,11 +52,11 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                         null}
                 </div>
                 <h2 className="article-info--title text-xl">{Title}</h2>
-                <p className="article-info--summary relative">
+                <div className="article-info--summary relative">
                     {loading ?
                         <Spinner className="absolute top-0 left-0 z-10" /> :
                         summary}
-                </p>
+                </div>
             </div>
             <div className="article-info--thumbnail rounded-none dark:opacity-off dark:group-hover:opacity-bold">
                 {imgLoading ?
