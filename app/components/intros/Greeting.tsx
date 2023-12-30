@@ -3,9 +3,9 @@
 import { MouseEvent, useEffect, useState } from "react";
 import Image from "next/image";
 
-import { GreetingItem, greetingItem } from "../lib/data/greeting";
+import { GreetingItem, greetingItem } from "../../lib/data/greeting";
 import Character from "@/public/images/character.png";
-import Button from "./Button";
+import Button from "../Button";
 
 export default function Greeting() {
     const [currentContent, setCurrentContent] = useState<GreetingItem>({
