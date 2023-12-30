@@ -4,10 +4,10 @@
 }
 
 .intro-container {
-  @apply w-full max-w-screen-lg min-h-screen py-12 mx-auto;
+  @apply w-full max-w-screen-lg py-12 mx-auto;
 
   &.greeting {
-    @apply flex max-[864px]:flex-col max-[864px]:items-center flex-nowrap min-[864px]:justify-evenly;
+    @apply min-h-screen flex max-[864px]:flex-col max-[864px]:items-center flex-nowrap min-[864px]:justify-evenly;
 
     & > :first-child {
       & ellipse {
@@ -28,6 +28,22 @@
       &.selected {
         @apply opacity-bold;
       }
+
+      @media (hover: none) and (pointer: coarse) {
+        & {
+          @apply opacity-bold;
+        }
+      }
+    }
+  }
+
+  &.stack-viewer {
+    @apply w-full;
+
+    & .stack-container {
+      @apply w-120 flex flex-col justify-center items-center opacity-off hover:opacity-bold;
+      @apply hover:bg-[radial-gradient(closest-side,_var(--light-secondary-background)_25%,_var(--light-primary-background))];
+      @apply dark:hover:bg-[radial-gradient(closest-side,_var(--dark-tertiary-background)_25%,_var(--dark-primary-background))];
 
       @media (hover: none) and (pointer: coarse) {
         & {

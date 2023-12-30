@@ -1,9 +1,10 @@
-import Greeting from "./components/Greeting";
-import ArticleContainer from "./components/articles/ArticleContainer";
-import ArticleList from "./components/articles/ArticleList";
 import { fetchArticle } from "./lib/databases";
-import { extractArticleProperties } from "./lib/functions/notion";
 import { ArticleResponse } from "./types/notion";
+import { extractArticleProperties } from "./lib/functions/notion";
+import Greeting from "./components/intros/Greeting";
+import StackViewer from "./components/intros/StackViewer";
+import ArticleList from "./components/articles/ArticleList";
+import ArticleContainer from "./components/articles/ArticleContainer";
 
 export default async function Home() {
     const response = await fetchArticle({});
@@ -13,6 +14,9 @@ export default async function Home() {
         <main className="main-wrapper">
             <section className="section-wrapper">
                 <Greeting />
+            </section>
+            <section className="section-wrapper">
+                <StackViewer />
             </section>
             <section className="section-wrapper">
                 <section className="section-container">
