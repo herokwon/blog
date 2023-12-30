@@ -1,0 +1,11 @@
+Model Information:
+* title:	Flat Design WEB
+* source:	https://sketchfab.com/3d-models/flat-design-web-b12df26ec16749d1abb589cceac9d1d1
+* author:	peewee.id (https://sketchfab.com/p2eweeworld)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Flat Design WEB" (https://sketchfab.com/3d-models/flat-design-web-b12df26ec16749d1abb589cceac9d1d1) by peewee.id (https://sketchfab.com/p2eweeworld) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,5 +1,6 @@
 @import "./styles/animation.css";
 @import "./styles/nav.css";
+@import "./styles/intro.css";
 @import "./styles/sidebar.css";
 @import "./styles/articles.css";
 @import "./styles/article.css";
@@ -73,13 +74,19 @@
   h6 {
     @apply text-[1rem];
   }
+
+  main {
+    @apply transition-opacity duration-200;
+  }
+
+  #main-header:has(.nav-item:hover) ~ main,
+  #main-header:has(.article-preview:hover) ~ main {
+    @apply opacity-off;
+  }
 }
 
 @layer components {
-  #wrapper {
-    @apply w-full min-h-screen;
-  }
-
+  #wrapper,
   .main-wrapper {
     @apply w-full min-h-screen;
   }

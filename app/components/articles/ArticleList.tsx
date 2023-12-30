@@ -11,7 +11,7 @@ import ArticleContainer from "./ArticleContainer";
 import Button from "../Button";
 
 interface ArticleList {
-    category: ArticleCategoryKeywords;
+    category?: ArticleCategoryKeywords;
     nextCursor: string | null;
     children: React.ReactNode;
 };

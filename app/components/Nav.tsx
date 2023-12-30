@@ -44,7 +44,8 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
     }, []);
 
     return (
-        <header id="main-header" className={`w-full h-48 px-4 flex items-center ${isScrolled ? "bg-light-primary dark:bg-dark-primary" : "text-dark"} transition-all duration-200 fixed top-0 left-0 z-[99]`}>
+        <header id="main-header"
+            className={`w-full h-48 px-4 flex items-center ${isScrolled ? "bg-light-primary dark:bg-dark-primary" : pathname === "/" ? "text-light dark:text-dark" : "text-dark"} transition-all duration-200 fixed top-0 left-0 z-[99]`}>
             <div className="h-full flex justify-start items-center flex-1">
                 <Link href={navItem[0].path} className="mx-2">
                     <h1 className="text-blue-500">All of IT</h1>
@@ -60,9 +61,6 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
                         onMouseEnter={handleNavItemMouseEnter}>
                         {item.title}
                     </Link>)}
-                <ArticlePreview
-                    previewArticles={previewArticles}
-                    categoryCursor={categoryCursor} />
             </nav>
             <div className="h-full flex justify-end items-center flex-1">
                 <Button innerType="icon" className={`${isScrolled ? "" : "hover:bg-neutral-500"}`}>
@@ -73,9 +71,12 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
                     <Moon className="scale-0 dark:scale-100 transition-transform duration-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-[1] dark:z-[1]" />
                 </Button>
                 <SidebarBtn
-                    className={`${isScrolled ? "scrolled" : ""} ${sidebarActive ? "active" : ""}`}
+                    className={`${isScrolled ? "scrolled" : pathname === "/" ? "even:*:first:*:bg-[var(--light-foreground)] odd:*:first:*:bg-[var(--light-foreground)] dark:even:*:first:*:bg-[var(--dark-foreground)] dark:odd:*:first:*:bg-[var(--dark-foreground)]" : ""} ${sidebarActive ? "active" : ""}`}
                     onClick={() => setSidebarActive(true)} />
             </div>
+            <ArticlePreview
+                previewArticles={previewArticles}
+                categoryCursor={categoryCursor} />
         </header>
     );
 }
