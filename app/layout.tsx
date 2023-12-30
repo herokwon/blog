@@ -1,4 +1,4 @@
-import { Noto_Sans_KR } from "next/font/google";
+import { Noto_Sans_KR, Nunito } from "next/font/google";
 
 import "./globals.css";
 import { ArticleResponse } from "./types/notion";
@@ -11,7 +11,15 @@ import Sidebar from "./components/Sidebar";
 const noto_sans_kr = Noto_Sans_KR({
     weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
     subsets: ['latin'],
-    variable: '--font-noto-sans-kr'
+    variable: '--font-noto-sans-kr',
+    adjustFontFallback: false,
+});
+
+const nunito = Nunito({
+    weight: ['200', '300', '400', '500', '600', '700', '800', '900', '1000'],
+    subsets: ['latin'],
+    variable: '--font-nunito',
+    adjustFontFallback: false,
 });
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,7 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <html lang="ko" className={savedTheme ?? "light"}>
             <head>
             </head>
-            <body className={noto_sans_kr.variable}>
+            <body className={`${noto_sans_kr.variable} ${nunito.variable}`}>
                 <Nav initTheme={savedTheme ?? "light"} previewArticles={previewArticles} />
                 <Sidebar latestArticles={articleData.items} />
                 {children}
