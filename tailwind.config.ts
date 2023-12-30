@@ -20,6 +20,7 @@ const config: Config = {
             },
             fontFamily: {
                 'sans-kr': 'var(--font-noto-sans-kr)',
+                'nunito': 'var(--font-nunito)',
             },
             width: width0_2000,
             height: height0_2000,
