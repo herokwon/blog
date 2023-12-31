@@ -102,6 +102,40 @@
   .section-container {
     @apply w-full max-w-screen-lg mx-auto;
   }
+
+  .nav-item {
+    @apply h-full px-2 py-1 flex justify-center items-center font-bold opacity-off hover:opacity-bold transition-opacity duration-200;
+
+    &.selected {
+      @apply opacity-bold;
+    }
+  }
+
+  .sidebar-btn {
+    & > div {
+      @apply w-21 h-18 flex flex-col justify-between items-center;
+    }
+
+    span {
+      @apply w-full h-4 rounded-full transition-all duration-200;
+    }
+
+    &.active {
+      span {
+        &:first-child {
+          @apply origin-[0%_0%] rotate-[46.5deg];
+        }
+
+        &:nth-child(2) {
+          @apply scale-0;
+        }
+
+        &:last-child {
+          @apply origin-[0%_100%] -rotate-[46.5deg];
+        }
+      }
+    }
+  }
 }
 
 @layer utilities {

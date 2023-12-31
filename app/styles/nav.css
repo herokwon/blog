@@ -1,16 +1,8 @@
 #main-header {
-  @apply w-full h-48 flex items-center transition-all duration-200 fixed top-0 left-0 z-[99];
+  @apply w-full h-48 px-4 flex items-center transition-all duration-200 fixed top-0 left-0 z-[99];
 
   & > .nav-container:nth-child(2) {
     @apply h-full hidden md:flex justify-center items-center;
-
-    & > .nav-item {
-      @apply h-full px-2 py-1 flex justify-center items-center font-bold opacity-off hover:opacity-bold transition-opacity duration-200;
-
-      &.selected {
-        @apply opacity-bold;
-      }
-    }
   }
 
   & > .button-container:nth-child(3) {
@@ -48,14 +40,6 @@
   }
 
   .sidebar-btn {
-    & > div {
-      @apply w-21 h-18 flex justify-between items-center;
-    }
-
-    & span {
-      @apply w-full h-4 rounded-full bg-[var(--dark-foreground)] dark:bg-[var(--light-foreground)] transition-all duration-200;
-    }
-
     &.active {
       & span:first-child {
         @apply origin-[0%_0%] rotate-[46.5deg];
@@ -80,10 +64,8 @@
   }
 
   &:not(.scrolled)[data-path="/"] {
-    .sidebar-btn {
-      & span {
-        @apply bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)];
-      }
+    .sidebar-btn span {
+      @apply bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)];
     }
   }
 }
