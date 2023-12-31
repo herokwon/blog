@@ -187,6 +187,21 @@
     - 참고 : [url-metadata](https://github.com/laurengarcia/url-metadata)
 
 <br />
+
+**_2023.12.30_**
+
+- Home - Intro 추가 :point_right: [@1d368c8](https://github.com/herokwon/blog/commit/1d368c8daf4c2eb28a1762693d92c142b6518803), [@67be290](https://github.com/herokwon/blog/commit/67be2900d632a30c4b895afb73f642d3863a5fd8)
+- SVG Loader 오류 수정 (webpack 설정 업데이트) :point_right: [@5e85eae](https://github.com/herokwon/blog/commit/5e85eae09fd8feed93577271e19ccafdc32e86b5)
+
+<br />
+
+**_2023.12.31_**
+
+- 리펙토링 : global class style :point_right: [@130b3c5](https://github.com/herokwon/blog/commit/130b3c5676d5463cd4fa9fa399920139bdc3c61b)
+- Page Transition 추가 (with. **framer-motion**) :point_right: [@30c3d1d](https://github.com/herokwon/blog/commit/30c3d1db3e0b093297429dea9c987b211543ff35)
+- Footer 추가 :point_right: [@351acd2](https://github.com/herokwon/blog/commit/351acd238d3238cc6318279889d4f776f5f9ba63)
+
+<br />
 <br />
 
 ## 기술: Skills
