@@ -1,4 +1,7 @@
 import { Noto_Sans_KR, Nunito } from "next/font/google";
+import { config } from '@fortawesome/fontawesome-svg-core';
+import '@fortawesome/fontawesome-svg-core/styles.css';
+config.autoAddCss = false;
 
 import "./globals.css";
 import { ArticleResponse } from "./types/notion";
@@ -7,6 +10,7 @@ import { getTheme, updateTheme } from "./lib/functions/theme";
 import { fetchPreviewArticles } from "./lib/functions/article";
 import Nav from "./components/Nav";
 import Sidebar from "./components/Sidebar";
+import Footer from "./components/Footer";
 
 const noto_sans_kr = Noto_Sans_KR({
     weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
@@ -40,6 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <Nav initTheme={savedTheme ?? "light"} previewArticles={previewArticles} />
                 <Sidebar latestArticles={articleData.items} />
                 {children}
+                <Footer />
             </body>
         </html>
     );
