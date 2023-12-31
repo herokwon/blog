@@ -12,6 +12,7 @@
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4",
+    "framer-motion": "^10.16.16",
     "katex": "^0.16.9",
     "lucide-react": "^0.294.0",
     "next": "latest",

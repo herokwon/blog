@@ -1,62 +1,89 @@
-.nav-item {
-  @apply h-full px-2 py-1 flex justify-center items-center font-bold opacity-off hover:opacity-bold transition-opacity duration-200;
+#main-header {
+  @apply w-full h-48 flex items-center transition-all duration-200 fixed top-0 left-0 z-[99];
 
-  &.selected {
-    @apply opacity-bold;
-  }
-}
+  & > .nav-container:nth-child(2) {
+    @apply h-full hidden md:flex justify-center items-center;
 
-.article-preview {
-  @apply w-full max-w-[calc((200px*3)+(16px*2))] h-200 hidden absolute top-full left-1/2 -translate-x-1/2 z-[99];
+    & > .nav-item {
+      @apply h-full px-2 py-1 flex justify-center items-center font-bold opacity-off hover:opacity-bold transition-opacity duration-200;
 
-  #main-header:has(.nav-item:hover) > &:last-child,
-  &:hover {
-    @apply block;
-  }
-
-  & > .preview-container {
-    @apply w-full h-200 grid grid-cols-[repeat(auto-fit,_200px)] gap-x-4 justify-center pointer-events-none invisible absolute top-0 left-1/2 -translate-x-1/2 -z-50;
-
-    &.active {
-      @apply visible z-50;
-      pointer-events: all;
-    }
-
-    & > .preview-box {
-      @apply w-200 aspect-square rounded-lg bg-light-primary dark:bg-dark-secondary overflow-hidden hover:translate-y-[10%] transition-transform duration-200;
-      @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] hover:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
-
-      & > :first-child {
-        @apply bg-light-primary dark:bg-dark-primary;
+      &.selected {
+        @apply opacity-bold;
       }
     }
   }
-}
 
-.sidebar-btn {
-  & > div {
-    @apply w-21 h-18 flex flex-col justify-between items-center;
+  & > .button-container:nth-child(3) {
+    @apply h-full flex justify-end items-center;
   }
 
-  & span {
-    @apply w-full h-4 rounded-full bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)] transition-all duration-200;
-  }
+  & > .article-preview:last-child {
+    @apply w-full max-w-[calc((200px*3)+(16px*2))] h-200 hidden absolute top-full left-1/2 -translate-x-1/2 z-[88];
 
-  &:not(.scrolled) span {
-    @apply bg-light-primary;
-  }
-
-  &.active span {
-    &:first-child {
-      @apply origin-[0%_0%] rotate-[46.5deg];
+    &:hover {
+      @apply block;
     }
 
-    &:nth-child(2) {
-      @apply scale-0;
+    & > .preview-container {
+      @apply w-full h-full grid grid-cols-[repeat(auto-fit,_200px)] gap-x-4 justify-center pointer-events-none invisible absolute top-0 left-1/2 -translate-x-1/2 -z-50;
+
+      &.active {
+        @apply visible z-50;
+        pointer-events: all;
+      }
+
+      & > .preview-box {
+        @apply w-200 aspect-square rounded-lg bg-light-primary dark:bg-dark-secondary overflow-hidden hover:translate-y-[10%] transition-transform duration-200;
+        @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] hover:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
+
+        & > :first-child {
+          @apply bg-light-primary dark:bg-dark-primary;
+        }
+      }
+    }
+  }
+
+  &:has(.nav-item:hover) > .article-preview:last-child {
+    @apply block;
+  }
+
+  .sidebar-btn {
+    & > div {
+      @apply w-21 h-18 flex justify-between items-center;
     }
 
-    &:last-child {
-      @apply origin-[0%_100%] -rotate-[46.5deg];
+    & span {
+      @apply w-full h-4 rounded-full bg-[var(--dark-foreground)] dark:bg-[var(--light-foreground)] transition-all duration-200;
+    }
+
+    &.active {
+      & span:first-child {
+        @apply origin-[0%_0%] rotate-[46.5deg];
+      }
+
+      & span:nth-child(2) {
+        @apply scale-0;
+      }
+
+      & span:last-child {
+        @apply origin-[0%_100%] -rotate-[46.5deg];
+      }
+    }
+  }
+
+  &.scrolled {
+    @apply text-light bg-light-primary dark:text-dark dark:bg-dark-primary;
+
+    .sidebar-btn span {
+      @apply bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)];
+    }
+  }
+
+  &:not(.scrolled)[data-path="/"] {
+    .sidebar-btn {
+      & span {
+        @apply bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)];
+      }
     }
   }
 }
