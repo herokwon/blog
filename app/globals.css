@@ -2,6 +2,7 @@
 @import "./styles/nav.css";
 @import "./styles/intro.css";
 @import "./styles/sidebar.css";
+@import "./styles/footer.css";
 @import "./styles/articles.css";
 @import "./styles/article.css";
 
@@ -74,15 +75,6 @@
   h6 {
     @apply text-[1rem];
   }
-
-  main {
-    @apply transition-opacity duration-200;
-  }
-
-  #main-header:has(.nav-item:hover) ~ main,
-  #main-header:has(.article-preview:hover) ~ main {
-    @apply opacity-off;
-  }
 }
 
 @layer components {
@@ -91,16 +83,25 @@
     @apply w-full min-h-screen;
   }
 
-  body:has(.sidebar-btn.active) .main-wrapper {
-    @apply pointer-events-none;
+  .main-wrapper {
+    @apply transition-opacity duration-200;
+
+    #main-header:has(.nav-item:hover) ~ #wrapper &,
+    #main-header:has(.article-preview:hover) ~ #wrapper & {
+      @apply opacity-off;
+    }
+
+    body:has(.sidebar-btn.active) & {
+      @apply pointer-events-none;
+    }
   }
 
   .section-wrapper {
-    @apply w-full px-4 py-4 my-4;
+    @apply w-full px-4 py-4;
   }
 
-  .section-container {
-    @apply w-full max-w-screen-lg mx-auto;
+  .section-inner {
+    @apply w-full max-w-screen-lg py-8 mx-auto;
   }
 
   .nav-item {
@@ -117,7 +118,7 @@
     }
 
     span {
-      @apply w-full h-4 rounded-full transition-all duration-200;
+      @apply w-full h-4 rounded-full bg-[var(--light-foreground)] dark:bg-[var(--dark-foreground)] transition-all duration-200;
     }
 
     &.active {
