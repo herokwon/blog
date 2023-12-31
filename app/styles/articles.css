@@ -1,6 +1,5 @@
 .article-list {
-  @apply w-full py-4 grid gap-x-4 gap-y-8 auto-rows-auto;
-  grid-template-columns: repeat(auto-fill, minmax(321px, 1fr));
+  @apply w-full min-h-screen py-4 grid grid-cols-[repeat(auto-fill,_minmax(321px,_1fr))] auto-rows-max gap-x-4 gap-y-8;
 }
 
 .article-info {
@@ -26,9 +25,8 @@
 }
 
 .article-container {
-  @apply w-full h-auto min-h-[calc((312px/4)*5)] rounded-lg overflow-hidden transition-all duration-200;
+  @apply w-full h-auto min-h-[calc((312px/4)*5)] rounded-lg overflow-hidden transition-all duration-200 hover:-translate-y-2;
   @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] hover:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
-  @apply hover:-translate-y-2;
 
   > div:first-child {
     @apply w-full aspect-[2/1] grid gap-y-2 auto-rows-auto dark:bg-dark-secondary;

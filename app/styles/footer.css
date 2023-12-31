@@ -1,0 +1,15 @@
+.social-item {
+  @apply w-fit h-max flex justify-center items-center hover:text-blue-500;
+
+  &--icon {
+    @apply w-[1.5rem] h-[1.5rem] mr-1.5;
+  }
+
+  &--content {
+    @apply ml-1.5;
+
+    .social-item:hover > & {
+      @apply underline underline-offset-4;
+    }
+  }
+}

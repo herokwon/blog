@@ -26,18 +26,21 @@ const variants: Variants = {
         opacity: 0,
         transform: 'translateY(50px)',
         transitionProperty: 'transform',
-        transitionDuration: '500ms',
+        transitionDuration: '300ms',
+        transitionTimingFunction: 'ease',
     },
     enter: {
         opacity: 1,
-        transform: 'translateY(0))',
+        transform: 'translateY(0)',
         transitionProperty: 'transform',
-        transitionDuration: '500ms',
+        transitionDuration: '300ms',
+        transitionTimingFunction: 'ease',
     },
     exit: {
         opacity: 0,
         transform: 'translateY(50px)',
         transitionProperty: 'transform',
-        transitionDuration: '500ms',
+        transitionDuration: '300ms',
+        transitionTimingFunction: 'ease',
     }
 };
