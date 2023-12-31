@@ -1,12 +1,10 @@
 .intro-focus-background {
-  @apply bg-[radial-gradient(closest-side,_var(--light-tertiary-background)_50%,_var(--light-primary-background))];
-  @apply dark:bg-[radial-gradient(closest-side,_var(--dark-secondary-background)_25%,_var(--dark-primary-background))];
+  @apply bg-[radial-gradient(closest-side,_var(--light-tertiary-background)_50%,_transparent)];
+  @apply dark:bg-[radial-gradient(closest-side,_var(--dark-tertiary-background)_25%,_transparent)];
 }
 
 .intro-container {
-  @apply w-full max-w-screen-lg py-12 mx-auto;
-
-  &.greeting {
+  &--greeting {
     @apply min-h-screen flex max-[864px]:flex-col max-[864px]:items-center flex-nowrap min-[864px]:justify-evenly;
 
     & > :first-child {
@@ -21,7 +19,7 @@
       }
     }
 
-    & > :last-child > .greeting-item {
+    .greeting-item {
       @apply w-full py-2 my-4 font-semibold font-nunito opacity-off hover:opacity-bold transition-all duration-200;
       @apply bg-gradient-to-r from-blue-400 to-[var(--light-primary-background)] dark:from-blue-900 dark:to-[var(--dark-primary-background)];
 
@@ -37,13 +35,13 @@
     }
   }
 
-  &.stack-viewer {
+  &--stack-viewer {
     @apply w-full;
 
     & .stack-container {
       @apply w-120 flex flex-col justify-center items-center opacity-off hover:opacity-bold;
-      @apply hover:bg-[radial-gradient(closest-side,_var(--light-secondary-background)_25%,_var(--light-primary-background))];
-      @apply dark:hover:bg-[radial-gradient(closest-side,_var(--dark-tertiary-background)_25%,_var(--dark-primary-background))];
+      @apply hover:bg-[radial-gradient(closest-side,_var(--light-secondary-background)_25%,_transparent)];
+      @apply dark:hover:bg-[radial-gradient(closest-side,_var(--dark-tertiary-background)_25%,_transparent)];
 
       @media (hover: none) and (pointer: coarse) {
         & {

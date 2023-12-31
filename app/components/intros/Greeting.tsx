@@ -3,7 +3,7 @@
 import { MouseEvent, useEffect, useState } from "react";
 import Image from "next/image";
 
-import { GreetingItem, greetingItem } from "../../lib/data/greeting";
+import { GreetingItem, greetingItem } from "@/app/lib/data/greeting";
 import Character from "@/public/images/character.png";
 import Button from "../Button";
 
@@ -34,7 +34,7 @@ export default function Greeting() {
     }, [currentContent]);
 
     return (
-        <section className="intro-container greeting relative">
+        <section className="intro-container--greeting relative">
             <div className="w-full max-w-[280px] min-[864px]:max-w-[320px] h-max aspect-[5/4] min-[864px]:mx-4 max-[864px]:my-4 flex justify-center items-center transition-all duration-200 relative z-10">
                 <svg className="w-full h-full absolute top-0 left-0 z-0">
                     <ellipse cx="50%" cy="50%" rx="50%" ry="50%"
