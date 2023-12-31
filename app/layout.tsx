@@ -29,8 +29,6 @@ const nunito = Nunito({
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
     const savedTheme = await getTheme();
 
-    if (!savedTheme) updateTheme("light");
-
     const response = await fetchArticle({ pageSize: 3 });
     const articleData = new ArticleResponse(response.items, response.nextCursor);
 

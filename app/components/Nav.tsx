@@ -13,9 +13,9 @@ import Button from "./Button";
 import SidebarBtn from "./SidebarBtn";
 import ArticlePreview from "./articles/ArticlePreview";
 
-export default function Nav({ initTheme, previewArticles }: { initTheme: BlogTheme; previewArticles: PreviewArticles }) {
+export default function Nav({ initTheme, previewArticles }: { initTheme: BlogTheme | undefined; previewArticles: PreviewArticles }) {
     const pathname = usePathname();
-    const [theme, setTheme] = useState<BlogTheme>(initTheme);
+    const [theme, setTheme] = useState<BlogTheme>(initTheme ?? "light");
     const [categoryCursor, setCategoryCursor] = useState<ArticleCategoryKeywords | null>(null);
     const [isScrolled, setIsScrolled] = useState<boolean>(false);
     const { sidebarActive, setSidebarActive } = useSidebar();
@@ -33,6 +33,11 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
         document.documentElement.className = theme;
         updateTheme(theme);
     }, [theme]);
+
+    useEffect(() => {
+        initTheme ? null : updateTheme("light");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const handleScroll = () => {
