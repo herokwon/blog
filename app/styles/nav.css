@@ -1,5 +1,5 @@
 #main-header {
-  @apply w-full h-48 px-4 flex items-center transition-all duration-200 fixed top-0 left-0 z-[99];
+  @apply w-full h-48 px-4 flex items-center text-dark transition-all duration-200 fixed top-0 left-0 z-[99];
 
   & > .nav-container:nth-child(2) {
     @apply h-full hidden md:flex justify-center items-center;

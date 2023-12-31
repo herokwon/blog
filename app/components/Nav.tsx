@@ -48,7 +48,7 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
             className={`${isScrolled ? "scrolled" : ""}`}>
             <div className="h-full flex justify-start items-center flex-1">
                 <Link href={navItem[0].path} className="mx-2">
-                    <h1 className="text-blue-500 dark:text-blue-600">All of IT</h1>
+                    <h1 className="text-blue-500">All of IT</h1>
                 </Link>
             </div>
             <nav className="nav-container flex-[2]">
