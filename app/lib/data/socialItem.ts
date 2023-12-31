@@ -6,8 +6,10 @@ interface SocialItem {
     content: string;
 };
 
+const author = process.env.NEXT_PUBLIC_AUTHOR!;
+
 export const socialItem: SocialItem[] = [
-    { path: "github.com/herokwon", icon: faGithub, content: "@herokwon" },
-    { path: "instagram.com/herokwon", icon: faInstagram, content: "@herokwon" },
-    { path: "linkedin.com/in/herokwon", icon: faLinkedin, content: "@herokwon" },
+    { path: `github.com/${author}`, icon: faGithub, content: `@${author}` },
+    { path: `instagram.com/${author}`, icon: faInstagram, content: `@${author}` },
+    { path: `linkedin.com/in/${author}`, icon: faLinkedin, content: `@${author}` },
 ];
