@@ -1,16 +1,20 @@
 #sidebar {
   @apply max-md:bg-black/80 bg-[linear-gradient(270deg,_rgb(18_18_18_/_0.8),_transparent)];
-}
 
-#sidebar:has(.sidebar-btn.active),
-#sidebar:has(.sidebar-btn.active) > aside {
-  pointer-events: all;
-}
+  .sidebar-btn {
+    & span {
+      @apply bg-[var(--dark-foreground)];
+    }
+  }
 
-#sidebar .sidebar-btn > span {
-  @apply bg-[var(--dark-foreground)];
-}
+  &:has(.sidebar.active) {
+    &,
+    & > aside {
+      pointer-events: all;
+    }
+  }
 
-.sidebar-container {
-  @apply w-full px-4 py-2 mb-4 rounded-lg bg-light-primary dark:bg-dark-tertiary;
+  .sidebar-container {
+    @apply w-full px-4 py-2 mb-4 rounded-lg bg-light-primary dark:bg-dark-tertiary;
+  }
 }
