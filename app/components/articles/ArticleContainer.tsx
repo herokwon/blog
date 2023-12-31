@@ -51,7 +51,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                         <span className="article-info--date px-2 py-1">{getDate(Date)}</span> :
                         null}
                 </div>
-                <h2 className="article-info--title text-xl">{Title}</h2>
+                <h2 className="article-info--title text-[1.32rem]">{Title}</h2>
                 <div className="article-info--summary relative">
                     {loading ?
                         <Spinner className="absolute top-0 left-0 z-10" /> :
