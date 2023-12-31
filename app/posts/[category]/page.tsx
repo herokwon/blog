@@ -12,6 +12,7 @@ import RetrospectImage from "@/public/images/retrospect.png";
 import StudyImage from "@/public/images/study.png";
 import ColumnImage from "@/public/images/column.png";
 import LifeImage from "@/public/images/life.png";
+import Section from "@/app/components/Section";
 
 const importImage: { [key in ArticleCategoryKeywords]: StaticImport } = {
     dev: DevImage,
@@ -32,28 +33,26 @@ export default async function Category({ params }: { params: { category: Article
                     <h1 className="text-center text-dark">{ArticleCategory[params.category]}</h1>
                 </div>
             </PageHeader>
-            <section className="section-wrapper">
-                <section className="section-container">
-                    <ArticleList
-                        category={params.category}
-                        nextCursor={articleData.nextCursor}>
-                        {articleData.items.map((article) => {
-                            const properties = extractArticleProperties(article.properties);
+            <Section>
+                <ArticleList
+                    category={params.category}
+                    nextCursor={articleData.nextCursor}>
+                    {articleData.items.map((article) => {
+                        const properties = extractArticleProperties(article.properties);
 
-                            return (
-                                <ArticleContainer
-                                    key={article.id}
-                                    id={article.id}
-                                    Category={properties.Category}
-                                    Title={properties.Title}
-                                    Date={properties.Date}
-                                    Thumbnail={properties.Thumbnail}
-                                />
-                            );
-                        })}
-                    </ArticleList>
-                </section>
-            </section>
+                        return (
+                            <ArticleContainer
+                                key={article.id}
+                                id={article.id}
+                                Category={properties.Category}
+                                Title={properties.Title}
+                                Date={properties.Date}
+                                Thumbnail={properties.Thumbnail}
+                            />
+                        );
+                    })}
+                </ArticleList>
+            </Section>
         </>
     );
 }
