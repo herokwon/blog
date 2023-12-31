@@ -7,6 +7,8 @@ import ThreeModelViewer from "./intros/ThreeModelViewer";
 import Section from "./Section";
 
 export default function Footer() {
+    const email = process.env.NEXT_PUBLIC_CONTACT!;
+
     return (
         <footer id="main-footer" className="w-full py-8 bg-light-secondary dark:bg-dark-secondary">
             <Section innerProps={{ className: "grid grid-cols-1 sm:grid-cols-2" }}>
@@ -27,10 +29,10 @@ export default function Footer() {
                         )}
                         <Link
                             target="_blank"
-                            href="mailto:herokwon@herokwon.dev"
+                            href={`mailto:${email}`}
                             className="social-item">
                             <Mail className="social-item--icon" />
-                            <span className="social-item--content">{"herokwon@herokwon.com"}</span>
+                            <span className="social-item--content">{email}</span>
                         </Link>
                     </div>
                 </div>
