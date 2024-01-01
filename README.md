@@ -202,6 +202,16 @@
 - Footer 추가 :point_right: [@351acd2](https://github.com/herokwon/blog/commit/351acd238d3238cc6318279889d4f776f5f9ba63)
 
 <br />
+
+**_2024.01.01_**
+
+- Vercel Deployment (Test ver.) :point_right: [https://herokwon.dev](https://herokwon.dev)
+- Production Runtime 오류 수정 :point_right: [@5af4b91](https://github.com/herokwon/blog/commit/5af4b913e74cd146a2af57fd5ee112c2d35534e0)
+- url-metadata data handling 오류 수정 :point_right: [@5ac1de6](https://github.com/herokwon/blog/commit/5ac1de6be8f9a4bf3fa6221f209020eefc9f8e59)
+- Date Time 추가 :point_right: [@6a23f8e](https://github.com/herokwon/blog/commit/6a23f8e215dcfa2d3d82a298894ca0f625ed57bd)
+  - 참고 : [Hydration Error on Production with Date String : r/nextjs](https://www.reddit.com/r/nextjs/comments/wfhhwn/hydration_error_on_production_with_date_string/)
+
+<br />
 <br />
 
 ## 기술: Skills
@@ -215,7 +225,7 @@
 > 프레임워크 (Framework)
 
 [<img src="https://img.shields.io/badge/NextJS-000000?style=for-the-badge&logo=next.js&logoColor=white">](https://nextjs.org/)
-[<img src="https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">](https://tailwindcss.com/)
+[<img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">](https://tailwindcss.com/)
 
 <br />
 
@@ -240,6 +250,7 @@
 > 기타 (.etc)
 
 [<img src="https://img.shields.io/badge/Lucide-FFFFFF?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZwogIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICB3aWR0aD0iMjQiCiAgaGVpZ2h0PSIyNCIKICB2aWV3Qm94PSIwIDAgMjQgMjQiCiAgZmlsbD0ibm9uZSIKICBzdHJva2U9ImN1cnJlbnRDb2xvciIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCiAgaWQ9Imx1Y2lkZS1sb2dvIgo+CiAgPHBhdGggZD0iTTE0IDEyQzE0IDkuNzkwODYgMTIuMjA5MSA4IDEwIDhDNy43OTA4NiA4IDYgOS43OTA4NiA2IDEyQzYgMTYuNDE4MyA5LjU4MTcyIDIwIDE0IDIwQzE4LjQxODMgMjAgMjIgMTYuNDE4MyAyMiAxMkMyMiA4LjQ0NiAyMC40NTUgNS4yNTI4NSAxOCAzLjA1NTU3IiBzdHJva2U9IiMyRDM3NDgiIC8+CiAgPHBhdGggZD0iTTEwIDEyQzEwIDE0LjIwOTEgMTEuNzkwOSAxNiAxNCAxNkMxNi4yMDkxIDE2IDE4IDE0LjIwOTEgMTggMTJDMTggNy41ODE3MiAxNC40MTgzIDQgMTAgNEM1LjU4MTcyIDQgMiA3LjU4MTcyIDIgMTJDMiAxNS41ODQxIDMuNTcxMjcgMTguODAxMiA2LjA2MjUzIDIxIiBzdHJva2U9IiNGNTY1NjUiIC8+Cjwvc3ZnPgo=">](https://lucide.dev/)
+[<img src="https://img.shields.io/badge/Font_Awesome-528DD7?style=for-the-badge&logo=font-awesome&logoColor=white">](https://fontawesome.com/)
 
 <br />
 <br />
