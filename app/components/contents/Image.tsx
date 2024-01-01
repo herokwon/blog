@@ -4,7 +4,7 @@ import { ImageBlockObjectResponse } from "@notionhq/client/build/src/api-endpoin
 import { useState } from "react";
 import Image from "next/image";
 
-import { ImageBlockData, ImageMetadata } from "@/app/types/notion";
+import { ImageBlockData } from "@/app/types/notion";
 import { getImage } from "@/app/lib/functions/notion";
 import { fetchBlock } from "@/app/lib/databases";
 import RichText from "./texts/RichText";
@@ -12,10 +12,14 @@ import RichText from "./texts/RichText";
 interface Images {
     block: ImageBlockObjectResponse;
     imgData: ImageBlockData;
-    imgMetadata: ImageMetadata;
+    base64: string;
+    imgMetadata: {
+        width: number;
+        height: number;
+    };
 };
 
-export default function Images({ block, imgData, imgMetadata }: Images) {
+export default function Images({ block, imgData, base64, imgMetadata }: Images) {
     const { imgUrl, handleImgError } = useImage(block, imgData);
 
     return (
@@ -26,7 +30,7 @@ export default function Images({ block, imgData, imgMetadata }: Images) {
                     fill
                     sizes="(max-width: 512px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     placeholder="blur"
-                    blurDataURL={imgMetadata.base64}
+                    blurDataURL={base64}
                     onError={handleImgError}
                     alt="article-image" />
             </div>

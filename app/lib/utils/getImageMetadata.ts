@@ -1,19 +1,17 @@
-import sharp from "sharp";
+import { getPlaiceholder } from "plaiceholder";
 import fetch from "node-fetch";
 
-import { ImageMetadata } from "@/app/types/notion";
-
-const getImageMetadata = async (src: string): Promise<ImageMetadata> => {
+const getImageMetadata = async (src: string) => {
     const response = await fetch(src);
     const buffer = await response.buffer();
 
-    const base64String = `data:image/png;base64,${buffer.toString("base64")}`;
-    const metadata = await sharp(buffer).metadata();
+    const { metadata: { width, height },
+        ...plaiceholder
+    } = await getPlaiceholder(buffer, { size: 12 });
 
     return {
-        base64: base64String,
-        width: metadata.width,
-        height: metadata.height,
+        ...plaiceholder,
+        imgMetadata: { width, height },
     }
 }
 
