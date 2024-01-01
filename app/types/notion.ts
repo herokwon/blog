@@ -123,15 +123,9 @@ export interface ImageBlockData {
     expiring: boolean;
 };
 
-export interface ImageMetadata {
-    base64: string;
-    width: number | undefined;
-    height: number | undefined;
-};
-
 export interface BookmarkMetadata {
-    title: string;
-    description: string;
+    title: string | null;
+    description: string | null;
     faviconUrl: string | null;
     imageUrl: string | null;
 };
