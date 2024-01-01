@@ -119,5 +119,21 @@
 
   &--bookmark {
     @apply w-full h-120 my-block flex rounded-lg border border-light-tertiary dark:border-dark-tertiary bg-light-secondary dark:bg-dark-secondary overflow-hidden;
+
+    &-info {
+      @apply h-full px-3 py-1.5 flex flex-col justify-between bg-inherit transition-all duration-200;
+    }
+
+    &:hover &-info {
+      @apply bg-light-tertiary dark:bg-dark-tertiary;
+    }
+
+    &-image {
+      @apply h-full opacity-bold dark:opacity-off bg-center bg-no-repeat transition-all duration-200 relative;
+    }
+
+    &:hover > &-image {
+      @apply dark:opacity-bold;
+    }
   }
 }
