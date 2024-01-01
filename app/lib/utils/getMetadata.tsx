@@ -12,13 +12,15 @@ export const getMetadata = async (url: string): Promise<BookmarkMetadata> => {
 
         const metadata = response as UrlMetadata;
 
+        const title = handleFetchMetadata.title(metadata);
+        const description = handleFetchMetadata.description(metadata);
         const baseUrl = url.slice(0, url.indexOf("/", 10));
-        const faviconUrl = await getMetadataFaviconUrl(baseUrl, metadata.favicons);
-        const imageUrl = await getMetadataImageUrl(baseUrl, metadata.image, metadata['og:image']);
+        const faviconUrl = await handleFetchMetadata.faviconUrl(baseUrl, metadata.favicons);
+        const imageUrl = await handleFetchMetadata.imageUrl(baseUrl, metadata);
 
         return {
-            title: metadata.title,
-            description: metadata.description,
+            title: title,
+            description: description,
             faviconUrl: faviconUrl,
             imageUrl: imageUrl,
         };
@@ -28,54 +30,70 @@ export const getMetadata = async (url: string): Promise<BookmarkMetadata> => {
     }
 };
 
-const getMetadataFromBaseUrl = async (baseUrl: string) => {
-    const response: unknown = await urlMetadata(baseUrl, {
-        mode: "same-origin"
-    });
+const handleFetchMetadata = {
+    title: (metadata: UrlMetadata) => {
+        if (metadata.title.length > 0) return metadata.title;
+        if (metadata["og:title"].length > 0) return metadata["og:title"];
+        if (metadata["twitter:title"].length > 0) return metadata["twitter:title"];
 
-    return response as UrlMetadata;
-};
+        return null;
+    },
+    description: (metadata: UrlMetadata) => {
+        if (metadata.description.length > 0) return metadata.description;
+        if (metadata["og:description"].length > 0) return metadata["og:description"];
+        if (metadata["twitter:description"].length > 0) return metadata["twitter:description"];
 
-const getMetadataFaviconUrl = async (baseUrl: string, favicons: { href: string }[]): Promise<string | null> => {
-    if (favicons.length > 0) {
-        switch (favicons[0].href.includes("https://")) {
-            case true:
-                return favicons[0].href;
-            case false:
-                const baseFaviconUrl =
-                    favicons[0].href[0] === "/" ?
-                        favicons[0].href.slice(1) :
-                        favicons[0].href;
+        return null;
+    },
+    faviconUrl: async (baseUrl: string, favicons: { href: string }[]) => {
+        if (favicons.length > 0) {
+            switch (favicons[0].href.includes("https://")) {
+                case true:
+                    return favicons[0].href;
+                case false:
+                    const baseFaviconUrl =
+                        favicons[0].href[0] === "/" ?
+                            favicons[0].href.slice(1) :
+                            favicons[0].href;
 
-                return `${baseUrl}/${baseFaviconUrl}`;
+                    return `${baseUrl}/${baseFaviconUrl}`;
+            }
+        } else {
+            const baseUrlMetadata = await handleFetchMetadata.fromBaseUrl(baseUrl);
+
+            if (baseUrlMetadata.favicons.length === 0) return null;
+
+            switch (baseUrlMetadata.favicons[0].href.includes("https://")) {
+                case true:
+                    return baseUrlMetadata.favicons[0].href;
+                case false:
+                    const baseFaviconUrl =
+                        baseUrlMetadata.favicons[0].href[0] === "/" ?
+                            baseUrlMetadata.favicons[0].href.slice(1) :
+                            baseUrlMetadata.favicons[0].href;
+
+                    return `${baseUrl}/${baseFaviconUrl}`;
+            }
         }
-    } else {
-        const baseUrlMetadata = await getMetadataFromBaseUrl(baseUrl);
+    },
+    imageUrl: async (baseUrl: string, metadata: UrlMetadata) => {
+        if (metadata.image.length > 0) return metadata.image;
+        if (metadata["ogImage"].length > 0) return metadata["ogImage"];
+        if (metadata["twitterImage"].length > 0) return metadata["twitterImage"];
 
-        if (baseUrlMetadata.favicons.length === 0) return null;
+        const baseUrlMetadata = await handleFetchMetadata.fromBaseUrl(baseUrl);
 
-        switch (baseUrlMetadata.favicons[0].href.includes("https://")) {
-            case true:
-                return baseUrlMetadata.favicons[0].href;
-            case false:
-                const baseFaviconUrl =
-                    baseUrlMetadata.favicons[0].href[0] === "/" ?
-                        baseUrlMetadata.favicons[0].href.slice(1) :
-                        baseUrlMetadata.favicons[0].href;
+        if (baseUrlMetadata.image.length > 0) return baseUrlMetadata.image;
+        if (baseUrlMetadata["og:image"].length > 0) return baseUrlMetadata["og:image"];
+        if (baseUrlMetadata["twitter:image"].length > 0) return baseUrlMetadata["twitter:image"];
 
-                return `${baseUrl}/${baseFaviconUrl}`;
-        }
-    }
-};
+        return null;
+    },
+    fromBaseUrl: async (baseUrl: string) => {
+        const response: unknown = await urlMetadata(baseUrl, {
+            mode: "same-origin"
+        });
 
-const getMetadataImageUrl = async (baseUrl: string, image: string, ogImage: string): Promise<string | null> => {
-    if (image.length > 0) return image;
-    if (ogImage.length > 0) return ogImage;
-
-    const baseUrlMetadata = await getMetadataFromBaseUrl(baseUrl);
-
-    if (baseUrlMetadata.image.length > 0) return baseUrlMetadata.image;
-    if (baseUrlMetadata["og:image"].length > 0) return baseUrlMetadata["og:image"];
-
-    return null;
+        return response as UrlMetadata;
+    },
 };
