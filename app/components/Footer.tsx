@@ -7,6 +7,7 @@ import ThreeModelViewer from "./intros/ThreeModelViewer";
 import Section from "./Section";
 
 export default function Footer() {
+    const author = process.env.NEXT_PUBLIC_AUTHOR!;
     const email = process.env.NEXT_PUBLIC_CONTACT!;
 
     return (
@@ -36,9 +37,8 @@ export default function Footer() {
                         </Link>
                     </div>
                 </div>
-                <section>
-                </section>
             </Section>
+            <p className="py-4 text-center font-nunito">{`ⓒ 2024. ${author}. All rights reserved.`}</p>
         </footer>
     );
 }
