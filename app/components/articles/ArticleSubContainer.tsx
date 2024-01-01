@@ -5,10 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { ArticleSubProperty } from "@/app/types/notion";
-import { getDate } from "@/app/lib/utils/getDate";
 import useThumbnail from "@/app/hooks/useThumbnail";
 import CategoryButton from "./CategoryButton";
 import Spinner from "../Spinner";
+import DateTime from "./DateTime";
 
 interface ArticleSubContainer extends ArticleSubProperty {
     onClick: () => void;
@@ -44,7 +44,7 @@ export default function ArticleSubContainer({ Category, Title, Date, Thumbnail, 
                         category={Category}
                         className="px-1.5 py-[0.1875rem]" />
                     {Date ?
-                        <span className="article-info--date">{getDate(Date)}</span> :
+                        <DateTime date={Date} /> :
                         null}
                 </div>
             </div>

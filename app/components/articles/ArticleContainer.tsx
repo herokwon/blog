@@ -6,10 +6,10 @@ import Image from "next/image";
 
 import { ArticleSubProperty } from "@/app/types/notion";
 import { arrangeArticleSummary } from "@/app/lib/functions/notion";
-import { getDate } from "@/app/lib/utils/getDate";
 import useThumbnail from "@/app/hooks/useThumbnail";
 import CategoryButton from "./CategoryButton";
 import Spinner from "../Spinner";
+import DateTime from "./DateTime";
 
 interface ArticleContainer extends ArticleSubProperty {
     id: string;
@@ -48,7 +48,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                         category={Category}
                         className="dark:bg-blue-600" />
                     {Date ?
-                        <span className="article-info--date px-2 py-1">{getDate(Date)}</span> :
+                        <DateTime date={Date} className="px-2 py-1" /> :
                         null}
                 </div>
                 <h2 className="article-info--title text-[1.32rem]">{Title}</h2>

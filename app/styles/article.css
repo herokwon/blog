@@ -109,7 +109,12 @@
   }
 
   &--image {
-    @apply w-full h-auto min-h-[100px] rounded-lg overflow-hidden relative;
+    @apply w-full min-h-[100px] rounded-lg overflow-hidden relative;
+    @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] dark:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
+  }
+
+  &--video {
+    @apply w-full aspect-video rounded-lg overflow-hidden;
     @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] dark:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
   }
 
