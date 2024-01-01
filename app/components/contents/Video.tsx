@@ -25,13 +25,14 @@ export default function Video({ block }: { block: VideoBlockObjectResponse }) {
                     <p className="article-content--caption">iframe을 지원하지 않는 브라우저입니다.</p>
                 </iframe> :
                 <video
+                    controls
+                    controlsList="nodownload"
                     playsInline
                     preload="metadata"
-                    className="article-content--video"
                     src={videoUrl}
-                    onLoad={handleVideoLoad}
+                    className="article-content--video"
+                    onLoadedData={handleVideoLoad}
                     onError={handleVideoError} />}
-
             <div className="article-content--caption">
                 <RichText richTexts={block.video.caption} />
             </div>

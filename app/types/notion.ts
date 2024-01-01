@@ -130,9 +130,8 @@ export interface ImageMetadata {
 };
 
 export interface BookmarkMetadata {
-    pageUrl: string;
     title: string;
     description: string;
-    faviconUrl: string;
-    imageUrl: string;
+    faviconUrl: string | null;
+    imageUrl: string | null;
 };

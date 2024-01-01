@@ -8,11 +8,5 @@ export interface UrlMetadata {
         sizes: string | undefined;
     }[];
     description: string;
-    jsonld: {
-        image: string[];
-    } | {
-        image: {
-            url: string;
-        };
-    }[];
+    'og:image': string;
 };
