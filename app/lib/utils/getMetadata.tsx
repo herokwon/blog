@@ -12,12 +12,11 @@ export const getMetadata = async (url: string): Promise<BookmarkMetadata> => {
 
         const metadata = response as UrlMetadata;
 
-        const pageUrl = url.at(-1) === "/" ? url.slice(0, url.lastIndexOf("/")) : url;
-        const faviconUrl = getMetadataFaviconUrl(pageUrl, metadata.favicons[0].href);
-        const imageUrl = getMetadataImageUrl(metadata.image, metadata.jsonld);
+        const baseUrl = url.slice(0, url.indexOf("/", 10));
+        const faviconUrl = await getMetadataFaviconUrl(baseUrl, metadata.favicons);
+        const imageUrl = await getMetadataImageUrl(baseUrl, metadata.image, metadata['og:image']);
 
         return {
-            pageUrl: pageUrl,
             title: metadata.title,
             description: metadata.description,
             faviconUrl: faviconUrl,
@@ -29,18 +28,54 @@ export const getMetadata = async (url: string): Promise<BookmarkMetadata> => {
     }
 };
 
-const getMetadataFaviconUrl = (pageUrl: string, faviconHref: string) => {
-    if (faviconHref.includes("https://")) return faviconHref;
+const getMetadataFromBaseUrl = async (baseUrl: string) => {
+    const response: unknown = await urlMetadata(baseUrl, {
+        mode: "same-origin"
+    });
 
-    const baseUrl = pageUrl.slice(0, pageUrl.indexOf("/", 10));
-    const baseFaviconUrl = faviconHref[0] === "/" ? faviconHref.slice(1) : faviconHref;
-
-    return `${baseUrl}/${baseFaviconUrl}`;
+    return response as UrlMetadata;
 };
 
-const getMetadataImageUrl = (image: string, jsonld: UrlMetadata["jsonld"]): string => {
-    if (image.length > 0) return image;
-    if (!Array.isArray(jsonld)) return jsonld.image[0];
+const getMetadataFaviconUrl = async (baseUrl: string, favicons: { href: string }[]): Promise<string | null> => {
+    if (favicons.length > 0) {
+        switch (favicons[0].href.includes("https://")) {
+            case true:
+                return favicons[0].href;
+            case false:
+                const baseFaviconUrl =
+                    favicons[0].href[0] === "/" ?
+                        favicons[0].href.slice(1) :
+                        favicons[0].href;
 
-    return jsonld.find((elem) => 'image' in elem)?.image.url ?? "";
+                return `${baseUrl}/${baseFaviconUrl}`;
+        }
+    } else {
+        const baseUrlMetadata = await getMetadataFromBaseUrl(baseUrl);
+
+        if (baseUrlMetadata.favicons.length === 0) return null;
+
+        switch (baseUrlMetadata.favicons[0].href.includes("https://")) {
+            case true:
+                return baseUrlMetadata.favicons[0].href;
+            case false:
+                const baseFaviconUrl =
+                    baseUrlMetadata.favicons[0].href[0] === "/" ?
+                        baseUrlMetadata.favicons[0].href.slice(1) :
+                        baseUrlMetadata.favicons[0].href;
+
+                return `${baseUrl}/${baseFaviconUrl}`;
+        }
+    }
+};
+
+const getMetadataImageUrl = async (baseUrl: string, image: string, ogImage: string): Promise<string | null> => {
+    if (image.length > 0) return image;
+    if (ogImage.length > 0) return ogImage;
+
+    const baseUrlMetadata = await getMetadataFromBaseUrl(baseUrl);
+
+    if (baseUrlMetadata.image.length > 0) return baseUrlMetadata.image;
+    if (baseUrlMetadata["og:image"].length > 0) return baseUrlMetadata["og:image"];
+
+    return null;
 };
