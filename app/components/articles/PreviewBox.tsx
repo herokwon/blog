@@ -4,9 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { ArticleSubProperty } from "@/app/types/notion";
-import { getDate } from "@/app/lib/utils/getDate";
 import useThumbnail from "@/app/hooks/useThumbnail";
 import Spinner from "../Spinner";
+import DateTime from "./DateTime";
 
 export default function PreviewBox({ Category, Title, Date, Thumbnail }: ArticleSubProperty) {
     const { imgSrc, imgLoading, handleImgLoad, handleImgError } = useThumbnail(Thumbnail.url, Title);
@@ -31,7 +31,7 @@ export default function PreviewBox({ Category, Title, Date, Thumbnail }: Article
             <div className="w-full aspect-[4/1] flex flex-col items-center text-center">
                 <h2 className=" py-0.5 text-[0.96rem] line-clamp-1">{Title}</h2>
                 {Date ?
-                    <span className="py-0.5 text-[0.72rem]">{getDate(Date)}</span> :
+                    <DateTime date={Date} className="py-0.5" /> :
                     null}
             </div>
         </Link>

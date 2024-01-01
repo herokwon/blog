@@ -1,9 +1,9 @@
 import { ArticleCategoryKeywords, ArticleResponse } from "@/app/types/notion";
 import { fetchArticle } from "@/app/lib/databases";
 import { extractArticleProperties } from "@/app/lib/functions/notion";
-import { getDate } from "@/app/lib/utils/getDate";
 import PageHeader from "@/app/components/PageHeader";
 import CategoryButton from "@/app/components/articles/CategoryButton";
+import DateTime from "@/app/components/articles/DateTime";
 
 interface ContentLayoutProps {
     params: {
@@ -28,7 +28,7 @@ export default async function ContentLayout({ params, children }: ContentLayoutP
                     <CategoryButton category={params.category} />
                     <h1 className="py-4 text-center text-dark">{title}</h1>
                     {properties.Date ?
-                        <span className="text-[0.72rem]">{getDate(properties.Date)}</span> :
+                        <DateTime date={properties.Date} /> :
                         null}
                 </div>
             </PageHeader>
