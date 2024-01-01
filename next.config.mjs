@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
 
+import withPlaiceholder from "@plaiceholder/next";
+
 const nextConfig = {
     images: {
         imageSizes: [16, 32, 64, 128, 256],
         deviceSizes: [512, 768, 1024, 1280, 1920],
+        dangerouslyAllowSVG: true,
         remotePatterns: [
             {
                 protocol: "https",
@@ -35,4 +38,4 @@ const nextConfig = {
     }
 };
 
-module.exports = nextConfig;
+export default withPlaiceholder(nextConfig);
