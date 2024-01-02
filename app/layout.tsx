@@ -1,13 +1,15 @@
 import { Noto_Sans_KR, Nunito } from "next/font/google";
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
+import Script from "next/script";
 config.autoAddCss = false;
 
-import "./globals.css";
 import { ArticleResponse } from "./types/notion";
 import { fetchArticle } from "./lib/databases";
-import { getTheme, updateTheme } from "./lib/functions/theme";
+import { GA_ID } from "./lib/data/constants";
+import { getTheme } from "./lib/functions/theme";
 import { fetchPreviewArticles } from "./lib/functions/article";
+import "./globals.css";
 import Nav from "./components/Nav";
 import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
@@ -37,6 +39,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     return (
         <html lang="ko" className={savedTheme ?? "light"}>
             <head>
+                <meta name="naver-site-verification" content="966343a9c23577938f4f0061e13ab3654c42c025" />
+                <Script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+                <Script id="gtag-init" dangerouslySetInnerHTML={{
+                    __html: `
+                        window.dataLayer = window.dataLayer || [];
+                        function gtag() {dataLayer.push(arguments);}
+                        gtag('js', new Date());
+                        gtag('config', '${GA_ID}', {
+                            page_path: window.location.pathname,
+                        });
+                    `,
+                }} />
             </head>
             <body className={`${noto_sans_kr.variable} ${nunito.variable}`}>
                 <Nav initTheme={savedTheme ?? "light"} previewArticles={previewArticles} />

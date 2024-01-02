@@ -1,10 +1,23 @@
 'use client'
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, Variants, motion } from "framer-motion";
 
+import { isProd, GA_ID } from "./lib/data/constants";
+
 export default function Template({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+
+    useEffect(() => {
+        if (isProd) {
+            window.gtag('config', GA_ID, {
+                page_title: window.document.title,
+                page_location: window.location.href,
+                page_path: pathname,
+            });
+        }
+    }, [pathname]);
 
     return (
         <AnimatePresence>

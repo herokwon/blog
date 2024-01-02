@@ -13,6 +13,7 @@
     "@notionhq/client": "^2.2.14",
     "@plaiceholder/next": "^3.0.0",
     "@svgr/webpack": "^8.1.0",
+    "@types/gtag.js": "^0.0.18",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4",
