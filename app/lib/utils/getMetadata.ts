@@ -12,9 +12,10 @@ export const getMetadata = async (url: string): Promise<BookmarkMetadata> => {
 
         const metadata = response as UrlMetadata;
 
+        const baseUrl = url.slice(0, url.indexOf("/", 10));
+
         const title = handleFetchMetadata.title(metadata);
         const description = handleFetchMetadata.description(metadata);
-        const baseUrl = url.slice(0, url.indexOf("/", 10));
         const faviconUrl = await handleFetchMetadata.faviconUrl(baseUrl, metadata.favicons);
         const imageUrl = await handleFetchMetadata.imageUrl(baseUrl, metadata);
 
@@ -45,7 +46,7 @@ const handleFetchMetadata = {
 
         return null;
     },
-    faviconUrl: async (baseUrl: string, favicons: { href: string }[]) => {
+    faviconUrl: async (baseUrl: string, favicons: UrlMetadata["favicons"]) => {
         if (favicons.length > 0) {
             switch (favicons[0].href.includes("https://")) {
                 case true:
@@ -78,8 +79,8 @@ const handleFetchMetadata = {
     },
     imageUrl: async (baseUrl: string, metadata: UrlMetadata) => {
         if (metadata.image.length > 0) return metadata.image;
-        if (metadata["ogImage"].length > 0) return metadata["ogImage"];
-        if (metadata["twitterImage"].length > 0) return metadata["twitterImage"];
+        if (metadata["og:image"].length > 0) return metadata["og:image"];
+        if (metadata["twitter:image"].length > 0) return metadata["twitter:image"];
 
         const baseUrlMetadata = await handleFetchMetadata.fromBaseUrl(baseUrl);
 
