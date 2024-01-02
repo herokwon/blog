@@ -6,6 +6,9 @@ import StackViewer from "./components/intros/StackViewer";
 import ArticleList from "./components/articles/ArticleList";
 import ArticleContainer from "./components/articles/ArticleContainer";
 import Section from "./components/Section";
+import getPageMetadata from "./lib/utils/getPageMetadata";
+
+export const metadata = getPageMetadata({ path: "/" });
 
 export default async function Home() {
     const response = await fetchArticle({});
