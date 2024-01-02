@@ -1,18 +1,25 @@
+'use server'
+
 import { getPlaiceholder } from "plaiceholder";
-import fetch from "node-fetch";
 
 const getImageMetadata = async (src: string) => {
-    const response = await fetch(src);
-    const buffer = await response.buffer();
+    const buffer = await fetch(src).then(async (response) =>
+        Buffer.from(await response.arrayBuffer())
+    );
 
-    const { metadata: { width, height },
+    const {
+        metadata: {
+            width, height
+        },
         ...plaiceholder
-    } = await getPlaiceholder(buffer, { size: 12 });
+    } = await getPlaiceholder(buffer);
 
     return {
         ...plaiceholder,
-        imgMetadata: { width, height },
-    }
-}
+        imgMetadata: {
+            width, height
+        }
+    };
+};
 
 export default getImageMetadata;
