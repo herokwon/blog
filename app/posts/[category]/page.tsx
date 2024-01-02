@@ -1,25 +1,20 @@
-import { StaticImport } from "next/dist/shared/lib/get-img-props";
-
 import { ArticleCategory, ArticleCategoryKeywords, ArticleResponse } from "@/app/types/notion";
+import { CategoryHeader } from "@/app/lib/data/constants";
 import { fetchArticle } from "@/app/lib/databases";
 import { extractArticleProperties } from "@/app/lib/functions/notion";
+import getPageMetadata from "@/app/lib/utils/getPageMetadata";
 import PageHeader from "@/app/components/PageHeader";
 import ArticleContainer from "@/app/components/articles/ArticleContainer";
 import ArticleList from "@/app/components/articles/ArticleList";
-
-import DevImage from "@/public/images/dev.png";
-import RetrospectImage from "@/public/images/retrospect.png";
-import StudyImage from "@/public/images/study.png";
-import ColumnImage from "@/public/images/column.png";
-import LifeImage from "@/public/images/life.png";
 import Section from "@/app/components/Section";
 
-const importImage: { [key in ArticleCategoryKeywords]: StaticImport } = {
-    dev: DevImage,
-    retrospect: RetrospectImage,
-    study: StudyImage,
-    column: ColumnImage,
-    life: LifeImage,
+export const generateMetadata = ({ params }: { params: { category: ArticleCategoryKeywords } }) => {
+    return getPageMetadata({
+        path: `/posts/${params.category}`,
+        title: ArticleCategory[params.category],
+        keywords: [params.category],
+        imgSrc: `/images/${params.category}.png`,
+    });
 };
 
 export default async function Category({ params }: { params: { category: ArticleCategoryKeywords } }) {
@@ -28,7 +23,7 @@ export default async function Category({ params }: { params: { category: Article
 
     return (
         <>
-            <PageHeader imageSrc={importImage[params.category]}>
+            <PageHeader imageSrc={CategoryHeader[params.category]}>
                 <div className="w-full my-4 absolute bottom-0 left-0 z-[1]">
                     <h1 className="text-center text-dark">{ArticleCategory[params.category]}</h1>
                 </div>

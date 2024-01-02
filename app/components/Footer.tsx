@@ -5,11 +5,9 @@ import Link from "next/link";
 import { socialItem } from "../lib/data/socialItem";
 import ThreeModelViewer from "./intros/ThreeModelViewer";
 import Section from "./Section";
+import { AUTHOR, CONTACT } from "../lib/data/constants";
 
 export default function Footer() {
-    const author = process.env.NEXT_PUBLIC_AUTHOR!;
-    const email = process.env.NEXT_PUBLIC_CONTACT!;
-
     return (
         <footer id="main-footer" className="w-full py-8 bg-light-secondary dark:bg-dark-secondary">
             <Section innerProps={{ className: "grid grid-cols-1 sm:grid-cols-2" }}>
@@ -30,15 +28,15 @@ export default function Footer() {
                         )}
                         <Link
                             target="_blank"
-                            href={`mailto:${email}`}
+                            href={`mailto:${CONTACT}`}
                             className="social-item">
                             <Mail className="social-item--icon" />
-                            <span className="social-item--content">{email}</span>
+                            <span className="social-item--content">{CONTACT}</span>
                         </Link>
                     </div>
                 </div>
             </Section>
-            <p className="py-4 text-center font-nunito">{`ⓒ 2024. ${author}. All rights reserved.`}</p>
+            <p className="py-4 text-center font-nunito">{`ⓒ 2024. ${AUTHOR}. All rights reserved.`}</p>
         </footer>
     );
 }

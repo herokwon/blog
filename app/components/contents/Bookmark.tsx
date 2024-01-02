@@ -1,6 +1,6 @@
 import { BookmarkBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { getMetadata } from "@/app/lib/utils/getMetadata";
+import { getMetadata } from "@/app/lib/utils/getUrlMetadata";
 import Link from "next/link";
 
 export default async function Bookmark({ block }: { block: BookmarkBlockObjectResponse }) {
@@ -18,7 +18,7 @@ export default async function Bookmark({ block }: { block: BookmarkBlockObjectRe
                 {metadata.description ?
                     <p className="text-[0.8rem] opacity-off line-clamp-2">{metadata.description}</p> : null}
                 <div className="w-full flex items-center">
-                    <i className={`${metadata.faviconUrl ? "w-16 h-16 bg-[length:16px_16px]" : "w-0 h-0"} mr-2 my-auto block bg-center bg-no-repeat`}
+                    <i className={`${metadata.faviconUrl ? "w-16 h-16 bg-[length:16px_16px] mr-2" : "w-0 h-0"} my-auto block bg-center bg-no-repeat`}
                         style={{
                             backgroundImage:
                                 metadata.faviconUrl ?
