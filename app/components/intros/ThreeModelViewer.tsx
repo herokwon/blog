@@ -23,7 +23,7 @@ export default function ThreeModelViewer() {
         const scene = new THREE.Scene();  // scene 생성
 
         const camera = new THREE.PerspectiveCamera(30, 4 / 3, 0.1, 100);  // camera 생성
-        camera.position.set(0, 5, 20);  // camera position 설정 - (x, y, z)
+        camera.position.set(-10, 5, 20);  // camera position 설정 - (x, y, z)
 
         const light = new THREE.PointLight(0xffffff, 12, 100, 1);  // light 생성 - PointLight(16진수 색상, 세기, 거리, 감쇠)
         light.position.set(0, 1, 5);  // light position 설정 - (x, y, z)
