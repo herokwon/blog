@@ -5,7 +5,7 @@ import { fetchArticle } from "@/app/lib/databases";
 import { extractArticleProperties } from "@/app/lib/functions/notion";
 import { ArticleCategory, ArticleCategoryKeywords, ArticleResponse } from "@/app/types/notion";
 
-export const generateSitemaps = () => {
+export const generateSitemaps = async () => {
     return Object.keys(ArticleCategory).map((category: ArticleCategoryKeywords) => ({
         id: category
     }));
@@ -24,7 +24,7 @@ export default async function sitemap({ id }: { id: ArticleCategoryKeywords }): 
         const properties = extractArticleProperties(article.properties);
 
         return {
-            url: `${BASE_URL}/${id}/${encodeURIComponent(properties.Title ?? "")}`,
+            url: `${BASE_URL}/posts/${id}/${encodeURIComponent(properties.Title ?? "")}`,
             lastModified: properties.Date ? new Date(properties.Date) : new Date(),
             changeFrequency: 'daily',
         };
