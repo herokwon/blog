@@ -1,6 +1,6 @@
 import { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { getImage } from "@/app/lib/functions/notion";
+import { getImage, getVideo } from "@/app/lib/functions/notion";
 import getImageMetadata from "@/app/lib/utils/getImageMetadata";
 import Heading from "./Heading";
 import Paragraph from "./Paragraph";
@@ -14,12 +14,13 @@ import List from "./List";
 import Toggle from "./Toggle";
 import Table from "./tables/Table";
 import Images from "./Image";
-import Video from "./Video";
 import Pdf from "./Pdf";
 import Embed from "./Embed";
 import Divider from "./Divider";
 import ToDo from "./ToDo";
 import Bookmark from "./Bookmark";
+import ExternalVideo from "./ExternalVideo";
+import FileVideo from "./FileVideo";
 
 interface BlockProps {
     block: BlockObjectResponse;
@@ -112,6 +113,9 @@ export default async function Block({ block, blocks, index }: BlockProps) {
         case "unsupported":
             return null;
         case "video":
-            return <Video block={block} />;
+            const videoData = getVideo(block);
+            block.video.type === "external" ?
+                <ExternalVideo videoData={videoData} /> :
+                <FileVideo block={block} videoData={videoData} />
     }
 }
