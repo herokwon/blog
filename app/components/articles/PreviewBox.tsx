@@ -24,6 +24,7 @@ export default function PreviewBox({ Category, Title, Date, Thumbnail }: Article
                     className={`object-cover object-center ${imgLoading ? "opacity-off" : ""}`}
                     fill
                     sizes="200px"
+                    unoptimized
                     onLoad={handleImgLoad}
                     onError={handleImgError}
                     alt="preview-thumbnail" />

@@ -21,6 +21,7 @@ export default function ImageHeader({ imageSrc, title }: { imageSrc: string | St
                 sizes="1x"
                 placeholder={!imgSrc || typeof imgSrc === "string" ? "empty" : "blur"}
                 priority
+                unoptimized
                 onLoad={handleImgLoad}
                 onError={handleImgError}
                 alt="header-image" />
