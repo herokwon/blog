@@ -68,6 +68,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                     fill
                     sizes="(max-width: 680px) 100vw, (max-width: 1026px) 50vw, 33vw"
                     priority
+                    unoptimized
                     onLoad={handleImgLoad}
                     onError={handleImgError}
                     alt="article-thumbnail" />

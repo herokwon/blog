@@ -31,6 +31,7 @@ export default function Images({ block, imgData, base64, imgMetadata }: Images) 
                     sizes="(max-width: 512px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     placeholder="blur"
                     blurDataURL={base64}
+                    unoptimized
                     onError={handleImgError}
                     alt="article-image" />
             </div>

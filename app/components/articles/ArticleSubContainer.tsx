@@ -33,6 +33,7 @@ export default function ArticleSubContainer({ Category, Title, Date, Thumbnail, 
                     fill
                     sizes="(60px-8px)"
                     priority
+                    unoptimized
                     onLoad={handleImgLoad}
                     onError={handleImgError}
                     alt="article-thumbnail" />
