@@ -49,10 +49,10 @@
   }
 
   &--column {
-    @apply grid gap-y-4 justify-center items-center grid-rows-[repeat(auto-fill,_minmax(auto,_1fr))] grid-cols-[1fr];
+    @apply grid gap-y-4 justify-center items-center;
 
     &-list {
-      @apply my-block grid justify-center items-center gap-x-4 md:gap-x-8 grid-cols-[repeat(auto-fill,_minmax(auto,_1fr))];
+      @apply my-block grid justify-center items-center gap-x-4 md:gap-x-8;
     }
   }
 
@@ -109,7 +109,7 @@
   }
 
   &--image {
-    @apply w-full min-h-[100px] rounded-lg overflow-hidden relative;
+    @apply w-full rounded-lg overflow-hidden relative;
     @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] dark:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
   }
 

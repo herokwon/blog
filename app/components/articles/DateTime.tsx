@@ -1,7 +1,8 @@
 'use client'
 
 import { HTMLAttributes } from "react";
-import { getDate } from "../../lib/utils/getDate";
+
+import { getDate } from "@/app/lib/utils/getDate";
 
 export default function DateTime({ date, ...props }: { date: string } & HTMLAttributes<HTMLSpanElement>) {
     return (

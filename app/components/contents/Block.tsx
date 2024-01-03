@@ -7,8 +7,8 @@ import Paragraph from "./Paragraph";
 import Quote from "./Quote";
 import Code from "./Code";
 import Callout from "./Callout";
-import ColumnList from "./columns/ColumnList";
-import Column from "./columns/Column";
+import ColumnList from "./ColumnList";
+import Column from "./Column";
 import Equation from "./Equation";
 import List from "./List";
 import Toggle from "./Toggle";
@@ -114,7 +114,7 @@ export default async function Block({ block, blocks, index }: BlockProps) {
             return null;
         case "video":
             const videoData = getVideo(block);
-            block.video.type === "external" ?
+            return block.video.type === "external" ?
                 <ExternalVideo videoData={videoData} /> :
                 <FileVideo block={block} videoData={videoData} />
     }

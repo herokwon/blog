@@ -1,15 +1,13 @@
 'use server'
 
-import { UrlMetadata } from '@/app/types/metadata';
-import { BookmarkMetadata } from '@/app/types/notion';
 import urlMetadata from 'url-metadata';
 
-export const getMetadata = async (url: string): Promise<BookmarkMetadata> => {
-    try {
-        const response: unknown = await urlMetadata(url, {
-            mode: "same-origin"
-        });
+import { UrlMetadata } from '@/app/types/metadata';
+import { BookmarkMetadata } from '@/app/types/notion';
 
+export const getMetadata = async (url: string): Promise<BookmarkMetadata | null> => {
+    try {
+        const response: unknown = await urlMetadata(url);
         const metadata = response as UrlMetadata;
 
         const baseUrl = url.slice(0, url.indexOf("/", 10));
@@ -25,9 +23,8 @@ export const getMetadata = async (url: string): Promise<BookmarkMetadata> => {
             faviconUrl: faviconUrl,
             imageUrl: imageUrl,
         };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(message);
+    } catch {
+        return null;
     }
 };
 
@@ -91,10 +88,7 @@ const handleFetchMetadata = {
         return null;
     },
     fromBaseUrl: async (baseUrl: string) => {
-        const response: unknown = await urlMetadata(baseUrl, {
-            mode: "same-origin"
-        });
-
+        const response: unknown = await urlMetadata(baseUrl);
         return response as UrlMetadata;
     },
 };

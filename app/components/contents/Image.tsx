@@ -42,7 +42,10 @@ export default function Images({ block, imgData, base64, imgMetadata }: Images) 
     );
 }
 
-const useImage = (block: ImageBlockObjectResponse, imgData: ImageBlockData): { imgUrl: string; handleImgError: () => Promise<void> } => {
+const useImage = (block: ImageBlockObjectResponse, imgData: ImageBlockData): {
+    imgUrl: string;
+    handleImgError: () => Promise<void>
+} => {
     const [imgUrl, setImgUrl] = useState<string>(imgData.url);
 
     const handleImgError = async () => {

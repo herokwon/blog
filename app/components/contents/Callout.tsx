@@ -11,7 +11,11 @@ export default async function Callout({ block }: { block: CalloutBlockObjectResp
         <div className="article-content--callout article-content--indent">
             <RichText richTexts={block.callout.rich_text} />
             {children?.items.map((item, index) =>
-                <Block key={index} block={item} blocks={children?.items} index={index} />)}
+                <Block
+                    key={index}
+                    block={item}
+                    blocks={children?.items}
+                    index={index} />)}
         </div>
     );
 }

@@ -1,9 +1,9 @@
 'use client'
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef } from "react";
 import { CodeBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { highlightAll } from "prismjs";
+import dynamic from "next/dynamic";
 import "prismjs/themes/prism-okaidia.css";
 
 import { convertRichToPlain } from "@/app/lib/functions/notion";
