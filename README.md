@@ -22,194 +22,347 @@
 
 ## 로그: Logs
 
-**_2023.12.09_**
-
-- 프로젝트 생성 및 환경 설정 :point_right: [@aed3f1a](https://github.com/herokwon/blog/commit/aed3f1aa000d4d3e80f9174127068c7071897f04)
-
-<br />
-
-**_2023.12.10_**
-
-- navigation 추가 :point_right: [@9622a7b](https://github.com/herokwon/blog/commit/9622a7ba8a764d44d6effe94a7250aaa847f2195)
-
-<br />
-
-**_2023.12.11_**
-
-- darkmode 적용 :point_right: [@dea0a3d](https://github.com/herokwon/blog/commit/dea0a3d16e32deca9e42323d442d586b94c51d3c)
-- Button 컴포넌트화 :point_right: [@8116373](https://github.com/herokwon/blog/commit/81163733cd5270307cb4225de2cc6e133f1b501b)
-
-<br />
-
-**_2023.12.12 ~ 13_**
-
-- Notion Data Fetch API 추가
-  - Articles :point_right: [@2627717](https://github.com/herokwon/blog/commit/2627717eb79a8c476481ad27c235c530af1d1959)
-  - Summary :point_right: [@b37a974](https://github.com/herokwon/blog/commit/b37a974fbec62286bb64452abf6c340befa24472)
-  - Categories & Tags :point_right: [@f658b32](https://github.com/herokwon/blog/commit/f658b325807eb01ddf81f4bf6f637ee554ee1dd2)
-  - Block(s) :point_right: [@432977e](https://github.com/herokwon/blog/commit/432977e8525c5d773a9b7fffe87e9344f5056edc)
-    - 참고 : [API Reference | Notion Developers](https://developers.notion.so/reference)
-
-<br />
-
-**_2023.12.14_**
-
-- Database Query를 위한 매개변수 타입 정의 :point_right: [@c176e87](https://github.com/herokwon/blog/commit/c176e8752db83566afa8116a9fe0ebcc45d71c77)
-  - TypeScript Omit(유틸리티 타입) → Notion SDK 타입에서 특정 Key를 생략한 타입 정의 및 API 적용
-    - 참고 : [TypeScript: Documentation - Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
-
-<br />
-
-**_2023.12.15_**
-
-- Articles (list & container) Component 추가 :point_right: [@dc582f6](https://github.com/herokwon/blog/commit/dc582f69093cafdcf44a5c6d5051969b4349e8b4)
-  - Notion API 응답 데이터 타입을 위한 새로운 타입 정의
-    - 참고 : [TypeScript: Documentation - Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
-  - Notion API 응답 데이터 활용을 위한 유틸리티 함수 추가
-  - 외부 이미지 사용을 위한 Next.js 환경 설정 업데이트
-    - 참고 : [Components: \<Image> | Next.js](https://nextjs.org/docs/app/api-reference/components/image#remotepatterns)
-- library 폴더 업데이트 :point_right: [@b1b539f](https://github.com/herokwon/blog/commit/b1b539fa2828d80b97bf349a61121d64ff19fa20)
-  - `lib/data` : 데이터, 상수 등
-  - `lib/functions` : 주요 기능 관련 함수
-  - `lib/utils`: 유틸리티 함수
-- Node.js 환경에 따른 baseUrl 설정 :point_right: [@558e44e](https://github.com/herokwon/blog/commit/558e44eff04e6a7e2a49c6f18ee95909dc4bddab)
-
-<br />
-
-**_2023.12.16 ~ 17_**
-
-- Page-Header 추가 :point_right: [@74336da](https://github.com/herokwon/blog/commit/74336da1ce1000ae4783e32bd1c67c01cd32f3d7)
-  - Posts 카테고리 일부 변경 (성장 → 회고)
-  - 이미지 파일 추가
-
-<br />
-
-**_2023.12.18_**
-
-- Sidebar 추가 :point_right: [@6e3b6b5](https://github.com/herokwon/blog/commit/6e3b6b59a49698826537ef9a22b8c4a8012ecd31)
-
-<br />
-
-**_2023.12.19_**
-
-- articles 관련 컴포넌트 그룹화 (`components/articles`) :point_right: [@630e671](https://github.com/herokwon/blog/commit/630e671c9b4a766652d6ca2cec400fb43ded8c49)
-- Catebory Button Component 추가 :point_right: [@24e2651](https://github.com/herokwon/blog/commit/24e26513760ae78b1669014f3737608a49eaf1b6)
-- Article Category 상수 관리 방식 변경 (**_object_** → **_const assertion_**) :point_right: [@286a49b](https://github.com/herokwon/blog/commit/286a49b1c1d3119b30c1a8e19952869899d1ac14)
-
-<br />
-
-**_2023.12.20_**
-
-- External Image Rendering hook 추가 :point_right: [@6e1ee24](https://github.com/herokwon/blog/commit/6e1ee24fe4a9bc1bff7ea381ce19b5737b9e577c)
-  - Notion 및 외부 이미지 렌더링 & 리렌더링(유효기간 만료 등) 상태 관리
-- Loading UI - Spinner 추가 :point_right: [@9fbf115](https://github.com/herokwon/blog/commit/9fbf115b8ac4ee78c6ea3dd3e69eda03cbb53446)
-
-<br />
-
-**_2023.12.21_**
-
-- Read more 버튼이 있는 infinite scroll 구현 :point_right: [@8fe17c0](https://github.com/herokwon/blog/commit/8fe17c098ece3b24cdd6f29c58c1840fea859e16)
-- Article-Content 페이지 추가
-  - 페이지 생성 :point_right: [@893b1dd](https://github.com/herokwon/blog/commit/893b1dd6a0d0097cb8fbe2d844084d24ccc3f8f8)
-  - 데이터 적용 :point_right: [@cd43b8e](https://github.com/herokwon/blog/commit/cd43b8e97539fdbd747e150c1c05a4293eac8874)
-- Article-Content 페이지 Page-Header 적용 :point_right: [@20f9a8c](https://github.com/herokwon/blog/commit/20f9a8c663eb2ca4b1f14fbdc98f7ff699aabd48)
-
-<br />
-
-**_2023.12.22_**
-
-- Typescript 설정 업데이트 - **_stictNullChecks_** :point_right: [@b601ed1](https://github.com/herokwon/blog/commit/b601ed1304e7bd56584cf0defc139f27699736ad)
-  - 참고 : [TypeScript: TSConfig Reference - Docs on every TSConfig option](https://www.typescriptlang.org/tsconfig#strictNullChecks)
-
-<br />
-
-**_2023.12.23_**
-
-- API Routes → Server Actions 적용 :point_right: [@0afd79f](https://github.com/herokwon/blog/commit/0afd79fcf2f9198753d4ea2ee2435ffc81973edf)
-- Module Import 구분 (internal / external) :point_right: [@3f0c9ba](https://github.com/herokwon/blog/commit/3f0c9ba12abcf246a99da976bab7b0490ba3be7a)
-- Next.js 환경 설정 업데이트 - `images/srcSet` 설정 :point_right: [@7d0659c](https://github.com/herokwon/blog/commit/7d0659ce14bb2bde7d216f68c3a800d356b9f42d)
-- Image-Header Component 추가 :point_right: [@6df929f](https://github.com/herokwon/blog/commit/6df929f710809f5fbf98428d62a4f19ed176e4bb)
-  - Page-Header 내 이미지 렌더링을 위한 리펙토링
-
-<br />
-
-**_2023.12.24_**
-
-- Normal Text Blocks 추가 :point_right: [@d5377dc](https://github.com/herokwon/blog/commit/d5377dc247452b4269b29203953fca30d72abc15)
-  - `Heading`, `Paragraph`, `RichText`, `Quote`
-
-<br />
-
-**_2023.12.25_**
-
-- Specific Text Blocks 추가 :point_right: [@d89f70e](https://github.com/herokwon/blog/commit/d89f70eba4414a897220de36786f77e1b3a7833b)
-  - `Callout`, `Code`, `Column`, `ColumnList`, `Equation`, `List(bulleted & numbered)`, `Table`, `TableRow`, `Toggle`
-  - Text Style Library 추가
-    - 참고 : [**`prismjs`**](https://github.com/Prismjs/Prism) & [**`katex`**](https://github.com/katex/katex)
-
-<br />
-
-**_2023.12.26_**
-
-- Content Blocks Folder Segmentation :point_right: [@05aa5f4](https://github.com/herokwon/blog/commit/05aa5f49ed194de52fa301305fafa1be689e124b)
-- Media Blocks 추가 :point_right: [@e16ca46](https://github.com/herokwon/blog/commit/e16ca46578d828d5d346964b5bac2630187ed0ea)
-  - `Image`, `Video`
-  - sharp 라이브러리 추가
-    - 참고 : [sharp - High performance Node.js image processing](https://sharp.pixelplumbing.com/)
-- `ArticleContainer` Layout Shift 줄이기 :point_right: [@979a6d3](https://github.com/herokwon/blog/commit/979a6d31d86c032c63d58de36c328e8ac4b47032)
-
-<br />
-
-**_2023.12.27_**
-
-- Navigation 리펙토링 :point_right: [@058f616](https://github.com/herokwon/blog/commit/058f616409efda905af43e40dd94cb3bb6d89279)
-  - 내용 : Navigation & Sidebar & Article Preview 업데이트 및 스타일 설정
-
-<br />
-
-**_2023.12.28_**
-
-- Thumbnail hook 리펙토링 :point_right: [@ddd9839](https://github.com/herokwon/blog/commit/ddd983959bde2875dd60ba57a5e0e7b6f49f7d09)
-  - Static Import 추가
-    - 참고 : [Optimizing: Images | Next.js](https://nextjs.org/docs/app/building-your-application/optimizing/images)
-  - Article Info 스타일 재구성
-  - Database Type - ArticleSubProperty 추가
-
-<br />
-
-**_2023.12.29_**
-
-- Content Blocks 추가 :point_right: [@0925493](https://github.com/herokwon/blog/commit/0925493b956b206bd5dfd0fadd4ae75ebdf9d212)
-  - `Bookmark`, `Divider`, `Embed`, `Pdf`, `ToDo`
-- Bookmark Content Details 업데이트 :point_right: [@672aa88](https://github.com/herokwon/blog/commit/672aa8894fe6bf5431c376622964d2e15db8a1e2)
-  - 페이지 제목, 설명, 아이콘, 대표 이미지 등 상세 데이터 적용
-  - 페이지 metadata를 위한 라이브러리 추가
-    - 참고 : [url-metadata](https://github.com/laurengarcia/url-metadata)
-
-<br />
-
-**_2023.12.30_**
-
-- Home - Intro 추가 :point_right: [@1d368c8](https://github.com/herokwon/blog/commit/1d368c8daf4c2eb28a1762693d92c142b6518803), [@67be290](https://github.com/herokwon/blog/commit/67be2900d632a30c4b895afb73f642d3863a5fd8)
-- SVG Loader 오류 수정 (webpack 설정 업데이트) :point_right: [@5e85eae](https://github.com/herokwon/blog/commit/5e85eae09fd8feed93577271e19ccafdc32e86b5)
-
-<br />
-
-**_2023.12.31_**
-
-- 리펙토링 : global class style :point_right: [@130b3c5](https://github.com/herokwon/blog/commit/130b3c5676d5463cd4fa9fa399920139bdc3c61b)
-- Page Transition 추가 (with. **framer-motion**) :point_right: [@30c3d1d](https://github.com/herokwon/blog/commit/30c3d1db3e0b093297429dea9c987b211543ff35)
-- Footer 추가 :point_right: [@351acd2](https://github.com/herokwon/blog/commit/351acd238d3238cc6318279889d4f776f5f9ba63)
-
-<br />
-
-**_2024.01.01_**
-
-- Vercel Deployment (Test ver.) :point_right: [https://herokwon.dev](https://herokwon.dev)
-- Production Runtime 오류 수정 :point_right: [@5af4b91](https://github.com/herokwon/blog/commit/5af4b913e74cd146a2af57fd5ee112c2d35534e0)
-- url-metadata data handling 오류 수정 :point_right: [@5ac1de6](https://github.com/herokwon/blog/commit/5ac1de6be8f9a4bf3fa6221f209020eefc9f8e59)
-- Date Time 추가 :point_right: [@6a23f8e](https://github.com/herokwon/blog/commit/6a23f8e215dcfa2d3d82a298894ca0f625ed57bd)
-  - 참고 : [Hydration Error on Production with Date String : r/nextjs](https://www.reddit.com/r/nextjs/comments/wfhhwn/hydration_error_on_production_with_date_string/)
+<table>
+  <thead>
+    <tr>
+      <th scope="col">날짜</th>
+      <th scope="col">내용</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">2023.12.09</th>
+      <td>
+        프로젝트 생성 및 환경 설정 :point_right: <a href="https://github.com/herokwon/blog/commit/aed3f1aa000d4d3e80f9174127068c7071897f04">@aed3f1a</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.10</th>
+      <td>
+        navigation 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/9622a7ba8a764d44d6effe94a7250aaa847f2195">@9622a7b</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.11</th>
+      <td>
+        darkmode 적용 :point_right: <a href="https://github.com/herokwon/blog/commit/dea0a3d16e32deca9e42323d442d586b94c51d3c">@dea0a3d</a>
+        <br />
+        Button Component 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/81163733cd5270307cb4225de2cc6e133f1b501b">@8116373</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.12 ~ 13</th>
+      <td>
+        Notion Data Fetch API 추가
+        <ul>
+          <li>
+            Articles :point_right: <a href="https://github.com/herokwon/blog/commit/2627717eb79a8c476481ad27c235c530af1d1959">@2627717</a>
+          </li>
+          <li>
+            Summary :point_right: <a href="https://github.com/herokwon/blog/commit/b37a974fbec62286bb64452abf6c340befa24472">@b37a974</a>
+          </li>
+          <li>
+            Categories & Tags :point_right: <a href="https://github.com/herokwon/blog/commit/f658b325807eb01ddf81f4bf6f637ee554ee1dd2">@f658b32</a>
+          </li>
+          <li>
+            Blocks :point_right: <a href="https://github.com/herokwon/blog/commit/432977e8525c5d773a9b7fffe87e9344f5056edc">@432977e</a>
+          </li>
+          <br/>
+          <li>
+            참고 : <a href="https://developers.notion.so/reference">API Reference | Notion Developers</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.14</th>
+      <td>
+        Database Query를 위한 매개변수 타입 정의 :point_right: <a href="https://github.com/herokwon/blog/commit/c176e8752db83566afa8116a9fe0ebcc45d71c77">@c176e87</a>
+        <ul>
+          <li>
+            참고 : <a href="https://www.typescriptlang.org/docs/handbook/utility-types.html">TypeScript: Documentation - Utility Types</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.15</th>
+      <td>
+        Articles (list & container) Component 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/dc582f69093cafdcf44a5c6d5051969b4349e8b4">@dc582f6</a>
+        <ul>
+          <li>
+            참고 : <a href="https://www.typescriptlang.org/docs/handbook/utility-types.html">TypeScript: Documentation - Utility Types</a>
+          </li>
+        </ul>
+        외부 이미지 사용을 위한 Next.js 환경 설정 업데이트
+        <ul>
+          <li>
+            참고 : <a href="https://nextjs.org/docs/app/api-reference/components/image#remotepatterns">Components: <code>Image</code> | Next.js</a>
+          </li>
+        </ul>
+        library 폴더 리팩토링 :point_right: <a href="https://github.com/herokwon/blog/commit/b1b539fa2828d80b97bf349a61121d64ff19fa20">@b1b539f</a>
+        <ul>
+          <li>
+            <code>lib/data</code> : 데이터, 상수 등
+          </li>
+          <li>
+            <code>lib/functions</code> : 주요 기능 관련 함수
+          </li>
+          <li>
+            <code>lib/utils</code> : 유틸리티 함수
+          </li>
+        </ul>
+        외부 이미지 사용을 위한 Next.js 환경 설정 업데이트
+        <ul>
+          <li>
+            참고 : <a href="https://github.com/herokwon/blog/commit/558e44eff04e6a7e2a49c6f18ee95909dc4bddab">@558e44e</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.16 ~ 17</th>
+      <td>
+        Page Header 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/74336da1ce1000ae4783e32bd1c67c01cd32f3d7">@74336da</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.18</th>
+      <td>
+        Sidebar 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/6e3b6b59a49698826537ef9a22b8c4a8012ecd31">@6e3b6b5</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.19</th>
+      <td>
+        Articles Components 리팩토링 (<code>components/articles</code>) :point_right: <a href="https://github.com/herokwon/blog/commit/630e671c9b4a766652d6ca2cec400fb43ded8c49">@630e671</a>
+        <br />
+        Catebory Button Component 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/24e26513760ae78b1669014f3737608a49eaf1b6">@24e2651</a>
+        <br />
+        Article Category 리팩토링 (object → const assertion) :point_right: <a href="https://github.com/herokwon/blog/commit/286a49b1c1d3119b30c1a8e19952869899d1ac14">@286a49b</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.20</th>
+      <td>
+        External Image Rendering hook 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/6e1ee24fe4a9bc1bff7ea381ce19b5737b9e577c">@6e1ee24</a>
+        <ul>
+          <li>클라우드 이미지 렌더링 & 리렌더링(유효기간 만료 등) 상태 관리</li>
+        </ul>
+        (Loading UI) Spinner 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/9fbf115b8ac4ee78c6ea3dd3e69eda03cbb53446">@9fbf115</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.21</th>
+      <td>
+        Read more 버튼이 있는 infinite scroll 구현 :point_right: <a href="https://github.com/herokwon/blog/commit/8fe17c098ece3b24cdd6f29c58c1840fea859e16">@8fe17c0</a>
+        <br />
+        Article-Content 페이지 추가
+        <ul>
+          <li>페이지 생성 :point_right: <a href="https://github.com/herokwon/blog/commit/893b1dd6a0d0097cb8fbe2d844084d24ccc3f8f8">@893b1dd</a>
+          </li>
+          <li>데이터 적용 :point_right: <a href="https://github.com/herokwon/blog/commit/cd43b8e97539fdbd747e150c1c05a4293eac8874">@cd43b8e</a>
+          </li>
+        </ul>
+        Article-Content 페이지 Page-Header 적용 :point_right: <a href="https://github.com/herokwon/blog/commit/20f9a8c663eb2ca4b1f14fbdc98f7ff699aabd48">@20f9a8c</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.22</th>
+      <td>
+        Typescript 설정 업데이트 (strictNullChecks) :point_right: <a href="https://github.com/herokwon/blog/commit/b601ed1304e7bd56584cf0defc139f27699736ad">@b601ed1</a>
+        <ul>
+          <li>참고 : <a href="https://www.typescriptlang.org/tsconfig#strictNullChecks">TypeScript: TSConfig Reference - Docs on every TSConfig option</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.23</th>
+      <td>
+        API Routes → Server Actions 적용 :point_right: <a href="https://github.com/herokwon/blog/commit/0afd79fcf2f9198753d4ea2ee2435ffc81973edf">@0afd79f</a>
+        <br />
+        Module Import 구분 (internal / external) :point_right: <a href="https://github.com/herokwon/blog/commit/3f0c9ba12abcf246a99da976bab7b0490ba3be7a">@3f0c9ba</a>
+        <br />
+        Next.js 환경 설정 업데이트 (<code>images/srcSet</code>) :point_right: <a href="https://github.com/herokwon/blog/commit/7d0659ce14bb2bde7d216f68c3a800d356b9f42d">@7d0659c</a>
+        <br />
+        Image-Header Component 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/6df929f710809f5fbf98428d62a4f19ed176e4bb">@6df929f</a>
+        <ul>
+          <li>
+            Page-Header 내 이미지 렌더링을 위한 리펙토링
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.24</th>
+      <td>
+        Article Contents 1차 업데이트 :point_right: <a href="https://github.com/herokwon/blog/commit/d5377dc247452b4269b29203953fca30d72abc15">@d5377dc</a>
+        <ul>
+          <li>
+            <code>Heading</code>, 
+            <code>Paragraph</code>,
+            <code>RichText</code>,
+            <code>Quote</code>,
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.25</th>
+      <td>
+        Article Contents 2차 업데이트 :point_right: <a href="https://github.com/herokwon/blog/commit/d89f70eba4414a897220de36786f77e1b3a7833b">@d89f70e</a>
+        <ul>
+          <li>
+            <code>Callout</code>, 
+            <code>Code</code>,
+            <code>Column</code>,
+            <code>ColumnList</code>,
+            <code>Equation</code>,
+            <code>List (bulleted & numbered)</code>,
+            <code>Table</code>,
+            <code>TableRow</code>,
+            <code>Toggle</code>,
+          </li>
+        </ul>
+        <ul>
+          <li>
+            참고 : <a href="https://github.com/Prismjs/Prism">prismjs</a>, <a href="https://github.com/katex/katex">katex</a>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.26</th>
+      <td>
+        Content Blocks Folder Segmentation :point_right: <a href="https://github.com/herokwon/blog/commit/05aa5f49ed194de52fa301305fafa1be689e124b">@05aa5f4</a>
+        <br />
+        Article Contents 3차 업데이트 :point_right: <a href="https://github.com/herokwon/blog/commit/e16ca46578d828d5d346964b5bac2630187ed0ea">@e16ca46</a>
+        <ul>
+          <li>
+            <code>Image</code>,
+            <code>Video</code>
+          </li>
+        </ul>
+        <ul>
+          <li>
+            참고 : <a href="https://sharp.pixelplumbing.com/">sharp - High performance Node.js image processing</a>
+          </li>
+        </ul>
+        <code>ArticleContainer</code> Layout Shift 줄이기 :point_right: <a href="https://github.com/herokwon/blog/commit/979a6d31d86c032c63d58de36c328e8ac4b47032">@979a6d3</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.27</th>
+      <td>
+        Navigation 리펙토링 :point_right: <a href="https://github.com/herokwon/blog/commit/058f616409efda905af43e40dd94cb3bb6d89279">@058f616</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.28</th>
+      <td>
+        Thumbnail hook 리펙토링 :point_right: <a href="https://github.com/herokwon/blog/commit/ddd983959bde2875dd60ba57a5e0e7b6f49f7d09">@ddd9839</a>
+        <ul>
+          <li>
+            참고 : <a href="https://nextjs.org/docs/app/building-your-application/optimizing/images">Optimizing: Images | Next.js</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.29</th>
+      <td>
+        Article Contents 4차 업데이트 :point_right: <a href="https://github.com/herokwon/blog/commit/0925493b956b206bd5dfd0fadd4ae75ebdf9d212">@0925493</a>
+        <ul>
+          <li>
+            <code>Bookmark</code>,
+            <code>Divider</code>,
+            <code>Embed</code>,
+            <code>Pdf</code>,
+            <code>ToDo</code>,
+          </li>
+        </ul>
+        Bookmark 상세 정보 업데이트 :point_right: <a href="https://github.com/herokwon/blog/commit/672aa8894fe6bf5431c376622964d2e15db8a1e2">@672aa88</a>
+        <ul>
+          <li>
+            참고 : <a href="https://github.com/laurengarcia/url-metadata">url-metadata</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.30</th>
+      <td>
+        Intro 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/1d368c8daf4c2eb28a1762693d92c142b6518803">@1d368c8</a>, <a href="https://github.com/herokwon/blog/commit/67be2900d632a30c4b895afb73f642d3863a5fd8">@67be290</a>
+        <br />
+        SVG Loader 오류 수정 (webpack 설정 업데이트) :point_right: <a href="https://github.com/herokwon/blog/commit/5e85eae09fd8feed93577271e19ccafdc32e86b5">@5e85eae</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.12.31</th>
+      <td>
+        Global CSS Styles 리팩토링 :point_right: <a href="https://github.com/herokwon/blog/commit/130b3c5676d5463cd4fa9fa399920139bdc3c61b">@130b3c5</a>
+        <br />
+        Page Transition 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/30c3d1db3e0b093297429dea9c987b211543ff35">@30c3d1d</a>
+        <ul>
+          <li>
+            참고 : <a href="https://github.com/framer/motion">framer-motion</a>
+          </li>
+        </ul>
+        Footer 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/351acd238d3238cc6318279889d4f776f5f9ba63">@351acd2</a>
+      </td>
+    </tr>
+    <tr>
+      <th colspan="2" style="text-align: center;">2024</th>
+    </tr>
+    <tr>
+      <th scope="row">2024.01.01</th>
+      <td>
+        Vercel Deployment (Test ver.) : <a href="https://herokwon.dev">https://herokwon.dev</a>
+        <br />
+        오류 수정
+        <ul>
+          <li>
+            Production Runtime :point_right: <a href="https://github.com/herokwon/blog/commit/30c3d1db3e0b093297429dea9c987b211543ff35">@5af4b91</a>
+          </li>
+        </ul>
+        <ul>
+          <li>
+            url-metadata data handler :point_right: <a href="https://github.com/herokwon/blog/commit/5ac1de6be8f9a4bf3fa6221f209020eefc9f8e59">@5ac1de6</a>
+          </li>
+        </ul>
+        Date Time 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/6a23f8e215dcfa2d3d82a298894ca0f625ed57bd">@6a23f8e</a>      
+        <ul>
+          <li>
+          참고 : <a href="https://www.reddit.com/r/nextjs/comments/wfhhwn/hydration_error_on_production_with_date_string/">Hydration Error on Production with Date String : r/nextjs</a>
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.01.02</th>
+      <td>
+        <code>getImageMetadata</code>, <code>getUrlMetadata</code> 코드 포맷팅 :point_right: <a href="https://github.com/herokwon/blog/commit/20cda63e1b8c93c0c59fca3fb6705d1e3ebc55ac">@20cda63</a>
+        <br />
+        sitemap 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/f228f3b00e71ef9edb9a9237f0f1aaaef9343f2b">@f228f3b</a>
+        <br />
+        page metadata 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/b70ab64dfea654e8aa7afc708be45869f6ec3bf7">@b70ab64</a>
+        <br />
+        Google Analytics 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/1821a2dc488b5a093091228b05d85db8f4f26925">@1821a2d</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2023.01.03</th>
+      <td>
+        Image Optimization 관련 오류 수정 (Vercel 할당량 초과) :point_right: <a href="https://github.com/herokwon/blog/commit/f192a82682db9f820335ab0dd29344e11aaaad84">@f192a82</a>
+        <br />
+        Article Contents - Video 리팩토링 :point_right: <a href="https://github.com/herokwon/blog/commit/ec342381ed0d1e34004dfb32d9873086358d886e">@ec34238</a>
+        Page Loading UI 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/5345e28d355d04940705c5f199148e3ffa416fed">@5345e28</a>
+        <br />
+        Article Contents 전체 리팩토링 & 코드 포맷팅 :point_right: <a href="https://github.com/herokwon/blog/commit/8747bc223a5ec4f03e0cbe45343f5ac78b2ec5de">@8747bc2</a>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 <br />
 <br />
