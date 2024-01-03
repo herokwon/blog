@@ -78,6 +78,10 @@
 }
 
 @layer components {
+  .page-loading:before {
+    @apply w-full h-full content-[""] bg-light-primary dark:bg-dark-primary opacity-bold absolute top-0 left-0 z-0;
+  }
+
   #wrapper,
   .main-wrapper {
     @apply w-full min-h-screen;
