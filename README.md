@@ -339,7 +339,7 @@
       </td>
     </tr>
     <tr>
-      <th scope="row">2023.01.02</th>
+      <th scope="row">2024.01.02</th>
       <td>
         <code>getImageMetadata</code>, <code>getUrlMetadata</code> 코드 포맷팅 :point_right: <a href="https://github.com/herokwon/blog/commit/20cda63e1b8c93c0c59fca3fb6705d1e3ebc55ac">@20cda63</a>
         <br />
@@ -351,7 +351,7 @@
       </td>
     </tr>
     <tr>
-      <th scope="row">2023.01.03</th>
+      <th scope="row">2024.01.03</th>
       <td>
         Image Optimization 관련 오류 수정 (Vercel 할당량 초과) :point_right: <a href="https://github.com/herokwon/blog/commit/f192a82682db9f820335ab0dd29344e11aaaad84">@f192a82</a>
         <br />
