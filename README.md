@@ -112,12 +112,7 @@
             <code>lib/utils</code> : 유틸리티 함수
           </li>
         </ul>
-        외부 이미지 사용을 위한 Next.js 환경 설정 업데이트
-        <ul>
-          <li>
-            참고 : <a href="https://github.com/herokwon/blog/commit/558e44eff04e6a7e2a49c6f18ee95909dc4bddab">@558e44e</a>
-          </li>
-        </ul>
+        Node.js 모드에 따른 baseUrl 설정 및 적용 :point_right: <a href="https://github.com/herokwon/blog/commit/558e44eff04e6a7e2a49c6f18ee95909dc4bddab">@558e44e</a>
       </td>
     </tr>
     <tr>
