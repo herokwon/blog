@@ -1,5 +1,4 @@
-import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
-import { ImageBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { RichTextItemResponse, ImageBlockObjectResponse, VideoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextColors, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "@/app/types/notion";
 import { fetchSummary } from "../databases";
@@ -79,6 +78,24 @@ export const getImage = (block: ImageBlockObjectResponse): { url: string; expiri
         case "file":
             return {
                 url: block.image.file.url,
+                expiring: true,
+            };
+    }
+};
+
+export const getVideo = (block: VideoBlockObjectResponse) => {
+    switch (block.video.type) {
+        case "external":
+            const externalUrl = block.video.external.url;
+
+            return {
+                url: externalUrl.includes("youtube") && externalUrl.includes("watch?v=") ?
+                    externalUrl.replace("watch?v=", "embed/") : externalUrl,
+                expiring: false,
+            };
+        case "file":
+            return {
+                url: block.video.file.url,
                 expiring: true,
             };
     }
