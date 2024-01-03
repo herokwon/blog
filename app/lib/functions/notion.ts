@@ -83,7 +83,7 @@ export const getImage = (block: ImageBlockObjectResponse): { url: string; expiri
     }
 };
 
-export const getVideo = (block: VideoBlockObjectResponse) => {
+export const getVideo = (block: VideoBlockObjectResponse): { url: string; expiring: boolean; } => {
     switch (block.video.type) {
         case "external":
             const externalUrl = block.video.external.url;

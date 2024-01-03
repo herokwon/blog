@@ -24,7 +24,7 @@ export default async function ContentLayout({ params, children }: ContentLayoutP
     return (
         <section className="main-wrapper">
             <PageHeader imageSrc={properties.Thumbnail.url ?? ""} title={properties.Title ?? title}>
-                <div className="w-full my-4 flex flex-col justify-center items-center absolute bottom-0 left-0 z-[1]">
+                <div className="w-full max-w-screen-lg my-4 flex flex-col justify-center items-center absolute bottom-0 left-1/2 -translate-x-1/2 z-[1]">
                     <CategoryButton category={params.category} />
                     <h1 className="py-4 text-center text-dark">{title}</h1>
                     {properties.Date ?
