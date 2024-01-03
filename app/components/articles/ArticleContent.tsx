@@ -7,7 +7,7 @@ export default async function ArticleContent({ id }: { id: string }) {
     const blockData = new BlockResponse(response.items, response.nextCursor);
 
     return (
-        <article className="article-content section-container">
+        <article className="article-content">
             {blockData.items.map((block, index) =>
                 <Block
                     key={index}

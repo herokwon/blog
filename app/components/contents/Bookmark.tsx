@@ -1,11 +1,13 @@
 import { BookmarkBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import Link from "next/link";
 
 import { getMetadata } from "@/app/lib/utils/getUrlMetadata";
-import Link from "next/link";
 
 export default async function Bookmark({ block }: { block: BookmarkBlockObjectResponse }) {
     const pageUrl = block.bookmark.url;
     const metadata = await getMetadata(pageUrl);
+
+    if (!metadata) return null;
 
     return (
         <Link
