@@ -219,10 +219,9 @@
             <code>TableRow</code>,
             <code>Toggle</code>,
           </li>
-        </ul>
-        <ul>
           <li>
             참고 : <a href="https://github.com/Prismjs/Prism">prismjs</a>, <a href="https://github.com/katex/katex">katex</a>
+          </li>
         </ul>
       </td>
     </tr>
@@ -237,8 +236,6 @@
             <code>Image</code>,
             <code>Video</code>
           </li>
-        </ul>
-        <ul>
           <li>
             참고 : <a href="https://sharp.pixelplumbing.com/">sharp - High performance Node.js image processing</a>
           </li>
@@ -319,13 +316,11 @@
           <li>
             Production Runtime :point_right: <a href="https://github.com/herokwon/blog/commit/30c3d1db3e0b093297429dea9c987b211543ff35">@5af4b91</a>
           </li>
-        </ul>
-        <ul>
           <li>
             url-metadata data handler :point_right: <a href="https://github.com/herokwon/blog/commit/5ac1de6be8f9a4bf3fa6221f209020eefc9f8e59">@5ac1de6</a>
           </li>
         </ul>
-        Date Time 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/6a23f8e215dcfa2d3d82a298894ca0f625ed57bd">@6a23f8e</a>      
+        Date Time 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/6a23f8e215dcfa2d3d82a298894ca0f625ed57bd">@6a23f8e</a>
         <ul>
           <li>
           참고 : <a href="https://www.reddit.com/r/nextjs/comments/wfhhwn/hydration_error_on_production_with_date_string/">Hydration Error on Production with Date String : r/nextjs</a>
@@ -356,6 +351,13 @@
         Article Contents 전체 리팩토링 & 코드 포맷팅 :point_right: <a href="https://github.com/herokwon/blog/commit/8747bc223a5ec4f03e0cbe45343f5ac78b2ec5de">@8747bc2</a>
       </td>
     </tr>
+    <tr>
+      <th scope="row">2024.01.04 ~ 05</th>
+      <td>
+        Custom Errors 추가 & 전체적인 코드 리팩토링 :point_right: <a href="https://github.com/herokwon/blog/commit/a6392875423b3a3199fe8d09483247000e2ff4ca">@a639287</a>
+      </td>
+    </tr>
+
   </tbody>
 </table>
 
