@@ -134,7 +134,7 @@
     }
 
     &-image {
-      @apply h-full opacity-bold dark:opacity-off bg-center bg-no-repeat transition-all duration-200 relative;
+      @apply opacity-off transition-all duration-200 relative;
     }
 
     &:hover > &-image {

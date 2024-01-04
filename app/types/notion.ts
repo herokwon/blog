@@ -127,5 +127,8 @@ export interface BookmarkMetadata {
     title: string | null;
     description: string | null;
     faviconUrl: string | null;
-    imageUrl: string | null;
+    imgData: {
+        url: string;
+        base64: string;
+    } | null;
 };

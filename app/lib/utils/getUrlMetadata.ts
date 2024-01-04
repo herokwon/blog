@@ -4,8 +4,9 @@ import urlMetadata from 'url-metadata';
 
 import { UrlMetadata } from '@/app/types/metadata';
 import { BookmarkMetadata } from '@/app/types/notion';
+import getImageMetadata from './getImageMetadata';
 
-export const getMetadata = async (url: string): Promise<BookmarkMetadata | null> => {
+export const getUrlMetadata = async (url: string): Promise<BookmarkMetadata | null> => {
     try {
         const response: unknown = await urlMetadata(url);
         const metadata = response as UrlMetadata;
@@ -21,7 +22,10 @@ export const getMetadata = async (url: string): Promise<BookmarkMetadata | null>
             title: title,
             description: description,
             faviconUrl: faviconUrl,
-            imageUrl: imageUrl,
+            imgData: imageUrl ? {
+                base64: (await getImageMetadata(imageUrl)).base64,
+                url: imageUrl,
+            } : null,
         };
     } catch {
         return null;

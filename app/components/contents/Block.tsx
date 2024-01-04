@@ -71,13 +71,13 @@ export default async function Block({ block, blocks, index }: BlockProps) {
             return <Heading block={block} />
         case "image":
             const imgData = getImage(block);
-            const { base64, imgMetadata } = await getImageMetadata(imgData.url);
+            const { base64, metadata } = await getImageMetadata(imgData.url);
             return (
                 <Images
                     block={block}
                     imgData={imgData}
                     base64={base64}
-                    imgMetadata={imgMetadata} />
+                    imgMetadata={metadata} />
             );
         case "link_preview":
             return null;
