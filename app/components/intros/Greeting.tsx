@@ -43,7 +43,13 @@ export default function Greeting() {
                 <div className="w-full text-[1.48rem] text-center font-nunito font-semibold whitespace-pre absolute top-1/2 left-0 -translate-y-1/2 z-[1]">
                     {currentContent.answer.map((item, index) =>
                         <p key={index} className="w-full my-2 flex justify-center items-center">
-                            {item.imgUrl ? <i className="w-[2.5rem] h-[2.5rem] mr-2 rounded-full bg-white block bg-center bg-no-repeat bg-[length:2.5rem_2.5rem]" style={{ backgroundImage: `url(${item.imgUrl})` }} /> : null}
+                            {item.imgSrc ?
+                                <Image
+                                    src={item.imgSrc}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-full"
+                                    alt="greeting-image" /> : null}
                             {item.content}
                         </p>)}
                 </div>
