@@ -36,6 +36,7 @@ export default async function Bookmark({ block }: { block: BookmarkBlockObjectRe
                         src={metadata.imgData.url}
                         fill
                         sizes="(max-width: 768px) 33vw (max-width: 1056px) 25vw 256px"
+                        unoptimized
                         placeholder="blur"
                         blurDataURL={metadata.imgData.base64}
                         className="object-cover object-center"
