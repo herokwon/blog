@@ -1,8 +1,16 @@
 'use server'
 
-import { getPlaiceholder } from "plaiceholder";
+import { GetPlaiceholderReturn, getPlaiceholder } from "plaiceholder";
 
-const getImageMetadata = async (src: string) => {
+type ImageMetadata =
+    Omit<GetPlaiceholderReturn, "metadata"> & {
+        metadata: {
+            width: number;
+            height: number;
+        }
+    }
+
+const getImageMetadata = async (src: string): Promise<ImageMetadata> => {
     const buffer = await fetch(src).then(async (response) =>
         Buffer.from(await response.arrayBuffer())
     );
@@ -16,7 +24,7 @@ const getImageMetadata = async (src: string) => {
 
     return {
         ...plaiceholder,
-        imgMetadata: {
+        metadata: {
             width, height
         }
     };
