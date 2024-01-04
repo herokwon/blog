@@ -14,6 +14,7 @@ export default function PreviewBox({ Category, Title, Date, Thumbnail }: Article
     return (
         <Link
             href={Title ? `/posts/${Category}/${encodeURIComponent(Title)}` : ""}
+            scroll={false}
             className="preview-box">
             <div className="w-full aspect-[4/3] relative">
                 {imgLoading ?
