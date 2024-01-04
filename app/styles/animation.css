@@ -4,6 +4,15 @@
   }
 }
 
+@keyframes drop {
+  90% {
+    @apply h-20;
+  }
+  100% {
+    @apply h-160 top-full;
+  }
+}
+
 .rotation {
   animation: rotate 1s linear infinite;
   @apply transition-transform duration-200;

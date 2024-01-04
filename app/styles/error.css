@@ -1,0 +1,29 @@
+#notfound {
+  & > .notfound-bg {
+    & > div {
+      @apply w-1 h-full bg-light-secondary dark:bg-dark-secondary absolute top-0 bottom-0 overflow-hidden;
+
+      &:after {
+        @apply w-2 h-160 bg-blue-500 content-[""] absolute -top-full -left-[0.5px] transition-all duration-200;
+      }
+
+      &:nth-child(1):after {
+        animation: drop 5s infinite linear;
+        animation-delay: 0.2s;
+      }
+
+      &:nth-child(2):after {
+        animation: drop 3s infinite linear;
+        animation-delay: 0.7s;
+      }
+      &:nth-child(3):after {
+        animation: drop 4s infinite linear;
+        animation-delay: 0.9s;
+      }
+      &:nth-child(4):after {
+        animation: drop 3s infinite linear;
+        animation-delay: 1.2s;
+      }
+    }
+  }
+}
