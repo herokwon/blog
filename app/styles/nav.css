@@ -72,7 +72,8 @@
       @apply bg-[var(--dark-foreground)];
     }
 
-    &[data-path="/"] {
+    &[data-path="/"],
+    &[data-path="not-found"] {
       > :not(:last-child) {
         @apply text-light dark:text-dark;
       }

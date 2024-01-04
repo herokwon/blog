@@ -8,7 +8,7 @@
   }
 
   &--title {
-    @apply text-center line-clamp-1;
+    @apply line-clamp-1;
   }
 
   &--summary {
@@ -29,7 +29,7 @@
   @apply shadow-[4px_12px_30px_6px_rgba(18,18,18,0.09)] hover:shadow-[4px_12px_30px_6px_rgba(18,18,18,0.27)];
 
   > div:first-child {
-    @apply w-full aspect-[2/1] grid gap-y-2 auto-rows-auto dark:bg-dark-secondary;
+    @apply w-full aspect-[2/1] grid gap-y-2 auto-rows-auto bg-light-primary dark:bg-dark-secondary;
   }
 
   > div:last-child {

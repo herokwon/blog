@@ -41,6 +41,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
     return (
         <Link
             href={Title ? `/posts/${Category}/${encodeURIComponent(Title)}` : ""}
+            scroll={false}
             className="article-container group">
             <div className="w-full px-2 py-4">
                 <div className="w-full flex justify-between items-center">
@@ -66,7 +67,7 @@ export default function ArticleContainer({ id, Category, Title, Date, Thumbnail 
                     src={imgSrc ?? Thumbnail.url ?? ""}
                     className={`object-cover object-center ${imgLoading ? "opacity-off" : ""}`}
                     fill
-                    sizes="(max-width: 680px) 100vw, (max-width: 1026px) 50vw, 33vw"
+                    sizes="(max-width: 689px) 100vw, (max-width: 1026px) 50vw, 33vw"
                     priority
                     unoptimized
                     onLoad={handleImgLoad}

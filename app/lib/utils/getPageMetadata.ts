@@ -11,14 +11,14 @@ interface PageMetadata {
 };
 
 const getPageMetadata = ({ path, title, description, keywords, imgSrc }: PageMetadata): Metadata => {
-    const pageUrl = `${BASE_URL}${path}`;
     const pageTitle = title ?
         `${title} | All of IT` : "All of IT";
     const pageDescription = description ?? "배움과 성장을 기록하는 공간 | Hero Kwon's Blog";
     const imgUrl = imgSrc?.includes("https://") ?
-        imgSrc : `${BASE_URL}${imgSrc ?? "/images/opengraph.png"}`;
+        imgSrc : imgSrc ?? "/images/opengraph.png";
 
     return {
+        metadataBase: new URL(BASE_URL),
         authors: [{ name: AUTHOR, url: BASE_URL }],
         creator: AUTHOR,
         title: pageTitle,
@@ -28,7 +28,7 @@ const getPageMetadata = ({ path, title, description, keywords, imgSrc }: PageMet
             title: pageTitle,
             type: "website",
             description: pageDescription,
-            url: pageUrl,
+            url: path,
             images: imgUrl,
             locale: "ko_KR",
             ttl: path.includes("/posts") ?
@@ -39,7 +39,7 @@ const getPageMetadata = ({ path, title, description, keywords, imgSrc }: PageMet
             creator: AUTHOR,
             title: pageTitle,
             description: pageDescription,
-            site: pageUrl,
+            site: `${BASE_URL}${path}`,
             images: imgUrl,
         },
     };
