@@ -48,6 +48,7 @@ export default function Greeting() {
                                     src={item.imgSrc}
                                     width={40}
                                     height={40}
+                                    unoptimized
                                     className="rounded-full"
                                     alt="greeting-image" /> : null}
                             {item.content}
