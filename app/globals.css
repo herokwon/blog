@@ -5,6 +5,7 @@
 @import "./styles/footer.css";
 @import "./styles/articles.css";
 @import "./styles/article.css";
+@import "./styles/error.css";
 
 @tailwind base;
 @tailwind components;

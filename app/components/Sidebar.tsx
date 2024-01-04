@@ -30,6 +30,7 @@ export default function Sidebar({ latestArticles }: { latestArticles: PageObject
                         <Link
                             key={index}
                             href={item.path}
+                            scroll={false}
                             className={`nav-item ${pathname === item.path ? "selected" : ""} w-full flex justify-between items-center group`}
                             onClick={handleCloseSidebar}>
                             {item.title}

@@ -29,6 +29,8 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
         setCategoryCursor(targetCategory as ArticleCategoryKeywords);
     };
 
+    useEffect(() => { }, [pathname]);
+
     useEffect(() => {
         document.documentElement.className = theme;
         updateTheme(theme);
@@ -49,7 +51,10 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
     }, []);
 
     return (
-        <header data-path={pathname} id="main-header"
+        <header
+            data-path={navItem.find((item) => item.path === pathname) || pathname.includes("/posts") || pathname.includes("/projects") ?
+                pathname : "not-found"}
+            id="main-header"
             className={`${isScrolled ? "scrolled" : ""}`}>
             <div className="h-full flex justify-start items-center flex-1">
                 <Link href={navItem[0].path} className="mx-2">
@@ -61,6 +66,7 @@ export default function Nav({ initTheme, previewArticles }: { initTheme: BlogThe
                     <Link
                         key={index}
                         href={item.path}
+                        scroll={false}
                         data-category={item.path.slice(item.path.lastIndexOf("/") + 1)}
                         className={`nav-item ${pathname === item.path ? "selected" : ""}`}
                         onMouseEnter={handleNavItemMouseEnter}>
