@@ -6,9 +6,13 @@ import { UrlMetadata } from '@/app/types/metadata';
 import { BookmarkMetadata } from '@/app/types/notion';
 import getImageMetadata from './getImageMetadata';
 
+const options: urlMetadata.Options = {
+    timeout: 1000 * 5,  // timeout in millisecionds.
+};
+
 export const getUrlMetadata = async (url: string): Promise<BookmarkMetadata | null> => {
     try {
-        const response: unknown = await urlMetadata(url);
+        const response: unknown = await urlMetadata(url, options);
         const metadata = response as UrlMetadata;
 
         const baseUrl = url.slice(0, url.indexOf("/", 10));
@@ -92,7 +96,7 @@ const handleFetchMetadata = {
         return null;
     },
     fromBaseUrl: async (baseUrl: string) => {
-        const response: unknown = await urlMetadata(baseUrl);
+        const response: unknown = await urlMetadata(baseUrl, options);
         return response as UrlMetadata;
     },
 };
