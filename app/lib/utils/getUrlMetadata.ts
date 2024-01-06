@@ -1,98 +1,167 @@
 'use server'
 
-import urlMetadata from 'url-metadata';
+import { unfurl } from "unfurl.js";
+import { AbsoluteString, AbsoluteTemplateString, DefaultTemplateString } from "next/dist/lib/metadata/types/metadata-types";
 
-import { UrlMetadata } from '@/app/types/metadata';
-import { BookmarkMetadata } from '@/app/types/notion';
-import getImageMetadata from './getImageMetadata';
+import { BookmarkMetadata } from "@/app/types/notion";
+
+// Metadata type (from unfurl.js)
+interface UrlMetadata {
+    title?: string;
+    description?: string;
+    keywords?: string[];
+    favicon?: string;
+    author?: string;
+    theme_color?: string;
+    canonical_url?: string;
+    oEmbed?: {
+        type: "photo" | "video" | "link" | "rich";
+        width?: number;
+        height?: number;
+        version?: string;
+        title?: string;
+        author_name?: string;
+        author_url?: string;
+        provider_name?: string;
+        provider_url?: string;
+        cache_age?: number;
+        thumbnails?: [
+            {
+                url?: string;
+                width?: number;
+                height?: number;
+            }
+        ];
+    };
+    twitter_card: {
+        card: string;
+        site?: string;
+        creator?: string;
+        creator_id?: string;
+        title?: string;
+        description?: string;
+        players?: {
+            url: string;
+            stream?: string;
+            height?: number;
+            width?: number;
+        }[];
+        apps: {
+            iphone: {
+                id: string;
+                name: string;
+                url: string;
+            };
+            ipad: {
+                id: string;
+                name: string;
+                url: string;
+            };
+            googleplay: {
+                id: string;
+                name: string;
+                url: string;
+            };
+        };
+        images: {
+            url: string;
+            alt: string;
+        }[];
+    };
+    open_graph: {
+        title: string;
+        type: string;
+        images?: {
+            url: string;
+            secure_url?: string;
+            type: string;
+            width: number;
+            height: number;
+            alt?: string;
+        }[];
+        url?: string;
+        audio?: {
+            url: string;
+            secure_url?: string;
+            type: string;
+        }[];
+        description?: string;
+        determiner?: string;
+        site_name?: string;
+        locale: string;
+        locale_alt: string;
+        videos: {
+            url: string;
+            stream?: string;
+            height?: number;
+            width?: number;
+            tags?: string[];
+        }[];
+        article: {
+            published_time?: string;
+            modified_time?: string;
+            expiration_time?: string;
+            author?: string;
+            section?: string;
+            tags?: string[];
+        };
+    };
+};
 
 export const getUrlMetadata = async (url: string): Promise<BookmarkMetadata | null> => {
     try {
-        const response: unknown = await urlMetadata(url);
-        const metadata = response as UrlMetadata;
+        const metadata: UrlMetadata = await unfurl(url, {
+            oembed: true,
+            timeout: 5000,
+            follow: 3,
+        });
 
-        const baseUrl = url.slice(0, url.indexOf("/", 10));
-
-        const title = handleFetchMetadata.title(metadata);
-        const description = handleFetchMetadata.description(metadata);
-        const faviconUrl = await handleFetchMetadata.faviconUrl(baseUrl, metadata.favicons);
-        const imageUrl = await handleFetchMetadata.imageUrl(baseUrl, metadata);
+        const title = handleUrlMetadata.parseTitle(metadata);
+        const description = handleUrlMetadata.parseDescription(metadata);
+        const faviconUrl = handleUrlMetadata.parseFaviconUrl(metadata);
+        const imageUrl = handleUrlMetadata.parseImageData(metadata);
 
         return {
             title: title,
             description: description,
             faviconUrl: faviconUrl,
-            imgData: imageUrl ? {
-                base64: (await getImageMetadata(imageUrl)).base64,
-                url: imageUrl,
-            } : null,
+            imageUrl: (imageUrl && imageUrl.length > 0) ? imageUrl : null,
         };
     } catch {
         return null;
     }
 };
 
-const handleFetchMetadata = {
-    title: (metadata: UrlMetadata) => {
-        if (metadata.title.length > 0) return metadata.title;
-        if (metadata["og:title"].length > 0) return metadata["og:title"];
-        if (metadata["twitter:title"].length > 0) return metadata["twitter:title"];
+const isString = (s: any): s is string => {
+    return typeof s === "string" || s instanceof String;
+};
 
-        return null;
+const handleUrlMetadata = {
+    parseTitle: (metadata: UrlMetadata): string | null => {
+        return metadata.title ? handleUrlMetadata.parseTemplateString(metadata.title) : null;
     },
-    description: (metadata: UrlMetadata) => {
-        if (metadata.description.length > 0) return metadata.description;
-        if (metadata["og:description"].length > 0) return metadata["og:description"];
-        if (metadata["twitter:description"].length > 0) return metadata["twitter:description"];
-
-        return null;
+    parseDescription: (metadata: UrlMetadata): string | null => {
+        return metadata.description ?? metadata.open_graph.description ?? metadata.twitter_card.description ?? null;
     },
-    faviconUrl: async (baseUrl: string, favicons: UrlMetadata["favicons"]) => {
-        if (favicons.length > 0) {
-            switch (favicons[0].href.includes("https://")) {
-                case true:
-                    return favicons[0].href;
-                case false:
-                    const baseFaviconUrl =
-                        favicons[0].href[0] === "/" ?
-                            favicons[0].href.slice(1) :
-                            favicons[0].href;
+    parseFaviconUrl: (metadata: UrlMetadata): string | null => {
+        return metadata.favicon ?? null;
+    },
+    parseImageData: (metadata: UrlMetadata): string | null => {
+        if (metadata.oEmbed) {
+            const thumbnails = metadata.oEmbed.thumbnails;
 
-                    return `${baseUrl}/${baseFaviconUrl}`;
-            }
-        } else {
-            const baseUrlMetadata = await handleFetchMetadata.fromBaseUrl(baseUrl);
-
-            if (baseUrlMetadata.favicons.length === 0) return null;
-
-            switch (baseUrlMetadata.favicons[0].href.includes("https://")) {
-                case true:
-                    return baseUrlMetadata.favicons[0].href;
-                case false:
-                    const baseFaviconUrl =
-                        baseUrlMetadata.favicons[0].href[0] === "/" ?
-                            baseUrlMetadata.favicons[0].href.slice(1) :
-                            baseUrlMetadata.favicons[0].href;
-
-                    return `${baseUrl}/${baseFaviconUrl}`;
-            }
+            if (thumbnails) return thumbnails[0].url ?? null;
         }
+
+        if (metadata.open_graph.images) return metadata.open_graph.images[0].url;
+
+        return metadata.twitter_card.images[0].url;
     },
-    imageUrl: async (baseUrl: string, metadata: UrlMetadata) => {
-        if (metadata.image.length > 0) return metadata.image;
-        if (metadata["og:image"].length > 0) return metadata["og:image"];
-        if (metadata["twitter:image"].length > 0) return metadata["twitter:image"];
+    parseTemplateString: (str: string | DefaultTemplateString | AbsoluteTemplateString | AbsoluteString): string => {
+        if (isString(str)) return str;
 
-        const baseUrlMetadata = await handleFetchMetadata.fromBaseUrl(baseUrl);
-
-        if (baseUrlMetadata.image.length > 0) return baseUrlMetadata.image;
-        if (baseUrlMetadata["og:image"].length > 0) return baseUrlMetadata["og:image"];
-        if (baseUrlMetadata["twitter:image"].length > 0) return baseUrlMetadata["twitter:image"];
-
-        return null;
-    },
-    fromBaseUrl: async (baseUrl: string) => {
-        const response: unknown = await urlMetadata(baseUrl);
-        return response as UrlMetadata;
+        if ('default' in str) return str.default;
+        if ('absolute' in str) return str.absolute;
+        return "";
     },
 };
