@@ -357,7 +357,18 @@
         Custom Errors 추가 & 전체적인 코드 리팩토링 :point_right: <a href="https://github.com/herokwon/blog/commit/a6392875423b3a3199fe8d09483247000e2ff4ca">@a639287</a>
       </td>
     </tr>
-
+    <tr>
+      <th scope="row">2024.01.06 ~ 07</th>
+      <td>
+        Timeout 관련 오류 수정 (해결 X) :point_right: <a href="https://github.com/herokwon/blog/commit/1acafbb7ab412e2b9dabeed426dfcc446addf7c1">@1acafbb</a>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2024.01.08</th>
+      <td>
+      Toc(Table of content) 추가 :point_right: <a href="https://github.com/herokwon/blog/commit/3c66efbdf86cf8103990af16e643e343b8ef3e90">@3c66efb</a>
+      </td>
+    </tr>
   </tbody>
 </table>
 
