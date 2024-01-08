@@ -3,6 +3,38 @@
     @apply pl-4;
   }
 
+  /* Toc ------------------------------ */
+
+  .article-toc {
+    &--container {
+      @apply w-max max-w-[300px] p-2 block border-light-primary bg-light-secondary dark:border-dark-primary dark:bg-dark-secondary translate-x-[200%] -translate-y-1/2 transition-all duration-200 fixed top-1/2 right-5 -z-50;
+
+      &.active {
+        @apply rounded-lg overflow-hidden translate-x-0 z-50;
+
+        & ~ .article-toc--btn {
+          @apply translate-x-[200%] -z-10;
+        }
+      }
+
+      .toc-item {
+        @apply w-full p-2 block border-l-4 border-transparent text-[0.9rem] font-semibold break-words opacity-off transition-all duration-200;
+
+        &:hover {
+          @apply bg-light-primary dark:bg-dark-primary font-semibold opacity-bold;
+        }
+
+        &.selected {
+          @apply border-blue-500 bg-light-primary dark:bg-dark-primary opacity-bold;
+        }
+      }
+    }
+
+    &--btn {
+      @apply border-2 border-light-tertiary bg-light-primary dark:border-dark-tertiary dark:bg-dark-primary transition-all duration-200 fixed top-1/2 right-5 -translate-y-1/2 z-10;
+    }
+  }
+
   /* Text Contents ------------------------------ */
 
   &--heading {
