@@ -1,4 +1,7 @@
+'use client'
+
 import { Dispatch, SetStateAction, useEffect, useRef } from "react";
+
 import { Headings } from "../types/notion";
 
 export const useToc = (headings: Headings[], setActiveId: Dispatch<SetStateAction<string>>) => {

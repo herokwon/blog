@@ -1,8 +1,8 @@
 import { BlockResponse } from "@/app/types/notion";
 import { fetchBlocks } from "@/app/lib/databases";
+import { extractHeadings } from "@/app/lib/functions/notion";
 import Block from "../contents/Block";
 import Toc from "../Toc";
-import { extractHeadings } from "@/app/lib/functions/notion";
 
 export default async function ArticleContent({ id }: { id: string }) {
     const response = await fetchBlocks(id);
