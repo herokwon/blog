@@ -1,10 +1,9 @@
-import { Heading1BlockObjectResponse, Heading2BlockObjectResponse, Heading3BlockObjectResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+import { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import Link from "next/link";
 
+import { HeadingBlockObjectResponse } from "@/app/types/notion";
 import { convertRichToPlain } from "@/app/lib/functions/notion";
 import RichText from "./texts/RichText";
-
-type HeadingBlockObjectResponse = Heading1BlockObjectResponse | Heading2BlockObjectResponse | Heading3BlockObjectResponse;
 
 export default function Heading({ block }: { block: HeadingBlockObjectResponse }) {
     const richTexts = block[block.type].rich_text as RichTextItemResponse[];
