@@ -3,6 +3,9 @@ import {
     BulletedListItemBlockObjectResponse,
     DatePropertyItemObjectResponse,
     FilesPropertyItemObjectResponse,
+    Heading1BlockObjectResponse,
+    Heading2BlockObjectResponse,
+    Heading3BlockObjectResponse,
     MultiSelectPropertyItemObjectResponse,
     NumberedListItemBlockObjectResponse,
     PageObjectResponse,
@@ -128,4 +131,11 @@ export interface BookmarkMetadata {
     description: string | null;
     faviconUrl: string | null;
     imageUrl: string | null;
+};
+
+export type HeadingBlockObjectResponse = Heading1BlockObjectResponse | Heading2BlockObjectResponse | Heading3BlockObjectResponse;
+
+export interface Headings {
+    content: string;
+    count: number;
 };

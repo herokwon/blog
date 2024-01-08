@@ -1,6 +1,6 @@
-import { RichTextItemResponse, ImageBlockObjectResponse, VideoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { RichTextItemResponse, ImageBlockObjectResponse, VideoBlockObjectResponse, BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { ArticleProperty, DatePropertyItem, FilesPropertyItem, MultiSelectPropertyItem, RichTextColors, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "@/app/types/notion";
+import { ArticleProperty, DatePropertyItem, FilesPropertyItem, HeadingBlockObjectResponse, Headings, MultiSelectPropertyItem, RichTextColors, RichTextPropertyItem, SelectPropertyItem, StatusPropertyItem, TitlePropertyItem } from "@/app/types/notion";
 import { fetchSummary } from "../databases";
 
 export const extractArticleProperties = (properties: object): ArticleProperty => {
@@ -66,6 +66,15 @@ export const extractRichTextStyle = (richText: RichTextItemResponse): string => 
     if (annotations.color !== "default") styles.push(extractRichTextColor(annotations.color));
 
     return styles.join(" ");
+};
+
+export const extractHeadings = (blocks: BlockObjectResponse[]): Headings[] => {
+    const headings = blocks.filter((block) => block.type.includes("heading"));
+
+    return headings.map((heading: HeadingBlockObjectResponse) => ({
+        content: convertRichToPlain(heading[heading.type].rich_text as RichTextItemResponse[]),
+        count: parseInt(heading.type.replace("heading_", "")),
+    }));
 };
 
 export const getImage = (block: ImageBlockObjectResponse): { url: string; expiring: boolean } => {
