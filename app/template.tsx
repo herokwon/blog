@@ -37,22 +37,22 @@ export default function Template({ children }: { children: React.ReactNode }) {
 const variants: Variants = {
     initial: {
         opacity: 0,
-        transform: 'translateY(50px)',
-        transitionProperty: 'transform',
+        marginTop: '50px',
+        transitionProperty: 'margin',
         transitionDuration: '300ms',
         transitionTimingFunction: 'ease',
     },
     enter: {
         opacity: 1,
-        transform: 'translateY(0)',
-        transitionProperty: 'transform',
+        marginTop: '0px',
+        transitionProperty: 'margin',
         transitionDuration: '300ms',
         transitionTimingFunction: 'ease',
     },
     exit: {
         opacity: 0,
-        transform: 'translateY(50px)',
-        transitionProperty: 'transform',
+        marginTop: '50px',
+        transitionProperty: 'margin',
         transitionDuration: '300ms',
         transitionTimingFunction: 'ease',
     }
