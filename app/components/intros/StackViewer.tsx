@@ -1,10 +1,11 @@
 import { StackType, stackItem } from "@/app/lib/data/stack";
+import Blank from "../contents/Blank";
 
 export default function StackViewer() {
     return (
         <section className="intro-container--stack-viewer">
             {Object.keys(stackItem).map((stackType: keyof typeof StackType, index) => {
-                if (stackItem[stackType].length === 0) return null;
+                if (stackItem[stackType].length === 0) return <Blank />;
 
                 return (
                     <div key={index} className="w-full py-4 my-block">

@@ -2,11 +2,12 @@ import { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { ListItemBlockObjectResponse } from "@/app/types/notion";
 import ListItem from "./ListItem";
+import Blank from "./Blank";
 
 export default function List({ block, blocks, index }: { block: ListItemBlockObjectResponse; blocks: BlockObjectResponse[]; index: number }) {
     const listItems = mergeAdjacentListItems(block, blocks, index);
 
-    if (block.type === blocks[index - 1]?.type ?? null) return null;
+    if (block.type === blocks[index - 1]?.type ?? null) return <Blank />;
 
     switch (block.type) {
         case "bulleted_list_item":
