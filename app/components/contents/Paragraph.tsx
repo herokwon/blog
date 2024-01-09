@@ -12,14 +12,14 @@ export default async function Paragraph({ block }: { block: ParagraphBlockObject
             <RichText richTexts={block.paragraph.rich_text} />
             {!children ?
                 null :
-                <p className="article-content--indent">
+                <div className="article-content--indent">
                     {children.items.map((item, index) =>
                         <Block
                             key={item.id}
                             block={item}
                             blocks={children.items}
                             index={index} />)}
-                </p>}
+                </div>}
         </p>
     );
 }

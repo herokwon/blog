@@ -3,12 +3,13 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { getUrlMetadata } from "@/app/lib/utils/getUrlMetadata";
+import Blank from "./Blank";
 
 export default async function Bookmark({ block }: { block: BookmarkBlockObjectResponse }) {
     const pageUrl = block.bookmark.url;
     const metadata = await getUrlMetadata(pageUrl);
 
-    if (!metadata) return null;
+    if (!metadata) return <Blank />;
 
     return (
         <Link

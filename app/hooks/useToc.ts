@@ -2,16 +2,14 @@
 
 import { Dispatch, SetStateAction, useEffect, useRef } from "react";
 
-import { Headings } from "../types/notion";
-
-export const useToc = (headings: Headings[], setActiveId: Dispatch<SetStateAction<string>>) => {
-    const headingElementsRef = useRef<any>({});
+export const useToc = (children: React.ReactNode, setActiveId: Dispatch<SetStateAction<string>>) => {
+    const headingElementsRef = useRef({});
 
     useEffect(() => {
         headingElementsRef.current = {};
 
         const callback: IntersectionObserverCallback = (headings) => {
-            headingElementsRef.current = headings.reduce((map: any, headingElement) => {
+            headingElementsRef.current = headings.reduce((map, headingElement) => {
                 map[headingElement.target.id] = headingElement;
                 return map;
             }, headingElementsRef.current);
@@ -42,5 +40,5 @@ export const useToc = (headings: Headings[], setActiveId: Dispatch<SetStateActio
 
         return () => observer.disconnect();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [headings]);
+    }, [children]);
 };

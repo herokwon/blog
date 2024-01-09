@@ -1,24 +1,20 @@
-import { BlockResponse } from "@/app/types/notion";
-import { fetchBlocks } from "@/app/lib/databases";
-import { extractHeadings } from "@/app/lib/functions/notion";
-import Block from "../contents/Block";
+'use client'
+
+import { useState } from "react";
+
+import { Headings } from "@/app/types/notion";
+import { useToc } from "@/app/hooks/useToc";
 import Toc from "../Toc";
 
-export default async function ArticleContent({ id }: { id: string }) {
-    const response = await fetchBlocks(id);
-    const blockData = new BlockResponse(response.items, response.nextCursor);
-    const headings = extractHeadings(blockData.items);
+export default function ArticleContent({ headings, children }: { headings: Headings[]; children: React.ReactNode; }) {
+    const [activeId, setActiveId] = useState<string>("");
+
+    useToc(children, setActiveId);
 
     return (
         <article className="article-content">
-            {blockData.items.map((block, index) =>
-                <Block
-                    key={index}
-                    block={block}
-                    blocks={blockData.items}
-                    index={index} />
-            )}
-            <Toc headings={headings} />
+            {children}
+            <Toc activeId={activeId} headings={headings} />
         </article>
     );
 }

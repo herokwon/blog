@@ -3,9 +3,9 @@ import { Mail } from "lucide-react";
 import Link from "next/link";
 
 import { socialItem } from "../lib/data/socialItem";
+import { AUTHOR, CONTACT } from "../lib/data/constants";
 import ThreeModelViewer from "./intros/ThreeModelViewer";
 import Section from "./Section";
-import { AUTHOR, CONTACT } from "../lib/data/constants";
 
 export default function Footer() {
     return (
