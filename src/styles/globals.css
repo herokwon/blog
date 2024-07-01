@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    @apply w-full h-full min-h-screen;
+  }
+
+  body {
+    @apply text-light dark:text-dark bg-light-primary dark:bg-dark-primary;
+  }
+}
+
+@layer components {
+}
+
+@layer utilities {
+}
