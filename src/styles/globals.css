@@ -12,3 +12,21 @@
     @apply text-foreground-light dark:text-foreground-dark bg-background-light dark:bg-background-dark size-full min-h-screen;
   }
 }
+
+@utility bg-underline-* {
+  transition-property: background-size;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+
+  background-repeat: no-repeat;
+  background-position: 0% 100%;
+  background-size: 0% --spacing(--value(number));
+
+  &:hover,
+  &.active {
+    background-size: 100% --spacing(--value(number));
+  }
+}
