@@ -4,6 +4,10 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
     @apply text-foreground-light dark:text-foreground-dark bg-background-light dark:bg-background-dark size-full min-h-screen;
   }
