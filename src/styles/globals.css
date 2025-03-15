@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+@import '@herokwon/ui/dist/index.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply text-foreground-light dark:text-foreground-dark bg-background-light dark:bg-background-dark size-full min-h-screen;
+  }
+}
