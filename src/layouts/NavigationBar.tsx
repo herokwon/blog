@@ -14,7 +14,7 @@ export default function NavigationBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex h-12 w-full items-center justify-center gap-x-2">
+    <nav className="flex size-full flex-3 items-center justify-center gap-x-2">
       {NAV_ITEMS.map(({ path, title }) => (
         <Link
           key={`${title}${path}`}

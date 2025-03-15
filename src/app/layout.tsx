@@ -16,9 +16,12 @@ export default async function RootLayout({
   return (
     <html lang="ko" className={theme ?? 'light'}>
       <body>
-        <header className="sticky top-0 left-0 w-full backdrop-blur-md">
+        <header className="sticky top-0 left-0 flex h-12 w-full px-4 backdrop-blur-md">
+          <div className="flex h-full flex-1 items-center justify-start"></div>
           <NavigationBar />
-          <ThemeButton theme={theme} />
+          <div className="flex h-full flex-1 items-center justify-end">
+            <ThemeButton theme={theme} />
+          </div>
         </header>
         {children}
       </body>
