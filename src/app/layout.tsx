@@ -18,7 +18,7 @@ export default async function RootLayout({
   return (
     <html lang="ko" className={theme ?? 'light'}>
       <body>
-        <header className="sticky top-0 left-0 flex h-12 w-full px-4 backdrop-blur-md">
+        <header className="sticky top-0 left-0 z-99 flex h-12 w-full px-4 backdrop-blur-md">
           <div className="flex h-full flex-1 items-center justify-start">
             <Link
               href="/"
