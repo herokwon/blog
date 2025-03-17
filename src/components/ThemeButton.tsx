@@ -26,6 +26,7 @@ export default function ThemeButton({ theme }: ThemeButtonProps) {
 
   return (
     <button
+      data-testid="theme-button"
       type="button"
       className="hover:bg-secondary-light dark:hover:bg-secondary-dark relative size-8 rounded-full p-1.5 transition-colors *:absolute *:top-1/2 *:left-1/2 *:-translate-1/2 *:transition-transform"
       onClick={() => setIsDarkMode(prev => !prev)}
