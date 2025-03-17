@@ -14,7 +14,10 @@ export default function NavigationBox() {
   const pathname = usePathname();
 
   return (
-    <nav className="max-md:bg-secondary-light dark:max-md:bg-secondary-dark max-md:shadow-secondary-light dark:max-md:shadow-secondary-dark flex size-full items-center justify-center gap-x-2 gap-y-4 max-md:h-max max-md:max-w-75 max-md:flex-col max-md:rounded-md max-md:p-4 max-md:shadow">
+    <nav
+      data-testid="navigation-box"
+      className="max-md:bg-secondary-light dark:max-md:bg-secondary-dark max-md:shadow-secondary-light dark:max-md:shadow-secondary-dark flex size-full items-center justify-center gap-x-2 gap-y-4 max-md:h-max max-md:max-w-75 max-md:flex-col max-md:rounded-md max-md:p-4 max-md:shadow"
+    >
       {NAV_ITEMS.map(({ path, title }) => (
         <Link
           key={`${title}${path}`}
