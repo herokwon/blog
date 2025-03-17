@@ -6,7 +6,7 @@ import { getTheme } from '@lib';
 
 import { NavigationBar } from '@layouts';
 
-import { Logo, ThemeButton } from '@components';
+import { Logo, MenuButton, ThemeButton } from '@components';
 
 export default async function RootLayout({
   children,
@@ -18,8 +18,8 @@ export default async function RootLayout({
   return (
     <html lang="ko" className={theme ?? 'light'}>
       <body>
-        <header className="sticky top-0 left-0 z-99 flex h-12 w-full px-4 backdrop-blur-md">
-          <div className="flex h-full flex-1 items-center justify-start">
+        <header className="sticky top-0 left-0 z-99 grid h-12 w-full grid-cols-[1fr_2fr_1fr] grid-rows-[3rem] items-center gap-y-8 px-4 backdrop-blur-md">
+          <div className="flex h-full items-center justify-start max-md:order-2 max-md:justify-center">
             <Link
               href="/"
               className="relative h-full w-40 *:absolute *:top-1/2 *:left-1/2 *:-translate-1/2 *:transition-opacity *:last:-z-1 not-hover:*:last:pointer-events-none not-hover:*:last:opacity-0"
@@ -28,8 +28,11 @@ export default async function RootLayout({
               <Logo />
             </Link>
           </div>
-          <NavigationBar />
-          <div className="flex h-full flex-1 items-center justify-end">
+          <div className="max-md:*:first:order-1 max-md:*:last:absolute max-md:*:last:top-[calc(100%+(50vh-3rem))] max-md:*:last:left-1/2 max-md:*:last:-translate-1/2 md:*:first:hidden">
+            <MenuButton />
+            <NavigationBar />
+          </div>
+          <div className="order-3 flex h-full items-center justify-end">
             <ThemeButton theme={theme} />
           </div>
         </header>
