@@ -19,6 +19,7 @@ export default function MenuButton() {
 
   return (
     <button
+      data-testid="menu-button"
       type="button"
       className="hover:bg-secondary-light dark:hover:bg-secondary-dark flex size-8 items-center justify-center rounded-full transition-colors"
       onClick={() => setIsOpen(prev => !prev)}
