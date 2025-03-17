@@ -4,7 +4,7 @@ import '../styles/globals.css';
 
 import { getTheme } from '@lib';
 
-import { NavigationBar } from '@layouts';
+import { NavigationBox } from '@layouts';
 
 import { Logo, MenuButton, ThemeButton } from '@components';
 
@@ -30,7 +30,7 @@ export default async function RootLayout({
           </div>
           <div className="max-md:*:first:order-1 max-md:*:last:absolute max-md:*:last:top-[calc(100%+(50vh-3rem))] max-md:*:last:left-1/2 max-md:*:last:-translate-1/2 md:*:first:hidden">
             <MenuButton />
-            <NavigationBar />
+            <NavigationBox />
           </div>
           <div className="order-3 flex h-full items-center justify-end">
             <ThemeButton theme={theme} />

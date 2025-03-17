@@ -10,7 +10,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [{ path: '/', title: 'Home' }];
 
-export default function NavigationBar() {
+export default function NavigationBox() {
   const pathname = usePathname();
 
   return (
