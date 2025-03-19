@@ -1,13 +1,11 @@
 import NavigationBox from './NavigationBox';
 import { render, screen } from '@testing-library/react';
 
-const NAV_ITEMS: { path: string; title: string }[] = [
-  { path: '/', title: 'Home' },
-];
+import { NAV_ITEMS } from '@data';
 
 describe('Navigation Box', () => {
   it('should render as default', () => {
-    render(<NavigationBox />);
+    render(<NavigationBox items={NAV_ITEMS} />);
     const navigationBox = screen.getByTestId('navigation-box');
 
     expect(navigationBox).toBeInTheDocument();
@@ -15,12 +13,12 @@ describe('Navigation Box', () => {
   });
 
   it('should render with hyperlinks', () => {
-    render(<NavigationBox />);
+    render(<NavigationBox items={NAV_ITEMS} />);
     const hyperlinks = screen.getAllByRole('link');
 
     hyperlinks.forEach((hyperlink, index) => {
       expect(hyperlink).toHaveAttribute('href', NAV_ITEMS[index].path);
-      expect(hyperlink).toHaveTextContent(NAV_ITEMS[index].title);
+      expect(hyperlink).toHaveTextContent(NAV_ITEMS[index].title.toUpperCase());
     });
   });
 });
