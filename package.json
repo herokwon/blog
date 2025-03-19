@@ -5,12 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "check-types": "tsc --noEmit",
-    "test": "vitest",
-    "test:run": "vitest run",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check-types": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@herokwon/ui": "^0.2.1",
