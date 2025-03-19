@@ -1,3 +1,5 @@
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Link from 'next/link';
 
 import '../styles/globals.css';
@@ -39,6 +41,8 @@ export default async function RootLayout({
           </div>
         </header>
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
