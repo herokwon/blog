@@ -4,7 +4,41 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
     @apply text-foreground-light dark:text-foreground-dark bg-background-light dark:bg-background-dark size-full min-h-screen;
+
+    &:has(header nav.modal-active) {
+      @apply overflow-hidden!;
+    }
+  }
+
+  header nav {
+    @apply max-md:absolute max-md:top-[calc(100%+(50vh-3rem))] max-md:left-1/2 max-md:-translate-1/2;
+
+    &:not(.modal-active) {
+      @apply max-md:pointer-events-none max-md:opacity-0;
+    }
+  }
+}
+
+@utility bg-underline-* {
+  transition-property: background-size;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+
+  background-repeat: no-repeat;
+  background-position: 0% 100%;
+  background-size: 0% --spacing(--value(number));
+
+  &:hover,
+  &.active {
+    background-size: 100% --spacing(--value(number));
   }
 }

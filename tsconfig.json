@@ -18,7 +18,14 @@
         "name": "next"
       }
     ],
+    "baseUrl": ".",
     "paths": {
+      "@assets/*": ["./src/assets/*"],
+      "@components": ["./src/components"],
+      "@data": ["./src/data"],
+      "@layouts": ["./src/layouts"],
+      "@lib": ["./src/lib"],
+      "@types": ["./src/types"],
       "@/*": ["./src/*"]
     }
   },
