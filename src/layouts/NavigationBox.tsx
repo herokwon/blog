@@ -3,14 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-type NavItem = {
-  path: string;
-  title: string;
+import type { NavItem } from '@types';
+
+type NavigationBoxProps = {
+  items: NavItem[];
 };
 
-const NAV_ITEMS: NavItem[] = [{ path: '/', title: 'Home' }];
-
-export default function NavigationBox() {
+export default function NavigationBox({ items }: NavigationBoxProps) {
   const pathname = usePathname();
 
   return (
@@ -18,7 +17,7 @@ export default function NavigationBox() {
       data-testid="navigation-box"
       className="max-md:bg-secondary-light dark:max-md:bg-secondary-dark max-md:shadow-secondary-light dark:max-md:shadow-secondary-dark flex size-full items-center justify-center gap-x-2 gap-y-4 max-md:h-max max-md:max-w-75 max-md:flex-col max-md:rounded-md max-md:p-4 max-md:shadow"
     >
-      {NAV_ITEMS.map(({ path, title }) => (
+      {items.map(({ path, title }) => (
         <Link
           key={`${title}${path}`}
           href={path}
@@ -26,7 +25,7 @@ export default function NavigationBox() {
             pathname === path ? 'active font-bold' : ''
           }`}
         >
-          {title}
+          {title.toUpperCase()}
         </Link>
       ))}
     </nav>
