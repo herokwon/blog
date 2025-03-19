@@ -1,7 +1,14 @@
 {
   "singleQuote": true,
   "arrowParens": "avoid",
-  "importOrder": ["(.css)$", "lib$", "assets/(.*)$", "layouts$", "components$"],
+  "importOrder": [
+    "(.css)$",
+    "types$",
+    "lib$",
+    "assets/(.*)$",
+    "layouts$",
+    "components$"
+  ],
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true,
   "plugins": [
