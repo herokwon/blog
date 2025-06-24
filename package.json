@@ -7,7 +7,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "format": "prettier --write \"**/*.{ts,tsx,astro,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,astro,md}\""
   },
   "dependencies": {
     "@astrojs/react": "^4.3.0",
