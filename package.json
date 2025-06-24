@@ -10,7 +10,11 @@
     "astro": "astro",
     "format": "prettier --write \"**/*.{ts,tsx,astro,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,astro,md}\"",
-    "lint": "eslint . --max-warnings 0"
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@astrojs/react": "^4.3.0",
