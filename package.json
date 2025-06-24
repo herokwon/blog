@@ -17,8 +17,10 @@
   },
   "devDependencies": {
     "@astrojs/ts-plugin": "^1.10.4",
+    "@tailwindcss/vite": "^4.1.10",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3"
   }
 }
