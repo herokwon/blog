@@ -10,10 +10,15 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.10.1"
+    "@astrojs/react": "^4.3.0",
+    "astro": "^5.10.1",
+    "react": "^19",
+    "react-dom": "^19"
   },
   "devDependencies": {
     "@astrojs/ts-plugin": "^1.10.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "typescript": "^5.8.3"
   }
 }
