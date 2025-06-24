@@ -6,6 +6,8 @@
     "^@astrojs(.*)$",
     "^react(.*)$",
     "^vite(.*)$",
+    "^eslint(.*)$",
+    "^@eslint(.*)$",
     "<THIRD_PARTY_MODULES>",
     "@styles(.*)$",
     "(.css)$",
