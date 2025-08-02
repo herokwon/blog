@@ -1,0 +1,20 @@
+{
+  "singleQuote": true,
+  "arrowParens": "avoid",
+  "importOrder": [
+    "^react(.*)$",
+    "^next(.*)$",
+    "^eslint(.*)$",
+    "^@eslint(.*)$",
+    "<THIRD_PARTY_MODULES>",
+    "(.css)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true,
+  "importOrderCaseInsensitive": true,
+  "plugins": [
+    "@trivago/prettier-plugin-sort-imports",
+    "prettier-plugin-tailwindcss"
+  ]
+}
