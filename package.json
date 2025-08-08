@@ -13,7 +13,10 @@
     "check-types": "tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "build:worker": "opennextjs-cloudflare build",
+    "preview": "pnpm build:worker && wrangler dev",
+    "deploy": "pnpm build:worker && wrangler deploy"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.6.5",
