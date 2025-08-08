@@ -1,16 +1,41 @@
+import { defineWorkersProject } from '@cloudflare/vitest-pool-workers/config';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    globals: true,
-    pool: 'threads',
-    environment: 'jsdom',
-    setupFiles: 'vitest.setup.ts',
     coverage: {
       enabled: true,
-      provider: 'v8',
+      provider: 'istanbul',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/app/**/*.{ts,tsx}'],
+      exclude: ['src/app/**/*.{ts,tsx}', 'src/**/*.worker.ts', '**/*.d.ts'],
     },
+    projects: [
+      // Unit 테스트
+      {
+        test: {
+          globals: true,
+          name: 'Unit Tests',
+          environment: 'jsdom',
+          pool: 'threads',
+          setupFiles: './vitest.setup.ts',
+          include: ['src/**/!(*.worker).{test,spec}.{ts,tsx}'],
+        },
+      },
+      // Cloudflare Workers 테스트
+      defineWorkersProject({
+        test: {
+          globals: true,
+          name: 'Workers Tests',
+          include: ['src/**/*.worker.{test,spec}.ts'],
+          poolOptions: {
+            workers: {
+              wrangler: {
+                configPath: './wrangler.jsonc',
+              },
+            },
+          },
+        },
+      }),
+    ],
   },
 });
