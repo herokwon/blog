@@ -1,0 +1,201 @@
+name: Setup Slack Payload
+description: Create a payload for Slack notification
+
+inputs:
+  slack_channel_id:
+    description: Slack channel ID
+    required: true
+  deployed:
+    description: Whether the deployment was successful
+    required: true
+  cloudflare_account_id:
+    description: Cloudflare account ID
+    required: true
+  cloudflare_worker_name:
+    description: Name of the Cloudflare Worker
+    required: true
+  cloudflare_worker_domain:
+    description: Domain of the Cloudflare Worker
+    required: true
+  pr_commit:
+    description: Commit hash
+    required: true
+  pr_number:
+    description: Pull request number
+    required: true
+  pr_title:
+    description: Pull request title
+    required: true
+  pr_url:
+    description: Pull request URL
+    required: true
+  avatar_url:
+    description: GitHub avatar URL
+    required: true
+
+outputs:
+  file-path:
+    description: The path to the payload file
+    value: ${{ steps.payload.outputs.file-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup payload
+      id: payload
+      shell: bash
+      run: |
+        if [ "${{ inputs.deployed }}" = "true" ]; then
+          echo '{
+            "channel": "${{ inputs.slack_channel_id }}",
+            "attachments": [
+              {
+                "color": "#36a64f",
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "✅ Cloudflare Workers 배포 완료",
+                      "emoji": true
+                    }
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "🌐\t<https://${{ inputs.cloudflare_worker_domain }}|*페이지 바로가기*>"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*Commit*\n<https://github.com/${{ github.repository }}/commit/${{ inputs.pr_commit }}|${{ inputs.pr_commit }}>"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*Pull request*\n<${{ inputs.pr_url }}|[#${{ inputs.pr_number }}] ${{ inputs.pr_title }}>"
+                    }
+                  },
+                  {
+                    "type": "actions",
+                    "elements": [
+                      {
+                        "type": "button",
+                        "text": {
+                          "type": "plain_text",
+                          "text": "⭐\t Workflow details",
+                          "emoji": true
+                        },
+                        "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                      },
+                      {
+                        "type": "button",
+                        "text": {
+                          "type": "plain_text",
+                          "text": "📄\t Deployment details",
+                          "emoji": true
+                        },
+                        "url": "https://dash.cloudflare.com/${{ inputs.cloudflare_account_id }}/workers/services/view/${{ inputs.cloudflare_worker_name }}/production/deployments"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "context",
+                    "elements": [
+                      {
+                        "type": "image",
+                        "image_url": "${{ inputs.avatar_url }}",
+                        "alt_text": "avatar_img"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "<https://github.com/${{ github.repository_owner }}|*${{ github.repository_owner }}*> has approved this message."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }' > slack_payload.json
+        else
+          echo '{
+            "channel": "${{ inputs.slack_channel_id }}",
+            "attachments": [
+              {
+                "color": "#ff4d4d",
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "❌ Cloudflare Workers 배포 실패",
+                      "emoji": true
+                    }
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*Commit*\n<https://github.com/${{ github.repository }}/commit/${{ inputs.pr_commit }}|${{ inputs.pr_commit }}>"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*Pull request*\n<${{ inputs.pr_url }}|[#${{ inputs.pr_number }}] ${{ inputs.pr_title }}>"
+                    }
+                  },
+                  {
+                    "type": "actions",
+                    "elements": [
+                      {
+                        "type": "button",
+                        "text": {
+                          "type": "plain_text",
+                          "text": "🔍\t Workflow details",
+                          "emoji": true
+                        },
+                        "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "context",
+                    "elements": [
+                      {
+                        "type": "image",
+                        "image_url": "${{ inputs.avatar_url }}",
+                        "alt_text": "avatar_img"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "<https://github.com/${{ github.repository_owner }}|*${{ github.repository_owner }}*> has approved this message."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }' > slack_payload.json
+        fi
+
+        FILE_PATH="slack_payload.json"
+        echo "file-path=$FILE_PATH" >> $GITHUB_OUTPUT
