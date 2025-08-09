@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
-      result: ${{ steps.deploy.outcome == 'success' }}
+      result: ${{ steps.deploy.outcome }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,7 +97,7 @@ jobs:
         uses: ./.github/actions/setup-slack-payload
         with:
           slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
-          deployed: ${{ needs.deploy.outputs.result }}
+          deployed: ${{ needs.deploy.outputs.result == 'success' }}
           cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           cloudflare_worker_name: ${{ steps.wrangler.outputs.name }}
           cloudflare_worker_domain: ${{ steps.wrangler.outputs.domain }}
