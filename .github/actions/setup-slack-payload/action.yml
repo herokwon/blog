@@ -44,8 +44,12 @@ runs:
     - name: Setup payload
       id: payload
       shell: bash
+      env:
+        DEPLOYED: ${{ inputs.deployed }}
+        CF_WORKER_NAME: ${{ inputs.cloudflare_worker_name }}
+        CF_WORKER_DOMAIN: ${{ inputs.cloudflare_worker_domain }}
       run: |
-        if [ "${{ inputs.deployed }}" = "true" ]; then
+        if [ "$DEPLOYED" = "true" ] && [ -n "$CF_WORKER_NAME" ] && [ -n "$CF_WORKER_DOMAIN" ]; then
           echo '{
             "channel": "${{ inputs.slack_channel_id }}",
             "attachments": [
