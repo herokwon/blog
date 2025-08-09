@@ -20,7 +20,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build & Deploy Worker
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Build for Cloudflare Workers
+        run: pnpm build:worker
+
+      - name: Deploy Worker
         id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
