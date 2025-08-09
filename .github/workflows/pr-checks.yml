@@ -70,7 +70,7 @@ jobs:
     name: Merge
     needs: [check-lint, check-types, test]
     runs-on: ubuntu-latest
-    if: startsWith(github.head_ref, 'changeset-release') || github.event.pull_request.user.login == 'dependabot[bot]'
+    if: (startsWith(github.head_ref, 'changeset-release') && (github.event.pull_request.user.login == 'github-actions[bot]' || github.event.pull_request.user.login == 'dependabot[bot]')) || github.event.pull_request.user.login == 'dependabot[bot]'
     permissions:
       contents: write
       pull-requests: write
