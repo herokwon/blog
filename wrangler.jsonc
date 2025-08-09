@@ -10,5 +10,11 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "routes": [
+    {
+      "pattern": "blog.herokwon.dev",
+      "custom_domain": true
+    }
+  ]
 }
