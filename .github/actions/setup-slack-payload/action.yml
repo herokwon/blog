@@ -87,7 +87,7 @@ runs:
         if (ok) {
           blocks.push({
             type: 'section',
-            text: { type: 'mrkdwn', text: `🌐\t<https://${process.env.CF_WORKER_DOMAIN}|*페이지 바로가기*>` }
+            text: { type: 'mrkdwn', text: `🌐 <https://${process.env.CF_WORKER_DOMAIN}|*페이지 바로가기*>` }
           });
         }
 
