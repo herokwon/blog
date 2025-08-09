@@ -37,19 +37,17 @@ runs:
       if: ${{ inputs.debug == 'true' }}
       shell: bash
       run: |
+        set -euo pipefail
         echo "::group::project .npmrc"
-        if [ -f .npmrc ]; then cat .npmrc; else echo "(no .npmrc in repo root)"; fi
-        echo "::endgroup::"
-
-        echo "::group::effective pnpm configs"
-        echo "node-linker (effective): $(pnpm config get node-linker || true)"
-        echo "shamefully-hoist (effective): $(pnpm config get shamefully-hoist || true)"
-        echo "store path: $(pnpm store path || true)"
-        echo "::endgroup::"
-
-        echo "::group::project-scoped values"
-        pnpm config get node-linker --location=project || true
-        pnpm config get shamefully-hoist --location=project || true
+        if [ -f .npmrc ]; then
+          sed -E \
+            -e 's#(//[^:]+:[^=]+)=.*#\1=***REDACTED***#g' \
+            -e 's#(_authToken)=.*#\1=***REDACTED***#g' \
+            -e 's#(npmAuthToken)=.*#\1=***REDACTED***#g' \
+            .npmrc
+        else
+          echo "(no .npmrc in repo root)"
+        fi
         echo "::endgroup::"
 
     - name: Install dependencies
