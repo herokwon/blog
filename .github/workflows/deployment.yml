@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 60
     outputs:
       result: ${{ steps.deploy.outcome }}
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,6 +43,7 @@ jobs:
     name: Parse deployment info
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: read
     outputs:
       pr: ${{ steps.pr.outputs.result }}
@@ -50,7 +53,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          sparse-checkout: |
+            wrangler.jsonc
+          sparse-checkout-cone-mode: false
 
       - name: Check a latest pull request
         id: pr
@@ -114,11 +119,6 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Comment on pull request
         uses: actions/github-script@v7
         env:
@@ -155,12 +155,13 @@ jobs:
     name: Send Slack message
     runs-on: ubuntu-latest
     needs: [deploy, parse-info]
-    if: ${{ needs.parse-info.outputs.pr != '' }}
+    if: ${{ needs.parse-info.outputs.pr != ''  }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          sparse-checkout: |
+            .github/actions/setup-slack-payload
 
       - name: Setup Slack Payload
         id: slack-payload
