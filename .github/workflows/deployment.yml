@@ -37,12 +37,15 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         continue-on-error: true
 
-  send-slack-message:
-    name: Send Slack message
+  parse-info:
+    name: Parse deployment info
     runs-on: ubuntu-latest
-    needs: deploy
     permissions:
       pull-requests: read
+    outputs:
+      pr: ${{ steps.pr.outputs.result }}
+      worker-name: ${{ steps.wrangler.outputs.name }}
+      worker-domain: ${{ steps.wrangler.outputs.domain }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -75,6 +78,7 @@ jobs:
         id: wrangler
         run: |
           node - << 'NODE'
+
           const fs = require('fs');
           const path = './wrangler.jsonc';
 
@@ -95,6 +99,7 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_OUTPUT, 'name=\n');
             fs.appendFileSync(process.env.GITHUB_OUTPUT, 'domain=\n');
           }
+
           NODE
 
       - name: Setup Slack Payload
@@ -104,13 +109,13 @@ jobs:
           slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
           deployed: ${{ needs.deploy.outputs.result == 'success' }}
           cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          cloudflare_worker_name: ${{ steps.wrangler.outputs.name }}
-          cloudflare_worker_domain: ${{ steps.wrangler.outputs.domain }}
-          pr_commit: ${{ fromJSON(steps.pr.outputs.result).commit }}
-          pr_number: ${{ fromJSON(steps.pr.outputs.result).number }}
-          pr_title: ${{ fromJSON(steps.pr.outputs.result).title }}
-          pr_url: ${{ fromJSON(steps.pr.outputs.result).url }}
-          avatar_url: ${{ fromJSON(steps.pr.outputs.result).avatar_url }}
+          cloudflare_worker_name: ${{ needs.parse-info.outputs.worker-name }}
+          cloudflare_worker_domain: ${{ needs.parse-info.outputs.worker-domain }}
+          pr_commit: ${{ fromJSON(needs.parse-info.outputs.pr).commit }}
+          pr_number: ${{ fromJSON(needs.parse-info.outputs.pr).number }}
+          pr_title: ${{ fromJSON(needs.parse-info.outputs.pr).title }}
+          pr_url: ${{ fromJSON(needs.parse-info.outputs.pr).url }}
+          avatar_url: ${{ fromJSON(needs.parse-info.outputs.pr).avatar_url }}
 
       - name: Send slack message
         uses: slackapi/slack-github-action@v2
