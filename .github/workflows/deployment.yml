@@ -107,7 +107,7 @@ jobs:
           NODE
 
   comment-pr:
-    name: Comment on Pull request
+    name: Comment for deployment result
     runs-on: ubuntu-latest
     needs: [deploy, parse-info]
     if: ${{ needs.parse-info.outputs.pr != '' }}
