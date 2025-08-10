@@ -156,6 +156,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy, parse-info]
     if: ${{ needs.parse-info.outputs.pr != ''  }}
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
