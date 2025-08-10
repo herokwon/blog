@@ -1,12 +1,12 @@
 name: Deployment
 
-permissions:
-  contents: read
-
 on:
   push:
     branches:
       - main
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 60
     outputs:
       result: ${{ steps.deploy.outcome }}
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,15 +39,23 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         continue-on-error: true
 
-  send-slack-message:
-    name: Send Slack message
+  parse-info:
+    name: Parse deployment info
     runs-on: ubuntu-latest
-    needs: deploy
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      pr: ${{ steps.pr.outputs.result }}
+      worker-name: ${{ steps.wrangler.outputs.name }}
+      worker-domain: ${{ steps.wrangler.outputs.domain }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          sparse-checkout: |
+            wrangler.jsonc
+          sparse-checkout-cone-mode: false
 
       - name: Check a latest pull request
         id: pr
@@ -56,13 +66,17 @@ jobs:
               commit_sha: context.sha,
               owner: context.repo.owner,
               repo: context.repo.repo,
-            })).data;
+            }))?.data || [];
 
-            if (result.length === 0) throw new Error(`No pull request found for commit ${context.sha}.`);
+            if (result.length === 0) {
+              core.info(`No pull request found for commit ${context.sha}.`);
+              return '';
+            };
+
             const latestPr = result[0];
-
+            const commit = (latestPr.merge_commit_sha || context.sha || '').substring(0, 7);
             return {
-              commit: latestPr.merge_commit_sha.substring(0, 7),
+              commit,
               number: latestPr.number,
               title: latestPr.title,
               url: latestPr.html_url,
@@ -73,6 +87,7 @@ jobs:
         id: wrangler
         run: |
           node - << 'NODE'
+
           const fs = require('fs');
           const path = './wrangler.jsonc';
 
@@ -93,7 +108,62 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_OUTPUT, 'name=\n');
             fs.appendFileSync(process.env.GITHUB_OUTPUT, 'domain=\n');
           }
+
           NODE
+
+  comment-pr:
+    name: Comment for deployment result
+    runs-on: ubuntu-latest
+    needs: [deploy, parse-info]
+    if: ${{ needs.parse-info.outputs.pr != '' }}
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment on pull request
+        uses: actions/github-script@v7
+        env:
+          STATUS: ${{ needs.deploy.outputs.result }}
+          PR_JSON: ${{ needs.parse-info.outputs.pr }}
+          WORKER_NAME: ${{ needs.parse-info.outputs.worker-name }}
+          WORKER_DOMAIN: ${{ needs.parse-info.outputs.worker-domain }}
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        with:
+          script: |
+            const pr = JSON.parse(process.env.PR_JSON || '{}');
+            const success = process.env.STATUS === 'success';
+            const statusCell = success ? ':white_check_mark: Success!' : ':x: Failed!';
+
+            const rows = [
+              '| **Status** | ' + statusCell + ' |',
+              '| :--- | :--- |',
+              pr.commit ? `| **Commit** | [\`${pr.commit}\`](https://github.com/${process.env.REPO}/commit/${pr.commit}) |` : null,
+              process.env.WORKER_DOMAIN ? `| **URL** | https://${process.env.WORKER_DOMAIN} |` : null,
+              `| **Details** | :arrow_right: [GitHub Actions](https://github.com/${process.env.REPO}/actions/runs/${process.env.RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${process.env.ACCOUNT_ID}/workers/services/view/${process.env.WORKER_NAME}/production/deployments) |`,
+            ].filter(Boolean);
+            const body = ['## ⚡Deploying with Cloudflare Workers', '', ...rows].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(pr.number),
+              body
+            });
+
+  send-slack-message:
+    name: Send Slack message
+    runs-on: ubuntu-latest
+    needs: [deploy, parse-info]
+    if: ${{ needs.parse-info.outputs.pr != ''  }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/actions/setup-slack-payload
 
       - name: Setup Slack Payload
         id: slack-payload
@@ -102,13 +172,13 @@ jobs:
           slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
           deployed: ${{ needs.deploy.outputs.result == 'success' }}
           cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          cloudflare_worker_name: ${{ steps.wrangler.outputs.name }}
-          cloudflare_worker_domain: ${{ steps.wrangler.outputs.domain }}
-          pr_commit: ${{ fromJSON(steps.pr.outputs.result).commit }}
-          pr_number: ${{ fromJSON(steps.pr.outputs.result).number }}
-          pr_title: ${{ fromJSON(steps.pr.outputs.result).title }}
-          pr_url: ${{ fromJSON(steps.pr.outputs.result).url }}
-          avatar_url: ${{ fromJSON(steps.pr.outputs.result).avatar_url }}
+          cloudflare_worker_name: ${{ needs.parse-info.outputs.worker-name }}
+          cloudflare_worker_domain: ${{ needs.parse-info.outputs.worker-domain }}
+          pr_commit: ${{ fromJSON(needs.parse-info.outputs.pr).commit }}
+          pr_number: ${{ fromJSON(needs.parse-info.outputs.pr).number }}
+          pr_title: ${{ fromJSON(needs.parse-info.outputs.pr).title }}
+          pr_url: ${{ fromJSON(needs.parse-info.outputs.pr).url }}
+          avatar_url: ${{ fromJSON(needs.parse-info.outputs.pr).avatar_url }}
 
       - name: Send slack message
         uses: slackapi/slack-github-action@v2
