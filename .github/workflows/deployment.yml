@@ -61,13 +61,17 @@ jobs:
               commit_sha: context.sha,
               owner: context.repo.owner,
               repo: context.repo.repo,
-            })).data;
+            }))?.data || [];
 
-            if (result.length === 0) throw new Error(`No pull request found for commit ${context.sha}.`);
+            if (result.length === 0) {
+              core.info(`No pull request found for commit ${context.sha}.`);
+              return '';
+            };
+
             const latestPr = result[0];
-
+            const commit = (latestPr.merge_commit_sha || context.sha || '').substring(0, 7);
             return {
-              commit: latestPr.merge_commit_sha.substring(0, 7),
+              commit,
               number: latestPr.number,
               title: latestPr.title,
               url: latestPr.html_url,
@@ -101,6 +105,62 @@ jobs:
           }
 
           NODE
+
+  comment-pr:
+    name: Comment on Pull request
+    runs-on: ubuntu-latest
+    needs: [deploy, parse-info]
+    if: ${{ needs.parse-info.outputs.pr != '' }}
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Comment on pull request
+        uses: actions/github-script@v7
+        env:
+          STATUS: ${{ needs.deploy.outputs.result }}
+          PR_JSON: ${{ needs.parse-info.outputs.pr }}
+          WORKER_NAME: ${{ needs.parse-info.outputs.worker-name }}
+          WORKER_DOMAIN: ${{ needs.parse-info.outputs.worker-domain }}
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        with:
+          script: |
+            const pr = JSON.parse(process.env.PR_JSON || '{}');
+            const success = process.env.STATUS === 'success';
+            const statusCell = success ? ':white_check_mark: Success!' : ':x: Failed!';
+
+            const rows = [
+              '| **Status** | ' + statusCell + ' |',
+              '| :--- | :--- |',
+              pr.commit ? `| **Commit** | [\`${pr.commit}\`](https://github.com/${process.env.REPO}/commit/${pr.commit}) |` : null,
+              process.env.WORKER_DOMAIN ? `| **URL** | https://${process.env.WORKER_DOMAIN} |` : null,
+              `| **Details** | :arrow_right: [GitHub Actions](https://github.com/${process.env.REPO}/actions/runs/${process.env.RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${process.env.ACCOUNT_ID}/workers/services/view/${process.env.WORKER_NAME}/production/deployments) |`,
+            ].filter(Boolean);
+            const body = ['## ⚡Deploying with Cloudflare Workers', '', ...rows].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(pr.number),
+              body
+            });
+
+  send-slack-message:
+    name: Send Slack message
+    runs-on: ubuntu-latest
+    needs: [deploy, parse-info]
+    if: ${{ needs.parse-info.outputs.pr != '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Slack Payload
         id: slack-payload
