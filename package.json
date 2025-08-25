@@ -25,10 +25,10 @@
     "react-dom": "^19"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.8.64",
+    "@cloudflare/vitest-pool-workers": "^0.8.66",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/jest": "^30.0.0",
@@ -46,6 +46,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.4",
-    "wrangler": "^4.30.0"
+    "wrangler": "^4.32.0"
   }
 }
