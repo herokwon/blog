@@ -59,7 +59,7 @@ jobs:
 
       - name: Check a latest pull request
         id: pr
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const result = (await github.rest.repos.listPullRequestsAssociatedWithCommit({
@@ -120,7 +120,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment on pull request
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           STATUS: ${{ needs.deploy.outputs.result }}
           PR_JSON: ${{ needs.parse-info.outputs.pr }}
