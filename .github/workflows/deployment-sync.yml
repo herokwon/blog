@@ -1,0 +1,78 @@
+name: Deployment Status Synchronization
+
+on:
+  workflow_run:
+    workflows:
+      - Deployment
+    types:
+      - completed
+
+jobs:
+  parse-info:
+    name: Parse Deployment Info
+    runs-on: ubuntu-latest
+    if: always()
+    outputs:
+      ref: ${{ steps.url.outputs.ref }}
+      environment: ${{ steps.url.outputs.environment }}
+      url: ${{ steps.url.outputs.url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Download deployment-url artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-url
+          path: ./artifacts
+
+      - name: Check Deployment Info
+        id: url
+        run: |
+          REF="${{ github.sha }}"
+          CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          ENVIRONMENT=""
+          URL=""
+
+          if [[ "$HEAD_BRANCH" == "main" ]]; then
+            ENVIRONMENT="production"
+          else
+            ENVIRONMENT="preview"
+          fi
+
+          if [[ "$CONCLUSION" == "success" && -s ./artifacts/deployment-url.txt ]]; then
+            URL=$(tr -d '\r\n' < ./artifacts/deployment-url.txt)
+          else
+            URL="https://github.com/herokwon/blog/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}"
+          fi
+
+          echo "ref=$REF" >> $GITHUB_OUTPUT
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+  github-deployment:
+    name: Deployment for GitHub
+    runs-on: ubuntu-latest
+    needs: [parse-info]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+      - name: Create deployment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          REF="${{ github.sha }}"
+
+          ENVIRONMENT="Preview"
+
+          DEPLOY_ID=$(gh api repos/${{ github.repository }}/deployments \
+            --field ref=$REF \
+            --field environment=$ENVIRONMENT \
+            --field auto_merge=false \
+            --field required_contexts[]= \
+            -q '.id')
