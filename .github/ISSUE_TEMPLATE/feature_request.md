@@ -22,6 +22,7 @@ assignees: herokwon
 - [ ] 유틸리티/훅
 - [ ] 디자인 토큰/테마 향상
 - [ ] 문서 개선
+- [ ] CI/CD
 
 <br />
 
