@@ -16,6 +16,7 @@
     "test:run": "vitest run",
     "build:worker": "opennextjs-cloudflare build",
     "preview": "pnpm build:worker && wrangler dev",
+    "deploy:preview": "pnpm build:worker && wrangler versions upload",
     "deploy": "pnpm build:worker && wrangler deploy"
   },
   "dependencies": {
