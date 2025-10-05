@@ -44,7 +44,7 @@ jobs:
           if [[ "$CONCLUSION" == "success" && -s ./artifacts/deployment-url.txt ]]; then
             URL=$(tr -d '\r\n' < ./artifacts/deployment-url.txt)
           else
-            URL="https://github.com/herokwon/blog/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}"
+            URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}"
           fi
 
           echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
@@ -65,7 +65,7 @@ jobs:
       - name: Create deployment
         run: |
           DEPLOY_ID=$(gh api repos/${{ github.repository }}/deployments \
-            -F ref=$REF \
+            -F ref=$HEAD_SHA \
             -F environment=$ENVIRONMENT \
             -q '.id')
 
