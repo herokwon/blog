@@ -182,6 +182,7 @@ jobs:
         with:
           slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
           deployed: ${{ needs.deploy.outputs.result == 'success' }}
+          environment: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
           cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           cloudflare_worker_name: ${{ needs.parse-info.outputs.worker-name }}
           cloudflare_worker_domain: ${{ needs.deploy.outputs.url }}
