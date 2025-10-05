@@ -1,0 +1,79 @@
+name: Deployment Status Synchronization
+
+on:
+  workflow_run:
+    workflows:
+      - Deployment
+    types:
+      - completed
+
+env:
+  CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+  HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+  HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+
+jobs:
+  parse-info:
+    name: Parse Deployment Info
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      environment: ${{ steps.url.outputs.environment }}
+      url: ${{ steps.url.outputs.url }}
+    steps:
+      - name: Download artifact for Deployment URL
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-url
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Check Deployment Info
+        id: url
+        run: |
+          ENVIRONMENT=""
+          URL=""
+
+          if [[ "$HEAD_BRANCH" == "main" ]]; then
+            ENVIRONMENT="Production"
+          else
+            ENVIRONMENT="Preview"
+          fi
+
+          if [[ "$CONCLUSION" == "success" && -s ./artifacts/deployment-url.txt ]]; then
+            URL=$(tr -d '\r\n' < ./artifacts/deployment-url.txt)
+          else
+            URL="https://github.com/herokwon/blog/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}"
+          fi
+
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+  github-deployment:
+    name: Deployment for GitHub
+    runs-on: ubuntu-latest
+    needs: parse-info
+    timeout-minutes: 10
+    permissions:
+      deployments: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      ENVIRONMENT: ${{ needs.parse-info.outputs.environment }}
+      ENVIRONMENT_URL: ${{ needs.parse-info.outputs.url }}
+    steps:
+      - name: Create deployment
+        run: |
+          DEPLOY_ID=$(gh api repos/${{ github.repository }}/deployments \
+            -F ref=$REF \
+            -F environment=$ENVIRONMENT \
+            -q '.id')
+
+          echo "DEPLOY_ID=$DEPLOY_ID" >> $GITHUB_ENV
+
+      - name: Set Deployment Status
+        run: |
+          gh api repos/${{ github.repository }}/deployments/$DEPLOY_ID/statuses \
+            -F state="$CONCLUSION" \
+            -F environment=$ENVIRONMENT \
+            -F environment_url=$ENVIRONMENT_URL
