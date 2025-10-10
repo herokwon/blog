@@ -4,6 +4,8 @@
   "importOrder": [
     "^react(.*)$",
     "^next(.*)$",
+    "^vitest$",
+    "^@testing-library/(.*)$",
     "^eslint(.*)$",
     "^@eslint(.*)$",
     "<THIRD_PARTY_MODULES>",
