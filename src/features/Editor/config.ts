@@ -63,7 +63,7 @@ export const exportMap: DOMExportOutputMap = new Map<
 export const constructImportMap = (): DOMConversionMap => {
   const importMap: DOMConversionMap = {};
 
-  for (const [tag, fn] of Object.entries(TextNode.importDOM() || {})) {
+  for (const [tag, fn] of Object.entries({ ...TextNode.importDOM() })) {
     importMap[tag] = importNode => {
       const importer = fn(importNode);
 
