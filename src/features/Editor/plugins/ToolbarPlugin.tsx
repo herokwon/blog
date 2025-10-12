@@ -238,6 +238,8 @@ export const ToolbarPlugin = ({
       <ToolbarButton
         icon={RotateCcw}
         disabled={!canUndo}
+        title="되돌리기"
+        name="Undo"
         onClick={() => {
           editor.dispatchCommand(UNDO_COMMAND, undefined);
         }}
@@ -245,6 +247,8 @@ export const ToolbarPlugin = ({
       <ToolbarButton
         icon={RotateCw}
         disabled={!canRedo}
+        title="다시 실행"
+        name="Redo"
         onClick={() => {
           editor.dispatchCommand(REDO_COMMAND, undefined);
         }}
@@ -252,6 +256,8 @@ export const ToolbarPlugin = ({
       <Divider />
       <ToolbarButton
         icon={Bold}
+        title="굵게"
+        name="Bold"
         className={isBold ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
@@ -259,6 +265,8 @@ export const ToolbarPlugin = ({
       />
       <ToolbarButton
         icon={Italic}
+        title="기울임꼴"
+        name="Italic"
         className={isItalic ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
@@ -266,6 +274,8 @@ export const ToolbarPlugin = ({
       />
       <ToolbarButton
         icon={Underline}
+        title="밑줄"
+        name="Underline"
         className={isUnderline ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
@@ -273,6 +283,8 @@ export const ToolbarPlugin = ({
       />
       <ToolbarButton
         icon={Strikethrough}
+        title="취소선"
+        name="Strikethrough"
         className={isStrikethrough ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
@@ -280,6 +292,8 @@ export const ToolbarPlugin = ({
       />
       <ToolbarButton
         icon={Code}
+        title="코드"
+        name="Code"
         className={isCode ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
@@ -288,6 +302,8 @@ export const ToolbarPlugin = ({
       <Divider />
       <ToolbarButton
         icon={AlignLeft}
+        title="왼쪽 정렬"
+        name="LeftAlign"
         className={blockAlignment === 'left' ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'left');
@@ -295,6 +311,8 @@ export const ToolbarPlugin = ({
       />
       <ToolbarButton
         icon={AlignCenter}
+        title="가운데 정렬"
+        name="CenterAlign"
         className={blockAlignment === 'center' ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'center');
@@ -302,6 +320,8 @@ export const ToolbarPlugin = ({
       />
       <ToolbarButton
         icon={AlignRight}
+        title="오른쪽 정렬"
+        name="RightAlign"
         className={blockAlignment === 'right' ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'right');
@@ -309,6 +329,8 @@ export const ToolbarPlugin = ({
       />
       <ToolbarButton
         icon={AlignJustify}
+        title="양쪽 정렬"
+        name="JustifyAlign"
         className={blockAlignment === 'justify' ? 'active' : ''}
         onClick={() => {
           editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'justify');
