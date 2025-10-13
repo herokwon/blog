@@ -181,7 +181,7 @@ jobs:
               '| **Status** | ' + statusCell + ' |',
               '| :--- | :--- |',
               pr.commit ? `| **Commit** | [\`${pr.commit}\`](https://github.com/${process.env.REPO}/commit/${pr.commit}) |` : null,
-              process.env.WORKER_DOMAIN ? `| **URL** | https://${process.env.WORKER_DOMAIN} |` : null,
+              process.env.WORKER_DOMAIN ? `| **URL** | ${process.env.WORKER_DOMAIN} |` : null,
               `| **Details** | :arrow_right: [GitHub Actions](https://github.com/${process.env.REPO}/actions/runs/${process.env.RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${process.env.ACCOUNT_ID}/workers/services/view/${process.env.WORKER_NAME}/production/deployments) |`,
             ].filter(Boolean);
             const body = ['## ⚡Deploying with Cloudflare Workers', '', ...rows].join('\n');
