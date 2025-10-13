@@ -83,11 +83,14 @@ jobs:
 
             const latestPr = result[0];
             const commit = (latestPr.merge_commit_sha || context.sha || '').substring(0, 7);
+
+            const fallbackPr = context.payload.pull_request || {};
+
             return {
               commit,
-              number: latestPr.number,
-              title: latestPr.title,
-              url: latestPr.html_url,
+              number: latestPr.number ?? fallbackPr.number ?? '',
+              title: latestPr.title ?? fallbackPr.title ?? '',
+              url: latestPr.html_url ?? fallbackPr.html_url ?? '',
               avatar_url: context.payload.repository.owner.avatar_url
             };
 
