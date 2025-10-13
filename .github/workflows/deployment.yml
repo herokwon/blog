@@ -70,6 +70,20 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            if (context.eventName === 'pull_request') {
+              const pr = context.payload.pull_request;
+              const commit = context.sha.substring(0, 7);
+              const avatarUrl = pr.user?.avatar_url || context.payload.repository.owner.avatar_url;
+
+              return {
+                commit,
+                number: pr.number,
+                title: pr.title,
+                url: pr.html_url,
+                avatar_url: avatarUrl
+              };
+            }
+
             const result = (await github.rest.repos.listPullRequestsAssociatedWithCommit({
               commit_sha: context.sha,
               owner: context.repo.owner,
@@ -83,15 +97,14 @@ jobs:
 
             const latestPr = result[0];
             const commit = (latestPr.merge_commit_sha || context.sha || '').substring(0, 7);
-
-            const fallbackPr = context.payload.pull_request || {};
+            const avatarUrl = latestPr.user?.avatar_url || context.payload.repository.owner.avatar_url;
 
             return {
               commit,
-              number: latestPr.number ?? fallbackPr.number ?? '',
-              title: latestPr.title ?? fallbackPr.title ?? '',
-              url: latestPr.html_url ?? fallbackPr.html_url ?? '',
-              avatar_url: context.payload.repository.owner.avatar_url
+              number: latestPr.number,
+              title: latestPr.title,
+              url: latestPr.html_url,
+              avatar_url: avatarUrl
             };
 
       - name: Check info from wrangler.jsonc
@@ -158,6 +171,11 @@ jobs:
             const pr = JSON.parse(process.env.PR_JSON || '{}');
             const success = process.env.STATUS === 'success';
             const statusCell = success ? ':white_check_mark: Success!' : ':x: Failed!';
+
+            if (!pr || !pr.number) {
+              core.warning('No pull request found.');
+              return;
+            }
 
             const rows = [
               '| **Status** | ' + statusCell + ' |',
