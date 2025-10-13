@@ -19,7 +19,7 @@
     "deploy": "pnpm build:worker && wrangler deploy"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "^1.9.1",
+    "@opennextjs/cloudflare": "^1.10.1",
     "next": "^15",
     "react": "^19",
     "react-dom": "^19"
