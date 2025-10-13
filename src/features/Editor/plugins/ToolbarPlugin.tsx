@@ -87,27 +87,24 @@ export const ToolbarPlugin = ({
     const alignments = new Set<string>();
 
     for (const node of nodes) {
-      const topLevelElement = node.getTopLevelElement();
+      const topLevelElement = node.getTopLevelElement() as ElementNode | null;
       if (!topLevelElement) continue;
 
       const key = topLevelElement.getKey();
       if (seen.has(key)) continue;
       seen.add(key);
 
-      const alignment =
-        topLevelElement instanceof ElementNode
-          ? topLevelElement.getFormatType()
-          : 'left';
-
+      const alignment = topLevelElement.getFormatType();
       alignments.add(alignment);
+
       if (alignments.size > 1) break;
     }
 
     if (alignments.size === 0) setBlockAlignment('left');
     else if (alignments.size === 1) {
-      const alignment = alignments.values().next().value ?? '';
+      const alignment = alignments.values().next().value;
       setBlockAlignment(
-        (alignment.length > 0 ? alignment : 'left') as Alignment,
+        (alignment && alignment.length > 0 ? alignment : 'left') as Alignment,
       );
     } else {
       setBlockAlignment('mixed');
