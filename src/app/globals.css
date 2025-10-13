@@ -1,1 +1,8 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+@layer base {
+  html,
+  body {
+    @apply size-full min-h-screen;
+  }
+}
