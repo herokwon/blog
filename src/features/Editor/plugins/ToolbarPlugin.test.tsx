@@ -62,19 +62,19 @@ describe('[Features/Editor] ToolbarPlugin', () => {
         const root = $getRoot();
         root.clear();
 
-        const p1 = $createParagraphNode();
-        const t1 = $createTextNode('A');
-        p1.append(t1);
+        const paragraph1 = $createParagraphNode();
+        const text1 = $createTextNode('A');
+        paragraph1.append(text1);
 
-        const p2 = $createParagraphNode();
-        const t2 = $createTextNode('B');
-        p2.append(t2);
+        const paragraph2 = $createParagraphNode();
+        const text2 = $createTextNode('B');
+        paragraph2.append(text2);
 
-        root.append(p1, p2);
+        root.append(paragraph1, paragraph2);
 
         const selection = $createRangeSelection();
-        selection.anchor.set(t1.getKey(), 0, 'text');
-        selection.focus.set(t1.getKey(), 1, 'text');
+        selection.anchor.set(text1.getKey(), 0, 'text');
+        selection.focus.set(text1.getKey(), 1, 'text');
         $setSelection(selection);
       });
     });
@@ -86,17 +86,17 @@ describe('[Features/Editor] ToolbarPlugin', () => {
     await act(async () => {
       editor?.update(() => {
         const root = $getRoot();
-        const [p1, p2] = root.getChildren();
-        const firstTextNodeFromP1 = (
-          p1 as ReturnType<typeof $createParagraphNode>
+        const [paragraph1, p2] = root.getChildren();
+        const firstTextFromParagraph1 = (
+          paragraph1 as ReturnType<typeof $createParagraphNode>
         ).getChildren()[0];
-        const firstTextNodeFromP2 = (
+        const firstTextFromParagraph2 = (
           p2 as ReturnType<typeof $createParagraphNode>
         ).getChildren()[0];
 
         const selection = $createRangeSelection();
-        selection.anchor.set(firstTextNodeFromP1.getKey(), 0, 'text');
-        selection.focus.set(firstTextNodeFromP2.getKey(), 1, 'text');
+        selection.anchor.set(firstTextFromParagraph1.getKey(), 0, 'text');
+        selection.focus.set(firstTextFromParagraph2.getKey(), 1, 'text');
         $setSelection(selection);
       });
     });
@@ -109,8 +109,8 @@ describe('[Features/Editor] ToolbarPlugin', () => {
     const buttons = Array.from(toolbar.querySelectorAll('button'));
     const alignButtons = buttons.slice(-4);
 
-    alignButtons.forEach(btn => {
-      expect(btn.className.includes('[.active] active')).toBe(false);
+    alignButtons.forEach(button => {
+      expect(button.classList.contains('active')).toBe(false);
     });
   });
 
@@ -175,11 +175,11 @@ describe('[Features/Editor] ToolbarPlugin', () => {
 
     const toolbar = screen.getByRole('toolbar');
     const buttons = within(toolbar).getAllByRole('button');
-    const leftBtn = buttons[7];
+    const alignLeftButton = buttons[7];
 
-    await userEvent.click(leftBtn);
+    await userEvent.click(alignLeftButton);
     await waitFor(() => {
-      expect(leftBtn).toHaveClass('active');
+      expect(alignLeftButton).toHaveClass('active');
     });
   });
 
@@ -248,7 +248,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
     isRangeSpy.mockRestore();
   });
 
-  it('getFormatType이 빈 문자열을 반환할 때 left로 처리되어야 합니다.', async () => {
+  it('getFormatType 함수가 빈 문자열을 반환할 때 left로 처리되어야 합니다.', async () => {
     render(<EditorShell />);
     const editable = screen.getByRole('textbox');
 
