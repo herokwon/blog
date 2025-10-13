@@ -20,6 +20,9 @@ export default defineConfig({
           setupFiles: './vitest.setup.ts',
           include: ['src/**/!(*.worker).{test,spec}.{ts,tsx}'],
         },
+        esbuild: {
+          jsx: 'automatic',
+        },
       },
       // Cloudflare Workers 테스트
       defineWorkersProject({
