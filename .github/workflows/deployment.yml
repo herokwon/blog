@@ -161,6 +161,7 @@ jobs:
         env:
           STATUS: ${{ needs.deploy.outputs.result }}
           PR_JSON: ${{ needs.parse-info.outputs.pr }}
+          ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
           WORKER_NAME: ${{ needs.parse-info.outputs.worker-name }}
           WORKER_DOMAIN: ${{ needs.deploy.outputs.url }}
           ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -180,6 +181,7 @@ jobs:
             const rows = [
               '| **Status** | ' + statusCell + ' |',
               '| :--- | :--- |',
+              `| **Environment** | ${process.env.ENVIRONMENT} |`,
               pr.commit ? `| **Commit** | [\`${pr.commit}\`](https://github.com/${process.env.REPO}/commit/${pr.commit}) |` : null,
               process.env.WORKER_DOMAIN ? `| **URL** | ${process.env.WORKER_DOMAIN} |` : null,
               `| **Details** | :arrow_right: [GitHub Actions](https://github.com/${process.env.REPO}/actions/runs/${process.env.RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${process.env.ACCOUNT_ID}/workers/services/view/${process.env.WORKER_NAME}/production/deployments) |`,
