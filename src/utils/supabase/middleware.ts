@@ -4,6 +4,13 @@ import { createServerClient } from '@supabase/ssr';
 
 import { supabaseConfig } from './config';
 
+const PROTECTED_ROUTES = ['/write'];
+const AUTH_ROUTES = ['/login'];
+const DEFAULT_REDIRECT = '/';
+
+const isValidRedirectPath = (path: string): boolean =>
+  path.startsWith('/') && !AUTH_ROUTES.some(route => path.startsWith(route));
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse: NextResponse = NextResponse.next({
     request,
@@ -28,17 +35,30 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  const pathname = request.nextUrl.pathname;
+  const url = request.nextUrl.clone();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/write')
-  ) {
-    const url = request.nextUrl.clone();
+  if (user && AUTH_ROUTES.some(route => pathname.startsWith(route))) {
+    const redirectTo = url.searchParams.get('redirect');
+
+    if (redirectTo && isValidRedirectPath(redirectTo)) {
+      url.pathname = redirectTo;
+      url.searchParams.delete('redirect');
+
+      return NextResponse.redirect(url);
+    }
+
+    url.pathname = DEFAULT_REDIRECT;
+    return NextResponse.redirect(url);
+  }
+
+  if (!user && PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
     url.pathname = '/login';
+    url.searchParams.set('redirect', pathname);
 
     return NextResponse.redirect(url);
   }
