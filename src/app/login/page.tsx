@@ -1,4 +1,4 @@
-import { login } from './action';
+import { login } from '../actions/auth';
 
 type LoginProps = {
   searchParams: Promise<{ redirect?: string }>;
@@ -16,7 +16,7 @@ export default async function Login({ searchParams }: LoginProps) {
         <label htmlFor="password">Password</label>
         <input id="password" name="password" type="password" required />
         <button formAction={login} className="cursor-pointer bg-slate-200">
-          Login
+          로그인
         </button>
       </form>
     </div>
