@@ -8,7 +8,13 @@ export default defineConfig({
       enabled: true,
       provider: 'istanbul',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/app/**/*.{ts,tsx}', 'src/**/*.worker.ts', '**/*.d.ts'],
+      exclude: [
+        'src/app/**/*.{ts,tsx}',
+        'src/**/*.worker.ts',
+        'src/**/supabase/**',
+        'src/middleware.ts',
+        '**/*.d.ts',
+      ],
     },
     projects: [
       // Unit 테스트
