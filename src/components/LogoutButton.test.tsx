@@ -53,9 +53,11 @@ describe('[Components] LogoutButton', () => {
     });
   });
 
-  it('로그아웃 실패 시 에러 메시지를 alert으로 표시해야 합니다.', async () => {
+  it('로그아웃 실패 시 에러 메시지를 console.error로 출력해야 합니다.', async () => {
     const errorMessage = '로그아웃에 실패했습니다.';
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     mockLogout.mockResolvedValue({
       success: false,
       error: {
@@ -70,16 +72,18 @@ describe('[Components] LogoutButton', () => {
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
-      expect(alertSpy).toHaveBeenCalledWith(errorMessage);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(errorMessage);
       expect(mockPush).not.toHaveBeenCalled();
       expect(mockRefresh).not.toHaveBeenCalled();
     });
 
-    alertSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   it('로그아웃 실패 시 페이지 이동이나 새로고침을 하지 않아야 합니다.', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     mockLogout.mockResolvedValue({
       success: false,
       error: {
@@ -99,11 +103,10 @@ describe('[Components] LogoutButton', () => {
     expect(mockPush).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
 
-    alertSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   it('버튼을 여러 번 클릭해도 각각 logout 함수가 호출되어야 합니다.', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     mockLogout.mockResolvedValue({
       success: true,
       error: null,
@@ -121,7 +124,5 @@ describe('[Components] LogoutButton', () => {
       expect(mockPush).toHaveBeenCalledTimes(3);
       expect(mockRefresh).toHaveBeenCalledTimes(3);
     });
-
-    alertSpy.mockRestore();
   });
 });
