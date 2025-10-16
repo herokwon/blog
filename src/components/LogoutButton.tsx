@@ -11,7 +11,7 @@ const LogoutButton = () => {
   const handleLogout = async () => {
     const { success, error } = await logout();
     if (!success) {
-      alert(error.message);
+      console.error(error.message);
       return;
     }
 
