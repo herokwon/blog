@@ -17,8 +17,8 @@ export async function createClient() {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options),
           );
-        } catch {
-          console.error('Failed to set cookies on server side');
+        } catch (error) {
+          console.error('Failed to set cookies on server side: ', error);
         }
       },
     },
