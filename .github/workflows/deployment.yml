@@ -40,6 +40,9 @@ jobs:
 
       - name: Build for Cloudflare Workers
         run: pnpm build:worker
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
 
       - name: Deploy Worker
         id: deploy

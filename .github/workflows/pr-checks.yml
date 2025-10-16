@@ -11,6 +11,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+
 jobs:
   check-lint:
     name: Check lint
