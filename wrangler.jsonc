@@ -3,7 +3,10 @@
   "name": "blog",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-08-03",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
+  ],
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
