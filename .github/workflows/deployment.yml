@@ -17,6 +17,10 @@ on:
 permissions:
   contents: read
 
+env:
+  REPO: ${{ github.repository }}
+  ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -133,22 +137,37 @@ jobs:
 
           NODE
 
-  upload-artifact:
-    name: Upload artifact for Deployment URL
+  github-deploy:
+    name: Deploy to GitHub
     runs-on: ubuntu-latest
     needs: [deploy]
-    if: ${{ needs.deploy.outputs.url != '' }}
     permissions:
-      actions: write
+      deployments: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
-      - name: Create deployment-url artifact
-        run: echo "${{ needs.deploy.outputs.url }}" > deployment-url.txt
+      - name: Create GitHub Deployment
+        id: create-deployment
+        env:
+          REF: ${{ github.sha }}
+        run: |
+          DEPLOY_ID=$(gh api repos/$REPO/deployments \
+            -F ref=$REF \
+            -F environment=$ENVIRONMENT \
+            -q '.id')
 
-      - name: Upload deployment-url artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-url
-          path: deployment-url.txt
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+
+      - name: Set Deployment Status
+        env:
+          DEPLOY_ID: ${{ steps.create-deployment.outputs.deploy_id }}
+          CONCLUSION: ${{ needs.deploy.outputs.result }}
+          ENVIRONMENT_URL: ${{ needs.deploy.outputs.url }}
+        run: |
+          gh api repos/$REPO/deployments/$DEPLOY_ID/statuses \
+            -F state="$CONCLUSION" \
+            -F environment=$ENVIRONMENT \
+            -F environment_url=$ENVIRONMENT_URL
 
   comment-pr:
     name: Comment for Deployment
@@ -163,11 +182,9 @@ jobs:
         env:
           STATUS: ${{ needs.deploy.outputs.result }}
           PR_JSON: ${{ needs.parse-info.outputs.pr }}
-          ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
           WORKER_NAME: ${{ needs.parse-info.outputs.worker-name }}
           WORKER_DOMAIN: ${{ needs.deploy.outputs.url }}
           ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         with:
           script: |
