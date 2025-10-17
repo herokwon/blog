@@ -47,14 +47,17 @@ export const EditorShell = ({
       <div
         {...props}
         data-testid="editor-shell"
-        className={`w-full rounded-md ring-1 ring-slate-200 ${props.className ?? ''}`}
+        className={`flex w-full flex-col rounded ring-1 ring-slate-200 ${props.className ?? ''}`}
       >
         <ToolbarPlugin
           onChangeAlignment={alignment => {
             setAlignment(alignment);
           }}
         />
-        <div data-testid="editor-inner" className="relative p-4 text-sm">
+        <div
+          data-testid="editor-inner"
+          className="relative overflow-auto p-4 text-sm"
+        >
           <RichTextPlugin
             contentEditable={
               <ContentEditable
