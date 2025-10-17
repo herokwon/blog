@@ -230,7 +230,7 @@ export const ToolbarPlugin = ({
     <div
       role="toolbar"
       data-testid="toolbar"
-      className="flex w-full items-center gap-1 border-b border-slate-200 p-2"
+      className="flex w-full items-center gap-1 rounded-t p-2 ring-1 ring-slate-200"
     >
       <ToolbarButton
         icon={RotateCcw}
