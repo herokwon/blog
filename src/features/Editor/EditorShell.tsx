@@ -14,11 +14,13 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { type ElementFormatType, ParagraphNode, TextNode } from 'lexical';
 
 import { constructImportMap, exportMap } from './config';
+import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { ToolbarPlugin } from './plugins/ToolbarPlugin';
 import editorTheme from './theme';
 
 type EditorProps = React.ComponentPropsWithoutRef<'div'> & {
   placeholder?: string;
+  onChangeEditorState: React.ComponentProps<typeof OnChangePlugin>['onChange'];
 };
 
 const editorConfig = {
@@ -38,6 +40,7 @@ export type Alignment = Exclude<ElementFormatType, 'start' | 'end' | ''>;
 
 export const EditorShell = ({
   placeholder = '텍스트를 입력해 주세요.',
+  onChangeEditorState,
   ...props
 }: EditorProps) => {
   const [alignment, setAlignment] = useState<Alignment>('left');
@@ -84,6 +87,7 @@ export const EditorShell = ({
           />
           <HistoryPlugin />
           <AutoFocusPlugin />
+          <OnChangePlugin onChange={onChangeEditorState} />
         </div>
       </div>
     </LexicalComposer>
