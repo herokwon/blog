@@ -45,6 +45,10 @@ export const EditorShell = ({
 }: EditorProps) => {
   const [alignment, setAlignment] = useState<Alignment>('left');
 
+  const handleChangeAlignment = (alignment: Alignment) => {
+    setAlignment(alignment);
+  };
+
   return (
     <LexicalComposer initialConfig={editorConfig}>
       <div
@@ -52,11 +56,7 @@ export const EditorShell = ({
         data-testid="editor-shell"
         className={`flex w-full flex-col rounded ring-1 ring-slate-200 ${props.className ?? ''}`}
       >
-        <ToolbarPlugin
-          onChangeAlignment={alignment => {
-            setAlignment(alignment);
-          }}
-        />
+        <ToolbarPlugin onChangeAlignment={handleChangeAlignment} />
         <div
           data-testid="editor-inner"
           className="relative overflow-auto p-4 text-sm"
