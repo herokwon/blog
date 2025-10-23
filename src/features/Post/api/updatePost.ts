@@ -15,7 +15,7 @@ import { getErrorMessage } from '../utils/errorMessage';
  * @param params - 게시글 수정 요청 데이터
  * @param params.id - 수정할 게시글 ID
  * @param params.title - 수정할 게시글 제목 (공백만 있는 경우 에러)
- * @param params.contents - 수정할 게시글 내용 (공백만 있는 경우 에러)
+ * @param params.content - 수정할 게시글 내용 (공백만 있는 경우 에러)
  *
  * @returns 게시글 수정 결과를 담은 Promise
  * - `data`: 수정된 게시글 (성공 시) 또는 `null` (실패 시)
@@ -36,7 +36,7 @@ export const updatePost = async ({
       data: null,
       error: '제목을 입력해 주세요.',
     };
-  if (request.contents.trim().length === 0)
+  if (request.content.trim().length === 0)
     return {
       data: null,
       error: '내용을 입력해 주세요.',

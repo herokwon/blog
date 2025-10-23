@@ -5,10 +5,10 @@ export type Post = {
   created_at: string;
   updated_at: string;
   title: string;
-  contents: string;
+  content: string;
 };
 
-export type PostRequest = Pick<Post, 'title' | 'contents'>;
+export type PostRequest = Pick<Post, 'title' | 'content'>;
 
 export type CreatePostResponse =
   | {
