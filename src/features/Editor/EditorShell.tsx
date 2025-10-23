@@ -18,12 +18,12 @@ import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { ToolbarPlugin } from './plugins/ToolbarPlugin';
 import editorTheme from './theme';
 
-type EditorProps = React.ComponentPropsWithoutRef<'div'> & {
-  placeholder?: string;
-  onChangeEditorState: React.ComponentProps<typeof OnChangePlugin>['onChange'];
-};
+type EditorProps = React.ComponentPropsWithoutRef<'div'> &
+  React.ComponentProps<typeof OnChangePlugin> & {
+    placeholder?: string;
+  };
 
-const editorConfig = {
+const editorConfig: InitialConfigType = {
   html: {
     export: exportMap,
     import: constructImportMap(),
@@ -34,12 +34,13 @@ const editorConfig = {
   onError(error: Error) {
     throw error;
   },
-} satisfies InitialConfigType;
+};
 
 export type Alignment = Exclude<ElementFormatType, 'start' | 'end' | ''>;
 
 export const EditorShell = ({
   placeholder = '텍스트를 입력해 주세요.',
+  initialData,
   onChangeEditorState,
   ...props
 }: EditorProps) => {
@@ -87,7 +88,10 @@ export const EditorShell = ({
           />
           <HistoryPlugin />
           <AutoFocusPlugin />
-          <OnChangePlugin onChange={onChangeEditorState} />
+          <OnChangePlugin
+            initialData={initialData}
+            onChangeEditorState={onChangeEditorState}
+          />
         </div>
       </div>
     </LexicalComposer>
