@@ -5,12 +5,12 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import type { SerializedEditorState, SerializedLexicalNode } from 'lexical';
 
 type OnChangePluginProps = {
-  value?: PostRequest['content'];
+  value: PostRequest['content'];
   onChangeValue: (editorState: string) => void;
 };
 
 export const OnChangePlugin = ({
-  value = '',
+  value,
   onChangeValue,
 }: OnChangePluginProps) => {
   const [editor] = useLexicalComposerContext();
@@ -50,14 +50,26 @@ export const OnChangePlugin = ({
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       const editorStateJSON: SerializedEditorState = editorState.toJSON();
-      const firstChild: SerializedLexicalNode =
-        editorStateJSON.root.children[0];
+      const rootChildren = Array.isArray(editorStateJSON.root.children)
+        ? editorStateJSON.root.children
+        : [];
 
-      if (!('children' in firstChild) || !Array.isArray(firstChild.children))
-        throw new Error('내용을 찾을 수 없습니다.');
+      const hasNestedChildren = rootChildren.some(child => {
+        if (!child || typeof child !== 'object') return false;
 
-      const newContent =
-        firstChild.children.length === 0 ? '' : JSON.stringify(editorStateJSON);
+        const maybeWithChildren = child as SerializedLexicalNode & {
+          children?: SerializedLexicalNode[];
+        };
+
+        return Array.isArray(maybeWithChildren.children)
+          ? maybeWithChildren.children.length > 0
+          : false;
+      });
+
+      const newContent = hasNestedChildren
+        ? JSON.stringify(editorStateJSON)
+        : '';
+
       handleChangeEditor(newContent);
     });
   }, [editor, handleChangeEditor]);
