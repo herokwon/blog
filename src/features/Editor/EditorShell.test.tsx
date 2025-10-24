@@ -13,9 +13,11 @@ declare global {
   }
 }
 
+const onChangeValue = vi.fn();
+
 describe('[Features/Editor] EditorShell', () => {
   it('Props 기본값으로 렌더링해야 합니다.', () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={onChangeValue} />);
     const editorShell = screen.getByTestId('editor-shell');
     const editorInner = screen.getByTestId('editor-inner');
     const editable = screen.getByRole('textbox');
@@ -33,7 +35,13 @@ describe('[Features/Editor] EditorShell', () => {
 
   it('placeholder가 전달된 경우, 해당 값을 반영해야 합니다.', () => {
     const customPlaceholder = 'test-placeholder';
-    render(<EditorShell placeholder={customPlaceholder} />);
+    render(
+      <EditorShell
+        value=""
+        placeholder={customPlaceholder}
+        onChangeValue={onChangeValue}
+      />,
+    );
     const editorInner = screen.getByTestId('editor-inner');
     const editable = screen.getByTestId('editor-content');
 
@@ -47,7 +55,9 @@ describe('[Features/Editor] EditorShell', () => {
       className: 'custom-class',
       role: 'region',
     } satisfies React.ComponentPropsWithoutRef<'div'>;
-    render(<EditorShell {...customProps} />);
+    render(
+      <EditorShell {...customProps} value="" onChangeValue={onChangeValue} />,
+    );
     const editorShell = screen.getByTestId('editor-shell');
 
     expect(editorShell).toHaveAttribute('id', customProps.id);
@@ -56,7 +66,7 @@ describe('[Features/Editor] EditorShell', () => {
   });
 
   it('ToolbarPlugin의 onChangeAlignment 콜백함수가 호출되면 alignment 상태가 변경되어야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={onChangeValue} />);
     const toolbar = screen.getByRole('toolbar');
     const placeholder = screen.getByTestId('editor-placeholder');
     const alignmentButtons = Array.from(
@@ -77,7 +87,7 @@ describe('[Features/Editor] EditorShell', () => {
   });
 
   it('오류가 발생한 경우, 에러를 throw 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={onChangeValue} />);
     const editable = screen.getByRole('textbox');
     const editor = editable.__lexicalEditor;
 

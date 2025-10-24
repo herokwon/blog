@@ -18,7 +18,7 @@ import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { ToolbarPlugin } from './plugins/ToolbarPlugin';
 import editorTheme from './theme';
 
-type EditorProps = React.ComponentPropsWithoutRef<'div'> &
+type EditorProps = Omit<React.ComponentPropsWithoutRef<'div'>, 'value'> &
   React.ComponentProps<typeof OnChangePlugin> & {
     placeholder?: string;
   };
