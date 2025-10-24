@@ -40,8 +40,8 @@ export type Alignment = Exclude<ElementFormatType, 'start' | 'end' | ''>;
 
 export const EditorShell = ({
   placeholder = '텍스트를 입력해 주세요.',
-  initialData,
-  onChangeEditorState,
+  value,
+  onChangeValue,
   ...props
 }: EditorProps) => {
   const [alignment, setAlignment] = useState<Alignment>('left');
@@ -88,10 +88,7 @@ export const EditorShell = ({
           />
           <HistoryPlugin />
           <AutoFocusPlugin />
-          <OnChangePlugin
-            initialData={initialData}
-            onChangeEditorState={onChangeEditorState}
-          />
+          <OnChangePlugin value={value} onChangeValue={onChangeValue} />
         </div>
       </div>
     </LexicalComposer>
