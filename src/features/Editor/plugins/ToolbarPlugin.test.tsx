@@ -36,8 +36,14 @@ vi.mock('lexical', async importOriginal => {
 });
 
 describe('[Features/Editor] ToolbarPlugin', () => {
+  const mockOnChangeValue = vi.fn();
+
+  beforeEach(() => {
+    mockOnChangeValue.mockClear();
+  });
+
   it('ToolbarPlugin의 요소들이 렌더링되어야 합니다.', () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const toolbar = screen.getByTestId('toolbar');
     const buttons = toolbar.querySelectorAll('button');
     const dividers = toolbar.querySelectorAll('hr');
@@ -51,7 +57,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('혼합 정렬 상태에서는 정렬 버튼이 모두 활성화되지 않아야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -115,7 +121,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('Undo/Redo 활성화 시 Toolbar의 모든 버튼이 클릭 가능해야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -160,7 +166,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('빈 에디터에서 정렬 버튼을 클릭하면 onChangeAlignment 콜백함수가 실행되어야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -184,7 +190,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('요소를 선택중일 때와 아닐 때를 적절하게 대응해야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -249,7 +255,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('getFormatType 함수가 빈 문자열을 반환할 때 left로 처리되어야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -286,7 +292,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('텍스트 포맷 상태가 false인 경로를 커버해야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -325,7 +331,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('텍스트 포맷 상태가 true인 경로를 커버해야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -372,8 +378,8 @@ describe('[Features/Editor] ToolbarPlugin', () => {
     });
   });
 
-  it('RangeSelection이 아닌 상태에서 update 내부가 false인 경로를 커버해야 합니다.', async () => {
-    render(<EditorShell />);
+  it('RangeSelection이 아닌 상태에서 update 내부가 false인 경우를 커버해야 합니다.', async () => {
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -420,7 +426,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('FORMAT_ELEMENT_COMMAND에서 start와 end payload는 false를 반환해야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
@@ -444,7 +450,7 @@ describe('[Features/Editor] ToolbarPlugin', () => {
   });
 
   it('FORMAT_ELEMENT_COMMAND에서 빈 문자열 payload는 left로 처리되어야 합니다.', async () => {
-    render(<EditorShell />);
+    render(<EditorShell value="" onChangeValue={mockOnChangeValue} />);
     const editable = screen.getByRole('textbox');
 
     await waitFor(() => expect(editable.__lexicalEditor).toBeTruthy());
