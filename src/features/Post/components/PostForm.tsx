@@ -46,6 +46,7 @@ export const PostForm = ({
   return (
     <form
       {...props}
+      role="form"
       onSubmit={handleSubmit}
       className={`flex size-full grid-rows-[min-content_minmax(0,_1fr)] flex-col gap-y-4 ${props.className ?? ''}`}
     >
