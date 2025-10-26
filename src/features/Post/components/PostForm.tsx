@@ -6,6 +6,11 @@ import { EditorShell } from '@/features/Editor';
 
 import type { Post, PostRequest } from '../types';
 
+const EMPTY_POST: PostRequest = {
+  title: '',
+  content: '',
+};
+
 type PostFormProps = Omit<React.ComponentPropsWithRef<'form'>, 'onSubmit'> & {
   initialData?: PostRequest;
   isLoading?: boolean;
@@ -15,10 +20,7 @@ type PostFormProps = Omit<React.ComponentPropsWithRef<'form'>, 'onSubmit'> & {
 
 export const PostForm = ({
   children,
-  initialData = {
-    title: '',
-    content: '',
-  },
+  initialData = EMPTY_POST,
   onChangeData,
   onSubmit,
   ...props
