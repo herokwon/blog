@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import LogoutButton from './LogoutButton';
+import { LogoutButton } from './LogoutButton';
 
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
@@ -18,11 +18,11 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockLogout = vi.fn();
-vi.mock('@/app/actions/auth', () => ({
+vi.mock('../api', () => ({
   logout: async () => await mockLogout(),
 }));
 
-describe('[Components] LogoutButton', () => {
+describe('[Features/Auth] LogoutButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -60,9 +60,7 @@ describe('[Components] LogoutButton', () => {
       .mockImplementation(() => {});
     mockLogout.mockResolvedValue({
       success: false,
-      error: {
-        message: errorMessage,
-      },
+      error: errorMessage,
     });
 
     render(<LogoutButton />);
@@ -86,9 +84,7 @@ describe('[Components] LogoutButton', () => {
       .mockImplementation(() => {});
     mockLogout.mockResolvedValue({
       success: false,
-      error: {
-        message: 'Auth session missing',
-      },
+      error: 'Auth session missing',
     });
 
     render(<LogoutButton />);
