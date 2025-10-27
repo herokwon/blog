@@ -17,7 +17,7 @@ export async function login(formData: FormData) {
   } satisfies { email: string; password: string };
 
   if (data.email.length === 0 || data.password.length === 0) {
-    throw new Error('Email and password are required');
+    throw new Error('이메일과 비밀번호는 필수로 입력해야 합니다.');
   }
 
   const { error } = await supabase.auth.signInWithPassword(data);
