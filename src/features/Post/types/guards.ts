@@ -1,13 +1,15 @@
-import type { CreatePostResponse, Post, UpdatePostResponse } from '.';
+import type { ErrorResponse, SuccessResponse } from '.';
 
-export const isSuccess = (
-  result: CreatePostResponse | UpdatePostResponse,
-): result is { data: Post; error: null } => {
+type Result<K extends string, T> = SuccessResponse<K, T> | ErrorResponse<K, T>;
+
+export const isSuccess = <K extends string, T>(
+  result: Result<K, T>,
+): result is SuccessResponse<K, T> => {
   return !result.error;
 };
 
-export const isError = (
-  result: CreatePostResponse | UpdatePostResponse,
-): result is { data: null; error: string } => {
-  return result.error !== null;
+export const isError = <K extends string, T>(
+  result: Result<K, T>,
+): result is ErrorResponse<K, T> => {
+  return typeof result.error === 'string';
 };
