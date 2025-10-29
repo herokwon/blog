@@ -37,3 +37,13 @@ export type RemovePostResponse =
       success: false;
       error: string;
     };
+
+export type GetPostsResponse =
+  | {
+      data: string[];
+      error: null;
+    }
+  | {
+      data: null;
+      error: string;
+    };
