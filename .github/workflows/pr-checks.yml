@@ -48,6 +48,35 @@ jobs:
       - name: Run build
         run: pnpm build
 
+  verify-db-types:
+    name: Verify DB types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check existence of DB type definition
+        run: |
+          set -e
+          FILE_PATH="src/utils/supabase/database.types.ts"
+
+          git fetch origin main:refs/remotes/origin/main
+          if git show origin/main:$FILE_PATH > /dev/null 2>&1; then
+            echo "✅ Found $FILE_PATH in main branch."
+            exit 0
+          fi
+
+          if [ -f "$FILE_PATH" ]; then
+            echo "✅ Found $FILE_PATH in current PR branch."
+            exit 0
+          fi
+
+          echo "❌ Not found Supabase DB type definition file!"
+          echo "Please commit or generate it using 'pnpm gen-types'."
+          exit 1
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -66,7 +95,7 @@ jobs:
 
   merge:
     name: Merge
-    needs: [check-lint, check-types, test]
+    needs: [check-lint, check-types, verify-db-types, test]
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]' || (startsWith(github.head_ref, 'changeset-release') && github.event.pull_request.user.login == 'github-actions[bot]')
     permissions:
