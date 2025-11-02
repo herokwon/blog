@@ -25,7 +25,7 @@
     "react-dom": "^19"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.10.0",
+    "@cloudflare/vitest-pool-workers": "^0.10.3",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -40,12 +40,12 @@
     "eslint": "^9",
     "eslint-config-next": "^15",
     "eslint-config-prettier": "^10.1.8",
-    "jsdom": "^27.0.1",
+    "jsdom": "^27.1.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.4",
-    "wrangler": "^4.45.0"
+    "wrangler": "^4.45.3"
   }
 }
