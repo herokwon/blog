@@ -23,7 +23,7 @@ type EditorProps = Omit<React.ComponentPropsWithoutRef<'div'>, 'value'> &
     placeholder?: string;
   };
 
-const editorConfig: InitialConfigType = {
+export const editorConfig: InitialConfigType = {
   html: {
     export: exportMap,
     import: constructImportMap(),
