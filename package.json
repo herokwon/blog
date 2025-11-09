@@ -25,7 +25,7 @@
     "react-dom": "^19"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.10.3",
+    "@cloudflare/vitest-pool-workers": "^0.10.5",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -46,6 +46,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.4",
-    "wrangler": "^4.45.3"
+    "wrangler": "^4.46.0"
   }
 }
