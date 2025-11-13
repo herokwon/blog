@@ -1,43 +1,52 @@
-'use client';
-
-import { use } from 'react';
-
 import Link from 'next/link';
 
-import { getPost, getPosts } from '../api';
-import { isError } from '../types';
+import { extractTextNodes } from '@/features/Editor';
 
-type PostListProps = {
-  postsPromise: ReturnType<typeof getPosts>;
-};
+import type { Post } from '../types';
 
-type PostItemProps = {
-  postPromise: ReturnType<typeof getPost>;
-};
-
-export const PostList = ({ postsPromise }: PostListProps) => {
-  const result = use(postsPromise);
-
-  if (isError(result)) throw new Error(result.error);
-
+export const PostList = ({ posts }: { posts: Post[] }) => {
   return (
-    <ul>
-      {result.data.map(id => (
-        <PostItem key={id} postPromise={getPost(id)} />
+    <section data-testid="post-list">
+      {posts.map(({ ...post }) => (
+        <article
+          key={post.id}
+          data-testid="post-item-wrapper"
+          className="flex w-full"
+        >
+          <PostItem key={post.id} {...post} />
+        </article>
       ))}
-    </ul>
+    </section>
   );
 };
 
-const PostItem = ({ postPromise }: PostItemProps) => {
-  const result = use(postPromise);
+const parseContentText = (content: string): string => {
+  const textNodes = extractTextNodes(content);
+  let previewText = '';
 
-  if (isError(result)) throw new Error(result.error);
+  for (const node of textNodes) {
+    if (previewText.length >= 200) break;
+    previewText += node.text.trim() + ' ';
+  }
+
+  return previewText.trim();
+};
+
+const PostItem = ({ ...item }: Post) => {
+  const formattedCreatedAt = new Date(item.created_at).toLocaleDateString();
+  const previewText = parseContentText(item.content);
 
   return (
-    <Link href={`/posts/${result.data.id}`}>
-      <h2>{result.data.title}</h2>
-      <p>{result.data.content}</p>
+    <Link
+      href={`/posts/${item.id}`}
+      data-testid="post-item"
+      className="flex w-full flex-col gap-y-1"
+    >
+      <h2>{item.title}</h2>
+      <p className="line-clamp-3">{previewText}</p>
+      <time dateTime={formattedCreatedAt} className="text-sm opacity-60">
+        {formattedCreatedAt}
+      </time>
     </Link>
   );
 };
