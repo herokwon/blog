@@ -31,7 +31,7 @@ export type RemovePostResponse =
   | SuccessResponse<'success', true>
   | ErrorResponse<'success', false>;
 export type GetPostsResponse =
-  | SuccessResponse<'data', string[]>
+  | SuccessResponse<'data', Post[]>
   | ErrorResponse<'data', null>;
 
 export type GetPostResponse =

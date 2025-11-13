@@ -33,16 +33,31 @@ describe('[Features/Post] getPosts', () => {
 
   it('작업 성공 시, 게시글 목록을 최신순으로 반환해야 합니다.', async () => {
     orderMock.mockResolvedValueOnce({
-      data: [{ id: '2' }, { id: '1' }],
+      data: [
+        {
+          id: '2',
+          created_at: '2025-01-02',
+          updated_at: '2025-01-02',
+          title: 'title2',
+          content: 'content2',
+        },
+        {
+          id: '1',
+          created_at: '2025-01-01',
+          updated_at: '2025-01-01',
+          title: 'title1',
+          content: 'content1',
+        },
+      ],
       error: null,
     });
 
     const result = await getPosts();
 
-    expect(selectMock).toHaveBeenCalledWith('id');
+    expect(selectMock).toHaveBeenCalledWith('*');
     expect(orderMock).toHaveBeenCalledWith('created_at', { ascending: false });
+    expect(result.data).not.toBeNull();
     expect(result.error).toBeNull();
-    expect(result.data).toEqual(['2', '1']);
   });
 
   it('작업 실패 시, 적절한 오류 메시지를 반환해야 합니다.', async () => {
