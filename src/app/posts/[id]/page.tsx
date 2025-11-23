@@ -1,4 +1,5 @@
-import { getPost, isError, PostContent } from '@/features/Post';
+import { getPost, isError, PostContent, PostHeader } from '@/features/Post';
+import { createClient } from '@/utils/supabase/server';
 
 export default async function Post({
   params,
@@ -9,25 +10,16 @@ export default async function Post({
   const post = await getPost(id);
 
   if (isError(post)) throw new Error(post.error);
+  const { content, ...rest } = post.data;
 
-  const { title, content, created_at, updated_at } = post.data;
-
-  const formattedCreatedAt = new Date(created_at).toLocaleDateString();
-  const formattedUpdatedAt = new Date(updated_at).toLocaleDateString();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <article className="space-y-8">
-      <header className="space-y-2">
-        <h1>{title}</h1>
-        <div className="inline-flex flex-col text-sm opacity-60">
-          <time dateTime={created_at}>{formattedCreatedAt}</time>
-          {created_at === updated_at && (
-            <time
-              dateTime={updated_at}
-            >{`(${formattedUpdatedAt} 수정됨)`}</time>
-          )}
-        </div>
-      </header>
+      <PostHeader isAdmin={!!user} {...rest} />
       <hr className="border-slate-200" />
       <section>
         <PostContent content={content} />
