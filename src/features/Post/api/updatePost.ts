@@ -46,7 +46,10 @@ export const updatePost = async ({
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('posts')
-      .update(request)
+      .update({
+        ...request,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', id)
       .select()
       .single();
