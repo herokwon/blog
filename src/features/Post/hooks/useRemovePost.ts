@@ -17,7 +17,7 @@ export const useRemovePost = (): UseRemoveReturn => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const remove = async (id: string): Promise<boolean> => {
     setIsLoading(true);

@@ -18,7 +18,7 @@ export const useCreatePost = (): UseCreatePostReturn => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const create = async (data: PostRequest): Promise<Post | null> => {
     setIsLoading(true);

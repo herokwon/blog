@@ -18,7 +18,7 @@ export const useUpdatePost = (id: string): UseUpdatePostReturn => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const update = async (data: PostRequest): Promise<Post | null> => {
     setIsLoading(true);
