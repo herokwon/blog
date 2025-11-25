@@ -55,7 +55,7 @@ const ToolbarButton = ({
 };
 
 const Divider = () => {
-  return <hr className="mx-2 h-4 w-0.25 border-none bg-slate-200" />;
+  return <hr className="mx-2 h-4 w-px border-none bg-slate-200" />;
 };
 
 export const ToolbarPlugin = ({
