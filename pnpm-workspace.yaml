@@ -2,5 +2,6 @@ onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - esbuild
   - sharp
+  - supabase
   - unrs-resolver
   - workerd
