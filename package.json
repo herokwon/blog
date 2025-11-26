@@ -44,8 +44,8 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitest/coverage-istanbul": "^4.0.13",
-    "@vitest/ui": "^4.0.13",
+    "@vitest/coverage-istanbul": "^4.0.14",
+    "@vitest/ui": "^4.0.14",
     "eslint": "^9",
     "eslint-config-next": "^16",
     "eslint-config-prettier": "^10.1.8",
@@ -55,7 +55,7 @@
     "supabase": "^2.62.5",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.0.13",
+    "vitest": "^4.0.14",
     "wrangler": "^4.50.0"
   }
 }
