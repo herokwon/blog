@@ -2,16 +2,16 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 
-import { logout } from '@/app/actions/auth';
+import { logout } from '../api';
 
-const LogoutButton = () => {
+export const LogoutButton = () => {
   const router = useRouter();
   const pathname = usePathname();
 
   const handleLogout = async () => {
     const { success, error } = await logout();
     if (!success) {
-      console.error(error.message);
+      console.error(error);
       return;
     }
 
@@ -25,5 +25,3 @@ const LogoutButton = () => {
     </button>
   );
 };
-
-export default LogoutButton;

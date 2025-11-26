@@ -14,14 +14,16 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { type ElementFormatType, ParagraphNode, TextNode } from 'lexical';
 
 import { constructImportMap, exportMap } from './config';
+import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { ToolbarPlugin } from './plugins/ToolbarPlugin';
 import editorTheme from './theme';
 
-type EditorProps = React.ComponentPropsWithoutRef<'div'> & {
-  placeholder?: string;
-};
+type EditorProps = Omit<React.ComponentPropsWithoutRef<'div'>, 'value'> &
+  React.ComponentProps<typeof OnChangePlugin> & {
+    placeholder?: string;
+  };
 
-const editorConfig = {
+export const editorConfig: InitialConfigType = {
   html: {
     export: exportMap,
     import: constructImportMap(),
@@ -32,29 +34,34 @@ const editorConfig = {
   onError(error: Error) {
     throw error;
   },
-} satisfies InitialConfigType;
+};
 
 export type Alignment = Exclude<ElementFormatType, 'start' | 'end' | ''>;
 
 export const EditorShell = ({
   placeholder = '텍스트를 입력해 주세요.',
+  value,
+  onChangeValue,
   ...props
 }: EditorProps) => {
   const [alignment, setAlignment] = useState<Alignment>('left');
+
+  const handleChangeAlignment = (alignment: Alignment) => {
+    setAlignment(alignment);
+  };
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
       <div
         {...props}
         data-testid="editor-shell"
-        className={`w-full rounded-md ring-1 ring-slate-200 ${props.className ?? ''}`}
+        className={`flex w-full flex-col rounded ring-1 ring-slate-200 ${props.className ?? ''}`}
       >
-        <ToolbarPlugin
-          onChangeAlignment={alignment => {
-            setAlignment(alignment);
-          }}
-        />
-        <div data-testid="editor-inner" className="relative p-4 text-sm">
+        <ToolbarPlugin onChangeAlignment={handleChangeAlignment} />
+        <div
+          data-testid="editor-inner"
+          className="relative overflow-auto p-4 text-sm"
+        >
           <RichTextPlugin
             contentEditable={
               <ContentEditable
@@ -81,6 +88,7 @@ export const EditorShell = ({
           />
           <HistoryPlugin />
           <AutoFocusPlugin />
+          <OnChangePlugin value={value} onChangeValue={onChangeValue} />
         </div>
       </div>
     </LexicalComposer>

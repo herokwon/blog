@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/utils/supabase/server';
-import type { AuthError } from '@supabase/supabase-js';
 
 const isValidRedirectPath = (path: string): boolean =>
   path.startsWith('/') && !path.startsWith('//');
@@ -18,7 +17,7 @@ export async function login(formData: FormData) {
   } satisfies { email: string; password: string };
 
   if (data.email.length === 0 || data.password.length === 0) {
-    throw new Error('Email and password are required');
+    throw new Error('이메일과 비밀번호는 필수로 입력해야 합니다.');
   }
 
   const { error } = await supabase.auth.signInWithPassword(data);
@@ -29,23 +28,4 @@ export async function login(formData: FormData) {
 
   revalidatePath('/', 'layout');
   redirect(redirectPath);
-}
-
-export async function logout(): Promise<
-  { success: true; error: null } | { success: false; error: AuthError }
-> {
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    return {
-      success: false,
-      error,
-    };
-  }
-
-  return {
-    success: true,
-    error: null,
-  };
 }

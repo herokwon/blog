@@ -4,12 +4,19 @@ import { createServerClient } from '@supabase/ssr';
 
 import { supabaseConfig } from './config';
 
-const PROTECTED_ROUTES = ['/write'];
+const PROTECTED_ROUTES = [
+  /^\/write$/,
+  /^\/posts\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/edit$/i,
+];
 const AUTH_ROUTES = ['/login'];
 const DEFAULT_REDIRECT = '/';
 
-const isValidRedirectPath = (path: string): boolean =>
-  path.startsWith('/') && !AUTH_ROUTES.some(route => path.startsWith(route));
+const isValidRedirectPath = (pathname: string): boolean =>
+  pathname.startsWith('/') &&
+  !AUTH_ROUTES.some(route => pathname.startsWith(route));
+
+const isProtectedRoute = (pathname: string): boolean =>
+  PROTECTED_ROUTES.some(pattern => pattern.test(pathname));
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse: NextResponse = NextResponse.next({
@@ -56,7 +63,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (!user && PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
+  if (!user && isProtectedRoute(pathname)) {
     url.pathname = '/login';
     url.searchParams.set('redirect', pathname);
 

@@ -1,6 +1,4 @@
-import Link from 'next/link';
-
-import { LogoutButton } from '@/components';
+import { LoginButton, LogoutButton } from '@/features/Auth';
 import { createClient } from '@/utils/supabase/server';
 
 import './globals.css';
@@ -13,11 +11,13 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const AuthButton = !user ? LoginButton : LogoutButton;
+
   return (
     <html>
       <body>
         <div className="fixed top-0 left-0 z-99 flex w-full justify-end px-4 py-3">
-          {!user ? <Link href="/login">Login</Link> : <LogoutButton />}
+          {<AuthButton />}
         </div>
         {children}
       </body>
