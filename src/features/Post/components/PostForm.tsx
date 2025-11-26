@@ -48,7 +48,7 @@ export const PostForm = ({
       {...props}
       role="form"
       onSubmit={handleSubmit}
-      className={`flex size-full grid-rows-[min-content_minmax(0,_1fr)] flex-col gap-y-4 ${props.className ?? ''}`}
+      className={`flex size-full grid-rows-[min-content_minmax(0,1fr)] flex-col gap-y-4 ${props.className ?? ''}`}
     >
       {children && <div className="mr-0 ml-auto">{children}</div>}
       <input
@@ -56,7 +56,7 @@ export const PostForm = ({
         name="title"
         value={post.title}
         placeholder="제목"
-        className="w-full flex-shrink-0 rounded px-4 py-3 font-bold ring-1 ring-slate-200 outline-none"
+        className="w-full shrink-0 rounded px-4 py-3 font-bold ring-1 ring-slate-200 outline-none"
         onChange={e => handleChange({ ...post, title: e.target.value })}
       />
       <EditorShell
