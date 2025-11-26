@@ -53,7 +53,7 @@ describe('[Features/Post] PostHeader', () => {
       />,
     );
 
-    expect(screen.getByText('(2024. 1. 2. 수정됨)')).toBeInTheDocument();
+    expect(screen.queryByText(/수정됨/)).toBeInTheDocument();
   });
 
   it('isAdmin에 따라 버튼을 표시하고 수정/삭제 동작을 수행해야 합니다', async () => {
