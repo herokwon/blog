@@ -82,7 +82,10 @@ describe('[Features/Post] updatePost', () => {
 
     const result = await updatePost(params);
 
-    expect(updateMock).toHaveBeenCalledWith(request);
+    expect(updateMock).toHaveBeenCalledWith({
+      ...request,
+      updated_at: expect.any(String),
+    });
     expect(eqMock).toHaveBeenCalledWith('id', '1');
     expect(selectMock).toHaveBeenCalled();
     expect(result).toEqual({ data: mockPost, error: null });
