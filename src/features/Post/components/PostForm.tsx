@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { EditorShell } from '@/features/Editor';
 
@@ -38,10 +38,6 @@ export const PostForm = ({
     e.preventDefault();
     await onSubmit(post);
   };
-
-  useEffect(() => {
-    setPost({ ...initialData });
-  }, [initialData]);
 
   return (
     <form
