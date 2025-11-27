@@ -13,6 +13,7 @@ import { getErrorMessage } from '../utils';
  * - created_at 기준 내림차순으로 정렬합니다.
  * - PostgreSQL/Supabase 에러를 사용자 친화적 메시지로 변환합니다.
  *
+ * @param limit - 조회할 게시글의 최대 개수 (선택 사항)
  * @returns 게시글 목록 조회 결과를 담은 Promise
  * - `data`: 게시글 배열(성공 시) 또는 `null`(실패 시)
  * - `error`: 에러 메시지(실패 시) 또는 `null`(성공 시)
@@ -20,13 +21,20 @@ import { getErrorMessage } from '../utils';
  * @see {@link GetPostsResponse} - 응답 데이터 타입 정의
  * @see {@link getErrorMessage} - PostgreSQL 에러 메시지 변환 함수
  */
-export const getPosts = async (): Promise<GetPostsResponse> => {
+export const getPosts = async (limit?: number): Promise<GetPostsResponse> => {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('posts')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
 
     return !error
       ? {
