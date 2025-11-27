@@ -20,13 +20,20 @@ import { getErrorMessage } from '../utils';
  * @see {@link GetPostsResponse} - 응답 데이터 타입 정의
  * @see {@link getErrorMessage} - PostgreSQL 에러 메시지 변환 함수
  */
-export const getPosts = async (): Promise<GetPostsResponse> => {
+export const getPosts = async (limit?: number): Promise<GetPostsResponse> => {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('posts')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
 
     return !error
       ? {
