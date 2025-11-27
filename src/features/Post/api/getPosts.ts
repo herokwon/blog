@@ -27,8 +27,7 @@ export const getPosts = async (limit?: number): Promise<GetPostsResponse> => {
     let query = supabase
       .from('posts')
       .select('*')
-      .order('created_at', { ascending: false })
-      .order('updated_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (limit) {
       query = query.limit(limit);
