@@ -19,7 +19,7 @@ export default async function RootLayout({
         <div className="fixed top-0 left-0 z-99 flex w-full justify-end px-4 py-3">
           {<AuthButton />}
         </div>
-        {children}
+        <main>{children}</main>
       </body>
     </html>
   );
