@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 
 import { PostgrestError } from '@supabase/supabase-js';
 
+import { Post } from '../types';
 import { getErrorMessage } from '../utils';
 
 const { selectMock, orderMock } = vi.hoisted(() => ({
@@ -56,8 +57,29 @@ describe('[Features/Post] getPosts', () => {
 
     expect(selectMock).toHaveBeenCalledWith('*');
     expect(orderMock).toHaveBeenCalledWith('created_at', { ascending: false });
+
     expect(result.data).not.toBeNull();
     expect(result.error).toBeNull();
+  });
+
+  it('limit 파라미터가 제공되면 지정된 개수만큼만 조회해야 합니다.', async () => {
+    const limitMock = vi.fn().mockResolvedValueOnce({
+      data: Array.from({ length: 10 }, (_, i) => ({
+        id: `${i + 1}`,
+        title: `title${i + 1}`,
+        content: `content${i + 1}`,
+        created_at: `2025-01-${(i + 1).toString().padStart(2, '0')}`,
+        updated_at: `2025-01-${(i + 1).toString().padStart(2, '0')}`,
+      })) satisfies Post[],
+      error: null,
+    });
+
+    orderMock.mockReturnValueOnce({ limit: limitMock });
+
+    const result = await getPosts(5);
+
+    expect(limitMock).toHaveBeenCalledWith(5);
+    expect(result.data).not.toBeNull();
   });
 
   it('작업 실패 시, 적절한 오류 메시지를 반환해야 합니다.', async () => {
@@ -72,7 +94,9 @@ describe('[Features/Post] getPosts', () => {
     const result = await getPosts();
 
     expect(selectMock).toHaveBeenCalled();
+
     expect(result.data).toBeNull();
+
     expect(result.error).toBeTruthy();
     expect(result.error).toBe(getErrorMessage(error));
   });
