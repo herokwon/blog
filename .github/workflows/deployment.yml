@@ -152,7 +152,7 @@ jobs:
       - name: Create GitHub Deployment
         id: create-deployment
         env:
-          REF: ${{ github.ref }}
+          REF: ${{ github.sha }}
         run: |
           DEPLOY_ID=$(gh api repos/$REPO/deployments \
             -F ref=$REF \
