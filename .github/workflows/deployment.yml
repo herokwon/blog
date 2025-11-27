@@ -35,7 +35,7 @@ jobs:
       url: ${{ steps.deploy.outputs.deployment-url }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_TOKEN }}
 
@@ -68,7 +68,7 @@ jobs:
       worker-name: ${{ steps.worker.outputs.name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           sparse-checkout: |
             wrangler.jsonc
@@ -225,7 +225,7 @@ jobs:
     if: ${{ needs.parse-info.outputs.pr != ''  }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           sparse-checkout: |
             .github/actions/setup-slack-payload
