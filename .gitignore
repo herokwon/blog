@@ -46,4 +46,3 @@ next-env.d.ts
 
 # wrangler files
 .wrangler
-cloudflare-env.d.ts

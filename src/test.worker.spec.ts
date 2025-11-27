@@ -1,9 +1,10 @@
+import { vi } from 'vitest';
+
 import {
   createExecutionContext,
   env,
   waitOnExecutionContext,
 } from 'cloudflare:test';
-import { vi } from 'vitest';
 
 import workers, { type ResponseData } from './test.worker';
 

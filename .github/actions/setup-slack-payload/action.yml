@@ -8,6 +8,9 @@ inputs:
   deployed:
     description: Whether the deployment was successful
     required: true
+  environment:
+    description: Deployment environment (Production or Preview)
+    required: true
   cloudflare_account_id:
     description: Cloudflare account ID
     required: true
@@ -47,6 +50,7 @@ runs:
       env:
         SLACK_CHANNEL_ID: ${{ inputs.slack_channel_id }}
         DEPLOYED: ${{ inputs.deployed }}
+        ENVIRONMENT: ${{ inputs.environment }}
         CF_ACCOUNT_ID: ${{ inputs.cloudflare_account_id }}
         CF_WORKER_NAME: ${{ inputs.cloudflare_worker_name }}
         CF_WORKER_DOMAIN: ${{ inputs.cloudflare_worker_domain }}
@@ -67,6 +71,7 @@ runs:
         const hasName = !!(process.env.CF_WORKER_NAME && process.env.CF_WORKER_NAME.trim());
         const hasDomain = !!(process.env.CF_WORKER_DOMAIN && process.env.CF_WORKER_DOMAIN.trim());
         const ok = deployed && hasName && hasDomain;
+        const environment = process.env.ENVIRONMENT;
 
         const payload = {
           channel: process.env.SLACK_CHANNEL_ID,
@@ -80,14 +85,14 @@ runs:
 
         blocks.push({
           type: 'header',
-          text: { type: 'plain_text', text: ok ? '✅ Cloudflare Workers 배포 완료' : '❌ Cloudflare Workers 배포 실패', emoji: true }
+          text: { type: 'plain_text', text: ok ? `✅ Cloudflare Workers ${process.env.ENVIRONMENT} 배포 완료` : `❌ Cloudflare Workers ${process.env.ENVIRONMENT} 배포 실패`, emoji: true }
         });
         blocks.push({ type: 'divider' });
 
         if (ok) {
           blocks.push({
             type: 'section',
-            text: { type: 'mrkdwn', text: `🌐 <https://${process.env.CF_WORKER_DOMAIN}|*페이지 바로가기*>` }
+            text: { type: 'mrkdwn', text: `🌐 <${process.env.CF_WORKER_DOMAIN}|*페이지 바로가기*>` }
           });
         }
 

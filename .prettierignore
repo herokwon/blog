@@ -1,2 +1,5 @@
 # GitHub templates
 .github/**/*.md
+
+# Cloudflare Worker types
+cloudflare-env.d.ts
