@@ -14,7 +14,7 @@ env:
   ENVIRONMENT: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && 'Production' || 'Preview' }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
@@ -151,7 +151,6 @@ jobs:
             -F ref=$REF \
             -F environment=$ENVIRONMENT \
             -F auto_merge=false \
-            -f required_contexts=[] \
             -q '.id')
 
           echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
