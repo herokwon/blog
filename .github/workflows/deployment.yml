@@ -148,11 +148,18 @@ jobs:
           REF: ${{ github.event.workflow_run.head_sha }}
         run: |
           DEPLOY_ID=$(gh api repos/$REPO/deployments \
-            -F ref=$REF \
-            -F environment=$ENVIRONMENT \
-            -F auto_merge=false \
-            -f required_contexts=[] \
-            -q '.id')
+            --method POST \
+            --header "Accept: application/vnd.github+json" \
+            --input - \
+            -q '.id' <<EOF
+          {
+            "ref": "$REF",
+            "environment": "$ENVIRONMENT",
+            "auto_merge": false,
+            "required_contexts": []
+          }
+          EOF
+          )
 
           echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
 
