@@ -53,6 +53,8 @@ jobs:
       - name: Get Deployment URL
         id: deploy-url
         if: ${{ steps.deploy.outcome == 'success' }}
+        env:
+          RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
           node - << 'NODE'
           const fs = require('fs');
@@ -76,6 +78,7 @@ jobs:
 
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${workerUrl}\n`);
           NODE
+
   parse-info:
     name: Parse Deployment Info
     runs-on: ubuntu-latest
