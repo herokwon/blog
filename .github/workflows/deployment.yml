@@ -14,7 +14,7 @@ env:
   ENVIRONMENT: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && 'Production' || 'Preview' }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
