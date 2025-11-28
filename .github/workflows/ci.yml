@@ -1,6 +1,9 @@
-name: PR Checks
+name: CI
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -53,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

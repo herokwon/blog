@@ -1,25 +1,17 @@
 name: Deployment
 
 on:
-  push:
-    branches:
-      - main
-
-  pull_request:
-    branches:
-      - release/*
+  workflow_run:
+    workflows: ["CI"]
     types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
+      - completed
 
 permissions:
   contents: read
 
 env:
   REPO: ${{ github.repository }}
-  ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
+  ENVIRONMENT: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && 'Production' || 'Preview' }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,6 +21,7 @@ jobs:
   deploy:
     name: Deploy to Cloudflare Workers
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     timeout-minutes: 60
     outputs:
       result: ${{ steps.deploy.outcome }}
@@ -54,7 +47,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: ${{ github.ref_name == 'main' && 'deploy' || 'versions upload' }}
+          command: ${{ env.ENVIRONMENT == 'Production' && 'deploy' || 'versions upload' }}
         continue-on-error: true
 
   parse-info:
@@ -152,7 +145,7 @@ jobs:
       - name: Create GitHub Deployment
         id: create-deployment
         env:
-          REF: ${{ github.sha }}
+          REF: ${{ github.event.workflow_run.head_sha }}
         run: |
           DEPLOY_ID=$(gh api repos/$REPO/deployments \
             -F ref=$REF \
@@ -237,7 +230,7 @@ jobs:
         with:
           slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
           deployed: ${{ needs.deploy.outputs.result == 'success' }}
-          environment: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
+          environment: ${{ env.ENVIRONMENT }}
           cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           cloudflare_worker_name: ${{ needs.parse-info.outputs.worker-name }}
           cloudflare_worker_domain: ${{ needs.deploy.outputs.url }}
