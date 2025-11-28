@@ -151,7 +151,6 @@ jobs:
             -F ref=$REF \
             -F environment=$ENVIRONMENT \
             -F auto_merge=false \
-            -f required_contexts=[] \
             -q '.id')
 
           echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
