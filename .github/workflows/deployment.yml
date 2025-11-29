@@ -63,7 +63,6 @@ jobs:
           let workerUrl = '';
 
           if (rawUrl && rawUrl.trim()) {
-
             const cleanDomain = rawUrl
               .replace(/\s*\([^)]*\)\s*/g, '')
               .split(/[,;\s]+/)[0]
@@ -101,40 +100,46 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            if (context.eventName === 'pull_request') {
-              const pr = context.payload.pull_request;
-              const commit = context.sha.substring(0, 7);
-              const avatarUrl = pr.user?.avatar_url || context.payload.repository.owner.avatar_url;
+            const workflowRun = context.payload.workflow_run;
+            const headSha = workflowRun.head_sha;
 
-              return {
-                commit,
-                number: pr.number,
-                title: pr.title,
-                url: pr.html_url,
-                avatar_url: avatarUrl
-              };
+            let prNumber = null;
+
+            if (workflowRun.pull_requests && workflowRun.pull_requests.length > 0) {
+              core.info('Found PR info directly in workflow_run payload.');
+              prNumber = workflowRun.pull_requests[0].number;
+            } else {
+              core.info(`No PR info in payload. Searching by commit SHA: ${headSha}`);
+              const result = (await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                commit_sha: headSha,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              }))?.data || [];
+
+              if (result.length > 0) {
+                prNumber = result[0].number;
+              }
             }
 
-            const result = (await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              commit_sha: context.sha,
+            if (!prNumber) {
+              core.info('No pull request associated with this commit.');
+              return '';
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-            }))?.data || [];
+              pull_number: prNumber,
+            });
 
-            if (result.length === 0) {
-              core.info(`No pull request found for commit ${context.sha}.`);
-              return '';
-            };
-
-            const latestPr = result[0];
-            const commit = (latestPr.merge_commit_sha || context.sha || '').substring(0, 7);
-            const avatarUrl = latestPr.user?.avatar_url || context.payload.repository.owner.avatar_url;
+            const commit = (pr.merge_commit_sha || headSha || '').substring(0, 7);
+            const avatarUrl = pr.user?.avatar_url || context.payload.repository.owner.avatar_url;
 
             return {
               commit,
-              number: latestPr.number,
-              title: latestPr.title,
-              url: latestPr.html_url,
+              number: pr.number,
+              title: pr.title,
+              url: pr.html_url,
               avatar_url: avatarUrl
             };
 

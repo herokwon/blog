@@ -48,24 +48,19 @@ jobs:
       - name: Run check-types
         run: pnpm check-types
 
-      - name: Run build
-        run: pnpm build
-
   verify-db-types:
     name: Verify DB types
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Check existence of DB type definition
         run: |
           set -e
           FILE_PATH="src/utils/supabase/database.types.ts"
 
-          git fetch origin main:refs/remotes/origin/main
+          git fetch origin main --depth=1
           if git show origin/main:$FILE_PATH > /dev/null 2>&1; then
             echo "✅ Found $FILE_PATH in main branch."
             exit 0
