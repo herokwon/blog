@@ -63,7 +63,6 @@ jobs:
           let workerUrl = '';
 
           if (rawUrl && rawUrl.trim()) {
-
             const cleanDomain = rawUrl
               .replace(/\s*\([^)]*\)\s*/g, '')
               .split(/[,;\s]+/)[0]
@@ -101,33 +100,23 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            if (context.eventName === 'pull_request') {
-              const pr = context.payload.pull_request;
-              const commit = context.sha.substring(0, 7);
-              const avatarUrl = pr.user?.avatar_url || context.payload.repository.owner.avatar_url;
+            const headSha = context.event.workflow_run.head_sha;
 
-              return {
-                commit,
-                number: pr.number,
-                title: pr.title,
-                url: pr.html_url,
-                avatar_url: avatarUrl
-              };
-            }
+            core.info(`Checking PRs for commit: ${headSha}`);
 
             const result = (await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              commit_sha: context.sha,
+              commit_sha: headSha,
               owner: context.repo.owner,
               repo: context.repo.repo,
             }))?.data || [];
 
             if (result.length === 0) {
-              core.info(`No pull request found for commit ${context.sha}.`);
+              core.info(`No pull request found for commit ${headSha}.`);
               return '';
             };
 
             const latestPr = result[0];
-            const commit = (latestPr.merge_commit_sha || context.sha || '').substring(0, 7);
+            const commit = (latestPr.merge_commit_sha || headSha || '').substring(0, 7);
             const avatarUrl = latestPr.user?.avatar_url || context.payload.repository.owner.avatar_url;
 
             return {
