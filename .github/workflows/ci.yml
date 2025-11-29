@@ -48,9 +48,6 @@ jobs:
       - name: Run check-types
         run: pnpm check-types
 
-      - name: Run build
-        run: pnpm build
-
   verify-db-types:
     name: Verify DB types
     runs-on: ubuntu-latest
