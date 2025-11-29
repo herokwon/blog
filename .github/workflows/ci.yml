@@ -61,7 +61,6 @@ jobs:
           FILE_PATH="src/utils/supabase/database.types.ts"
 
           git fetch origin main --depth=1
-
           if git show origin/main:$FILE_PATH > /dev/null 2>&1; then
             echo "✅ Found $FILE_PATH in main branch."
             exit 0
