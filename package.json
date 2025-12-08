@@ -24,7 +24,7 @@
     "@lexical/react": "^0.38.2",
     "@opennextjs/cloudflare": "^1.14.4",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.86.0",
+    "@supabase/supabase-js": "^2.87.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "lexical": "^0.38.2",
     "lucide-react": "^0.556.0",
