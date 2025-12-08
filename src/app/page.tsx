@@ -1,5 +1,7 @@
 import { getPosts, isError, PostList } from '@/features/Post';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const response = await getPosts(5);
 
