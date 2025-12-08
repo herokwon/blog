@@ -1,6 +1,8 @@
 import { getPost, isError, PostContent, PostHeader } from '@/features/Post';
 import { createClient } from '@/utils/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Post({
   params,
 }: {
