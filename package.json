@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@lexical/react": "^0.39.0",
-    "@opennextjs/cloudflare": "^1.14.4",
+    "@opennextjs/cloudflare": "^1.14.6",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.86.0",
     "babel-plugin-react-compiler": "^1.0.0",
@@ -33,7 +33,7 @@
     "react-dom": "^19"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.10.14",
+    "@cloudflare/vitest-pool-workers": "^0.11.1",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -56,6 +56,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.15",
-    "wrangler": "^4.53.0"
+    "wrangler": "^4.56.0"
   }
 }
