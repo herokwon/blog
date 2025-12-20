@@ -12,7 +12,17 @@
     "directory": ".open-next/assets"
   },
   "observability": {
-    "enabled": true
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
   },
   "preview_urls": true,
   "routes": [
@@ -26,12 +36,6 @@
       "binding": "NEXT_INC_CACHE_KV",
       "id": "dfa6b9c132d74b25a904de203b7efd54",
       "preview_id": "7e752337b5fd4b65a8b59fc84a9a3aad"
-    }
-  ],
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "blog"
     }
   ]
 }
