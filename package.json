@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@lexical/react": "^0.39.0",
-    "@opennextjs/cloudflare": "^1.14.6",
+    "@opennextjs/cloudflare": "^1.14.7",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "babel-plugin-react-compiler": "^1.0.0",
