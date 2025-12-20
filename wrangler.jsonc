@@ -20,5 +20,18 @@
       "pattern": "blog.herokwon.dev",
       "custom_domain": true
     }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "dfa6b9c132d74b25a904de203b7efd54",
+      "preview_id": "7e752337b5fd4b65a8b59fc84a9a3aad"
+    }
+  ],
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "blog"
+    }
   ]
 }
