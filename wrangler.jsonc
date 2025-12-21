@@ -25,6 +25,7 @@
     }
   },
   "preview_urls": true,
+  "workers_dev": true,
   "routes": [
     {
       "pattern": "blog.herokwon.dev",
