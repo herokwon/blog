@@ -19,9 +19,9 @@
       "head_sampling_rate": 0.6
     },
     "traces": {
-      "enabled": false,
+      "enabled": true,
       "persist": true,
-      "head_sampling_rate": 1
+      "head_sampling_rate": 0.05
     }
   },
   "preview_urls": true,
