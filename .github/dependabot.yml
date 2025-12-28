@@ -37,6 +37,8 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: 'tailwindcss'
         update-types: ['version-update:semver-major']
+      - dependency-name: 'next'
+        update-types: ['version-update:semver-major']
     groups:
       npm-production:
         dependency-type: production
