@@ -50,13 +50,13 @@
     "eslint": "^9",
     "eslint-config-next": "^15",
     "eslint-config-prettier": "^10.1.8",
-    "jsdom": "^27.3.0",
+    "jsdom": "^27.4.0",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "supabase": "^2.67.3",
+    "supabase": "^2.70.5",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.16",
-    "wrangler": "^4.56.0"
+    "wrangler": "^4.54.0"
   }
 }
