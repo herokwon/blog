@@ -23,9 +23,9 @@
   "dependencies": {
     "@lexical/react": "^0.39.0",
     "@lexical/utils": "^0.39.0",
-    "@opennextjs/cloudflare": "^1.14.7",
+    "@opennextjs/cloudflare": "^1.14.8",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.89.0",
+    "@supabase/supabase-js": "^2.90.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "lexical": "^0.39.0",
     "lucide-react": "^0.562.0",
