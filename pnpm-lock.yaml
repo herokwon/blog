@@ -11,9 +11,6 @@ importers:
       '@lexical/react':
         specifier: ^0.39.0
         version: 0.39.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(yjs@13.6.29)
-      '@lexical/utils':
-        specifier: ^0.39.0
-        version: 0.39.0
       '@opennextjs/cloudflare':
         specifier: ^1.14.8
         version: 1.14.8(next@15.5.9(@babel/core@7.28.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(wrangler@4.58.0)
