@@ -1,0 +1,151 @@
+name: ✨ Feature Request
+description: Have an idea for a new feature or improvement? Share it here.
+title: '[Feature]: '
+labels: ['✨ Feature']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > Thanks for the suggestion! Your ideas help make this project better.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Request Type
+      description: What kind of request is this?
+      options:
+        - New feature
+        - Improvement to existing feature
+        - Performance enhancement
+        - UI/UX improvement
+        - API addition/change
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Problem / Opportunity
+      description:
+        What pain point are you experiencing, or what opportunity do you see?
+        If there is no clear problem, describe why this would still be valuable.
+      placeholder: |
+        (Pain point example)
+        Finding a specific project on the dashboard requires scrolling through the entire list.
+
+        (Opportunity example)
+        There is no major issue, but a quick search could reduce navigation time
+        and improve discoverability for large project lists.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like to solve this problem?
+      placeholder: |
+        Add a search bar at the top of the dashboard to quickly find projects by name.
+        Real-time filtering would be great, and saving recent searches would make it even better.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternative
+    attributes:
+      label: Alternatives Considered
+      description: Have you thought of any other approaches?
+      placeholder: |
+        - Grouping projects into folders — but search feels faster
+        - Adding a favorites list — but I can't favorite everything
+    validations:
+      required: false
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Usage Example
+      description: Show us how this feature would be used.
+      placeholder: |
+        1. Open the dashboard
+        2. Press Cmd+K or click the search bar
+        3. Type "mobile"
+        4. Only "Mobile App" and "Mobile Web" projects are shown instantly
+        5. Arrow keys to navigate, Enter to open
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - 🔴 Must Have - Hard to use without it
+        - 🟠 Should Have - Strongly needed
+        - 🟡 Nice to Have - Would be appreciated
+        - 🟢 Low - Not urgent
+    validations:
+      required: true
+
+  - type: dropdown
+    id: user_group
+    attributes:
+      label: Who Would Benefit?
+      description: Who needs this feature?
+      multiple: true
+      options:
+        - All users
+        - Admins
+        - Developers
+        - Designers
+        - End users
+        - Specific user group
+    validations:
+      required: false
+
+  - type: dropdown
+    id: compatibility_impact
+    attributes:
+      label: Backward compatibility impact
+      description: Would this affect any existing functionality?
+      options:
+        - No impact
+        - Requires changes to existing features
+        - Not sure
+    validations:
+      required: false
+
+  - type: input
+    id: reference
+    attributes:
+      label: Reference Links
+      description: Any similar features in other products or helpful references?
+      placeholder: 'https://example.com/similar-feature'
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Anything else you'd like to share?
+      placeholder: |
+        - Estimated frequency of use
+        - Related feature ideas
+        - Implementation considerations
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched for duplicate feature requests
+          required: true
+        - label: I believe this aligns with the project's goals
+          required: true
+        - label: I am willing to contribute to this feature if needed
+          required: false
