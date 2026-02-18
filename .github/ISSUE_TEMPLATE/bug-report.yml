@@ -1,0 +1,138 @@
+name: 🐞 Bug Report
+description: Found a bug? Please report reproducible bugs here.
+title: '[Bug]: '
+labels: ['🐞 BugFix']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > Thanks for taking the time to report a bug! Providing reproducible information helps us fix it faster.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What's the problem?
+      description: Briefly describe the bug you found.
+      placeholder: Clicking the login button freezes the page
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Walk us through the steps to reproduce the bug.
+      placeholder: |
+        1. Go to https://example.com/login
+        2. Enter 'test@example.com' in the email field
+        3. Enter '1234' in the password field
+        4. Click the 'Login' button
+        5. Page gets stuck in a loading state
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+      placeholder: After login, I should be redirected to the dashboard page
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots / Logs
+      description: Attach error screenshots or console logs if available.
+      placeholder: |
+        - Drag & drop an image or paste with Ctrl+V.
+        - If there's a console error:
+        ```
+        Uncaught TypeError: Cannot read property 'user' of undefined
+        ```
+    validations:
+      required: false
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      description: How often does this bug occur?
+      options:
+        - Always (100%)
+        - Often (70-90%)
+        - Sometimes (30-70%)
+        - Rarely (10-30%)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How much does this bug impact you?
+      options:
+        - 🔴 Critical - Service is completely unusable
+        - 🟠 High - Core feature is broken
+        - 🟡 Medium - Feature is inconvenient to use
+        - 🟢 Low - Minor inconvenience
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version are you running?
+      placeholder: 'v2.3.1'
+    validations:
+      required: false
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser (if web app)
+      description: Which browser(s) did this occur in?
+      multiple: true
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Opera
+        - Other
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: 'macOS 14.2 / Windows 11 / Ubuntu 22.04'
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other details that might help?
+      placeholder: |
+        - Does this only happen with a specific account?
+        - Does this also occur on mobile?
+        - When did this problem start?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched for duplicate issues
+          required: true
+        - label: I have tested on the latest version
+          required: false
+        - label: I have checked the browser console for errors
+          required: false
