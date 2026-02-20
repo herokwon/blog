@@ -41,9 +41,9 @@ body:
       required: true
 
   - type: textarea
-    id: evidence
+    id: reference
     attributes:
-      label: Screenshots / Logs
+      label: Screenshot / Log
       description: Attach error screenshots or console logs if available.
       placeholder: |
         - Drag & drop an image or paste with Ctrl+V.
