@@ -227,18 +227,20 @@ jobs:
         run: |
           if [ -z "$SUMMARY" ] || [ "$SUMMARY" = "_No response_" ] || [ -z "$DESCRIPTION" ] || [ "$DESCRIPTION" = "_No response_" ]; then
             echo "skipped=true" >> $GITHUB_OUTPUT
-            exit 0
+          else
+            echo "skipped=false" >> $GITHUB_OUTPUT
           fi
-          echo "skipped=false" >> $GITHUB_OUTPUT
 
       - name: Render checklist
         uses: ./.github/actions/render-checklist
         id: checklist
+        if: steps.validate.outputs.skipped != 'true'
         with:
           template-path: ${{ env.TEMPLATE_PATH }}
           checklist-input: ${{ steps.issue-parser.outputs.issueparser_checklist }}
 
       - name: Update issue content
+        if: steps.checklist.outcome == 'success'
         env:
           SUMMARY: ${{ steps.issue-parser.outputs.issueparser_summary }}
           DESCRIPTION: ${{ steps.issue-parser.outputs.issueparser_description }}
