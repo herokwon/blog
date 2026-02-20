@@ -248,6 +248,8 @@ jobs:
     needs: initialize-processing
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.issue.title, '[Bug]') && !contains(github.event.issue.labels.*.name, 'BugFix') && !contains(github.event.issue.title, '[Feature]') && !contains(github.event.issue.labels.*.name, 'Feature') }}
+    outputs:
+      skipped: ${{ steps.validate.outputs.skipped }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -257,6 +259,18 @@ jobs:
         id: issue-parser
         with:
           template-path: .github/ISSUE_TEMPLATE/general.yml
+
+      - name: Validate parsed content
+        id: validate
+        env:
+          SUMMARY: ${{ steps.issue-parser.outputs.issueparser_summary }}
+          DESCRIPTION: ${{ steps.issue-parser.outputs.issueparser_description }}
+        run: |
+          if [ -z "$SUMMARY" ] || [ "$SUMMARY" = "_No response_" ] || [ -z "$DESCRIPTION" ] || [ "$DESCRIPTION" = "_No response_" ]; then
+            echo "skipped=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "skipped=false" >> $GITHUB_OUTPUT
 
       - name: Update issue content
         env:
@@ -341,13 +355,17 @@ jobs:
       REPO: ${{ github.repository }}
       COMMENT_ID: ${{ needs.initialize-processing.outputs.comment-id }}
       CATEGORY: ${{ needs.initialize-processing.outputs.category }}
+      GENERAL_SKIPPED: ${{ needs.process-general.outputs.skipped }}
       RESULT: ${{ ((needs.initialize-processing.outputs.category == 'bug-report' && needs.process-bug-report.result == 'success') || (needs.initialize-processing.outputs.category == 'feature-request' && needs.process-feature-request.result == 'success') || (needs.initialize-processing.outputs.category == 'general' && needs.process-general.result == 'success')) && 'success' || 'failure'  }}
     steps:
       - name: Add final comment
         run: |
           COMMENT_BODY="✅ **Processing completed!** Labels have been synchronized and applied based on the issue content."
-          if [ "$RESULT" != "success" ]; then
-             COMMENT_BODY="⚠️ **Processing failed!** There was an error while formatting the issue. Please check the issue content and labels for correctness."              
+
+          if [ "$CATEGORY" = "general" ] && [ "$GENERAL_SKIPPED" = "true" ]; then
+            COMMENT_BODY="⏭️ **Processing skipped!** This issue does not match any template (Bug Report / Feature Request / General)."
+          elif [ "$RESULT" != "success" ]; then
+            COMMENT_BODY="❌ **Processing failed!** There was an error while formatting the issue. Please check the issue content and labels for correctness."
           fi
 
           gh api -X PATCH "repos/$REPO/issues/comments/$COMMENT_ID" \
