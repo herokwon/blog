@@ -175,15 +175,15 @@ jobs:
           CHECKLIST: ${{ steps.issue-parser.outputs.issueparser_checklist }}
         run: |
           METADATA_SECTION=""
-          [ -n "$USER_GROUP" ] && [ "$USER_GROUP" != "_No response_" ] && METADATA_SECTION="${METADATA_SECTION}> **Target**: $USER_GROUP"$'\n'
-          [ -n "$COMPATIBILITY_IMPACT" ] && [ "$COMPATIBILITY_IMPACT" != "_No response_" ] && METADATA_SECTION="${METADATA_SECTION}> **Compatibility Impact**: $COMPATIBILITY_IMPACT"$'\n'
-          METADATA_SECTION="${METADATA_SECTION}"$'\n'"<br />"
+          [ -n "$USER_GROUP" ] && [ "$USER_GROUP" != "_No response_" ] && METADATA_SECTION="$METADATA_SECTION> **Target**: $USER_GROUP"$'\n'
+          [ -n "$COMPATIBILITY_IMPACT" ] && [ "$COMPATIBILITY_IMPACT" != "_No response_" ] && METADATA_SECTION="$METADATA_SECTION> **Compatibility Impact**: $COMPATIBILITY_IMPACT"$'\n'
+          METADATA_SECTION="$METADATA_SECTION"$'\n'"<br />"
 
           OPTIONAL_DETAILS="<br />"
-          [ -n "$ALTERNATIVE" ] && [ "$ALTERNATIVE" != "_No response_" ] && OPTIONAL_DETAILS="${OPTIONAL_DETAILS}"$'\n\n'"### ☑️ Alternative Considered"$'\n\n'"$ALTERNATIVE"
-          [ -n "$EXAMPLE" ] && [ "$EXAMPLE" != "_No response_" ] && OPTIONAL_DETAILS="${OPTIONAL_DETAILS}"$'\n\n'"### 🚀 Usage Example"$'\n\n'"$EXAMPLE"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="${OPTIONAL_DETAILS}"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
-          [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="${OPTIONAL_DETAILS}"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
+          [ -n "$ALTERNATIVE" ] && [ "$ALTERNATIVE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ☑️ Alternative Considered"$'\n\n'"$ALTERNATIVE"
+          [ -n "$EXAMPLE" ] && [ "$EXAMPLE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🚀 Usage Example"$'\n\n'"$EXAMPLE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
+          [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           CHECKLIST_OPTIONS=$(awk '
             $0 ~ /^  - type: checkboxes$/ {in_checkbox=1; next}
@@ -225,7 +225,7 @@ jobs:
 
           ## ❓ Problem Statement
 
-          $PROBLEM
+          $CONTEXT
 
           <br />
 
