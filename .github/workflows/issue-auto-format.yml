@@ -294,13 +294,21 @@ jobs:
 
       - name: Add final comment
         run: |
-          COMMENT_BODY="✅ **Processing completed!** Labels have been synchronized and applied based on the issue content."
+          COMMENT_ICON="✅"
+          COMMENT_STATUS="completed"
+          COMMENT_DESCRIPTION="Labels have been synchronized and applied based on the issue content."
 
           if [ "$CATEGORY" = "general" ] && [ "$GENERAL_SKIPPED" = "true" ]; then
-            COMMENT_BODY="⏭️ **Processing skipped!** This issue does not match any template (Bug Report / Feature Request / General)."
+            COMMENT_ICON="⏭️"
+            COMMENT_STATUS="skipped"
+            COMMENT_DESCRIPTION="This issue does not match any template (Bug Report / Feature Request / General)."
           elif [ "$RESULT" != "success" ]; then
-            COMMENT_BODY="❌ **Processing failed!** There was an error while formatting the issue. Please check the issue content and labels for correctness."
+            COMMENT_ICON="❌"
+            COMMENT_STATUS="failed"
+            COMMENT_DESCRIPTION="There was an error while formatting the issue. Please check the issue content and labels for correctness."
           fi
+
+          COMMENT_BODY="### $COMMENT_ICON Processing $COMMENT_STATUS!"$'\n\n'"$COMMENT_DESCRIPTION"
 
           gh api -X PATCH "repos/$REPO/issues/comments/$COMMENT_ID" \
             -f body="$COMMENT_BODY"
