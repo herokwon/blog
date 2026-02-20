@@ -19,6 +19,9 @@ jobs:
       comment-id: ${{ steps.comment.outputs.id }}
       category: ${{ steps.category.outputs.result }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Check issue category
         id: category
         run: |
@@ -280,6 +283,9 @@ jobs:
       GENERAL_SKIPPED: ${{ needs.process-general.outputs.skipped }}
       RESULT: ${{ ((needs.initialize-processing.outputs.category == 'bug-report' && needs.process-bug-report.result == 'success') || (needs.initialize-processing.outputs.category == 'feature-request' && needs.process-feature-request.result == 'success') || (needs.initialize-processing.outputs.category == 'general' && needs.process-general.result == 'success')) && 'success' || 'failure'  }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Add final comment
         run: |
           COMMENT_BODY="✅ **Processing completed!** Labels have been synchronized and applied based on the issue content."
