@@ -1,0 +1,63 @@
+name: Render Checklist
+description: Render checklist from issue template and parse input
+
+inputs:
+  template-path:
+    description: Path to the issue template file
+    required: true
+  checklist-input:
+    description: Parsed checklist input from issue parser
+    required: true
+
+outputs:
+  section:
+    description: Rendered checklist section with markdown formatting
+    value: ${{ steps.render.outputs.section }}
+
+runs:
+  using: composite
+  steps:
+    - name: Render checklist
+      id: render
+      shell: bash
+      env:
+        TEMPLATE_PATH: ${{ inputs.template-path }}
+        CHECKLIST: ${{ inputs.checklist-input }}
+      run: |
+        CHECKLIST_OPTIONS=$(awk '
+          $0 ~ /^  - type: checkboxes$/ {in_checkbox=1; next}
+          in_checkbox && $0 ~ /^  - type:/ {in_checkbox=0}
+          in_checkbox && $0 ~ /^    id: checklist$/ {is_target=1; next}
+          in_checkbox && $0 ~ /^    id:/ && $0 !~ /^    id: checklist$/ {is_target=0}
+          in_checkbox && is_target && $0 ~ /^        - label:/ {
+            sub(/^        - label:[[:space:]]*/, "", $0)
+            print
+          }
+        ' "$TEMPLATE_PATH")
+
+        CHECKLIST_SECTION=""
+        CHECKLIST_RENDERED=""
+
+        if [ -n "$CHECKLIST_OPTIONS" ]; then
+          while IFS= read -r OPTION; do
+            [ -z "$OPTION" ] && continue
+
+            ESCAPED_OPTION=$(printf '%s\n' "$OPTION" | sed 's/[][(){}.^$*+?|\\/]/\\&/g')
+
+            if [ -n "$CHECKLIST" ] && [ "$CHECKLIST" != "_No response_" ] && printf '%s\n' "$CHECKLIST" | grep -Eiq "\\[[xX]\\][[:space:]]*$ESCAPED_OPTION([[:space:]]*)$"; then
+              CHECKLIST_RENDERED="${CHECKLIST_RENDERED}- [x] $OPTION"$'\n'
+            elif [ -n "$CHECKLIST" ] && [ "$CHECKLIST" != "_No response_" ] && printf '%s\n' "$CHECKLIST" | grep -Eiq "\\[[[:space:]]\\][[:space:]]*$ESCAPED_OPTION([[:space:]]*)$"; then
+              CHECKLIST_RENDERED="${CHECKLIST_RENDERED}- [ ] $OPTION"$'\n'
+            elif [ -n "$CHECKLIST" ] && [ "$CHECKLIST" != "_No response_" ] && printf '%s\n' "$CHECKLIST" | grep -Fqi "$OPTION"; then
+              CHECKLIST_RENDERED="${CHECKLIST_RENDERED}- [x] $OPTION"$'\n'
+            else
+              CHECKLIST_RENDERED="${CHECKLIST_RENDERED}- [ ] $OPTION"$'\n'
+            fi
+          done <<< "$CHECKLIST_OPTIONS"
+
+          CHECKLIST_SECTION="---"$'\n\n'"### ✅ Checklist"$'\n\n'"$CHECKLIST_RENDERED"$'\n'"<br />"
+        fi
+
+        echo "section<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHECKLIST_SECTION" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
