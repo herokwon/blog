@@ -268,9 +268,9 @@ jobs:
           CHECKLIST: ${{ steps.issue-parser.outputs.issueparser_checklist }}
         run: |
           OPTIONAL_DETAILS="<br />"
-          [ -n "$EXPECTED" ] && [ "$EXPECTED" != "_No response_" ] && OPTIONAL_DETAILS="${OPTIONAL_DETAILS}"$'\n\n'"### 🎯 Expected Outcome"$'\n\n'"$EXPECTED"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="${OPTIONAL_DETAILS}"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
-          [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="${OPTIONAL_DETAILS}"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
+          [ -n "$EXPECTED" ] && [ "$EXPECTED" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🎯 Expected Outcome"$'\n\n'"$EXPECTED"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
+          [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           CHECKLIST_OPTIONS=$(awk '
             $0 ~ /^  - type: checkboxes$/ {in_checkbox=1; next}
