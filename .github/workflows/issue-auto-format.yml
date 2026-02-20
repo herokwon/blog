@@ -350,5 +350,5 @@ jobs:
              COMMENT_BODY="⚠️ **Processing failed!** There was an error while formatting the issue. Please check the issue content and labels for correctness."              
           fi
 
-          gh api -X PATCH "repos/${REPO}/issues/comments/${COMMENT_ID}" \
-            -f body="${COMMENT_BODY}"
+          gh api -X PATCH "repos/$REPO/issues/comments/$COMMENT_ID" \
+            -f body="$COMMENT_BODY"
