@@ -41,7 +41,7 @@ body:
   - type: input
     id: reference
     attributes:
-      label: Reference Links
+      label: Reference
       description: Any related docs, issues, or external links?
       placeholder: 'https://example.com'
     validations:
@@ -50,7 +50,7 @@ body:
   - type: textarea
     id: additional
     attributes:
-      label: Additional Context
+      label: Additional Information
       description: Add any extra notes that may help.
       placeholder: Screenshots, logs, related discussions, etc.
     validations:
