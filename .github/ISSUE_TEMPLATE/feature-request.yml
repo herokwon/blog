@@ -120,7 +120,7 @@ body:
   - type: input
     id: reference
     attributes:
-      label: Reference Link
+      label: Reference
       description: Any similar features in other products or helpful references?
       placeholder: 'https://example.com/similar-feature'
     validations:
@@ -129,7 +129,7 @@ body:
   - type: textarea
     id: additional
     attributes:
-      label: Additional Context
+      label: Additional Information
       description: Anything else you'd like to share?
       placeholder: |
         - Estimated frequency of use
