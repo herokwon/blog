@@ -43,7 +43,7 @@ body:
   - type: textarea
     id: reference
     attributes:
-      label: Screenshot / Log
+      label: Reference
       description: Attach error screenshots or console logs if available.
       placeholder: |
         - Drag & drop an image or paste with Ctrl+V.
@@ -116,7 +116,7 @@ body:
   - type: textarea
     id: additional
     attributes:
-      label: Additional Context
+      label: Additional Information
       description: Any other details that might help?
       placeholder: |
         - Does this only happen with a specific account?
