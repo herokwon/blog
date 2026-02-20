@@ -54,7 +54,7 @@ body:
   - type: textarea
     id: alternative
     attributes:
-      label: Alternatives Considered
+      label: Alternative Considered
       description: Have you thought of any other approaches?
       placeholder: |
         - Grouping projects into folders — but search feels faster
@@ -120,7 +120,7 @@ body:
   - type: input
     id: reference
     attributes:
-      label: Reference Links
+      label: Reference Link
       description: Any similar features in other products or helpful references?
       placeholder: 'https://example.com/similar-feature'
     validations:
