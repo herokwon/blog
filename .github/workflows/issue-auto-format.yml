@@ -82,9 +82,9 @@ jobs:
           OPTIONAL_DETAILS="<br />"
 
           DEVICE_INFO=""
-          [ -n "$VERSION" ] && [ "$VERSION" != "_No response_" ] && DEVICE_INFO="$DEVICE_INFO**- Version**: \`$VERSION\`"
-          [ -n "$OS" ] && [ "$OS" != "_No response_" ] && DEVICE_INFO="$DEVICE_INFO"$'\n'"- **OS**: $OS"
-          [ -n "$BROWSER" ] && [ "$BROWSER" != "_No response_" ] && DEVICE_INFO="$DEVICE_INFO"$'\n'"- **Browser**: $BROWSER"
+          [ -n "$VERSION" ] && [ "$VERSION" != "_No response_" ] && DEVICE_INFO="$DEVICE_INFO- Version: \`$VERSION\`"
+          [ -n "$OS" ] && [ "$OS" != "_No response_" ] && DEVICE_INFO="$DEVICE_INFO"$'\n'"- OS: $OS"
+          [ -n "$BROWSER" ] && [ "$BROWSER" != "_No response_" ] && DEVICE_INFO="$DEVICE_INFO"$'\n'"- Browser: $BROWSER"
 
           [ -n "$DEVICE_INFO" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ⚙️ Device Information"$'\n\n'"$DEVICE_INFO"
           [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
@@ -170,7 +170,7 @@ jobs:
           OPTIONAL_DETAILS="<br />"
           [ -n "$ALTERNATIVE" ] && [ "$ALTERNATIVE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ☑️ Alternative Considered"$'\n\n'"$ALTERNATIVE"
           [ -n "$EXAMPLE" ] && [ "$EXAMPLE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🚀 Usage Example"$'\n\n'"$EXAMPLE"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"- $REFERENCE"
           [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           NEW_BODY=$(cat <<EOF
@@ -247,7 +247,7 @@ jobs:
         run: |
           OPTIONAL_DETAILS="<br />"
           [ -n "$EXPECTED" ] && [ "$EXPECTED" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🎯 Expected Outcome"$'\n\n'"$EXPECTED"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"- $REFERENCE"
           [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           NEW_BODY=$(cat <<EOF
