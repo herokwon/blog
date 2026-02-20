@@ -46,6 +46,8 @@ jobs:
     needs: initialize-processing
     runs-on: ubuntu-latest
     if: contains(github.event.issue.title, '[Bug]') || contains(join(github.event.issue.labels.*.name), 'BugFix')
+    env:
+      TEMPLATE_PATH: .github/ISSUE_TEMPLATE/bug-report.yml
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -54,13 +56,13 @@ jobs:
         uses: stefanbuck/github-issue-parser@v3
         id: issue-parser
         with:
-          template-path: .github/ISSUE_TEMPLATE/bug-report.yml
+          template-path: ${{ env.TEMPLATE_PATH }}
 
       - name: Render checklist
         uses: ./.github/actions/render-checklist
         id: checklist
         with:
-          template-path: .github/ISSUE_TEMPLATE/bug-report.yml
+          template-path: ${{ env.TEMPLATE_PATH }}
           checklist-input: ${{ steps.issue-parser.outputs.issueparser_checklist }}
 
       - name: Update issue content
@@ -127,6 +129,8 @@ jobs:
     needs: initialize-processing
     runs-on: ubuntu-latest
     if: contains(github.event.issue.title, '[Feature]') || contains(join(github.event.issue.labels.*.name), 'Feature')
+    env:
+      TEMPLATE_PATH: .github/ISSUE_TEMPLATE/feature-request.yml
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -135,13 +139,13 @@ jobs:
         uses: stefanbuck/github-issue-parser@v3
         id: issue-parser
         with:
-          template-path: .github/ISSUE_TEMPLATE/feature-request.yml
+          template-path: ${{ env.TEMPLATE_PATH }}
 
       - name: Render checklist
         uses: ./.github/actions/render-checklist
         id: checklist
         with:
-          template-path: .github/ISSUE_TEMPLATE/feature-request.yml
+          template-path: ${{ env.TEMPLATE_PATH }}
           checklist-input: ${{ steps.issue-parser.outputs.issueparser_checklist }}
 
       - name: Update issue content
@@ -199,6 +203,8 @@ jobs:
     needs: initialize-processing
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.issue.title, '[Bug]') && !contains(github.event.issue.labels.*.name, 'BugFix') && !contains(github.event.issue.title, '[Feature]') && !contains(github.event.issue.labels.*.name, 'Feature') }}
+    env:
+      TEMPLATE_PATH: .github/ISSUE_TEMPLATE/general.yml
     outputs:
       skipped: ${{ steps.validate.outputs.skipped }}
     steps:
@@ -209,7 +215,7 @@ jobs:
         uses: stefanbuck/github-issue-parser@v3
         id: issue-parser
         with:
-          template-path: .github/ISSUE_TEMPLATE/general.yml
+          template-path: ${{ env.TEMPLATE_PATH }}
 
       - name: Validate parsed content
         id: validate
@@ -227,7 +233,7 @@ jobs:
         uses: ./.github/actions/render-checklist
         id: checklist
         with:
-          template-path: .github/ISSUE_TEMPLATE/general.yml
+          template-path: ${{ env.TEMPLATE_PATH }}
           checklist-input: ${{ steps.issue-parser.outputs.issueparser_checklist }}
 
       - name: Update issue content
