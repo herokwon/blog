@@ -1,6 +1,6 @@
 name: ✨ Feature Request
 description: Have an idea for a new feature or improvement? Share it here.
-title: '[Feature]: '
+title: '[Feature] '
 labels: ['✨ Feature']
 body:
   - type: markdown

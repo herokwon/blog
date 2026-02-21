@@ -1,6 +1,6 @@
 name: 🐞 Bug Report
 description: Found a bug? Please report reproducible bugs here.
-title: '[Bug]: '
+title: '[Bug] '
 labels: ['🐞 BugFix']
 body:
   - type: markdown

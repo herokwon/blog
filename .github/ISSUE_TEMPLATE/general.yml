@@ -1,6 +1,6 @@
 name: 📑 General
 description: General topics, discussions, or non-bug/non-feature requests.
-title: '[General]: '
+title: '[General] '
 labels: []
 body:
   - type: markdown
