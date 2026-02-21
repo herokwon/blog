@@ -13,7 +13,7 @@
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "test:unit": "vitest",
-    "test": "npm run test:unit -- --run",
+    "test": "pnpm test:unit -- --run",
     "gen": "wrangler types"
   },
   "devDependencies": {
