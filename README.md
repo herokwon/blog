@@ -1,42 +1,89 @@
-# sv
+# Introduction
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+> Personal blog built with SvelteKit. Focused on fast, readable posts, clean navigation, and a minimal authoring workflow.
 
-## Creating a project
+<br />
 
-If you're seeing this, you've probably already done this step. Congrats!
+## ✨ Features
+
+- Post listing and detail pages
+- Tag and category
+- SEO-friendly metadata
+- Responsive layout
+- Milkdown-based editor integration
+- Cloudflare R2-based content storage and management
+
+<br />
+
+## 🛠️ Tech Stack
+
+![svelte](https://img.shields.io/badge/svelte-FF3E00?style=for-the-badge&logo=svelte&logoColor=white)
+![typescript](https://img.shields.io/badge/typescript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![tailwindcss](https://img.shields.io/badge/tailwind_css-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![prettier](https://img.shields.io/badge/prettier-F7B93E?style=for-the-badge&logo=prettier&logoColor=black)
+![eslint](https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white)
+![vitest](https://img.shields.io/badge/vitest-00FF74?style=for-the-badge&logo=vitest&logoColor=white)
+![cloudflare r2](https://img.shields.io/badge/cloudflare_r2-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
+![cloudflare workers](https://img.shields.io/badge/cloudflare_workers-F38020?style=for-the-badge&logo=cloudflareworkers&logoColor=white)
+
+<br />
+
+## 📍 Getting Started
+
+Install dependencies:
 
 ```sh
-# create a new project
-npx sv create my-app
+pnpm install
 ```
 
-To recreate this project with the same configuration:
+Run the dev server:
 
 ```sh
-# recreate this project
-pnpm dlx sv create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" tailwindcss="plugins:typography,forms" sveltekit-adapter="adapter:cloudflare+cfTarget:workers" --install pnpm blog
+pnpm dev
 ```
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Build for production:
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm build
 ```
 
-## Building
-
-To create a production version of your app:
+Preview the production build:
 
 ```sh
-npm run build
+pnpm preview
 ```
 
-You can preview the production build with `npm run preview`.
+<br />
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## 📖 Content
+
+This blog uses [**Milkdown**](https://milkdown.dev) as the writting editor and stores post data in [**Cloudflare R2**](https://cloudflare.com/developer-platform/products/r2)
+
+### Content flow
+
+1. Write and edit content in Milkdown.
+2. Convert editor output to Markdown format.
+3. Upload and manage content files in Cloudflare R2.
+4. Read content from R2 in the app and render post pages.
+
+### Key capabilities
+
+- Rich text authoring with Markdown workflow
+- Centralized content storage on R2
+- Easy post update and asset management
+- Scalable content delivery for blog pages
+
+<br />
+
+## 🚀 Deployment
+
+This project targets Cloudflare Workers. Use the SvelteKit adapter configuration in [`svelte.config.js`](./svelte.config.js) and deploy with your preferred workflow.
+
+<br />
+
+## 📜 License
+
+Licensed under the [MIT](LICENSE) license.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)

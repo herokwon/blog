@@ -1,0 +1,67 @@
+name: 📑 General
+description: General topics, discussions, or non-bug/non-feature requests.
+title: '[General] '
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > Thanks for opening a general issue. Please share clear context so we can respond quickly.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 📌 Summary
+      description: What is this issue about?
+      placeholder: Briefly, describe the topic or request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 🔍 Description
+      description: Provide background, current situation, and why this is needed.
+      placeholder: |
+        - Current context
+        - What you tried (if any)
+        - Why this matters
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 🎯 Expected Outcome
+      description: What result or response are you expecting?
+      placeholder: Describe the ideal outcome.
+    validations:
+      required: false
+
+  - type: input
+    id: reference
+    attributes:
+      label: 🔗 Reference
+      description: Any related docs, issues, or external links?
+      placeholder: 'https://example.com'
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: ➕ Additional Information
+      description: Add any extra notes that may help.
+      placeholder: Screenshots, logs, related discussions, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: ✅ Checklist
+      options:
+        - label: I have searched for related issues
+          required: true
+        - label: I have provided enough context for review
+          required: true

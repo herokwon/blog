@@ -1,0 +1,20 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+case "$COMMIT_MSG" in
+  feat*)    REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^feat/✨ feat/') ;;
+  fix*)     REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^fix/🐞 fix/') ;;
+  refactor*) REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^refactor/♻️ refactor/') ;;
+  test*)    REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^test/🧪 test/') ;;
+  style*)   REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^style/🧩 style/') ;;
+  design*)  REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^design/🎨 design/') ;;
+  assets*)  REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^assets/📁 assets/') ;;
+  docs*)    REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^docs/📝 docs/') ;;
+  chore*)   REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^chore/⚙️ chore/') ;;
+  *)         REPLACED_MSG="$COMMIT_MSG" ;;
+esac
+
+echo "$REPLACED_MSG" > "$COMMIT_MSG_FILE"
