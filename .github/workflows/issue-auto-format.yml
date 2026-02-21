@@ -69,7 +69,7 @@ jobs:
 
       - name: Update issue content
         env:
-          DESCRIPTION: ${{ steps.issue-parser.outputs.issueparser_description }}
+          PROBLEM: ${{ steps.issue-parser.outputs.issueparser_problem }}
           REPRODUCTION: ${{ steps.issue-parser.outputs.issueparser_reproduction }}
           EXPECTED: ${{ steps.issue-parser.outputs.issueparser_expected }}
           REFERENCE: ${{ steps.issue-parser.outputs.issueparser_reference }}
@@ -89,7 +89,7 @@ jobs:
           [ -n "$BROWSER" ] && [ "$BROWSER" != "_No response_" ] && DEVICE_INFO="$DEVICE_INFO"$'\n'"- Browser: $BROWSER"
 
           [ -n "$DEVICE_INFO" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ⚙️ Device Information"$'\n\n'"$DEVICE_INFO"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"$REFERENCE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔗 Reference"$'\n\n'"$REFERENCE"
           [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           NEW_BODY=$(cat <<EOF
@@ -98,13 +98,13 @@ jobs:
 
           <br />
 
-          ## 🔍 Description
+          ## ❓ Problem
 
-          $DESCRIPTION
+          $PROBLEM
 
           <br />
 
-          ## ❓ Steps to Reproduce
+          ## ↪️ Steps to Reproduce
 
           $REPRODUCTION
 
@@ -170,9 +170,9 @@ jobs:
           METADATA_SECTION="$METADATA_SECTION"$'\n'"<br />"
 
           OPTIONAL_DETAILS="<br />"
-          [ -n "$ALTERNATIVE" ] && [ "$ALTERNATIVE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ☑️ Alternative Considered"$'\n\n'"$ALTERNATIVE"
-          [ -n "$EXAMPLE" ] && [ "$EXAMPLE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🚀 Usage Example"$'\n\n'"$EXAMPLE"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"- $REFERENCE"
+          [ -n "$ALTERNATIVE" ] && [ "$ALTERNATIVE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔄️ Alternative Considered"$'\n\n'"$ALTERNATIVE"
+          [ -n "$EXAMPLE" ] && [ "$EXAMPLE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🧪 Usage Example"$'\n\n'"$EXAMPLE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔗 Reference"$'\n\n'"- $REFERENCE"
           [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           NEW_BODY=$(cat <<EOF
@@ -251,7 +251,7 @@ jobs:
         run: |
           OPTIONAL_DETAILS="<br />"
           [ -n "$EXPECTED" ] && [ "$EXPECTED" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🎯 Expected Outcome"$'\n\n'"$EXPECTED"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 💬 Reference"$'\n\n'"- $REFERENCE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔗 Reference"$'\n\n'"- $REFERENCE"
           [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           NEW_BODY=$(cat <<EOF
