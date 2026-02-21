@@ -24,20 +24,24 @@ jobs:
 
       - name: Check issue category
         id: category
+        env:
+          HAS_BUGFIX_LABEL: ${{ contains(github.event.issue.labels.*.name, 'BugFix') }}
+          HAS_FEATURE_LABEL: ${{ contains(github.event.issue.labels.*.name, 'Feature') }}
         run: |
-          if [[ "${{ env.ISSUE_TITLE }}" == *"[Bug]"* ]] || [[ "$(echo ${{ github.event.issue.labels.*.name }} | grep -o 'BugFix')" == "BugFix" ]]; then
-            echo "result=bug-report" >> $GITHUB_OUTPUT
-          elif [[ "${{ env.ISSUE_TITLE }}" == *"[Feature]"* ]] || [[ "$(echo ${{ github.event.issue.labels.*.name }} | grep -o 'Feature')" == "Feature" ]]; then
-            echo "result=feature-request" >> $GITHUB_OUTPUT
-          else
-            echo "result=general" >> $GITHUB_OUTPUT
+          CATEGORY="general"
+
+          if [[ "$ISSUE_TITLE" == *"[Bug]"* ]] || [[ "$HAS_BUGFIX_LABEL" == "true" ]]; then
+            CATEGORY="bug-report"
+          elif [[ "$ISSUE_TITLE" == *"[Feature]"* ]] || [[ "$HAS_FEATURE_LABEL" == "true" ]]; then
+            CATEGORY="feature-request"
           fi
+
+          echo "result=$CATEGORY" >> $GITHUB_OUTPUT
 
       - name: Add initial comment
         id: comment
         run: |
           COMMENT_BODY="### 🚀 Processing started!"$'\n\n'"Refining the issue and assigning labels..."
-
           COMMENT_URL=$(gh issue comment $ISSUE_NUMBER --body "$COMMENT_BODY")
           COMMENT_ID=$(echo $COMMENT_URL | grep -oE "[0-9]+$")
 
