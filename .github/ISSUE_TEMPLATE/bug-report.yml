@@ -9,9 +9,9 @@ body:
         > Thanks for taking the time to report a bug! Providing reproducible information helps us fix it faster.
 
   - type: textarea
-    id: description
+    id: problem
     attributes:
-      label: What's the problem?
+      label: ❓ What's the problem?
       description: Briefly describe the bug you found.
       placeholder: Clicking the login button freezes the page
     validations:
@@ -20,7 +20,7 @@ body:
   - type: textarea
     id: reproduction
     attributes:
-      label: Steps to Reproduce
+      label: ↪️ Steps to Reproduce
       description: Walk us through the steps to reproduce the bug.
       placeholder: |
         1. Go to https://example.com/login
@@ -34,7 +34,7 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Expected Behavior
+      label: 🎯 Expected Behavior
       description: What should have happened instead?
       placeholder: After login, I should be redirected to the dashboard page
     validations:
@@ -43,7 +43,7 @@ body:
   - type: textarea
     id: reference
     attributes:
-      label: Reference
+      label: 🔗 Reference
       description: Attach error screenshots or console logs if available.
       placeholder: |
         - Drag & drop an image or paste with Ctrl+V.
@@ -57,7 +57,7 @@ body:
   - type: dropdown
     id: frequency
     attributes:
-      label: Frequency
+      label: 🔁 Frequency
       description: How often does this bug occur?
       options:
         - Always (100%)
@@ -70,7 +70,7 @@ body:
   - type: dropdown
     id: severity
     attributes:
-      label: Severity
+      label: 🚨 Severity
       description: How much does this bug impact you?
       options:
         - 🔴 Critical - Service is completely unusable
@@ -83,7 +83,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Version
+      label: 🏷️ Version
       description: What version are you running?
       placeholder: 'v2.3.1'
     validations:
@@ -92,7 +92,7 @@ body:
   - type: dropdown
     id: browser
     attributes:
-      label: Browser (if web app)
+      label: 🌐 Browser (if web app)
       description: Which browser(s) did this occur in?
       multiple: true
       options:
@@ -108,7 +108,7 @@ body:
   - type: input
     id: os
     attributes:
-      label: Operating System
+      label: 💻 Operating System
       placeholder: 'macOS 14.2 / Windows 11 / Ubuntu 22.04'
     validations:
       required: false
@@ -116,7 +116,7 @@ body:
   - type: textarea
     id: additional
     attributes:
-      label: Additional Information
+      label: ➕ Additional Information
       description: Any other details that might help?
       placeholder: |
         - Does this only happen with a specific account?
@@ -128,7 +128,7 @@ body:
   - type: checkboxes
     id: checklist
     attributes:
-      label: Checklist
+      label: ✅ Checklist
       options:
         - label: I have searched for duplicate issues
           required: true
