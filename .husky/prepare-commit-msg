@@ -2,7 +2,7 @@
 . "$(dirname "$0")/_/husky.sh"
 
 COMMIT_MSG_FILE=$1
-COMMIT_MSG=$(cat $COMMIT_MSG_FILE)
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
 
 case "$COMMIT_MSG" in
   feat*)    REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^feat/✨ feat/') ;;
@@ -17,4 +17,4 @@ case "$COMMIT_MSG" in
   *)         REPLACED_MSG="$COMMIT_MSG" ;;
 esac
 
-echo "$REPLACED_MSG" > $COMMIT_MSG_FILE
+echo "$REPLACED_MSG" > "$COMMIT_MSG_FILE"
