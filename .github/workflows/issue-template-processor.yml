@@ -1,4 +1,4 @@
-name: Issue Auto-Format and Labeling
+name: 🤖 Issue Template Processor
 on:
   issues:
     types: [opened]
