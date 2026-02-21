@@ -2,7 +2,7 @@
 
 > Personal blog built with SvelteKit. Focused on fast, readable posts, clean navigation, and a minimal authoring workflow.
 
-<br>
+<br />
 
 ## ✨ Features
 
@@ -10,6 +10,8 @@
 - Tag and category
 - SEO-friendly metadata
 - Responsive layout
+- Milkdown-based editor integration
+- Cloudflare R2-based content storage and management
 
 <br />
 
@@ -54,10 +56,23 @@ pnpm preview
 
 <br />
 
-## 🔎 Content
+## 📖 Content
 
-- Posts live under `src/lib` or `src/routes` depending on the chosen structure.
-- Add front matter for title, date, and tags.
+This blog uses [**Milkdown**](https://milkdown.dev) as the writting editor and stores post data in [**Cloudflare R2**](https://cloudflare.com/developer-platform/products/r2)
+
+### Content flow
+
+1. Write and edit content in Milkdown.
+2. Convert editor output to Markdown format.
+3. Upload and manage content files in Cloudflare R2.
+4. Read content from R2 in the app and render post pages.
+
+### Key capabilities
+
+- Rich text authoring with Markdown workflow
+- Centralized content storage on R2
+- Easy post update and asset management
+- Scalable content delivery for blog pages
 
 <br />
 
