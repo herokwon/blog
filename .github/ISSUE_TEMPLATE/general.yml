@@ -11,7 +11,7 @@ body:
   - type: textarea
     id: summary
     attributes:
-      label: Summary
+      label: 📌 Summary
       description: What is this issue about?
       placeholder: Briefly, describe the topic or request.
     validations:
@@ -20,7 +20,7 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Description
+      label: 🔍 Description
       description: Provide background, current situation, and why this is needed.
       placeholder: |
         - Current context
@@ -32,7 +32,7 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Expected Outcome
+      label: 🎯 Expected Outcome
       description: What result or response are you expecting?
       placeholder: Describe the ideal outcome.
     validations:
@@ -41,7 +41,7 @@ body:
   - type: input
     id: reference
     attributes:
-      label: Reference
+      label: 🔗 Reference
       description: Any related docs, issues, or external links?
       placeholder: 'https://example.com'
     validations:
@@ -50,7 +50,7 @@ body:
   - type: textarea
     id: additional
     attributes:
-      label: Additional Information
+      label: ➕ Additional Information
       description: Add any extra notes that may help.
       placeholder: Screenshots, logs, related discussions, etc.
     validations:
@@ -59,7 +59,7 @@ body:
   - type: checkboxes
     id: checklist
     attributes:
-      label: Checklist
+      label: ✅ Checklist
       options:
         - label: I have searched for related issues
           required: true
