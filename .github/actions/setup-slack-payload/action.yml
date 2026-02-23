@@ -1,0 +1,142 @@
+name: Setup Slack Payload
+description: Create a payload for Slack notification
+
+inputs:
+  slack_channel_id:
+    description: Slack channel ID
+    required: true
+  deployed:
+    description: Whether the deployment was successful
+    required: true
+  deployment_env:
+    description: Deployment environment (Production or Preview)
+    required: true
+  deployment_url:
+    description: Deployment URL
+    required: true
+  cloudflare_account_id:
+    description: Cloudflare Account ID
+    required: true
+  cloudflare_worker_name:
+    description: Name of the Cloudflare Worker
+    required: true
+  pr_commit:
+    description: Commit hash
+    required: true
+  pr_number:
+    description: Pull request number
+    required: true
+  pr_title:
+    description: Pull request title
+    required: true
+  pr_url:
+    description: Pull request URL
+    required: true
+  avatar_url:
+    description: GitHub avatar URL
+    required: true
+
+outputs:
+  file-path:
+    description: The path to the payload file
+    value: ${{ steps.payload.outputs.file-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup payload
+      id: payload
+      shell: bash
+      env:
+        SLACK_CHANNEL_ID: ${{ inputs.slack_channel_id }}
+        DEPLOYED: ${{ inputs.deployed }}
+        DEPLOYMENT_ENV: ${{ inputs.deployment_env }}
+        DEPLOYMENT_URL: ${{ inputs.deployment_url }}
+        CF_ACCOUNT_ID: ${{ inputs.cloudflare_account_id }}
+        CF_WORKER_NAME: ${{ inputs.cloudflare_worker_name }}
+        PR_COMMIT: ${{ inputs.pr_commit }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        PR_TITLE: ${{ inputs.pr_title }}
+        PR_URL: ${{ inputs.pr_url }}
+        AVATAR_URL: ${{ inputs.avatar_url }}
+        GH_REPO: ${{ github.repository }}
+        GH_RUN_ID: ${{ github.run_id }}
+        GH_REPO_OWNER: ${{ github.repository_owner }}
+      run: |
+        set -euo pipefail
+        node - <<'NODE'
+        const fs = require('fs');
+
+        const deployed = process.env.DEPLOYED === 'true';
+        const hasName = !!(process.env.CF_WORKER_NAME && process.env.CF_WORKER_NAME.trim());
+        const hasUrl = !!(process.env.DEPLOYMENT_URL && process.env.DEPLOYMENT_URL.trim());
+        const ok = deployed && hasName && hasUrl;
+        const environment = process.env.DEPLOYMENT_ENV;
+
+        const payload = {
+          channel: process.env.SLACK_CHANNEL_ID,
+          attachments: [{
+            color: ok ? '#36a64f' : '#ff4d4d',
+            blocks: []
+          }]
+        };
+
+        const blocks = payload.attachments[0].blocks;
+
+        blocks.push({
+          type: 'header',
+          text: { 
+            type: 'plain_text',
+            text: ok
+              ? `✅ Cloudflare Workers ${process.env.DEPLOYMENT_ENV} 배포 완료`
+              : `❌ Cloudflare Workers ${process.env.DEPLOYMENT_ENV} 배포 실패`,
+            emoji: true
+          }
+        });
+        blocks.push({ type: 'divider' });
+
+        if (ok) {
+          blocks.push({
+            type: 'section',
+            text: { type: 'mrkdwn', text: `🌐 <${process.env.DEPLOYMENT_URL}|*페이지 바로가기*>` }
+          });
+        }
+
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `*Commit*\n<https://github.com/${process.env.GH_REPO}/commit/${process.env.PR_COMMIT}|${process.env.PR_COMMIT}>` }
+        });
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `*Pull request*\n<${process.env.PR_URL}|[#${process.env.PR_NUMBER}] ${process.env.PR_TITLE}>` }
+        });
+
+        const elements = [{
+          type: 'button',
+          text: { type: 'plain_text', text: (ok ? '⭐' : '🔍') + '\t Workflow details', emoji: true },
+          url: `https://github.com/${process.env.GH_REPO}/actions/runs/${process.env.GH_RUN_ID}`
+        }];
+
+        if (ok) {
+          elements.push({
+            type: 'button',
+            text: { type: 'plain_text', text: '📄\t Deployment details', emoji: true },
+            url: `https://dash.cloudflare.com/${process.env.CF_ACCOUNT_ID}/workers/services/view/${process.env.CF_WORKER_NAME}/production/deployments`
+          });
+        }
+
+        blocks.push({ type: 'actions', elements });
+        blocks.push({ type: 'divider' });
+
+        blocks.push({
+          type: 'context',
+          elements: [
+            { type: 'image', image_url: process.env.AVATAR_URL, alt_text: 'avatar_img' },
+            { type: 'mrkdwn', text: `<https://github.com/${process.env.GH_REPO_OWNER}|*${process.env.GH_REPO_OWNER}*> has approved this message.` }
+          ]
+        });
+
+        fs.writeFileSync('slack_payload.json', JSON.stringify(payload, null, 2));
+        NODE
+
+        echo "file-path=slack_payload.json" >> "$GITHUB_OUTPUT"
