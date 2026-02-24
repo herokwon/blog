@@ -103,10 +103,10 @@ jobs:
             const json = JSON.parse(stripped);
             const name = json?.name ?? '';
 
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${name}\n`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${name}\n`);
           } catch (e) {
             console.error('Error reading wrangler.jsonc:', e);
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'name=\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'result=\n');
           }
 
           NODE
