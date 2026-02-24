@@ -1,4 +1,5 @@
 {
+  "tabWidth": 2,
   "singleQuote": true,
   "arrowParens": "avoid",
   "importOrderSeparation": true,
@@ -26,6 +27,12 @@
       "files": "*.svelte",
       "options": {
         "parser": "svelte"
+      }
+    },
+    {
+      "files": ["*.jsonc"],
+      "options": {
+        "trailingComma": "none"
       }
     }
   ],

@@ -1,0 +1,53 @@
+name: Setup Environment
+description: Common steps to set up pnpm, Node.js, cache and install dependencies
+
+inputs:
+  pnpm-version:
+    description: pnpm version
+    required: false
+    default: '10'
+  node-version:
+    description: Node.js version
+    required: false
+    default: '24'
+  debug:
+    description: Print pnpm hoist/linker configs
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+        run_install: false
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+
+    - name: Show pnpm hoist config
+      if: ${{ inputs.debug == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::project .npmrc"
+        if [ -f .npmrc ]; then
+          sed -E \
+            -e 's#(//[^:]+:[^=]+)=.*#\1=***REDACTED***#g' \
+            -e 's#(_authToken)=.*#\1=***REDACTED***#g' \
+            -e 's#(npmAuthToken)=.*#\1=***REDACTED***#g' \
+            .npmrc
+        else
+          echo "(no .npmrc in repo root)"
+        fi
+        echo "::endgroup::"
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --prefer-offline

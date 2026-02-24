@@ -1,0 +1,274 @@
+name: 🚀 Deployment
+
+on:
+  push:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REPO: ${{ github.repository }}
+  DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
+
+jobs:
+  deploy-worker:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      result: ${{ steps.deploy.outcome }}
+      url: ${{ steps.deployment-url.outputs.result }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Build
+        run: pnpm build
+
+      - name: Deploy
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          command: ${{ env.DEPLOYMENT_ENV == 'Production' && 'deploy' || 'versions upload' }}
+        continue-on-error: true
+
+      - name: Get deployment url
+        id: deployment-url
+        if: steps.deploy.outcome == 'success'
+        env:
+          RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          node - << 'NODE'
+          const fs = require('fs');
+
+          const rawUrl = process.env.RAW_URL;
+          let workerUrl = '';
+
+          if (rawUrl && rawUrl.trim()) {
+            const cleanDomain = rawUrl
+              .replace(/\s*\([^)]*\)\s*/g, '')
+              .split(/[,;\s]+/)[0]
+              .trim();
+            
+            if (cleanDomain && !/^https?:\/\//i.test(cleanDomain)) {
+              workerUrl = `https://${cleanDomain}`;
+            } else if (cleanDomain) {
+              workerUrl = cleanDomain;
+            }
+          }
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${workerUrl}\n`);
+          NODE
+
+  extract-metadata:
+    name: Extract Metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      worker-name: ${{ steps.worker-name.outputs.result }}
+      pr: ${{ steps.pr.outputs.result }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: wrangler.jsonc
+          sparse-checkout-cone-mode: false
+
+      - name: Get worker name
+        id: worker-name
+        run: |
+          node - << 'NODE'
+
+          const fs = require('fs');
+          const path = './wrangler.jsonc';
+
+          try {
+            const raw = fs.readFileSync(path, 'utf8');
+            const stripped = raw
+              .replace(/\/\*[\s\S]*?\*\//g, '')
+              .replace(/^\s*\/\/.*$/mg, '');
+            const json = JSON.parse(stripped);
+            const name = json?.name ?? '';
+
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${name}\n`);
+          } catch (e) {
+            console.error('Error reading wrangler.jsonc:', e);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'result=\n');
+          }
+
+          NODE
+
+      - name: Check a latest pull request
+        id: pr
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const result = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+            }).then(res => res?.data ?? []);
+
+            if (result.length === 0) {
+              core.info('No associated pull request found.');
+              return;
+            };
+
+            const prNumber = result[0].number ?? null;
+
+            if (!prNumber) {
+              core.info('No pull request associated with this commit.');
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const commit = (pr.merge_commit_sha ?? context.sha).substring(0, 7);
+            const avatarUrl = pr.user?.avatar_url ?? context.payload.repository.owner.avatar_url;
+
+            return {
+              commit,
+              number: pr.number,
+              title: pr.title,
+              url: pr.html_url,
+              avatar_url: avatarUrl, 
+            };
+
+  deploy-github:
+    name: Deploy to GitHub
+    runs-on: ubuntu-latest
+    needs: [deploy-worker]
+    permissions:
+      deployments: write
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Create deployment
+        id: create-deployment
+        env:
+          REF: ${{ github.sha }}
+        run: |
+          DEPLOY_ID=$(gh api repos/$REPO/deployments \
+            --method POST \
+            --header "Accept: application/vnd.github+json" \
+            --input - \
+            -q '.id' <<EOF
+          {
+            "ref": "$REF",
+            "environment": "$DEPLOYMENT_ENV",
+            "auto_merge": false,
+            "required_contexts": []
+          }
+          EOF
+          )
+
+          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+
+      - name: Conclude deployment
+        env:
+          DEPLOY_ID: ${{ steps.create-deployment.outputs.deploy_id }}
+          CONCLUSION: ${{ needs.deploy-worker.outputs.result }}
+          DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
+        run: |
+          gh api repos/$REPO/deployments/$DEPLOY_ID/statuses \
+            -F state="$CONCLUSION" \
+            -F environment=$DEPLOYMENT_ENV \
+            -F environment_url=$DEPLOYMENT_URL
+
+  comment-pr:
+    name: Comment on Pull Request
+    runs-on: ubuntu-latest
+    needs: [deploy-worker, extract-metadata]
+    if: needs.extract-metadata.outputs.pr != ''
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v8
+        env:
+          DEPLOYED: ${{ needs.deploy-worker.outputs.result == 'success' }}
+          DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_WORKER_NAME: ${{ needs.extract-metadata.outputs.worker-name }}
+          PR_JSON: ${{ needs.extract-metadata.outputs.pr }}
+          RUN_ID: ${{ github.run_id }}
+        with:
+          script: |
+            const deployed = process.env.DEPLOYED === 'true';
+            const deploymentUrl = process.env.DEPLOYMENT_URL;
+            const statusCell = deployed ? ':white_check_mark: Success' : ':x: Failed';
+            const pr = JSON.parse(process.env.PR_JSON || '{}');
+
+            if (!pr || !pr.number) {
+              core.warning('No pull request found.');
+              return;
+            }
+
+            const rows = [
+              '| **Status** | ' + `${statusCell}!` + ' |',
+              '| :--- | :--- |',
+              `| **Environment** | ${process.env.DEPLOYMENT_ENV} |`,
+              pr.commit ? `| **Commit** | [\`${pr.commit}\`](https://github.com/${process.env.REPO}/commit/${pr.commit}) |` : null,
+              deploymentUrl ? `| **URL** | ${deploymentUrl} |` : null,
+              `| **Details** | :arrow_right: [GitHub Actions](https://github.com/${process.env.REPO}/actions/runs/${process.env.RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${process.env.CF_ACCOUNT_ID}/workers/services/view/${process.env.CF_WORKER_NAME}/production/deployments) |`,
+            ].filter(Boolean);
+            const body = ['### ⚡ Deploying with Cloudflare Workers', '', ...rows].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(pr.number),
+              body
+            });
+
+  notify-slack:
+    name: Notify to Slack
+    runs-on: ubuntu-latest
+    needs: [deploy-worker, extract-metadata]
+    if: needs.extract-metadata.outputs.pr != ''
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/actions/setup-slack-payload
+
+      - name: Setup slack payload
+        id: slack-payload
+        uses: ./.github/actions/setup-slack-payload
+        with:
+          slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
+          deployed: ${{ needs.deploy-worker.outputs.result == 'success' }}
+          deployment_env: ${{ env.DEPLOYMENT_ENV }}
+          deployment_url: ${{ needs.deploy-worker.outputs.url }}
+          cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          cloudflare_worker_name: ${{ needs.extract-metadata.outputs.worker-name }}
+          pr_commit: ${{ fromJSON(needs.extract-metadata.outputs.pr).commit }}
+          pr_number: ${{ fromJSON(needs.extract-metadata.outputs.pr).number }}
+          pr_title: ${{ fromJSON(needs.extract-metadata.outputs.pr).title }}
+          pr_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).url }}
+          avatar_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).avatar_url }}
+
+      - name: Send notification to Slack
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload-file-path: ${{ steps.slack-payload.outputs.file-path }}

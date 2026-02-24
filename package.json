@@ -14,7 +14,9 @@
     "format": "prettier --write .",
     "test:unit": "vitest",
     "test": "pnpm test:unit -- --run",
-    "gen": "wrangler types"
+    "gen": "wrangler types",
+    "deploy:preview": "pnpm build && wrangler versions upload",
+    "deploy": "pnpm build && wrangler deploy"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
