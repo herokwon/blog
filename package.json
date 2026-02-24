@@ -28,7 +28,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/node": "^24",
+    "@types/node": "^25",
     "@vitest/browser-playwright": "^4.0.18",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
