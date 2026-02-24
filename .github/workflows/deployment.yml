@@ -41,7 +41,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
-          command: ${{ env.DEPLOYMENT_ENV == 'Production' && 'deploy' || 'version upload' }}
+          command: ${{ env.DEPLOYMENT_ENV == 'Production' && 'deploy' || 'versions upload' }}
         continue-on-error: true
 
       - name: Get deployment url
