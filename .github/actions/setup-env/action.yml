@@ -9,7 +9,7 @@ inputs:
   node-version:
     description: Node.js version
     required: false
-    default: '24'
+    default: '25'
   debug:
     description: Print pnpm hoist/linker configs
     required: false
