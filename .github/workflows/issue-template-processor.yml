@@ -7,7 +7,7 @@ permissions:
   issues: write
 
 env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ github.token }}
   ISSUE_NUMBER: ${{ github.event.issue.number }}
   ISSUE_TITLE: ${{ github.event.issue.title }}
 
