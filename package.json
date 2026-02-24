@@ -37,7 +37,7 @@
     "husky": "^9.1.7",
     "playwright": "^1.58.1",
     "prettier": "^3.8.1",
-    "prettier-plugin-svelte": "^3.4.1",
+    "prettier-plugin-svelte": "^3.5.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "svelte": "^5.53.3",
     "svelte-check": "^4.4.3",
