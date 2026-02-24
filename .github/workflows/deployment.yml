@@ -46,7 +46,7 @@ jobs:
 
       - name: Get deployment url
         id: deployment-url
-        if: ${{ steps.deploy.outcome == 'success' }}
+        if: steps.deploy.outcome == 'success'
         env:
           RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
