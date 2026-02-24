@@ -1,4 +1,4 @@
-name: 🤖 Issue Template Processor
+name: ⚡ Issue Template Processor
 on:
   issues:
     types: [opened]
