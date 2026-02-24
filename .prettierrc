@@ -28,6 +28,12 @@
       "options": {
         "parser": "svelte"
       }
+    },
+    {
+      "files": ["*.jsonc"],
+      "options": {
+        "trailingComma": "none"
+      }
     }
   ],
   "tailwindStylesheet": "./src/routes/layout.css"
