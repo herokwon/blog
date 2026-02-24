@@ -12,7 +12,7 @@ permissions:
 
 env:
   REPO: ${{ github.repository }}
-  DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }}
+  DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && github.actor != 'dependabot[bot]' && 'Production' || 'Preview' }}
 
 jobs:
   deploy-worker:
