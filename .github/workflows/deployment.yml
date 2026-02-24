@@ -91,18 +91,30 @@ jobs:
         id: worker-name
         run: |
           node - << 'NODE'
-
           const fs = require('fs');
           const path = './wrangler.jsonc';
 
-          try {
-            const raw = fs.readFileSync(path, 'utf8');
-            const stripped = raw
+          function parseJSONC(content) {
+            const stripped = content
               .replace(/\/\*[\s\S]*?\*\//g, '')
               .replace(/^\s*\/\/.*$/mg, '');
-            const json = JSON.parse(stripped);
-            const name = json?.name ?? '';
+            const fixed = stripped.replace(/([^{,\s]+)\s*:/g, (m, p1) => {
+              if (/^".*"$/.test(p1)) return m;
+              return `"${p1}":`;
+            });
 
+            try {
+              return JSON.parse(fixed);
+            } catch (e) {
+              return null;
+            }
+          }
+
+          try {
+            const raw = fs.readFileSync(path, 'utf8');
+            const json = parseJSONC(raw);
+            const name = json?.name ?? '';
+            
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${name}\n`);
           } catch (e) {
             console.error('Error reading wrangler.jsonc:', e);
