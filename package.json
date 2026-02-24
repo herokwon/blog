@@ -15,8 +15,8 @@
     "test:unit": "vitest",
     "test": "pnpm test:unit -- --run",
     "gen": "wrangler types",
-    "deploy:preview": "pnpm build && wrangler deploy --env preview",
-    "deploy": "pnpm build && wrangler deploy --env production"
+    "deploy:preview": "pnpm build && wrangler versions upload",
+    "deploy": "pnpm build && wrangler deploy"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
