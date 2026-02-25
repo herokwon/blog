@@ -48,27 +48,18 @@ jobs:
         env:
           RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
-          node - << 'NODE'
-          const fs = require('fs');
+          RAW_URL="${RAW_URL:-}"
+          workerUrl=""
 
-          const rawUrl = process.env.RAW_URL;
-          let workerUrl = '';
+          if [ -n "$RAW_URL" ]; then
+            cleanDomain=$(echo "$RAW_URL" | sed 's/([^)]*)//g' | awk -F'[,;[:space:]]+' '{print $1}' | xargs)
+            if [ -n "$cleanDomain" ]; then
+              [[ ! "$cleanDomain" =~ ^https?:// ]] && workerUrl="https://$cleanDomain" || workerUrl="$cleanDomain"
+            fi
+          fi
 
-          if (rawUrl && rawUrl.trim()) {
-            const cleanDomain = rawUrl
-              .replace(/\s*\([^)]*\)\s*/g, '')
-              .split(/[,;\s]+/)[0]
-              .trim();
-            
-            if (cleanDomain && !/^https?:\/\//i.test(cleanDomain)) {
-              workerUrl = `https://${cleanDomain}`;
-            } else if (cleanDomain) {
-              workerUrl = cleanDomain;
-            }
-          }
-
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${workerUrl}\n`);
-          NODE
+          echo "result=$workerUrl" >> "$GITHUB_OUTPUT"
+          echo "$workerUrl"
 
   extract-metadata:
     name: Extract Metadata
