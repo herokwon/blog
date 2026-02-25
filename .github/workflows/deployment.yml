@@ -12,6 +12,7 @@ permissions:
 
 env:
   REPO: ${{ github.repository }}
+  GITHUB_TOKEN: ${{ github.token }}
   DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && github.actor != 'dependabot[bot]' && 'Production' || 'Preview' }}
 
 jobs:
@@ -48,27 +49,18 @@ jobs:
         env:
           RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
-          node - << 'NODE'
-          const fs = require('fs');
+          RAW_URL="${RAW_URL:-}"
+          workerUrl=""
 
-          const rawUrl = process.env.RAW_URL;
-          let workerUrl = '';
+          if [ -n "$RAW_URL" ]; then
+            cleanDomain=$(echo "$RAW_URL" | sed 's/([^)]*)//g' | awk -F'[,;[:space:]]+' '{print $1}' | xargs)
+            if [ -n "$cleanDomain" ]; then
+              [[ ! "$cleanDomain" =~ ^https?:// ]] && workerUrl="https://$cleanDomain" || workerUrl="$cleanDomain"
+            fi
+          fi
 
-          if (rawUrl && rawUrl.trim()) {
-            const cleanDomain = rawUrl
-              .replace(/\s*\([^)]*\)\s*/g, '')
-              .split(/[,;\s]+/)[0]
-              .trim();
-            
-            if (cleanDomain && !/^https?:\/\//i.test(cleanDomain)) {
-              workerUrl = `https://${cleanDomain}`;
-            } else if (cleanDomain) {
-              workerUrl = cleanDomain;
-            }
-          }
-
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${workerUrl}\n`);
-          NODE
+          echo "result=$workerUrl" >> "$GITHUB_OUTPUT"
+          echo "$workerUrl"
 
   extract-metadata:
     name: Extract Metadata
@@ -90,66 +82,31 @@ jobs:
       - name: Get worker name
         id: worker-name
         run: |
-          node - << 'NODE'
-
-          const fs = require('fs');
-          const path = './wrangler.jsonc';
-
-          try {
-            const raw = fs.readFileSync(path, 'utf8');
-            const stripped = raw
-              .replace(/\/\*[\s\S]*?\*\//g, '')
-              .replace(/^\s*\/\/.*$/mg, '');
-            const json = JSON.parse(stripped);
-            const name = json?.name ?? '';
-
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${name}\n`);
-          } catch (e) {
-            console.error('Error reading wrangler.jsonc:', e);
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'result=\n');
-          }
-
-          NODE
+          NAME=$(sed '/\/\*/,/\*\//d; s/^\s*\/\/.*$//g' wrangler.jsonc | jq -r '.name // empty')
+          echo "result=$NAME" >> $GITHUB_OUTPUT
 
       - name: Check a latest pull request
         id: pr
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const result = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-            }).then(res => res?.data ?? []);
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          PR_INFO=$(gh pr list \
+            --head "$COMMIT_SHA" \
+            --state all \
+            --limit 1 \
+            --json number,title,url,mergeCommit,author \
+            --jq '.[0] // {} | {
+              commit: (.mergeCommit.oid // env.COMMIT_SHA) | .[0:7],
+              number: .number,
+              title: .title,
+              url: .url,
+              avatar_url: "https://github.com/\(.author.login).png"
+            }')
 
-            if (result.length === 0) {
-              core.info('No associated pull request found.');
-              return;
-            };
+          PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number // empty')
+          ([ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]) && PR_INFO=""
 
-            const prNumber = result[0].number ?? null;
-
-            if (!prNumber) {
-              core.info('No pull request associated with this commit.');
-              return;
-            }
-
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-
-            const commit = (pr.merge_commit_sha ?? context.sha).substring(0, 7);
-            const avatarUrl = pr.user?.avatar_url ?? context.payload.repository.owner.avatar_url;
-
-            return {
-              commit,
-              number: pr.number,
-              title: pr.title,
-              url: pr.html_url,
-              avatar_url: avatarUrl, 
-            };
+          echo "result=$PR_INFO" >> $GITHUB_OUTPUT
 
   deploy-github:
     name: Deploy to GitHub
@@ -157,8 +114,6 @@ jobs:
     needs: [deploy-worker]
     permissions:
       deployments: write
-    env:
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Create deployment
         id: create-deployment
@@ -179,11 +134,11 @@ jobs:
           EOF
           )
 
-          echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+          echo "deploy-id=$DEPLOY_ID" >> $GITHUB_OUTPUT
 
       - name: Conclude deployment
         env:
-          DEPLOY_ID: ${{ steps.create-deployment.outputs.deploy_id }}
+          DEPLOY_ID: ${{ steps.create-deployment.outputs.deploy-id }}
           CONCLUSION: ${{ needs.deploy-worker.outputs.result }}
           DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
         run: |
@@ -201,42 +156,44 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/github-script@v8
-        env:
+      - env:
           DEPLOYED: ${{ needs.deploy-worker.outputs.result == 'success' }}
           DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CF_WORKER_NAME: ${{ needs.extract-metadata.outputs.worker-name }}
           PR_JSON: ${{ needs.extract-metadata.outputs.pr }}
           RUN_ID: ${{ github.run_id }}
-        with:
-          script: |
-            const deployed = process.env.DEPLOYED === 'true';
-            const deploymentUrl = process.env.DEPLOYMENT_URL;
-            const statusCell = deployed ? ':white_check_mark: Success' : ':x: Failed';
-            const pr = JSON.parse(process.env.PR_JSON || '{}');
+        run: |
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number // empty')
+          PR_COMMIT=$(echo "$PR_JSON" | jq -r '.commit // empty')
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title // empty')
+          PR_URL=$(echo "$PR_JSON" | jq -r '.url // empty')
+          AVATAR_URL=$(echo "$PR_JSON" | jq -r '.avatar_url // empty')
 
-            if (!pr || !pr.number) {
-              core.warning('No pull request found.');
-              return;
-            }
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No pull request found."
+            exit 0
+          fi
 
-            const rows = [
-              '| **Status** | ' + `${statusCell}!` + ' |',
-              '| :--- | :--- |',
-              `| **Environment** | ${process.env.DEPLOYMENT_ENV} |`,
-              pr.commit ? `| **Commit** | [\`${pr.commit}\`](https://github.com/${process.env.REPO}/commit/${pr.commit}) |` : null,
-              deploymentUrl ? `| **URL** | ${deploymentUrl} |` : null,
-              `| **Details** | :arrow_right: [GitHub Actions](https://github.com/${process.env.REPO}/actions/runs/${process.env.RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${process.env.CF_ACCOUNT_ID}/workers/services/view/${process.env.CF_WORKER_NAME}/production/deployments) |`,
-            ].filter(Boolean);
-            const body = ['### ⚡ Deploying with Cloudflare Workers', '', ...rows].join('\n');
+          STATUS_CELL=":x: Failed"
+          [ "$DEPLOYED" = "true" ] && STATUS_CELL=":white_check_mark: Success"
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: Number(pr.number),
-              body
-            });
+          BODY="### ⚡ Deploying with Cloudflare Workers
+
+          | **Status** | ${STATUS_CELL}! |
+          | :--- | :--- |
+          | **Environment** | ${DEPLOYMENT_ENV} |"
+
+          [ -n "$PR_COMMIT" ] && BODY="${BODY}
+          | **Commit** | [\`${PR_COMMIT}\`](https://github.com/${REPO}/commit/${PR_COMMIT}) |"
+
+          [ -n "$DEPLOYMENT_URL" ] && BODY="${BODY}
+          | **URL** | ${DEPLOYMENT_URL} |"
+
+          BODY="${BODY}
+          | **Details** | :arrow_right: [GitHub Actions](https://github.com/${REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
+
+          gh pr comment "$PR_NUMBER" --body "$BODY"
 
   notify-slack:
     name: Notify to Slack
