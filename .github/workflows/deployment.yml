@@ -81,66 +81,28 @@ jobs:
       - name: Get worker name
         id: worker-name
         run: |
-          node - << 'NODE'
-
-          const fs = require('fs');
-          const path = './wrangler.jsonc';
-
-          try {
-            const raw = fs.readFileSync(path, 'utf8');
-            const stripped = raw
-              .replace(/\/\*[\s\S]*?\*\//g, '')
-              .replace(/^\s*\/\/.*$/mg, '');
-            const json = JSON.parse(stripped);
-            const name = json?.name ?? '';
-
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${name}\n`);
-          } catch (e) {
-            console.error('Error reading wrangler.jsonc:', e);
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'result=\n');
-          }
-
-          NODE
+          NAME=$(sed '/\/\*/,/\*\//d; s/^\s*\/\/.*$//g' wrangler.jsonc | jq -r '.name // empty')
+          echo "result=$NAME" >> $GITHUB_OUTPUT
 
       - name: Check a latest pull request
         id: pr
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const result = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-            }).then(res => res?.data ?? []);
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          PR_INFO=$(gh pr list \
+            --head "$COMMIT_SHA" \
+            --state all \
+            --limit 1 \
+            --json number,title,url,mergeCommit,author \
+            --jq '.[0] // {} | {
+              commit: (.mergeCommit.oid // env.COMMIT_SHA) | .[0:7],
+              number: .number,
+              title: .title,
+              url: .url,
+              avatar_url: "https://github.com/\(.author.login).png"
+            }')
 
-            if (result.length === 0) {
-              core.info('No associated pull request found.');
-              return;
-            };
-
-            const prNumber = result[0].number ?? null;
-
-            if (!prNumber) {
-              core.info('No pull request associated with this commit.');
-              return;
-            }
-
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-
-            const commit = (pr.merge_commit_sha ?? context.sha).substring(0, 7);
-            const avatarUrl = pr.user?.avatar_url ?? context.payload.repository.owner.avatar_url;
-
-            return {
-              commit,
-              number: pr.number,
-              title: pr.title,
-              url: pr.html_url,
-              avatar_url: avatarUrl, 
-            };
+          echo "result=$PR_INFO" >> $GITHUB_OUTPUT
 
   deploy-github:
     name: Deploy to GitHub
