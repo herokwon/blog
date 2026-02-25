@@ -154,42 +154,44 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/github-script@v8
-        env:
+      - env:
           DEPLOYED: ${{ needs.deploy-worker.outputs.result == 'success' }}
           DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CF_WORKER_NAME: ${{ needs.extract-metadata.outputs.worker-name }}
           PR_JSON: ${{ needs.extract-metadata.outputs.pr }}
           RUN_ID: ${{ github.run_id }}
-        with:
-          script: |
-            const deployed = process.env.DEPLOYED === 'true';
-            const deploymentUrl = process.env.DEPLOYMENT_URL;
-            const statusCell = deployed ? ':white_check_mark: Success' : ':x: Failed';
-            const pr = JSON.parse(process.env.PR_JSON || '{}');
+        run: |
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number // empty')
+          PR_COMMIT=$(echo "$PR_JSON" | jq -r '.commit // empty')
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title // empty')
+          PR_URL=$(echo "$PR_JSON" | jq -r '.url // empty')
+          AVATAR_URL=$(echo "$PR_JSON" | jq -r '.avatar_url // empty')
 
-            if (!pr || !pr.number) {
-              core.warning('No pull request found.');
-              return;
-            }
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No pull request found."
+            exit 0
+          fi
 
-            const rows = [
-              '| **Status** | ' + `${statusCell}!` + ' |',
-              '| :--- | :--- |',
-              `| **Environment** | ${process.env.DEPLOYMENT_ENV} |`,
-              pr.commit ? `| **Commit** | [\`${pr.commit}\`](https://github.com/${process.env.REPO}/commit/${pr.commit}) |` : null,
-              deploymentUrl ? `| **URL** | ${deploymentUrl} |` : null,
-              `| **Details** | :arrow_right: [GitHub Actions](https://github.com/${process.env.REPO}/actions/runs/${process.env.RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${process.env.CF_ACCOUNT_ID}/workers/services/view/${process.env.CF_WORKER_NAME}/production/deployments) |`,
-            ].filter(Boolean);
-            const body = ['### ⚡ Deploying with Cloudflare Workers', '', ...rows].join('\n');
+          STATUS_CELL=":x: Failed"
+          [ "$DEPLOYED" = "true" ] && STATUS_CELL=":white_check_mark: Success"
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: Number(pr.number),
-              body
-            });
+          BODY="### ⚡ Deploying with Cloudflare Workers
+
+          | **Status** | ${STATUS_CELL}! |
+          | :--- | :--- |
+          | **Environment** | ${DEPLOYMENT_ENV} |"
+
+          [ -n "$PR_COMMIT" ] && BODY="${BODY}
+          | **Commit** | [\`${PR_COMMIT}\`](https://github.com/${REPO}/commit/${PR_COMMIT}) |"
+
+          [ -n "$DEPLOYMENT_URL" ] && BODY="${BODY}
+          | **URL** | ${DEPLOYMENT_URL} |"
+
+          BODY="${BODY}
+          | **Details** | :arrow_right: [GitHub Actions](https://github.com/${REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
+
+          gh pr comment "$PR_NUMBER" --body "$BODY"
 
   notify-slack:
     name: Notify to Slack
