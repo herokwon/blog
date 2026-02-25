@@ -125,13 +125,13 @@ jobs:
             --header "Accept: application/vnd.github+json" \
             --input - \
             -q '.id' <<EOF
-            {
-              "ref": "$REF",
-              "environment": "$DEPLOYMENT_ENV",
-              "auto_merge": false,
-              "required_contexts": []
-            }
-            EOF
+          {
+            "ref": "$REF",
+            "environment": "$DEPLOYMENT_ENV",
+            "auto_merge": false,
+            "required_contexts": []
+          }
+          EOF
           )
 
           echo "deploy-id=$DEPLOY_ID" >> $GITHUB_OUTPUT
