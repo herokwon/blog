@@ -38,12 +38,14 @@ body:
     validations:
       required: false
 
-  - type: input
+  - type: textarea
     id: reference
     attributes:
       label: 🔗 Reference
       description: Any related docs, issues, or external links?
-      placeholder: 'https://example.com'
+      placeholder: |
+        - 'https://example.com/docs/1'
+        - 'https://example.com/docs/2'
     validations:
       required: false
 
