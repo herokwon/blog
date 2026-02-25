@@ -103,6 +103,9 @@ jobs:
               avatar_url: "https://github.com/\(.author.login).png"
             }')
 
+          PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number // empty')
+          ([ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]) && PR_INFO=""
+
           echo "result=$PR_INFO" >> $GITHUB_OUTPUT
 
   deploy-github:
