@@ -12,6 +12,7 @@ permissions:
 
 env:
   REPO: ${{ github.repository }}
+  GITHUB_TOKEN: ${{ github.token }}
   DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && github.actor != 'dependabot[bot]' && 'Production' || 'Preview' }}
 
 jobs:
@@ -110,8 +111,6 @@ jobs:
     needs: [deploy-worker]
     permissions:
       deployments: write
-    env:
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Create deployment
         id: create-deployment
