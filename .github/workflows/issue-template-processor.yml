@@ -255,7 +255,7 @@ jobs:
         run: |
           OPTIONAL_DETAILS="<br />"
           [ -n "$EXPECTED" ] && [ "$EXPECTED" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🎯 Expected Outcome"$'\n\n'"$EXPECTED"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔗 Reference"$'\n\n'"- $REFERENCE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔗 Reference"$'\n\n'"$REFERENCE"
           [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           NEW_BODY=$(cat <<EOF
