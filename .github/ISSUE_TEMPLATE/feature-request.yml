@@ -117,12 +117,14 @@ body:
     validations:
       required: false
 
-  - type: input
+  - type: textarea
     id: reference
     attributes:
       label: 🔗 Reference
       description: Any similar features in other products or helpful references?
-      placeholder: 'https://example.com/similar-feature'
+      placeholder: |
+        - 'https://example.com/similar-feature-1'
+        - 'https://example.com/similar-feature-2'
     validations:
       required: false
 
