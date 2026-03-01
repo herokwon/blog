@@ -5,3 +5,6 @@ export interface Post {
   createdAt: string;
   updatedAt: string;
 }
+
+export type CreatePostInput = Pick<Post, 'title' | 'content'>;
+export type UpdatePostInput = Omit<Post, 'id' | 'createdAt'>;
