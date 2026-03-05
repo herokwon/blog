@@ -1,3 +1,23 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@import '../lib/components/editor/Editor.css';
+
+:focus-visible {
+  @apply outline-none;
+}
+
+@layer base {
+  html {
+    @apply h-full min-h-screen;
+  }
+
+  body {
+    @apply h-full;
+  }
+
+  button {
+    @apply not-disabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-38;
+  }
+}
