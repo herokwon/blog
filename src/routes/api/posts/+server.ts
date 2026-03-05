@@ -77,7 +77,7 @@ export const POST: RequestHandler = async ({
     const error: ApiError = {
       code: 'SERVER_ERROR',
       message: e instanceof Error ? e.message : 'Unknown error',
-      details: e,
+      details: null,
     };
 
     return json(
