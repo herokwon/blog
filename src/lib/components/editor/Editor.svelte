@@ -29,14 +29,18 @@
   }
 
   onMount(async () => {
-    if (editorElement)
-      await createMilkdownEditor({
-        root: editorElement,
-        defaultValue: content,
-        onChange: (markdown: string) => {
-          content = markdown;
-        },
-      });
+    if (!editorElement) return;
+
+    await createMilkdownEditor({
+      root: editorElement,
+      defaultValue: content,
+      onChange: (markdown: string) => {
+        content = markdown;
+      },
+    });
+    editorElement
+      .querySelector('[contenteditable="true"]')
+      ?.setAttribute('aria-label', 'Content');
   });
 </script>
 
