@@ -60,6 +60,7 @@ jobs:
             echo "❌ Generated API type is not committed: $FILE_PATH"
             echo "Please run 'pnpm gen:api' and commit the updated file."
             git --no-pager diff -- "$FILE_PATH"
+            exit 1
           fi
 
   test:
