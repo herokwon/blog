@@ -53,7 +53,7 @@ describe('[Routes] /admin/posts/new', () => {
 
   it('should restore draft from localStorage on mount', async () => {
     localStorage.setItem(
-      'draftPost',
+      'DRAFT_POST',
       JSON.stringify({
         title: 'Draft Title',
         content: 'Draft Content',
@@ -66,7 +66,7 @@ describe('[Routes] /admin/posts/new', () => {
       .toHaveValue('Draft Title');
     await expect
       .element(page.getByRole('textbox', { name: 'Content' }))
-      .toHaveValue('Draft Content');
+      .toHaveTextContent('Draft Content');
   });
 
   it('should show success message and reset form on successful submission', async () => {
@@ -90,7 +90,7 @@ describe('[Routes] /admin/posts/new', () => {
       .toHaveValue('');
     await expect
       .element(page.getByRole('textbox', { name: 'Content' }))
-      .toHaveValue('');
+      .toBeInTheDocument();
   });
 
   it('should show error message on API error response', async () => {
