@@ -30,7 +30,7 @@ jobs:
       - name: Run lint
         run: pnpm lint
 
-  check:
+  types:
     name: Check types
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
@@ -44,6 +44,23 @@ jobs:
 
       - name: Run check
         run: pnpm check
+
+      - name: Generate API types
+        run: pnpm gen:api
+
+      - name: Verify generated types are committed
+        run: |
+          set -e
+          FILE_PATH="src/lib/types/schema.d.ts"
+
+          if git diff --quiet -- "$FILE_PATH"; then
+            echo "✅ OpenAPI generated type is up-to-date: $FILE_PATH"
+            exit 0
+          else
+            echo "❌ Generated API type is not committed: $FILE_PATH"
+            echo "Please run 'pnpm gen:api' and commit the updated file."
+            git --no-pager diff -- "$FILE_PATH"
+          fi
 
   test:
     name: Test
