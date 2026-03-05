@@ -35,5 +35,11 @@
       "id": "55eb8adeb8904b098c52879360bef6c6",
       "preview_id": "b81282d43e574952ba3103ff01b96f21"
     }
+  ],
+  "r2_buckets": [
+    {
+      "bucket_name": "blog",
+      "binding": "BLOG"
+    }
   ]
 }

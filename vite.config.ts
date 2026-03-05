@@ -6,6 +6,29 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
+  optimizeDeps: {
+    include: [
+      '@milkdown/core',
+      '@milkdown/plugin-listener',
+      '@milkdown/preset-commonmark',
+      '@milkdown/prose/commands',
+      '@milkdown/prose/inputrules',
+      '@milkdown/utils',
+    ],
+  },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Milkdown is client-only; SSR build correctly omits it via $effect tree-shaking
+        const isMilkdownUnusedExternalImport =
+          warning.code === 'UNUSED_EXTERNAL_IMPORT' &&
+          /@milkdown\//.test(warning.message ?? '');
+
+        if (isMilkdownUnusedExternalImport) return;
+        warn(warning);
+      },
+    },
+  },
   test: {
     expect: { requireAssertions: true },
     projects: [

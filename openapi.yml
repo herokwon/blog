@@ -1,0 +1,147 @@
+openapi: 3.0.3
+info:
+  title: Blog API
+  version: 0.1.0
+  description: Posts API specification
+
+paths:
+  /api/posts:
+    post:
+      summary: Create a post
+      operationId: createPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostInput'
+            example:
+              title: 'My First Post'
+              content: 'This is the content of my first post.'
+      responses:
+        '200':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponsePost'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REQUEST
+                  message: Request body must be a valid JSON object
+                  details: null
+        '500':
+          description: Internal server error (bucket not found or unknown server error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              examples:
+                bucketNotFound:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BUCKET_NOT_FOUND
+                      message: Blog bucket not found in environment variables
+                      details: null
+                serverError:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SERVER_ERROR
+                      message: Unknown error
+                      details: {}
+
+components:
+  schemas:
+    CreatePostInput:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+
+    Post:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - title
+        - content
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+        - details
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          nullable: true
+
+    ApiSuccessResponsePost:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - error
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/Post'
+        error:
+          nullable: true
+
+    ApiErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - error
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        data:
+          nullable: true
+        error:
+          $ref: '#/components/schemas/ApiError'
