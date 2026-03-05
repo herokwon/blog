@@ -58,7 +58,7 @@ pnpm preview
 
 ## 📖 Content
 
-This blog uses [**Milkdown**](https://milkdown.dev) as the writting editor and stores post data in [**Cloudflare R2**](https://cloudflare.com/developer-platform/products/r2)
+This blog uses [Milkdown](https://milkdown.dev) as the writting editor and stores post data in [Cloudflare R2](https://cloudflare.com/developer-platform/products/r2)
 
 ### Content flow
 
@@ -84,6 +84,4 @@ This project targets Cloudflare Workers. Use the SvelteKit adapter configuration
 
 ## 📜 License
 
-Licensed under the [MIT](LICENSE) license.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+Distributed under the MIT license. See [LICENSE](LICENSE) for more information.
