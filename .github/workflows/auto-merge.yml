@@ -24,9 +24,72 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-      - name: Enable auto-merge for patch updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch'
-        run: gh pr merge --auto --squash "$PR_URL" --delete-branch
+      - name: Classify update for auto-merge
+        id: classify
+        shell: bash
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+          PREVIOUS_VERSION: ${{ steps.metadata.outputs.previous-version }}
+          NEW_VERSION: ${{ steps.metadata.outputs.new-version }}
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+        run: |
+          set -euo pipefail
+
+          should_merge=false
+          reason="blocked-by-policy"
+
+          case "$DEPENDENCY_TYPE:$UPDATE_TYPE" in
+            direct:development:version-update:semver-minor|direct:development:version-update:semver-patch)
+              should_merge=true; reason="dev-minor-or-patch"
+              ;;
+            direct:production:version-update:semver-patch)
+              should_merge=true; reason="prod-patch-only"
+              ;;
+
+            *:|*:null)
+
+              if [[ "$DEPENDENCY_NAMES" != *","* ]] && \
+                 [[ "$PREVIOUS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && \
+                 [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                
+                IFS=. read -r oM om op <<< "$PREVIOUS_VERSION"
+                IFS=. read -r nM nm np <<< "$NEW_VERSION"
+
+                if (( nM == oM )); then
+                  if [[ "$DEPENDENCY_TYPE" == "direct:development" ]] && \
+                     (( nm > om || (nm == om && np > op) )); then
+                    should_merge=true
+                    reason="dev-null-semver-fallback"
+                  
+                  elif [[ "$DEPENDENCY_TYPE" == "direct:production" ]] && \
+                       (( nm == om && np > op )); then
+                    should_merge=true
+                    reason="prod-null-patch-fallback"
+                  else
+                    reason="null-not-safe-bump-for-$DEPENDENCY_TYPE"
+                  fi
+                else
+                  reason="null-major-bump-blocked"
+                fi
+              else
+                reason="null-invalid-or-multi-deps"
+              fi
+              ;;
+          esac
+
+          echo "should_merge=$should_merge" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+
+      - name: Log decision
+        run: echo "Auto-merge decision=${{ steps.classify.outputs.should_merge }} reason=${{ steps.classify.outputs.reason }}"
+
+      - name: Enable auto-merge for eligible Dependabot updates
+        if: steps.classify.outputs.should_merge == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          gh pr review "$PR_URL" --approve --body "Auto-approved by GitHub Actions based on SemVer policy. 🚀"
+          gh pr merge --auto --squash "$PR_URL" --delete-branch --subject "⚙️ $PR_TITLE"
