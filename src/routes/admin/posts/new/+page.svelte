@@ -1,38 +1,41 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
+  import { Editor } from '$lib/components/editor';
   import type { ApiResponse } from '$lib/types/api';
   import type { CreatePostInput, Post } from '$lib/types/post';
 
-  const STORAGE_KEY = 'draftPost';
+  const STORAGE_KEY = 'DRAFT_POST';
 
-  let title = $state('');
-  let content = $state('');
-
-  const canSaveDraft = $derived(
-    title.trim().length > 0 || content.trim().length > 0,
-  );
-
-  onMount(() => {
-    const rawData = localStorage.getItem(STORAGE_KEY);
-    if (!rawData) return;
-
-    const { title: t, content: c } = JSON.parse(rawData) as CreatePostInput;
-    title = t;
-    content = c;
+  let postData = $state<CreatePostInput>({
+    title: '',
+    content: '',
   });
 
   let isSubmitting = $state(false);
+  let isDraftLoaded = $state<boolean>(false);
+
+  const canSave = $derived(
+    postData.title.trim().length > 0 && postData.content.trim().length > 0,
+  );
+  const canSaveDraft = $derived(
+    postData.title.trim().length > 0 || postData.content.trim().length > 0,
+  );
+
   let result = $state<
     { type: 'success'; data: Post } | { type: 'error'; message: string } | null
   >(null);
 
+  function clearData() {
+    postData = {
+      title: '',
+      content: '',
+    };
+  }
+
   function handleSaveDraft() {
     if (!canSaveDraft) return;
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ title, content } satisfies CreatePostInput),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(postData));
   }
 
   async function handleSubmit(e: SubmitEvent) {
@@ -44,9 +47,8 @@
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify(postData),
       });
-
       const apiResponse: ApiResponse<Post> = await res.json();
 
       result = apiResponse.success
@@ -57,8 +59,7 @@
           };
 
       if (apiResponse.success) {
-        title = '';
-        content = '';
+        clearData();
       }
     } catch (error) {
       result = {
@@ -72,13 +73,30 @@
       isSubmitting = false;
     }
   }
+
+  onMount(() => {
+    try {
+      const rawData = localStorage.getItem(STORAGE_KEY);
+      if (rawData) {
+        const { title, content } = JSON.parse(
+          rawData,
+        ) satisfies CreatePostInput;
+        postData.title = title;
+        postData.content = content;
+      }
+    } catch (error) {
+      console.error('Failed to load draft post from localStorage:', error);
+    } finally {
+      isDraftLoaded = true;
+    }
+  });
 </script>
 
 <svelte:head>
   <title>New post</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl px-4 py-12">
+<div class="mx-auto flex h-full min-h-screen max-w-5xl flex-col px-4 py-12">
   <h1 class="mb-8 text-2xl font-bold text-gray-900">New post</h1>
 
   {#if result}
@@ -96,54 +114,45 @@
     {/if}
   {/if}
 
-  <form onsubmit={handleSubmit} class="space-y-5">
-    <div class="flex justify-end gap-x-4">
+  <form onsubmit={handleSubmit} class="flex min-h-0 flex-1 flex-col gap-y-4">
+    <div
+      class="flex justify-end gap-x-2 **:[button]:rounded-md **:[button]:px-4 **:[button]:py-2 **:[button]:text-sm **:[button]:font-medium"
+    >
       <button
         type="button"
         disabled={isSubmitting || !canSaveDraft}
         onclick={handleSaveDraft}
-        class="mr-2 rounded-md bg-gray-500 px-5 py-2 text-sm font-medium text-white hover:bg-gray-400"
+        class="bg-gray-500 text-white not-disabled:hover:bg-gray-600"
       >
         Save draft
       </button>
       <button
         type="submit"
-        disabled={isSubmitting}
-        class="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={isSubmitting || !canSave}
+        class="bg-blue-600 text-white not-disabled:hover:bg-blue-700"
       >
         {isSubmitting ? 'Submitting...' : 'Submit'}
       </button>
     </div>
 
-    <div>
-      <label for="title" class="mb-1.5 block text-sm font-medium text-gray-700">
-        Title
-      </label>
+    <div class="space-y-2">
+      <label for="title" class="block text-sm font-medium">Title</label>
       <input
         id="title"
         type="text"
-        bind:value={title}
+        bind:value={postData.title}
         required
-        placeholder="Enter post title."
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-gray-500 focus:outline-none"
+        placeholder="Enter the post title"
+        class="w-full rounded-md border-0 px-4 py-3 text-gray-900 placeholder-gray-400 ring ring-gray-300 outline-none focus:ring-gray-700"
       />
     </div>
-
-    <div>
-      <label
-        for="content"
-        class="mb-1.5 block text-sm font-medium text-gray-700"
-      >
-        Content
-      </label>
-      <textarea
-        id="content"
-        bind:value={content}
-        required
-        placeholder="Enter post content."
-        rows={16}
-        class="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-gray-500 focus:outline-none"
-      ></textarea>
+    <div class="flex h-full flex-col gap-y-2">
+      <p class="block text-sm font-medium">Content</p>
+      {#if isDraftLoaded}
+        <Editor bind:content={postData.content} class="flex-1" />
+      {:else}
+        <div class="milkdown-container flex-1"></div>
+      {/if}
     </div>
   </form>
 </div>
