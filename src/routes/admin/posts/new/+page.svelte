@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
   import type { ApiResponse } from '$lib/types/api';
   import type { CreatePostInput, Post } from '$lib/types/post';
@@ -22,10 +24,6 @@
     postData.title.trim().length > 0 || postData.content.trim().length > 0,
   );
 
-  let result = $state<
-    { type: 'success'; data: Post } | { type: 'error'; message: string } | null
-  >(null);
-
   function clearData() {
     postData = {
       title: '',
@@ -41,7 +39,6 @@
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     isSubmitting = true;
-    result = null;
 
     try {
       const res = await fetch('/api/posts', {
@@ -51,24 +48,12 @@
       });
       const apiResponse: ApiResponse<Post> = await res.json();
 
-      result = apiResponse.success
-        ? { type: 'success', ...apiResponse }
-        : {
-            type: 'error',
-            ...apiResponse.error,
-          };
-
       if (apiResponse.success) {
         clearData();
+        localStorage.removeItem(STORAGE_KEY);
+
+        await goto(resolve(`/posts/${apiResponse.data.id}`));
       }
-    } catch (error) {
-      result = {
-        type: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Unknown error occurred while submitting the post.',
-      };
     } finally {
       isSubmitting = false;
     }
@@ -98,22 +83,6 @@
 
 <div class="mx-auto flex h-full min-h-screen max-w-5xl flex-col px-4 py-12">
   <h1 class="mb-8 text-2xl font-bold text-gray-900">New post</h1>
-
-  {#if result}
-    {#if result.type === 'success'}
-      <div class="mb-6 rounded-md border border-green-200 bg-green-50 p-4">
-        <p class="text-sm font-medium text-green-800">
-          Created a new post successfully!
-        </p>
-        <p class="mt-1 text-xs text-green-600">ID: {result.data.id}</p>
-      </div>
-    {:else}
-      <div class="mb-6 rounded-md border border-red-200 bg-red-50 p-4">
-        <p class="text-sm font-medium text-red-800">{result.message}</p>
-      </div>
-    {/if}
-  {/if}
-
   <form onsubmit={handleSubmit} class="flex min-h-0 flex-1 flex-col gap-y-4">
     <div
       class="flex justify-end gap-x-2 **:[button]:rounded-md **:[button]:px-4 **:[button]:py-2 **:[button]:text-sm **:[button]:font-medium"
@@ -134,7 +103,6 @@
         {isSubmitting ? 'Submitting...' : 'Submit'}
       </button>
     </div>
-
     <div class="space-y-2">
       <label for="title" class="block text-sm font-medium">Title</label>
       <input
