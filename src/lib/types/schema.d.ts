@@ -70,18 +70,21 @@ export interface components {
       /** @enum {boolean} */
       success: true;
       data: components['schemas']['Post'];
-      error: unknown;
+      /** @enum {unknown|null} */
+      error: null;
     };
     ApiSuccessResponsePostList: {
       /** @enum {boolean} */
       success: true;
       data: components['schemas']['Post'][];
-      error: unknown;
+      /** @enum {unknown|null} */
+      error: null;
     };
     ApiErrorResponse: {
       /** @enum {boolean} */
       success: false;
-      data: unknown;
+      /** @enum {unknown|null} */
+      data: null;
       error: components['schemas']['ApiError'];
     };
   };

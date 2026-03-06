@@ -242,6 +242,7 @@ components:
         data:
           $ref: '#/components/schemas/Post'
         error:
+          enum: [null]
           nullable: true
 
     ApiSuccessResponsePostList:
@@ -260,6 +261,7 @@ components:
           items:
             $ref: '#/components/schemas/Post'
         error:
+          enum: [null]
           nullable: true
 
     ApiErrorResponse:
@@ -274,6 +276,7 @@ components:
           type: boolean
           enum: [false]
         data:
+          enum: [null]
           nullable: true
         error:
           $ref: '#/components/schemas/ApiError'
