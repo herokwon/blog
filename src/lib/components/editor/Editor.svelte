@@ -6,10 +6,12 @@
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     content: string;
+    readOnly?: boolean;
   };
 
   let {
     content = $bindable(),
+    readOnly = false,
     class: className,
     ...divProps
   }: Props = $props();
@@ -17,6 +19,8 @@
   let editorElement: HTMLElement;
 
   function focusEditorOnContainerMouseDown(event: MouseEvent) {
+    if (readOnly) return;
+
     const target = event.target;
     const editable = editorElement.querySelector<HTMLElement>(
       '[contenteditable="true"]',
@@ -34,10 +38,14 @@
     await createMilkdownEditor({
       root: editorElement,
       defaultValue: content,
+      readOnly,
       onChange: (markdown: string) => {
         content = markdown;
       },
     });
+
+    if (readOnly) return;
+
     editorElement
       .querySelector('[contenteditable="true"]')
       ?.setAttribute('aria-label', 'content');

@@ -2,6 +2,14 @@
   .milkdown-container {
     @apply size-full rounded-md px-4 py-3 ring ring-gray-300;
     @apply focus-within:ring-gray-700;
+
+    &:has([contenteditable='false']) {
+      @apply ring-0;
+
+      &.ProseMirror {
+        @apply cursor-default;
+      }
+    }
   }
 
   .milkdown-editor.prose {
