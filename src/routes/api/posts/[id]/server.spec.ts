@@ -2,7 +2,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiResponse } from '$lib/types/api';
+import type { GetPostByIdApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
 import { GET } from './+server';
@@ -64,7 +64,7 @@ describe('GET /api/posts/[id]', () => {
     const platform = createMockPlatform();
     const event = createMockEvent({ request, platform, postId: '' });
     const response = await GET(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: GetPostByIdApiResponse = await response.json();
 
     expect(response.status).toBe(400);
     expect(result.success).toBe(false);
@@ -78,7 +78,7 @@ describe('GET /api/posts/[id]', () => {
     const platform = { env: {}, ctx: {}, caches: {} };
     const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
     const response = await GET(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: GetPostByIdApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);
@@ -93,7 +93,7 @@ describe('GET /api/posts/[id]', () => {
     });
     const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
     const response = await GET(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: GetPostByIdApiResponse = await response.json();
 
     expect(response.status).toBe(404);
     expect(result.success).toBe(false);
@@ -116,7 +116,7 @@ describe('GET /api/posts/[id]', () => {
     });
     const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
     const response = await GET(event);
-    const result: ApiResponse<Post> = await response.json();
+    const result: GetPostByIdApiResponse = await response.json();
 
     expect(response.status).toBe(200);
     expect(result.success).toBe(true);
@@ -132,7 +132,7 @@ describe('GET /api/posts/[id]', () => {
     });
     const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
     const response = await GET(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: GetPostByIdApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);

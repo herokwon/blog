@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ApiResponse } from '$lib/types/api';
+import type { CreatePostApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
@@ -24,7 +24,7 @@ const mockPost: Post = {
   updatedAt: now,
 };
 
-function stubFetch(response: ApiResponse<Post>): void {
+function stubFetch(response: CreatePostApiResponse): void {
   vi.stubGlobal(
     'fetch',
     vi

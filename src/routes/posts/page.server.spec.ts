@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiResponse } from '$lib/types/api';
+import type { ListPostsApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
 import type { PageServerLoadEvent } from './$types';
@@ -14,7 +14,7 @@ const mockPost: Post = {
   updatedAt: '2026-02-20T00:00:00.000Z',
 };
 
-function createMockFetch(response: ApiResponse<Post[]>) {
+function createMockFetch(response: ListPostsApiResponse) {
   return vi.fn<PageServerLoadEvent['fetch']>(
     async () =>
       new Response(JSON.stringify(response), {
@@ -90,8 +90,9 @@ describe('[Routes] /posts - load', () => {
       error: {
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to load posts',
+        details: null,
       },
-    } as ApiResponse<Post[]>);
+    });
 
     const result = await runLoad(mockFetch);
 

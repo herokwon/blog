@@ -1,10 +1,5 @@
-export interface Post {
-  id: ReturnType<typeof crypto.randomUUID>;
-  title: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { components } from '$lib/types/schema';
 
-export type CreatePostInput = Pick<Post, 'title' | 'content'>;
-export type UpdatePostInput = Omit<Post, 'id' | 'createdAt'>;
+export type Post = components['schemas']['Post'];
+export type CreatePostInput = components['schemas']['CreatePostInput'];
+export type UpdatePostInput = Pick<Post, 'title' | 'content' | 'updatedAt'>;

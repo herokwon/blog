@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiResponse } from '$lib/types/api';
+import type { ListPostsApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
 import type { PageServerLoadEvent } from './$types';
@@ -14,7 +14,7 @@ const mockPost: Post = {
   updatedAt: '2026-02-20T00:00:00.000Z',
 };
 
-function createMockFetch(response: ApiResponse<Post[]>) {
+function createMockFetch(response: ListPostsApiResponse) {
   return vi.fn<PageServerLoadEvent['fetch']>(
     async () =>
       new Response(JSON.stringify(response), {
@@ -106,8 +106,12 @@ describe('[Routes] /admin/posts - load', () => {
     const mockFetch = createMockFetch({
       success: false,
       data: null,
-      error: { code: 'INTERNAL_SERVER_ERROR', message: 'Something went wrong' },
-    } as ApiResponse<Post[]>);
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Something went wrong',
+        details: null,
+      },
+    });
 
     const result = await runLoad(mockFetch);
 
@@ -119,8 +123,12 @@ describe('[Routes] /admin/posts - load', () => {
     const mockFetch = createMockFetch({
       success: false,
       data: null,
-      error: { code: 'INTERNAL_SERVER_ERROR', message: errorMessage },
-    } as ApiResponse<Post[]>);
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: errorMessage,
+        details: null,
+      },
+    });
 
     const result = await runLoad(mockFetch);
 

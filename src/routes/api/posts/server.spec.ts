@@ -2,7 +2,10 @@ import type { RequestEvent } from '@sveltejs/kit';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ApiResponse } from '$lib/types/api';
+import type {
+  CreatePostApiResponse,
+  ListPostsApiResponse,
+} from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
 import { GET, POST } from './+server';
@@ -76,7 +79,7 @@ describe('POST /api/posts', () => {
     const platform = createMockPlatform(mockBucket);
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(400);
     expect(result.success).toBe(false);
@@ -99,7 +102,7 @@ describe('POST /api/posts', () => {
     const platform = { env: {}, ctx: {}, caches: {} };
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);
@@ -116,7 +119,7 @@ describe('POST /api/posts', () => {
     const platform = createMockPlatform(mockBucket);
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<Post> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(200);
     expect(result.success).toBe(true);
@@ -151,7 +154,7 @@ describe('POST /api/posts', () => {
     const platform = createMockPlatform(mockBucket);
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);
@@ -168,7 +171,7 @@ describe('GET /api/posts', () => {
     const platform = { env: {}, ctx: {}, caches: {} };
     const event = createMockEvent({ request, platform });
     const response = await GET(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: ListPostsApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);
@@ -214,7 +217,7 @@ describe('GET /api/posts', () => {
     const platform = createMockPlatform({ list: mockList, get: mockGet });
     const event = createMockEvent({ request, platform });
     const response = await GET(event);
-    const result: ApiResponse<Post[]> = await response.json();
+    const result: ListPostsApiResponse = await response.json();
 
     expect(response.status).toBe(200);
     expect(result.success).toBe(true);
@@ -235,7 +238,7 @@ describe('GET /api/posts', () => {
     const platform = createMockPlatform({ list: mockList });
     const event = createMockEvent({ request, platform });
     const response = await GET(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: ListPostsApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);

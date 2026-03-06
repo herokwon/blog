@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiResponse } from '$lib/types/api';
+import type { GetPostByIdApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
 import type { PageServerLoadEvent } from './$types';
@@ -20,7 +20,7 @@ const mockPost: Post = {
   updatedAt: '2026-03-04T00:00:00.000Z',
 };
 
-function createMockFetch(response: ApiResponse<Post>, status = 200) {
+function createMockFetch(response: GetPostByIdApiResponse, status = 200) {
   return vi.fn<PageServerLoadEvent['fetch']>(
     async () =>
       new Response(JSON.stringify(response), {

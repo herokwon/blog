@@ -1,16 +1,12 @@
-import type { components } from '$lib/types/schema';
+import type { components, operations } from '$lib/types/schema';
 
 type SchemaApiError = components['schemas']['ApiError'];
 type SchemaApiErrorResponse = components['schemas']['ApiErrorResponse'];
-type SchemaApiSuccessResponsePost =
-  components['schemas']['ApiSuccessResponsePost'];
 
 export type ApiError = SchemaApiError;
 
-export type ApiSuccessResponse<T> = Omit<
-  SchemaApiSuccessResponsePost,
-  'data' | 'error'
-> & {
+export type ApiSuccessResponse<T> = {
+  success: true;
   data: T;
   error: null;
   message?: string;
@@ -22,3 +18,13 @@ export type ApiErrorResponse = Omit<SchemaApiErrorResponse, 'data'> & {
 };
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
+
+type SchemaPost = components['schemas']['Post'];
+
+export type ListPostsApiResponse = ApiResponse<SchemaPost[]>;
+export type CreatePostApiResponse = ApiResponse<SchemaPost>;
+export type GetPostByIdApiResponse = ApiResponse<SchemaPost>;
+
+export type ListPostsOperation = operations['listPosts'];
+export type CreatePostOperation = operations['createPost'];
+export type GetPostByIdOperation = operations['getPostById'];

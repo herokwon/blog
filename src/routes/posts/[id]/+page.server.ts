@@ -1,13 +1,12 @@
 import { error } from '@sveltejs/kit';
 
-import type { ApiResponse } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
+import type { GetPostByIdApiResponse } from '$lib/types/api';
 
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
   const res = await fetch(`/api/posts/${params.id}`);
-  const response: ApiResponse<Post> = await res.json();
+  const response: GetPostByIdApiResponse = await res.json();
 
   if (!response.success) {
     if (res.status === 404) {

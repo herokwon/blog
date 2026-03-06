@@ -4,8 +4,8 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
-  import type { ApiResponse } from '$lib/types/api';
-  import type { CreatePostInput, Post } from '$lib/types/post';
+  import type { CreatePostApiResponse } from '$lib/types/api';
+  import type { CreatePostInput } from '$lib/types/post';
 
   const STORAGE_KEY = 'DRAFT_POST';
 
@@ -46,7 +46,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(postData),
       });
-      const apiResponse: ApiResponse<Post> = await res.json();
+      const apiResponse: CreatePostApiResponse = await res.json();
 
       if (apiResponse.success) {
         clearData();
