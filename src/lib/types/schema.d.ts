@@ -60,7 +60,11 @@ export interface components {
     ApiError: {
       code: string;
       message: string;
-      details: unknown;
+      details: components['schemas']['PostNotFoundErrorDetails'] | null;
+    };
+    PostNotFoundErrorDetails: {
+      /** Format: uuid */
+      id: string;
     };
     ApiSuccessResponsePost: {
       /** @enum {boolean} */

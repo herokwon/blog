@@ -214,7 +214,19 @@ components:
         message:
           type: string
         details:
+          oneOf:
+            - $ref: '#/components/schemas/PostNotFoundErrorDetails'
           nullable: true
+
+    PostNotFoundErrorDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
 
     ApiSuccessResponsePost:
       type: object
