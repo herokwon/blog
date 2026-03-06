@@ -7,9 +7,17 @@ import { page } from 'vitest/browser';
 
 import Page from './+page.svelte';
 
+const { gotoMock } = vi.hoisted(() => ({
+  gotoMock: vi.fn(),
+}));
+
+vi.mock('$app/navigation', () => ({
+  goto: gotoMock,
+}));
+
 const now = new Date().toISOString();
 const mockPost: Post = {
-  id: crypto.randomUUID(),
+  id: '123e4567-e89b-12d3-a456-426614174100',
   title: 'Test Title',
   content: 'Test Content',
   createdAt: now,
@@ -27,7 +35,6 @@ function stubFetch(response: ApiResponse<Post>): void {
 
 async function submitForm(): Promise<void> {
   await page.getByRole('textbox', { name: 'Title' }).fill('Hello');
-  await page.getByRole('textbox', { name: 'Content' }).fill('World');
   await page.getByRole('button', { name: 'Submit' }).click();
 }
 
@@ -35,6 +42,7 @@ describe('[Routes] /admin/posts/new', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
+    gotoMock.mockReset();
   });
 
   it('should render form elements', async () => {
@@ -45,6 +53,9 @@ describe('[Routes] /admin/posts/new', () => {
       .toBeInTheDocument();
     await expect
       .element(page.getByRole('textbox', { name: 'Content' }))
+      .toBeInTheDocument();
+    await expect
+      .element(page.getByRole('button', { name: 'Save draft' }))
       .toBeInTheDocument();
     await expect
       .element(page.getByRole('button', { name: 'Submit' }))
@@ -65,35 +76,45 @@ describe('[Routes] /admin/posts/new', () => {
       .element(page.getByRole('textbox', { name: 'Title' }))
       .toHaveValue('Draft Title');
     await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
+      .element(page.getByRole('textbox', { name: /content/i }))
       .toHaveTextContent('Draft Content');
   });
 
-  it('should show success message and reset form on successful submission', async () => {
+  it('should save draft to localStorage', async () => {
+    render(Page);
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Hello');
+    await page.getByRole('button', { name: 'Save draft' }).click();
+
+    expect(localStorage.getItem('DRAFT_POST')).toBe(
+      JSON.stringify({ title: 'Hello', content: '' }),
+    );
+  });
+
+  it('should navigate to post detail on successful submission', async () => {
     stubFetch({
       success: true,
       data: mockPost,
       error: null,
     });
+    localStorage.setItem(
+      'DRAFT_POST',
+      JSON.stringify({ title: 'A', content: 'B' }),
+    );
     render(Page);
 
     await submitForm();
 
-    await expect
-      .element(page.getByText('Created a new post successfully!'))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByText(`ID: ${mockPost.id}`))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toHaveValue('');
-    await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
-      .toBeInTheDocument();
+    expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
+    expect(localStorage.getItem('DRAFT_POST')).toBeNull();
   });
 
-  it('should show error message on API error response', async () => {
+  it('should not navigate on API error response', async () => {
+    localStorage.setItem(
+      'DRAFT_POST',
+      JSON.stringify({ title: 'Draft Title', content: 'Draft Content' }),
+    );
+
     stubFetch({
       success: false,
       data: null,
@@ -107,20 +128,6 @@ describe('[Routes] /admin/posts/new', () => {
 
     await submitForm();
 
-    await expect
-      .element(page.getByText('Invalid input data.'))
-      .toBeInTheDocument();
-  });
-
-  it('should show error message on network failure', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValueOnce(new Error('Network Error')),
-    );
-    render(Page);
-
-    await submitForm();
-
-    await expect.element(page.getByText('Network Error')).toBeInTheDocument();
+    expect(gotoMock).not.toHaveBeenCalled();
   });
 });
