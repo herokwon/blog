@@ -117,6 +117,14 @@ describe('[Routes] /admin/posts', () => {
         .toBeInTheDocument();
     });
 
+    it('should render an "Edit" link for the post', async () => {
+      render(Page, { data: { posts: [mockPost] } });
+
+      await expect
+        .element(page.getByRole('link', { name: 'Edit' }))
+        .toBeInTheDocument();
+    });
+
     it('should not show empty state when posts exist', async () => {
       render(Page, { data: { posts: [mockPost] } });
 
