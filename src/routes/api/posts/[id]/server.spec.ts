@@ -58,7 +58,7 @@ function createMockEvent({
   } as unknown as RequestEvent;
 }
 
-const MOCK_POST_ID = crypto.randomUUID();
+const MOCK_POST_ID = '4e9344a8-b642-47fb-8e8b-b0f1343f77df';
 
 describe('GET /api/posts/[id]', () => {
   it('should return 400 when post id is missing', async () => {

@@ -10,6 +10,10 @@ import type { Post } from '$lib/types/post';
 
 import { GET, POST } from './+server';
 
+const MOCK_FIRST_POST_ID = '7b0f4f50-40ef-4625-b4f7-743f72f36f8f';
+const MOCK_SECOND_POST_ID = 'f2fb88b6-aeb8-4459-a2f4-073022eb35f9';
+const MOCK_REQUEST_POST_ID = '91bb149f-9a73-47c8-b3da-f2327e63ca02';
+
 type MockBucket = {
   put?: (key: string, value: string) => void;
   get?: (key: string) => Promise<{ json: <T>() => Promise<T> } | null>;
@@ -78,14 +82,14 @@ describe('GET /api/posts', () => {
 
   it('should return sorted posts from multiple list pages', async () => {
     const firstPost: Post = {
-      id: crypto.randomUUID(),
+      id: MOCK_FIRST_POST_ID,
       title: 'first',
       content: 'content-1',
       createdAt: '2026-03-01T00:00:00.000Z',
       updatedAt: '2026-03-01T00:00:00.000Z',
     };
     const secondPost: Post = {
-      id: crypto.randomUUID(),
+      id: MOCK_SECOND_POST_ID,
       title: 'second',
       content: 'content-2',
       createdAt: '2026-03-02T00:00:00.000Z',
@@ -194,7 +198,7 @@ describe('POST /api/posts', () => {
 
   it('should return 500 if BLOG bucket is missing', async () => {
     const requestBody: Post = {
-      id: crypto.randomUUID(),
+      id: MOCK_REQUEST_POST_ID,
       title: 't',
       content: 'c',
       createdAt: new Date().toISOString(),
