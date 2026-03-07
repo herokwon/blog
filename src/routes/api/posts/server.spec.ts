@@ -61,108 +61,6 @@ function createMockEvent({
   } as RequestEvent;
 }
 
-describe('POST /api/posts', () => {
-  let mockPut: (key: string, value: string) => void;
-  let mockBucket: MockBucket;
-
-  beforeEach(() => {
-    mockPut = vi.fn<(key: string, value: string) => void>();
-    mockBucket = { put: mockPut };
-  });
-
-  it('should return 400 for invalid request body', async () => {
-    const request = new Request('http://localhost/api/posts', {
-      method: 'POST',
-      body: JSON.stringify({ foo: 'bar' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
-    const response = await POST(event);
-    const result: CreatePostApiResponse = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('INVALID_REQUEST');
-  });
-
-  it('should return 500 if BLOG bucket is missing', async () => {
-    const requestBody: Post = {
-      id: crypto.randomUUID(),
-      title: 't',
-      content: 'c',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const request = new Request('http://localhost/api/posts', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform });
-    const response = await POST(event);
-    const result: CreatePostApiResponse = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('BUCKET_NOT_FOUND');
-  });
-
-  it('should create a post and return success', async () => {
-    const requestBody = { title: 't', content: 'c', author: 'a' };
-    const request = new Request('http://localhost/api/posts', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
-    const response = await POST(event);
-    const result: CreatePostApiResponse = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(result.success).toBe(true);
-    expect(result.data).toMatchObject(requestBody);
-    expect(typeof result.data?.id).toBe('string');
-    expect(typeof result.data?.createdAt).toBe('string');
-    expect(typeof result.data?.updatedAt).toBe('string');
-    expect(mockPut).toHaveBeenCalledWith(
-      result.data?.id,
-      JSON.stringify(result.data),
-    );
-  });
-
-  it('should handle server errors', async () => {
-    const request = new Proxy(
-      new Request('http://localhost/api/posts', {
-        method: 'POST',
-        body: JSON.stringify({ title: 't', content: 'c', author: 'a' }),
-        headers: { 'Content-Type': 'application/json' },
-      }),
-      {
-        get(target, prop) {
-          if (prop === 'json') {
-            return async () => {
-              throw new Error('fail');
-            };
-          }
-          return Reflect.get(target, prop);
-        },
-      },
-    );
-    const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
-    const response = await POST(event);
-    const result: CreatePostApiResponse = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('fail');
-  });
-});
-
 describe('GET /api/posts', () => {
   it('should return 500 if BLOG bucket is missing', async () => {
     const request = new Request('http://localhost/api/posts', {
@@ -239,6 +137,123 @@ describe('GET /api/posts', () => {
     const event = createMockEvent({ request, platform });
     const response = await GET(event);
     const result: ListPostsApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('fail');
+  });
+});
+
+describe('POST /api/posts', () => {
+  let mockPut: (key: string, value: string) => void;
+  let mockBucket: MockBucket;
+
+  beforeEach(() => {
+    mockPut = vi.fn<(key: string, value: string) => void>();
+    mockBucket = { put: mockPut };
+  });
+
+  it('should return 400 for malformed JSON body', async () => {
+    const request = new Request('http://localhost/api/posts', {
+      method: 'POST',
+      body: 'not a json',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const platform = createMockPlatform(mockBucket);
+    const event = createMockEvent({ request, platform });
+    const response = await POST(event);
+    const result: CreatePostApiResponse = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('INVALID_REQUEST');
+    expect(result.error?.message).toBe(
+      'Request body must be a valid JSON object',
+    );
+  });
+
+  it('should return 400 for invalid request body', async () => {
+    const request = new Request('http://localhost/api/posts', {
+      method: 'POST',
+      body: JSON.stringify({ foo: 'bar' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const platform = createMockPlatform(mockBucket);
+    const event = createMockEvent({ request, platform });
+    const response = await POST(event);
+    const result: CreatePostApiResponse = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('INVALID_REQUEST');
+    expect(result.error?.message).toBe(
+      'Request body must be a JSON object with string properties "title" and "content"',
+    );
+  });
+
+  it('should return 500 if BLOG bucket is missing', async () => {
+    const requestBody: Post = {
+      id: crypto.randomUUID(),
+      title: 't',
+      content: 'c',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const request = new Request('http://localhost/api/posts', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const platform = { env: {}, ctx: {}, caches: {} };
+    const event = createMockEvent({ request, platform });
+    const response = await POST(event);
+    const result: CreatePostApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('BUCKET_NOT_FOUND');
+  });
+
+  it('should create a post and return success', async () => {
+    const requestBody = { title: 't', content: 'c', author: 'a' };
+    const request = new Request('http://localhost/api/posts', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const platform = createMockPlatform(mockBucket);
+    const event = createMockEvent({ request, platform });
+    const response = await POST(event);
+    const result: CreatePostApiResponse = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject(requestBody);
+    expect(typeof result.data?.id).toBe('string');
+    expect(typeof result.data?.createdAt).toBe('string');
+    expect(typeof result.data?.updatedAt).toBe('string');
+    expect(mockPut).toHaveBeenCalledWith(
+      result.data?.id,
+      JSON.stringify(result.data),
+    );
+  });
+
+  it('should handle server errors', async () => {
+    mockPut = vi.fn(() => {
+      throw new Error('fail');
+    });
+    mockBucket = { put: mockPut };
+
+    const request = new Request('http://localhost/api/posts', {
+      method: 'POST',
+      body: JSON.stringify({ title: 't', content: 'c' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const platform = createMockPlatform(mockBucket);
+    const event = createMockEvent({ request, platform });
+    const response = await POST(event);
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);
