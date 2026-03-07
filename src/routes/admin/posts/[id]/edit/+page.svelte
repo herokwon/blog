@@ -15,15 +15,16 @@
     title: '',
     content: '',
   });
-  let isInitialized = $state(false);
+  let currentPostId = $state<unknown | null>(null);
 
   $effect(() => {
-    if (isInitialized) return;
+    if (currentPostId === data.post.id) return;
+
     postData = {
       title: data.post.title,
       content: data.post.content,
     };
-    isInitialized = true;
+    currentPostId = data.post.id;
   });
 
   let isSubmitting = $state(false);
@@ -76,6 +77,7 @@
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!isChanged || isSubmitting) return;
       event.preventDefault();
+      event.returnValue = '';
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -130,7 +132,7 @@
     </div>
     <div class="flex h-full flex-col gap-y-2">
       <p class="block text-sm font-medium">Content</p>
-      {#if isInitialized}
+      {#if currentPostId === data.post.id}
         <Editor bind:content={postData.content} class="flex-1" />
       {:else}
         <div class="milkdown-container flex-1"></div>

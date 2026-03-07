@@ -32,6 +32,14 @@ const mockPost: Post = {
   updatedAt: now,
 };
 
+const mockPost2: Post = {
+  id: '123e4567-e89b-12d3-a456-426614174101',
+  title: 'Second Title',
+  content: 'Second Content',
+  createdAt: now,
+  updatedAt: now,
+};
+
 function stubFetch(response: UpdatePostByIdApiResponse): void {
   vi.stubGlobal(
     'fetch',
@@ -84,6 +92,28 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
       .element(page.getByRole('textbox', { name: 'Title' }))
       .toHaveValue(mockPost.title);
 
+    await expect
+      .element(page.getByRole('button', { name: 'Update' }))
+      .toHaveAttribute('disabled');
+  });
+
+  it('should reset form values when post id changes', async () => {
+    const view = render(Page, { data: { post: mockPost } });
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+
+    await expect
+      .element(page.getByRole('button', { name: 'Update' }))
+      .not.toHaveAttribute('disabled');
+
+    await view.rerender({ data: { post: mockPost2 } });
+
+    await expect
+      .element(page.getByRole('textbox', { name: 'Title' }))
+      .toHaveValue(mockPost2.title);
+    await expect
+      .element(page.getByRole('textbox', { name: 'Content' }))
+      .toHaveTextContent(mockPost2.content);
     await expect
       .element(page.getByRole('button', { name: 'Update' }))
       .toHaveAttribute('disabled');
