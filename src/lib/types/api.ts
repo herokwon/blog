@@ -24,7 +24,9 @@ type SchemaPost = components['schemas']['Post'];
 export type ListPostsApiResponse = ApiResponse<SchemaPost[]>;
 export type CreatePostApiResponse = ApiResponse<SchemaPost>;
 export type GetPostByIdApiResponse = ApiResponse<SchemaPost>;
+export type UpdatePostByIdApiResponse = ApiResponse<SchemaPost>;
 
 export type ListPostsOperation = operations['listPosts'];
 export type CreatePostOperation = operations['createPost'];
 export type GetPostByIdOperation = operations['getPostById'];
+export type UpdatePostByIdOperation = operations['updatePostById'];

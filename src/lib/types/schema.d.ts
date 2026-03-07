@@ -31,7 +31,8 @@ export interface paths {
     };
     /** Get post by id */
     get: operations['getPostById'];
-    put?: never;
+    /** Update post by id */
+    put: operations['updatePostById'];
     post?: never;
     delete?: never;
     options?: never;
@@ -44,6 +45,10 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     CreatePostInput: {
+      title: string;
+      content: string;
+    };
+    UpdatePostInput: {
       title: string;
       content: string;
     };
@@ -218,6 +223,90 @@ export interface operations {
            *       "error": {
            *         "code": "INVALID_REQUEST",
            *         "message": "Post id is required",
+           *         "details": null
+           *       }
+           *     }
+           */
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+      /** @description Post not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "success": false,
+           *       "data": null,
+           *       "error": {
+           *         "code": "POST_NOT_FOUND",
+           *         "message": "Post not found",
+           *         "details": {
+           *           "id": "4e9344a8-b642-47fb-8e8b-b0f1343f77df"
+           *         }
+           *       }
+           *     }
+           */
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+      /** @description Internal server error (bucket not found or unknown server error) */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+    };
+  };
+  updatePostById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Post id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *       "title": "Updated title",
+         *       "content": "Updated post content."
+         *     }
+         */
+        'application/json': components['schemas']['UpdatePostInput'];
+      };
+    };
+    responses: {
+      /** @description Post updated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiSuccessResponsePost'];
+        };
+      };
+      /** @description Invalid request body */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "success": false,
+           *       "data": null,
+           *       "error": {
+           *         "code": "INVALID_REQUEST",
+           *         "message": "Request body must be a valid JSON object",
            *         "details": null
            *       }
            *     }
