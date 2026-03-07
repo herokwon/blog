@@ -43,13 +43,15 @@ export const GET: RequestHandler = async ({ platform }): Promise<Response> => {
     do {
       const listedObjects = await bucket.list({ cursor });
 
-      const objectPromises = listedObjects.objects.map(async object => {
-        const storedPost = await bucket.get(object.key);
-        if (!storedPost) {
-          return null;
-        }
-        return storedPost.json<Post>();
-      });
+      const objectPromises = listedObjects.objects.map(
+        async (object: { key: string }) => {
+          const storedPost = await bucket.get(object.key);
+          if (!storedPost) {
+            return null;
+          }
+          return storedPost.json<Post>();
+        },
+      );
       const pagePosts = await Promise.all(objectPromises);
 
       for (const post of pagePosts) {
