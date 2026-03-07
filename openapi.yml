@@ -267,6 +267,77 @@ paths:
                       code: SERVER_ERROR
                       message: Unknown error
                       details: null
+    delete:
+      summary: Delete post by id
+      operationId: deletePostById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponseEmpty'
+              example:
+                success: true
+                data: null
+                error: null
+        '400':
+          description: Invalid request (missing id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REQUEST
+                  message: Post id is required
+                  details: null
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              example:
+                success: false
+                data: null
+                error:
+                  code: POST_NOT_FOUND
+                  message: Post not found
+                  details:
+                    id: 4e9344a8-b642-47fb-8e8b-b0f1343f77df
+        '500':
+          description: Internal server error (bucket not found or unknown server error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              examples:
+                bucketNotFound:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BUCKET_NOT_FOUND
+                      message: Blog bucket not found in environment variables
+                      details: null
+                serverError:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SERVER_ERROR
+                      message: Unknown error
+                      details: null
 
 components:
   schemas:
@@ -376,6 +447,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Post'
+        error:
+          enum: [null]
+          nullable: true
+
+    ApiSuccessResponseEmpty:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - error
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          enum: [null]
+          nullable: true
         error:
           enum: [null]
           nullable: true
