@@ -109,12 +109,18 @@ describe('[Routes] /admin/posts', () => {
       await expect.element(page.getByText(mockPost2.title)).toBeInTheDocument();
     });
 
-    it('should render a "View" link for the post', async () => {
+    it('should render post title as a link to public post page', async () => {
       render(Page, { data: { posts: [mockPost] } });
 
       await expect
-        .element(page.getByRole('link', { name: 'View ↗' }))
-        .toBeInTheDocument();
+        .element(page.getByRole('link', { name: mockPost.title }))
+        .toHaveAttribute('href', `/posts/${mockPost.id}`);
+      await expect
+        .element(page.getByRole('link', { name: mockPost.title }))
+        .toHaveAttribute('target', '_blank');
+      await expect
+        .element(page.getByRole('link', { name: mockPost.title }))
+        .toHaveAttribute('rel', 'noopener noreferrer');
     });
 
     it('should render an "Edit" link for the post', async () => {

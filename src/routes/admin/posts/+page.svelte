@@ -66,7 +66,12 @@
           {#each data.posts as post (post.id)}
             <tr class="hover:bg-gray-50">
               <td class="px-4 py-3">
-                <a href={resolve(`/posts/${post.id}`)} class="group">
+                <a
+                  href={resolve(`/posts/${post.id}`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group"
+                >
                   <strong
                     class="font-medium text-gray-900 group-hover:text-blue-600 group-hover:underline"
                   >
@@ -90,14 +95,6 @@
                     class="text-gray-500 hover:text-blue-600"
                   >
                     Edit
-                  </a>
-                  <a
-                    href={resolve(`/posts/${post.id}`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-gray-500 hover:text-blue-600"
-                  >
-                    View ↗
                   </a>
                 </div>
               </td>
