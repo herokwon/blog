@@ -2,13 +2,22 @@ import type { RequestEvent } from '@sveltejs/kit';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ApiResponse } from '$lib/types/api';
+import type {
+  CreatePostApiResponse,
+  ListPostsApiResponse,
+} from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
-import { POST } from './+server';
+import { GET, POST } from './+server';
 
 type MockBucket = {
-  put: (key: string, value: string) => void;
+  put?: (key: string, value: string) => void;
+  get?: (key: string) => Promise<{ json: <T>() => Promise<T> } | null>;
+  list?: (options?: { cursor?: string }) => Promise<{
+    objects: { key: string }[];
+    truncated: boolean;
+    cursor?: string;
+  }>;
 };
 
 function createMockPlatform(bucketImpl?: MockBucket) {
@@ -70,7 +79,7 @@ describe('POST /api/posts', () => {
     const platform = createMockPlatform(mockBucket);
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(400);
     expect(result.success).toBe(false);
@@ -93,7 +102,7 @@ describe('POST /api/posts', () => {
     const platform = { env: {}, ctx: {}, caches: {} };
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);
@@ -110,7 +119,7 @@ describe('POST /api/posts', () => {
     const platform = createMockPlatform(mockBucket);
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<Post> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
 
     expect(response.status).toBe(200);
     expect(result.success).toBe(true);
@@ -125,7 +134,6 @@ describe('POST /api/posts', () => {
   });
 
   it('should handle server errors', async () => {
-    // Use a Proxy to override request.json() to throw an error, instead of using a real Request
     const request = new Proxy(
       new Request('http://localhost/api/posts', {
         method: 'POST',
@@ -146,7 +154,91 @@ describe('POST /api/posts', () => {
     const platform = createMockPlatform(mockBucket);
     const event = createMockEvent({ request, platform });
     const response = await POST(event);
-    const result: ApiResponse<null> = await response.json();
+    const result: CreatePostApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('fail');
+  });
+});
+
+describe('GET /api/posts', () => {
+  it('should return 500 if BLOG bucket is missing', async () => {
+    const request = new Request('http://localhost/api/posts', {
+      method: 'GET',
+    });
+    const platform = { env: {}, ctx: {}, caches: {} };
+    const event = createMockEvent({ request, platform });
+    const response = await GET(event);
+    const result: ListPostsApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('BUCKET_NOT_FOUND');
+  });
+
+  it('should return sorted posts from multiple list pages', async () => {
+    const firstPost: Post = {
+      id: crypto.randomUUID(),
+      title: 'first',
+      content: 'content-1',
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    };
+    const secondPost: Post = {
+      id: crypto.randomUUID(),
+      title: 'second',
+      content: 'content-2',
+      createdAt: '2026-03-02T00:00:00.000Z',
+      updatedAt: '2026-03-02T00:00:00.000Z',
+    };
+
+    const mockList = vi
+      .fn()
+      .mockResolvedValueOnce({
+        objects: [{ key: firstPost.id }],
+        truncated: true,
+        cursor: 'next-page',
+      })
+      .mockResolvedValueOnce({
+        objects: [{ key: secondPost.id }],
+        truncated: false,
+      });
+
+    const mockGet = vi
+      .fn()
+      .mockResolvedValueOnce({ json: async () => firstPost })
+      .mockResolvedValueOnce({ json: async () => secondPost });
+
+    const request = new Request('http://localhost/api/posts', {
+      method: 'GET',
+    });
+    const platform = createMockPlatform({ list: mockList, get: mockGet });
+    const event = createMockEvent({ request, platform });
+    const response = await GET(event);
+    const result: ListPostsApiResponse = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result.success).toBe(true);
+    expect(result.data?.map(post => post.id)).toEqual([
+      secondPost.id,
+      firstPost.id,
+    ]);
+    expect(mockList).toHaveBeenNthCalledWith(1, { cursor: undefined });
+    expect(mockList).toHaveBeenNthCalledWith(2, { cursor: 'next-page' });
+    expect(mockGet).toHaveBeenCalledTimes(2);
+  });
+
+  it('should handle server errors', async () => {
+    const mockList = vi.fn().mockRejectedValue(new Error('fail'));
+    const request = new Request('http://localhost/api/posts', {
+      method: 'GET',
+    });
+    const platform = createMockPlatform({ list: mockList });
+    const event = createMockEvent({ request, platform });
+    const response = await GET(event);
+    const result: ListPostsApiResponse = await response.json();
 
     expect(response.status).toBe(500);
     expect(result.success).toBe(false);

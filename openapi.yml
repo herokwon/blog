@@ -6,6 +6,39 @@ info:
 
 paths:
   /api/posts:
+    get:
+      summary: List posts
+      operationId: listPosts
+      responses:
+        '200':
+          description: Posts retrieved successfully (sorted by newest first)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponsePostList'
+        '500':
+          description: Internal server error (bucket not found or unknown server error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              examples:
+                bucketNotFound:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BUCKET_NOT_FOUND
+                      message: Blog bucket not found in environment variables
+                      details: null
+                serverError:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SERVER_ERROR
+                      message: Unknown error
+                      details: null
     post:
       summary: Create a post
       operationId: createPost
@@ -60,7 +93,76 @@ paths:
                     error:
                       code: SERVER_ERROR
                       message: Unknown error
-                      details: {}
+                      details: null
+
+  /api/posts/{id}:
+    get:
+      summary: Get post by id
+      operationId: getPostById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponsePost'
+        '400':
+          description: Invalid request (missing id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REQUEST
+                  message: Post id is required
+                  details: null
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              example:
+                success: false
+                data: null
+                error:
+                  code: POST_NOT_FOUND
+                  message: Post not found
+                  details:
+                    id: 4e9344a8-b642-47fb-8e8b-b0f1343f77df
+        '500':
+          description: Internal server error (bucket not found or unknown server error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              examples:
+                bucketNotFound:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BUCKET_NOT_FOUND
+                      message: Blog bucket not found in environment variables
+                      details: null
+                serverError:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SERVER_ERROR
+                      message: Unknown error
+                      details: null
 
 components:
   schemas:
@@ -112,7 +214,19 @@ components:
         message:
           type: string
         details:
+          oneOf:
+            - $ref: '#/components/schemas/PostNotFoundErrorDetails'
           nullable: true
+
+    PostNotFoundErrorDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
 
     ApiSuccessResponsePost:
       type: object
@@ -128,6 +242,26 @@ components:
         data:
           $ref: '#/components/schemas/Post'
         error:
+          enum: [null]
+          nullable: true
+
+    ApiSuccessResponsePostList:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - error
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+        error:
+          enum: [null]
           nullable: true
 
     ApiErrorResponse:
@@ -142,6 +276,7 @@ components:
           type: boolean
           enum: [false]
         data:
+          enum: [null]
           nullable: true
         error:
           $ref: '#/components/schemas/ApiError'

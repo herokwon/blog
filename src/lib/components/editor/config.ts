@@ -3,6 +3,7 @@ import {
   defaultValueCtx,
   Editor,
   editorViewCtx,
+  editorViewOptionsCtx,
   rootCtx,
 } from '@milkdown/core';
 import type { MilkdownPlugin } from '@milkdown/ctx';
@@ -23,7 +24,8 @@ import { $command, $inputRule, $useKeymap } from '@milkdown/utils';
 interface EditorOptions {
   root: HTMLElement;
   defaultValue: string;
-  onChange: (markdown: string) => void;
+  onChange?: (markdown: string) => void;
+  readOnly?: boolean;
 }
 
 function normalizeHeadingLevels(markdown: string): string {
@@ -127,11 +129,19 @@ export const createMilkdownEditor = async ({
   root,
   defaultValue,
   onChange,
+  readOnly = false,
 }: EditorOptions): Promise<Editor> => {
   return await Editor.make()
     .config(ctx => {
       ctx.set(rootCtx, root);
       ctx.set(defaultValueCtx, normalizeHeadingLevels(defaultValue));
+      ctx.update(editorViewOptionsCtx, prev => ({
+        ...prev,
+        editable: () => !readOnly,
+      }));
+
+      if (!onChange || readOnly) return;
+
       ctx.get(listenerCtx).markdownUpdated((_, markdown, prevMarkdown) => {
         const next = normalizeHeadingLevels(markdown);
         const prev = normalizeHeadingLevels(prevMarkdown);

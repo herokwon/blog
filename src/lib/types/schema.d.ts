@@ -11,10 +11,28 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** List posts */
+    get: operations['listPosts'];
     put?: never;
     /** Create a post */
     post: operations['createPost'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/posts/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get post by id */
+    get: operations['getPostById'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -42,18 +60,31 @@ export interface components {
     ApiError: {
       code: string;
       message: string;
-      details: unknown;
+      details: components['schemas']['PostNotFoundErrorDetails'] | null;
+    };
+    PostNotFoundErrorDetails: {
+      /** Format: uuid */
+      id: string;
     };
     ApiSuccessResponsePost: {
       /** @enum {boolean} */
       success: true;
       data: components['schemas']['Post'];
-      error: unknown;
+      /** @enum {unknown|null} */
+      error: null;
+    };
+    ApiSuccessResponsePostList: {
+      /** @enum {boolean} */
+      success: true;
+      data: components['schemas']['Post'][];
+      /** @enum {unknown|null} */
+      error: null;
     };
     ApiErrorResponse: {
       /** @enum {boolean} */
       success: false;
-      data: unknown;
+      /** @enum {unknown|null} */
+      data: null;
       error: components['schemas']['ApiError'];
     };
   };
@@ -65,6 +96,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  listPosts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Posts retrieved successfully (sorted by newest first) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiSuccessResponsePostList'];
+        };
+      };
+      /** @description Internal server error (bucket not found or unknown server error) */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+    };
+  };
   createPost: {
     parameters: {
       query?: never;
@@ -107,6 +167,80 @@ export interface operations {
            *         "code": "INVALID_REQUEST",
            *         "message": "Request body must be a valid JSON object",
            *         "details": null
+           *       }
+           *     }
+           */
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+      /** @description Internal server error (bucket not found or unknown server error) */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+    };
+  };
+  getPostById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Post id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Post retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiSuccessResponsePost'];
+        };
+      };
+      /** @description Invalid request (missing id) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "success": false,
+           *       "data": null,
+           *       "error": {
+           *         "code": "INVALID_REQUEST",
+           *         "message": "Post id is required",
+           *         "details": null
+           *       }
+           *     }
+           */
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+      /** @description Post not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "success": false,
+           *       "data": null,
+           *       "error": {
+           *         "code": "POST_NOT_FOUND",
+           *         "message": "Post not found",
+           *         "details": {
+           *           "id": "4e9344a8-b642-47fb-8e8b-b0f1343f77df"
+           *         }
            *       }
            *     }
            */
