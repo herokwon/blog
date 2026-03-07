@@ -7,7 +7,7 @@ import type {
 } from '$lib/types/api';
 import type { CreatePostInput, Post } from '$lib/types/post';
 
-function isPostRequestBody(body: unknown): body is CreatePostInput {
+function isCreatePostRequestBody(body: unknown): body is CreatePostInput {
   return (
     typeof body === 'object' &&
     body !== null &&
@@ -94,7 +94,7 @@ export const POST: RequestHandler = async ({
 }): Promise<Response> => {
   try {
     const body = await request.json();
-    if (!isPostRequestBody(body)) {
+    if (!isCreatePostRequestBody(body)) {
       const error: ApiError = {
         code: 'INVALID_REQUEST',
         message: 'Request body must be a valid JSON object',
