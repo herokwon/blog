@@ -164,17 +164,6 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          /**
-           * @example {
-           *       "success": false,
-           *       "data": null,
-           *       "error": {
-           *         "code": "INVALID_REQUEST",
-           *         "message": "Request body must be a valid JSON object",
-           *         "details": null
-           *       }
-           *     }
-           */
           'application/json': components['schemas']['ApiErrorResponse'];
         };
       };
@@ -300,17 +289,6 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          /**
-           * @example {
-           *       "success": false,
-           *       "data": null,
-           *       "error": {
-           *         "code": "INVALID_REQUEST",
-           *         "message": "Request body must be a valid JSON object",
-           *         "details": null
-           *       }
-           *     }
-           */
           'application/json': components['schemas']['ApiErrorResponse'];
         };
       };
