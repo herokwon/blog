@@ -163,10 +163,98 @@ paths:
                       code: SERVER_ERROR
                       message: Unknown error
                       details: null
+    put:
+      summary: Update post by id
+      operationId: updatePostById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Post id
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostInput'
+            example:
+              title: 'Updated title'
+              content: 'Updated post content.'
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponsePost'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REQUEST
+                  message: Request body must be a valid JSON object
+                  details: null
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              example:
+                success: false
+                data: null
+                error:
+                  code: POST_NOT_FOUND
+                  message: Post not found
+                  details:
+                    id: 4e9344a8-b642-47fb-8e8b-b0f1343f77df
+        '500':
+          description: Internal server error (bucket not found or unknown server error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              examples:
+                bucketNotFound:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: BUCKET_NOT_FOUND
+                      message: Blog bucket not found in environment variables
+                      details: null
+                serverError:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: SERVER_ERROR
+                      message: Unknown error
+                      details: null
 
 components:
   schemas:
     CreatePostInput:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+
+    UpdatePostInput:
       type: object
       additionalProperties: false
       required:
