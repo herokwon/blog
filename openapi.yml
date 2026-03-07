@@ -64,13 +64,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
-              example:
-                success: false
-                data: null
-                error:
-                  code: INVALID_REQUEST
-                  message: Request body must be a valid JSON object
-                  details: null
+              examples:
+                invalidJson:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVALID_REQUEST
+                      message: Request body must be a valid JSON object
+                      details: null
+                invalidFields:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVALID_REQUEST
+                      message: Request body must be a JSON object with string properties "title" and "content"
+                      details: null
         '500':
           description: Internal server error (bucket not found or unknown server error)
           content:
@@ -195,13 +205,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
-              example:
-                success: false
-                data: null
-                error:
-                  code: INVALID_REQUEST
-                  message: Request body must be a valid JSON object
-                  details: null
+              examples:
+                missingId:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVALID_REQUEST
+                      message: Post id is required
+                      details: null
+                invalidJson:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVALID_REQUEST
+                      message: Request body must be a valid JSON object
+                    details: null
+                invalidFields:
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: INVALID_REQUEST
+                      message: Request body must be a JSON object with string properties "title" and "content"
+                      details: null
         '404':
           description: Post not found
           content:
