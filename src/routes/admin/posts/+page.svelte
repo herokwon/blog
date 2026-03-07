@@ -86,6 +86,12 @@
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-4">
                   <a
+                    href={resolve(`/admin/posts/${post.id}/edit`)}
+                    class="text-gray-500 hover:text-blue-600"
+                  >
+                    Edit
+                  </a>
+                  <a
                     href={resolve(`/posts/${post.id}`)}
                     target="_blank"
                     rel="noopener noreferrer"
