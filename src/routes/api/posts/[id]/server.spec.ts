@@ -160,9 +160,29 @@ describe('PUT /api/posts/[id]', () => {
     expect(response.status).toBe(400);
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('INVALID_REQUEST');
+    expect(result.error?.message).toBe('Post id is required');
   });
 
-  it('should return 400 for invalid request body', async () => {
+  it('should return 400 for malformed JSON body', async () => {
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'PUT',
+      body: '{"title":"updated",',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const platform = createMockPlatform({ get: vi.fn(), put: vi.fn() });
+    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const response = await PUT(event);
+    const result: UpdatePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('INVALID_REQUEST');
+    expect(result.error?.message).toBe(
+      'Request body must be a valid JSON object',
+    );
+  });
+
+  it('should return 400 for invalid request body shape', async () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'PUT',
       body: JSON.stringify({ title: 'updated' }),
@@ -176,6 +196,9 @@ describe('PUT /api/posts/[id]', () => {
     expect(response.status).toBe(400);
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('INVALID_REQUEST');
+    expect(result.error?.message).toBe(
+      'Request body must be a JSON object with string properties "title" and "content"',
+    );
   });
 
   it('should return 500 if BLOG bucket is missing', async () => {

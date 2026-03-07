@@ -121,11 +121,30 @@ export const PUT: RequestHandler = async ({
       );
     }
 
-    const body = await request.json();
-    if (!isUpdatePostRequestBody(body)) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
       const error: ApiError = {
         code: 'INVALID_REQUEST',
         message: 'Request body must be a valid JSON object',
+        details: null,
+      };
+
+      return json(
+        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          status: 400,
+          statusText: 'Bad Request',
+        },
+      );
+    }
+
+    if (!isUpdatePostRequestBody(body)) {
+      const error: ApiError = {
+        code: 'INVALID_REQUEST',
+        message:
+          'Request body must be a JSON object with string properties "title" and "content"',
         details: null,
       };
 
