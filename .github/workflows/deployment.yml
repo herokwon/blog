@@ -64,7 +64,6 @@ jobs:
           fi
 
           echo "result=$workerUrl" >> "$GITHUB_OUTPUT"
-          echo "$workerUrl"
 
   extract-metadata:
     name: Extract Metadata
@@ -198,6 +197,55 @@ jobs:
           | **Details** | :arrow_right: [GitHub Actions](https://github.com/${REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
 
           gh pr comment "$PR_NUMBER" --body "$BODY"
+
+  release-github:
+    name: Release on GitHub
+    runs-on: ubuntu-latest
+    needs: [deploy-worker, extract-metadata]
+    if: |
+      needs.deploy-worker.outputs.result == 'success' &&
+      github.ref_name == 'main' &&
+      github.actor != 'dependabot[bot]'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+
+      - name: Get current version
+        id: package
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check tag existence
+        id: tag
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          git fetch --tags --force
+
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "⚠️ Tag v$VERSION already exists. Skipping release."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Tag v$VERSION is new. Proceeding..."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release
+        if: steps.tag.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --target main \
+            --title "v$VERSION" \
+            --generate-notes
 
   notify-slack:
     name: Notify to Slack
