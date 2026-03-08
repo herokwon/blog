@@ -11,9 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 env:
   REPO: ${{ github.repository }}
   GITHUB_TOKEN: ${{ github.token }}
@@ -24,6 +21,8 @@ jobs:
     name: Deploy to Cloudflare Workers
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     outputs:
       result: ${{ steps.deploy.outcome }}
       url: ${{ steps.deployment-url.outputs.result }}
@@ -115,6 +114,7 @@ jobs:
     name: Deploy to GitHub
     runs-on: ubuntu-latest
     needs: [deploy-worker]
+    timeout-minutes: 10
     permissions:
       deployments: write
     steps:
@@ -253,6 +253,8 @@ jobs:
     needs: [deploy-worker, extract-metadata]
     if: needs.extract-metadata.outputs.pr != ''
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
