@@ -12,6 +12,33 @@
       day: 'numeric',
     });
   }
+
+  async function handleDelete(postId: string) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this post? This action cannot be undone.',
+      )
+    )
+      return;
+
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok)
+        throw new Error(`Failed to delete post (status ${response.status})`);
+
+      data = {
+        ...data,
+        posts: data.posts.filter(post => post.id !== postId),
+      };
+    } catch (error) {
+      console.error(
+        `Error deleting post: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 </script>
 
 <svelte:head>
@@ -96,6 +123,14 @@
                   >
                     Edit
                   </a>
+                  <button
+                    type="button"
+                    class="font-medium text-red-500 hover:text-red-700"
+                    aria-label="Delete"
+                    onclick={() => handleDelete(post.id)}
+                  >
+                    Delete
+                  </button>
                 </div>
               </td>
             </tr>
