@@ -82,7 +82,10 @@ jobs:
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
 
       - name: Log decision
-        run: echo "Auto-merge decision=${{ steps.classify.outputs.should_merge }} reason=${{ steps.classify.outputs.reason }}"
+        run: |
+          echo "### Auto-Merge Decision for #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Decision: ${{ steps.classify.outputs.should_merge }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Reason: ${{ steps.classify.outputs.reason }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Enable auto-merge for eligible Dependabot updates
         if: steps.classify.outputs.should_merge == 'true'
@@ -91,5 +94,5 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          gh pr review "$PR_URL" --approve --body "Auto-approved by GitHub Actions based on SemVer policy. 🚀"
+          gh pr review "$PR_URL" --approve --body "🚀 Auto-approved by GitHub Actions based on SemVer policy."
           gh pr merge --auto --squash "$PR_URL" --delete-branch --subject "⚙️ $PR_TITLE"
