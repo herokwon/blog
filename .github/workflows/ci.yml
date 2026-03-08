@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   lint:
-    name: Check lint
+    name: Lint validation
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -30,8 +30,8 @@ jobs:
       - name: Run lint
         run: pnpm lint
 
-  check:
-    name: Check types
+  types:
+    name: Type validation
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -42,11 +42,32 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-env
 
-      - name: Run check
+      - name: Generate worker types
+        run: pnpm gen
+
+      - name: Check types
         run: pnpm check
 
+      - name: Generate API types
+        run: pnpm gen:api
+
+      - name: Verify generated types are committed
+        run: |
+          set -e
+          FILE_PATH="src/lib/types/schema.d.ts"
+
+          if git diff --quiet -- "$FILE_PATH"; then
+            echo "✅ OpenAPI generated type is up-to-date: $FILE_PATH"
+            exit 0
+          else
+            echo "❌ Generated API type is not committed: $FILE_PATH"
+            echo "Please run 'pnpm gen:api' and commit the updated file."
+            git --no-pager diff -- "$FILE_PATH"
+            exit 1
+          fi
+
   test:
-    name: Test
+    name: Test validation
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -64,7 +85,7 @@ jobs:
         run: pnpm test
 
   build:
-    name: Build
+    name: Build validation
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 10

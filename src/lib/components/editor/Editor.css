@@ -1,0 +1,83 @@
+@layer components {
+  .milkdown-container {
+    @apply size-full rounded-md px-4 py-3 ring ring-gray-300;
+    @apply focus-within:ring-gray-700;
+
+    &:has([contenteditable='false']) {
+      @apply ring-0;
+
+      &.ProseMirror {
+        @apply cursor-default;
+      }
+    }
+  }
+
+  .milkdown-editor.prose {
+    @apply max-w-full!;
+  }
+
+  .ProseMirror {
+    @apply whitespace-pre-wrap;
+  }
+}
+
+@layer utilities {
+  .milkdown-editor.prose {
+    blockquote {
+      @apply my-4 border-l-4 border-gray-300 pl-4;
+
+      p {
+        @apply text-gray-500 not-italic before:content-none after:content-none;
+      }
+    }
+
+    em {
+      @apply italic;
+    }
+
+    h1 {
+      @apply my-4 text-[2rem];
+    }
+
+    h2 {
+      @apply my-3.5 text-[1.5rem];
+    }
+
+    h3 {
+      @apply my-2 text-base;
+    }
+
+    hr {
+      @apply my-4 border-gray-300;
+    }
+
+    ol,
+    ul {
+      @apply my-4 pl-4 text-gray-700 in-[li]:my-1;
+
+      li {
+        @apply my-1;
+      }
+    }
+
+    p {
+      @apply my-1 text-black;
+    }
+
+    pre {
+      @apply my-4 overflow-x-auto rounded-lg border border-gray-200 bg-gray-950 px-4 py-3 text-sm text-gray-100;
+    }
+
+    pre code {
+      @apply border-0 bg-transparent p-0 text-inherit;
+    }
+
+    :not(pre) > code {
+      @apply rounded-md border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-[0.85em] text-gray-900 before:content-none after:content-none;
+    }
+
+    strong {
+      @apply font-semibold;
+    }
+  }
+}

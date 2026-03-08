@@ -1,4 +1,5 @@
 name: ⚡ Issue Template Processor
+
 on:
   issues:
     types: [opened]
@@ -176,7 +177,7 @@ jobs:
           OPTIONAL_DETAILS="<br />"
           [ -n "$ALTERNATIVE" ] && [ "$ALTERNATIVE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔄️ Alternative Considered"$'\n\n'"$ALTERNATIVE"
           [ -n "$EXAMPLE" ] && [ "$EXAMPLE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🧪 Usage Example"$'\n\n'"$EXAMPLE"
-          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔗 Reference"$'\n\n'"- $REFERENCE"
+          [ -n "$REFERENCE" ] && [ "$REFERENCE" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### 🔗 Reference"$'\n\n'"$REFERENCE"
           [ -n "$ADDITIONAL" ] && [ "$ADDITIONAL" != "_No response_" ] && OPTIONAL_DETAILS="$OPTIONAL_DETAILS"$'\n\n'"### ➕ Additional Information"$'\n\n'"$ADDITIONAL"
 
           NEW_BODY=$(cat <<EOF

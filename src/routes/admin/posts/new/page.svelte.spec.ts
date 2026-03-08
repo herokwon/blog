@@ -1,0 +1,133 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { CreatePostApiResponse } from '$lib/types/api';
+import type { Post } from '$lib/types/post';
+import { render } from 'vitest-browser-svelte';
+import { page } from 'vitest/browser';
+
+import Page from './+page.svelte';
+
+const { gotoMock } = vi.hoisted(() => ({
+  gotoMock: vi.fn(),
+}));
+
+vi.mock('$app/navigation', () => ({
+  goto: gotoMock,
+}));
+
+const now = new Date().toISOString();
+const mockPost: Post = {
+  id: '123e4567-e89b-12d3-a456-426614174100',
+  title: 'Test Title',
+  content: 'Test Content',
+  createdAt: now,
+  updatedAt: now,
+};
+
+function stubFetch(response: CreatePostApiResponse): void {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValueOnce(response) }),
+  );
+}
+
+async function submitForm(): Promise<void> {
+  await page.getByRole('textbox', { name: 'Title' }).fill('Hello');
+  await page.getByRole('button', { name: 'Submit' }).click();
+}
+
+describe('[Routes] /admin/posts/new', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    gotoMock.mockReset();
+  });
+
+  it('should render form elements', async () => {
+    render(Page);
+
+    await expect
+      .element(page.getByRole('textbox', { name: 'Title' }))
+      .toBeInTheDocument();
+    await expect
+      .element(page.getByRole('textbox', { name: 'Content' }))
+      .toBeInTheDocument();
+    await expect
+      .element(page.getByRole('button', { name: 'Save draft' }))
+      .toBeInTheDocument();
+    await expect
+      .element(page.getByRole('button', { name: 'Submit' }))
+      .toBeInTheDocument();
+  });
+
+  it('should restore draft from localStorage on mount', async () => {
+    localStorage.setItem(
+      'DRAFT_POST',
+      JSON.stringify({
+        title: 'Draft Title',
+        content: 'Draft Content',
+      }),
+    );
+    render(Page);
+
+    await expect
+      .element(page.getByRole('textbox', { name: 'Title' }))
+      .toHaveValue('Draft Title');
+    await expect
+      .element(page.getByRole('textbox', { name: /content/i }))
+      .toHaveTextContent('Draft Content');
+  });
+
+  it('should save draft to localStorage', async () => {
+    render(Page);
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Hello');
+    await page.getByRole('button', { name: 'Save draft' }).click();
+
+    expect(localStorage.getItem('DRAFT_POST')).toBe(
+      JSON.stringify({ title: 'Hello', content: '' }),
+    );
+  });
+
+  it('should navigate to post detail on successful submission', async () => {
+    stubFetch({
+      success: true,
+      data: mockPost,
+      error: null,
+    });
+    localStorage.setItem(
+      'DRAFT_POST',
+      JSON.stringify({ title: 'A', content: 'B' }),
+    );
+    render(Page);
+
+    await submitForm();
+
+    expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
+    expect(localStorage.getItem('DRAFT_POST')).toBeNull();
+  });
+
+  it('should not navigate on API error response', async () => {
+    localStorage.setItem(
+      'DRAFT_POST',
+      JSON.stringify({ title: 'Draft Title', content: 'Draft Content' }),
+    );
+
+    stubFetch({
+      success: false,
+      data: null,
+      error: {
+        code: 'INVALID_REQUEST',
+        message: 'Invalid input data.',
+        details: null,
+      },
+    });
+    render(Page);
+
+    await submitForm();
+
+    expect(gotoMock).not.toHaveBeenCalled();
+  });
+});
