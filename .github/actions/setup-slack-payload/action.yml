@@ -88,8 +88,8 @@ runs:
           text: { 
             type: 'plain_text',
             text: ok
-              ? `✅ Cloudflare Workers ${process.env.DEPLOYMENT_ENV} 배포 완료`
-              : `❌ Cloudflare Workers ${process.env.DEPLOYMENT_ENV} 배포 실패`,
+              ? `✅ [Cloudflare Workers] ${process.env.DEPLOYMENT_ENV} 배포 완료`
+              : `❌ [Cloudflare Workers] ${process.env.DEPLOYMENT_ENV} 배포 실패`,
             emoji: true
           }
         });
