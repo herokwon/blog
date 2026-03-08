@@ -3,16 +3,18 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  DeletePostByIdApiResponse,
   GetPostByIdApiResponse,
   UpdatePostByIdApiResponse,
 } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
-import { GET, PUT } from './+server';
+import { DELETE, GET, PUT } from './+server';
 
 type MockBucket = {
   get?: (key: string) => Promise<{ json: <T>() => Promise<T> } | null>;
   put?: (key: string, value: string) => Promise<void>;
+  delete?: (key: string) => Promise<void>;
 };
 
 function createMockPlatform(bucketImpl?: MockBucket) {
@@ -289,5 +291,116 @@ describe('PUT /api/posts/[id]', () => {
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('SERVER_ERROR');
     expect(result.error?.message).toBe('fail');
+  });
+});
+
+describe('DELETE /api/posts/[id]', () => {
+  it('should return 400 when post id is missing', async () => {
+    const request = new Request('http://localhost/api/posts/', {
+      method: 'DELETE',
+    });
+    const platform = createMockPlatform();
+    const event = createMockEvent({ request, platform, postId: '' });
+    const response = await DELETE(event);
+    const result: DeletePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('INVALID_REQUEST');
+  });
+
+  it('should return 500 if BLOG bucket is missing', async () => {
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'DELETE',
+    });
+    const platform = { env: {}, ctx: {}, caches: {} };
+    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const response = await DELETE(event);
+    const result: DeletePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('BUCKET_NOT_FOUND');
+  });
+
+  it('should return 404 when post does not exist', async () => {
+    const mockGet = vi.fn().mockResolvedValue(null);
+    const platform = createMockPlatform({ get: mockGet });
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'DELETE',
+    });
+    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const response = await DELETE(event);
+    const result: DeletePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('POST_NOT_FOUND');
+    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
+  });
+
+  it('should return post when found', async () => {
+    const post: Post = {
+      id: MOCK_POST_ID,
+      title: 'title',
+      content: 'content',
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    };
+    const mockGet = vi.fn().mockResolvedValue({ json: async () => post });
+    const mockDelete = vi.fn().mockResolvedValue(undefined);
+    const platform = createMockPlatform({ get: mockGet, delete: mockDelete });
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'DELETE',
+    });
+    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const response = await DELETE(event);
+    const result: DeletePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual(null);
+    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
+    expect(mockDelete).toHaveBeenCalledWith(MOCK_POST_ID);
+  });
+
+  it('should handle server errors during get (existence check)', async () => {
+    const mockGet = vi.fn().mockRejectedValue(new Error('fail-get'));
+    const platform = createMockPlatform({ get: mockGet });
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'DELETE',
+    });
+    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const response = await DELETE(event);
+    const result: DeletePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('fail-get');
+  });
+
+  it('should handle server errors during delete (delete operation)', async () => {
+    const post: Post = {
+      id: MOCK_POST_ID,
+      title: 'title',
+      content: 'content',
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    };
+    const mockGet = vi.fn().mockResolvedValue({ json: async () => post });
+    const mockDelete = vi.fn().mockRejectedValue(new Error('fail-delete'));
+    const platform = createMockPlatform({ get: mockGet, delete: mockDelete });
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'DELETE',
+    });
+    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const response = await DELETE(event);
+    const result: DeletePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('fail-delete');
   });
 });

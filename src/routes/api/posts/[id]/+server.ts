@@ -224,3 +224,83 @@ export const PUT: RequestHandler = async ({
     );
   }
 };
+
+export const DELETE: RequestHandler = async ({
+  platform,
+  params,
+}): Promise<Response> => {
+  try {
+    const postId = params.id;
+    if (!postId) {
+      const error: ApiError = {
+        code: 'INVALID_REQUEST',
+        message: 'Post id is required',
+        details: null,
+      };
+
+      return json(
+        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          status: 400,
+          statusText: 'Bad Request',
+        },
+      );
+    }
+
+    const bucket = platform?.env.BLOG;
+    if (!bucket) {
+      const error: ApiError = {
+        code: 'BUCKET_NOT_FOUND',
+        message: 'Blog bucket not found in environment variables',
+        details: null,
+      };
+
+      return json(
+        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          status: 500,
+          statusText: 'Internal Server Error',
+        },
+      );
+    }
+
+    const storedPost = await bucket.get(postId);
+    if (!storedPost) {
+      const error: ApiError = {
+        code: 'POST_NOT_FOUND',
+        message: 'Post not found',
+        details: { id: postId },
+      };
+
+      return json(
+        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      );
+    }
+
+    await bucket.delete(postId);
+
+    return json({
+      success: true,
+      data: null,
+      error: null,
+    } satisfies ApiSuccessResponse<null>);
+  } catch (e) {
+    const error: ApiError = {
+      code: 'SERVER_ERROR',
+      message: e instanceof Error ? e.message : 'Unknown error',
+      details: null,
+    };
+
+    return json(
+      { success: false, data: null, error } satisfies ApiErrorResponse,
+      {
+        status: 500,
+        statusText: 'Internal Server Error',
+      },
+    );
+  }
+};

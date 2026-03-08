@@ -34,7 +34,8 @@ export interface paths {
     /** Update post by id */
     put: operations['updatePostById'];
     post?: never;
-    delete?: never;
+    /** Delete post by id */
+    delete: operations['deletePostById'];
     options?: never;
     head?: never;
     patch?: never;
@@ -82,6 +83,14 @@ export interface components {
       /** @enum {boolean} */
       success: true;
       data: components['schemas']['Post'][];
+      /** @enum {unknown|null} */
+      error: null;
+    };
+    ApiSuccessResponseEmpty: {
+      /** @enum {boolean} */
+      success: true;
+      /** @enum {unknown|null} */
+      data: null;
       /** @enum {unknown|null} */
       error: null;
     };
@@ -289,6 +298,87 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+      /** @description Post not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "success": false,
+           *       "data": null,
+           *       "error": {
+           *         "code": "POST_NOT_FOUND",
+           *         "message": "Post not found",
+           *         "details": {
+           *           "id": "4e9344a8-b642-47fb-8e8b-b0f1343f77df"
+           *         }
+           *       }
+           *     }
+           */
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+      /** @description Internal server error (bucket not found or unknown server error) */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiErrorResponse'];
+        };
+      };
+    };
+  };
+  deletePostById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Post id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Post deleted successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "success": true,
+           *       "data": null,
+           *       "error": null
+           *     }
+           */
+          'application/json': components['schemas']['ApiSuccessResponseEmpty'];
+        };
+      };
+      /** @description Invalid request (missing id) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "success": false,
+           *       "data": null,
+           *       "error": {
+           *         "code": "INVALID_REQUEST",
+           *         "message": "Post id is required",
+           *         "details": null
+           *       }
+           *     }
+           */
           'application/json': components['schemas']['ApiErrorResponse'];
         };
       };

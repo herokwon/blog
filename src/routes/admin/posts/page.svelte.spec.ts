@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
@@ -84,6 +84,17 @@ describe('[Routes] /admin/posts', () => {
   });
 
   describe('posts table', () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
     it('should render table when posts exist', async () => {
       render(Page, { data: { posts: [mockPost] } });
 
@@ -129,6 +140,27 @@ describe('[Routes] /admin/posts', () => {
       await expect
         .element(page.getByRole('link', { name: 'Edit' }))
         .toBeInTheDocument();
+    });
+
+    it('should render a "Delete" button for the post', async () => {
+      render(Page, { data: { posts: [mockPost] } });
+
+      await expect
+        .element(page.getByRole('button', { name: 'Delete' }))
+        .toBeInTheDocument();
+    });
+
+    it('should remove post from table when Delete button is clicked', async () => {
+      vi.stubGlobal('confirm', () => true);
+      render(Page, { data: { posts: [mockPost] } });
+
+      await page.getByRole('button', { name: 'Delete' }).click();
+
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? '';
+        expect(text).not.toContain(mockPost.title);
+        expect(text).not.toContain(mockPost.id);
+      });
     });
 
     it('should not show empty state when posts exist', async () => {
