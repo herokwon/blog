@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-      - "release/*"
-      - "dependabot/**"
+      - 'release/*'
+      - 'dependabot/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
