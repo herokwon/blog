@@ -11,6 +11,7 @@ case "$COMMIT_MSG" in
   assets*)  REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^assets/📁 assets/') ;;
   docs*)    REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^docs/📝 docs/') ;;
   chore*)   REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^chore/⚙️ chore/') ;;
+  release*) REPLACED_MSG=$(echo "$COMMIT_MSG" | sed 's/^release/🚀 release/') ;;
   *)         REPLACED_MSG="$COMMIT_MSG" ;;
 esac
 
