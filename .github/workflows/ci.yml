@@ -79,7 +79,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install playwright browsers
-        run: pnpm exec playwright install
+        run: pnpm exec playwright install chromium --with-deps
 
       - name: Run test
         run: pnpm test
