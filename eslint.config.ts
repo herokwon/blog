@@ -9,7 +9,7 @@ import globals from 'globals';
 import path from 'node:path';
 import ts from 'typescript-eslint';
 
-import svelteConfig from './svelte.config.js';
+import svelteConfig from './svelte.config.ts';
 
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
