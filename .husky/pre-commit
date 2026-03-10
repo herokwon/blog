@@ -1,0 +1,9 @@
+echo "🔍 Applying lint rules before commit..."
+
+if pnpm lint:fix; then
+  echo "✅ All lint rules applied successfully. Proceeding with commit."
+  exit 0
+else
+  echo "❌ Lint rules check failed."
+  exit 1
+fi
