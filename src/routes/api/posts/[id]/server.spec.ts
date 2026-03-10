@@ -1,5 +1,3 @@
-import type { RequestEvent } from '@sveltejs/kit';
-
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -9,58 +7,19 @@ import type {
 } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
+import { createMockEvent, createMockPlatform } from '../test-utils';
 import { DELETE, GET, PUT } from './+server';
 
-type MockBucket = {
-  get?: (key: string) => Promise<{ json: <T>() => Promise<T> } | null>;
-  put?: (key: string, value: string) => Promise<void>;
-  delete?: (key: string) => Promise<void>;
-};
-
-function createMockPlatform(bucketImpl?: MockBucket) {
-  return {
-    env: {
-      BLOG: bucketImpl,
-    },
-    ctx: {},
-    caches: {},
-  };
-}
-
-function createMockEvent({
-  request,
-  platform,
-  postId,
-}: {
-  request: Request;
-  platform?: object;
-  postId?: string;
-}): RequestEvent {
-  return {
-    request,
-    platform,
-    cookies: {
-      get: () => undefined,
-      getAll: () => [],
-      set: () => {},
-      delete: () => {},
-      serialize: () => '',
-    },
-    fetch: global.fetch,
-    getClientAddress: () => '',
-    locals: {},
-    params: { id: postId ?? '' },
-    route: { id: '/api/posts/[id]' },
-    url: new URL(request.url),
-    setHeaders: () => {},
-    isDataRequest: false,
-    isSubRequest: false,
-    tracing: { enabled: false, root: null, current: null },
-    isRemoteRequest: false,
-  } as unknown as RequestEvent;
-}
-
 const MOCK_POST_ID = '4e9344a8-b642-47fb-8e8b-b0f1343f77df';
+
+function createMockEventWithPost(
+  args: Omit<Parameters<typeof createMockEvent>[0], 'routeId'>,
+) {
+  return createMockEvent({
+    ...args,
+    routeId: `/api/posts/${args.postId}`,
+  });
+}
 
 describe('GET /api/posts/[id]', () => {
   it('should return 400 when post id is missing', async () => {
@@ -68,7 +27,7 @@ describe('GET /api/posts/[id]', () => {
       method: 'GET',
     });
     const platform = createMockPlatform();
-    const event = createMockEvent({ request, platform, postId: '' });
+    const event = createMockEventWithPost({ request, platform });
     const response = await GET(event);
     const result: GetPostByIdApiResponse = await response.json();
 
@@ -82,7 +41,11 @@ describe('GET /api/posts/[id]', () => {
       method: 'GET',
     });
     const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await GET(event);
     const result: GetPostByIdApiResponse = await response.json();
 
@@ -97,7 +60,11 @@ describe('GET /api/posts/[id]', () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'GET',
     });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await GET(event);
     const result: GetPostByIdApiResponse = await response.json();
 
@@ -120,7 +87,11 @@ describe('GET /api/posts/[id]', () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'GET',
     });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await GET(event);
     const result: GetPostByIdApiResponse = await response.json();
 
@@ -136,7 +107,11 @@ describe('GET /api/posts/[id]', () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'GET',
     });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await GET(event);
     const result: GetPostByIdApiResponse = await response.json();
 
@@ -155,7 +130,7 @@ describe('PUT /api/posts/[id]', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform();
-    const event = createMockEvent({ request, platform, postId: '' });
+    const event = createMockEventWithPost({ request, platform });
     const response = await PUT(event);
     const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -172,7 +147,11 @@ describe('PUT /api/posts/[id]', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform({ get: vi.fn(), put: vi.fn() });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await PUT(event);
     const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -191,7 +170,11 @@ describe('PUT /api/posts/[id]', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform({ get: vi.fn(), put: vi.fn() });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await PUT(event);
     const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -210,7 +193,11 @@ describe('PUT /api/posts/[id]', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await PUT(event);
     const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -227,7 +214,11 @@ describe('PUT /api/posts/[id]', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform({ get: mockGet });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await PUT(event);
     const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -256,7 +247,11 @@ describe('PUT /api/posts/[id]', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform({ get: mockGet, put: mockPut });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await PUT(event);
     const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -283,7 +278,11 @@ describe('PUT /api/posts/[id]', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform({ get: mockGet });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await PUT(event);
     const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -300,7 +299,7 @@ describe('DELETE /api/posts/[id]', () => {
       method: 'DELETE',
     });
     const platform = createMockPlatform();
-    const event = createMockEvent({ request, platform, postId: '' });
+    const event = createMockEventWithPost({ request, platform });
     const response = await DELETE(event);
     const result: DeletePostByIdApiResponse = await response.json();
 
@@ -314,7 +313,11 @@ describe('DELETE /api/posts/[id]', () => {
       method: 'DELETE',
     });
     const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await DELETE(event);
     const result: DeletePostByIdApiResponse = await response.json();
 
@@ -329,7 +332,11 @@ describe('DELETE /api/posts/[id]', () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'DELETE',
     });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await DELETE(event);
     const result: DeletePostByIdApiResponse = await response.json();
 
@@ -353,7 +360,11 @@ describe('DELETE /api/posts/[id]', () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'DELETE',
     });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await DELETE(event);
     const result: DeletePostByIdApiResponse = await response.json();
 
@@ -370,7 +381,11 @@ describe('DELETE /api/posts/[id]', () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'DELETE',
     });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await DELETE(event);
     const result: DeletePostByIdApiResponse = await response.json();
 
@@ -394,7 +409,11 @@ describe('DELETE /api/posts/[id]', () => {
     const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
       method: 'DELETE',
     });
-    const event = createMockEvent({ request, platform, postId: MOCK_POST_ID });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
     const response = await DELETE(event);
     const result: DeletePostByIdApiResponse = await response.json();
 

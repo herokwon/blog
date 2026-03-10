@@ -1,5 +1,3 @@
-import type { RequestEvent } from '@sveltejs/kit';
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -9,60 +7,20 @@ import type {
 import type { Post } from '$lib/types/post';
 
 import { GET, POST } from './+server';
+import {
+  createMockEvent,
+  createMockPlatform,
+  type MockBucket,
+} from './test-utils';
 
 const MOCK_FIRST_POST_ID = '7b0f4f50-40ef-4625-b4f7-743f72f36f8f';
 const MOCK_SECOND_POST_ID = 'f2fb88b6-aeb8-4459-a2f4-073022eb35f9';
 const MOCK_REQUEST_POST_ID = '91bb149f-9a73-47c8-b3da-f2327e63ca02';
 
-type MockBucket = {
-  put?: (key: string, value: string) => void;
-  get?: (key: string) => Promise<{ json: <T>() => Promise<T> } | null>;
-  list?: (options?: { cursor?: string }) => Promise<{
-    objects: { key: string }[];
-    truncated: boolean;
-    cursor?: string;
-  }>;
-};
-
-function createMockPlatform(bucketImpl?: MockBucket) {
-  return {
-    env: {
-      BLOG: bucketImpl,
-    },
-    ctx: {},
-    caches: {},
-  };
-}
-
-function createMockEvent({
-  request,
-  platform,
-}: {
-  request: Request;
-  platform?: object;
-}): RequestEvent {
-  return {
-    request,
-    platform,
-    cookies: {
-      get: () => undefined,
-      getAll: () => [],
-      set: () => {},
-      delete: () => {},
-      serialize: () => '',
-    },
-    fetch: global.fetch,
-    getClientAddress: () => '',
-    locals: {},
-    params: {},
-    route: { id: '/api/posts' },
-    url: new URL(request.url),
-    setHeaders: () => {},
-    isDataRequest: false,
-    isSubRequest: false,
-    tracing: { enabled: false, root: null, current: null },
-    isRemoteRequest: false,
-  } as RequestEvent;
+function createMockEventWithPosts(
+  args: Omit<Parameters<typeof createMockEvent>[0], 'routeId'>,
+) {
+  return createMockEvent({ ...args, routeId: '/api/posts' });
 }
 
 describe('GET /api/posts', () => {
@@ -71,7 +29,7 @@ describe('GET /api/posts', () => {
       method: 'GET',
     });
     const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await GET(event);
     const result: ListPostsApiResponse = await response.json();
 
@@ -117,7 +75,7 @@ describe('GET /api/posts', () => {
       method: 'GET',
     });
     const platform = createMockPlatform({ list: mockList, get: mockGet });
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await GET(event);
     const result: ListPostsApiResponse = await response.json();
 
@@ -138,7 +96,7 @@ describe('GET /api/posts', () => {
       method: 'GET',
     });
     const platform = createMockPlatform({ list: mockList });
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await GET(event);
     const result: ListPostsApiResponse = await response.json();
 
@@ -165,7 +123,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -184,7 +142,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -210,7 +168,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -227,7 +185,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -255,7 +213,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
