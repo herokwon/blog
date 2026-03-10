@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint validation
+    name: Lint
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -31,7 +31,7 @@ jobs:
         run: pnpm lint
 
   types:
-    name: Type validation
+    name: Check types
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -67,7 +67,7 @@ jobs:
           fi
 
   test:
-    name: Test validation
+    name: Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -78,14 +78,14 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-env
 
-      - name: Install Playwright browsers
+      - name: Install playwright browsers
         run: pnpm exec playwright install
 
       - name: Run test
         run: pnpm test
 
   build:
-    name: Build validation
+    name: Build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 10
