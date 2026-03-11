@@ -23,6 +23,25 @@ vi.mock('$app/navigation', () => ({
   },
 }));
 
+vi.mock('$lib/components/editor/config', () => ({
+  createMilkdownEditor: vi.fn(
+    async (options: {
+      root: HTMLElement;
+      defaultValue: string;
+      onChange?: (markdown: string) => void;
+      readOnly?: boolean;
+    }) => {
+      const editable = document.createElement('div');
+      editable.setAttribute('contenteditable', 'true');
+      editable.setAttribute('role', 'textbox');
+      editable.textContent = options.defaultValue ?? '';
+      options.root.appendChild(editable);
+      options.onChange?.(options.defaultValue ?? '');
+      return {};
+    },
+  ),
+}));
+
 const now = new Date().toISOString();
 const mockPost: Post = {
   id: '123e4567-e89b-12d3-a456-426614174100',
@@ -214,5 +233,132 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
       'You have unsaved changes. Leave this page?',
     );
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('should skip navigation guard when navigation.to is null', async () => {
+    render(Page, { data: { post: mockPost } });
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    const cancel = vi.fn();
+
+    beforeNavigateHandlers[0]?.({ to: null, cancel });
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('should skip navigation guard when there are no unsaved changes', async () => {
+    render(Page, { data: { post: mockPost } });
+
+    await expect
+      .element(page.getByRole('textbox', { name: 'Title' }))
+      .toHaveValue(mockPost.title);
+
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    const cancel = vi.fn();
+
+    beforeNavigateHandlers[0]?.({ to: { route: { id: '/other' } }, cancel });
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('should skip navigation guard while the form is being submitted', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    );
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(Page, { data: { post: mockPost } });
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+    await page.getByRole('button', { name: 'Update' }).click();
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+
+    const cancel = vi.fn();
+    beforeNavigateHandlers[0]?.({ to: { route: { id: '/other' } }, cancel });
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('should allow navigation when user confirms leaving with unsaved changes', async () => {
+    render(Page, { data: { post: mockPost } });
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const cancel = vi.fn();
+
+    beforeNavigateHandlers[0]?.({ to: { route: { id: '/other' } }, cancel });
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'You have unsaved changes. Leave this page?',
+    );
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('should not prevent page unload when there are no unsaved changes', async () => {
+    render(Page, { data: { post: mockPost } });
+
+    await expect
+      .element(page.getByRole('textbox', { name: 'Title' }))
+      .toHaveValue(mockPost.title);
+
+    const event = new Event('beforeunload', { cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+    window.dispatchEvent(event);
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+  });
+
+  it('should prevent page unload when there are unsaved changes', async () => {
+    render(Page, { data: { post: mockPost } });
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+
+    const event = new Event('beforeunload', { cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+    window.dispatchEvent(event);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should not prevent page unload while the form is being submitted', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    );
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(Page, { data: { post: mockPost } });
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+    await page.getByRole('button', { name: 'Update' }).click();
+
+    const event = new Event('beforeunload', { cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+    window.dispatchEvent(event);
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+  });
+
+  it('should remove beforeunload listener on unmount', async () => {
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+    const view = render(Page, { data: { post: mockPost } });
+
+    await view.unmount();
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
+      'beforeunload',
+      expect.any(Function),
+    );
   });
 });

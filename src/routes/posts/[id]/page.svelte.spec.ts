@@ -31,4 +31,28 @@ describe('[Routes] /posts/[id]', () => {
       .toBeInTheDocument();
     await expect.element(page.getByRole('time')).toBeInTheDocument();
   });
+
+  it('should update page title and heading when post data changes', async () => {
+    const updatedPost: Post = {
+      ...mockPost,
+      title: 'Updated Title',
+    };
+
+    const view = render(Page, { data: { post: mockPost } });
+
+    await view.rerender({ data: { post: updatedPost } });
+
+    await expect
+      .element(page.getByRole('heading', { level: 1 }))
+      .toHaveTextContent(updatedPost.title);
+    expect(document.title).toBe(updatedPost.title);
+  });
+
+  it('should render without crashing when post title is null', async () => {
+    render(Page, {
+      data: { post: { ...mockPost, title: null as unknown as string } },
+    });
+
+    await expect.element(page.getByRole('article')).toBeInTheDocument();
+  });
 });

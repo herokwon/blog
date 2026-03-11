@@ -50,4 +50,14 @@ describe('[Routes] /posts', () => {
       .element(page.getByRole('heading', { level: 2, name: 'Hello World' }))
       .toBeInTheDocument();
   });
+
+  it('should truncate long post excerpts with an ellipsis', async () => {
+    const longPost: Post = {
+      ...mockPost,
+      content: 'a'.repeat(250),
+    };
+    render(Page, { data: { posts: [longPost] } });
+
+    await expect.element(page.getByText(/a{200}…/)).toBeInTheDocument();
+  });
 });
