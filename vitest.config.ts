@@ -37,9 +37,20 @@ export default mergeConfig(viteConfig, {
           name: 'client',
           browser: {
             enabled: true,
-            provider: playwright(),
+            // If PW_WS_ENDPOINT is provided by the setup file, connect to it so
+            // the worker can reuse a single Chromium server instance.
+            provider: playwright({
+              connectOptions: process.env.PW_WS_ENDPOINT
+                ? {
+                    wsEndpoint: process.env.PW_WS_ENDPOINT,
+                  }
+                : undefined,
+            }),
             instances: [{ browser: 'chromium', headless: true }],
           },
+          // The global Playwright WebSocket endpoint can be provided via
+          // `process.env.PW_WS_ENDPOINT` when running tests. We no longer use
+          // a worker-level setup file to avoid bundling issues.
           include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
           exclude: ['src/lib/server/**'],
         },
