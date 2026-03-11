@@ -140,7 +140,19 @@ vi.mock('@milkdown/prose/inputrules', () => ({
   ) => {
     void regexp;
     void type;
-    void attrs;
+    // Execute attrs to cover the match callback body in config.ts
+    attrs(
+      Object.assign(['##'], {
+        groups: { hashes: '##' },
+      }) as RegExpMatchArray & {
+        groups?: { hashes?: string };
+      },
+    );
+    attrs(
+      Object.assign(['#'], {
+        groups: undefined as undefined,
+      }) as RegExpMatchArray & { groups?: { hashes?: string } },
+    );
     return { key: 'textblockTypeInputRule' };
   },
 }));
@@ -150,11 +162,47 @@ vi.mock('@milkdown/utils', () => ({
     key: string,
     factory: (ctx: object) => (level?: number) => object,
   ) => {
-    void factory;
+    const commandFn = factory({});
+    commandFn(); // undefined → next = 1 (valid heading)
+    commandFn(0); // next < 1 → paragraph
+    commandFn(4); // next > 3 → paragraph
+    commandFn(2); // valid → heading
     return { key };
   },
   $inputRule: (factory: (ctx: object) => object) => {
-    void factory;
+    // Non-heading node: covers return { level: x }
+    factory({
+      get: (token: string) =>
+        token === 'editorViewCtx'
+          ? {
+              state: {
+                selection: {
+                  $from: {
+                    node: () => ({ type: { name: 'paragraph' }, attrs: {} }),
+                  },
+                },
+              },
+            }
+          : null,
+    });
+    // Heading node: covers Math.min + return { level }
+    factory({
+      get: (token: string) =>
+        token === 'editorViewCtx'
+          ? {
+              state: {
+                selection: {
+                  $from: {
+                    node: () => ({
+                      type: { name: 'heading' },
+                      attrs: { level: 1 },
+                    }),
+                  },
+                },
+              },
+            }
+          : null,
+    });
     return { key: 'inputRule' };
   },
   $useKeymap: (
@@ -171,7 +219,11 @@ vi.mock('@milkdown/utils', () => ({
       }
     >,
   ) => {
-    void keymap;
+    const mockCommands = { call: (): boolean => true };
+    const mockCtx = { get: () => mockCommands };
+    for (const entry of Object.values(keymap)) {
+      entry.command(mockCtx)();
+    }
     return { key };
   },
 }));
@@ -216,5 +268,112 @@ describe('[Components] Editor config', () => {
 
     callback('ctx', '###### Next', 'Old');
     expect(onChange).toHaveBeenCalledWith('Next');
+  });
+
+  it('should not set up listener when onChange is not provided', async () => {
+    state.listenerCallback = null;
+
+    await createMilkdownEditor({ root: {} as HTMLElement, defaultValue: '' });
+
+    expect(state.listenerCallback).toBeNull();
+  });
+
+  it('should not set up listener when readOnly is true even if onChange is provided', async () => {
+    state.listenerCallback = null;
+    const onChange = vi.fn<(markdown: string) => void>();
+
+    await createMilkdownEditor({
+      root: {} as HTMLElement,
+      defaultValue: '',
+      onChange,
+      readOnly: true,
+    });
+
+    expect(state.listenerCallback).toBeNull();
+  });
+
+  it('should configure editable as true when not readOnly', async () => {
+    state.updateMock.mockClear();
+
+    await createMilkdownEditor({ root: {} as HTMLElement, defaultValue: '' });
+
+    const call = state.updateMock.mock.calls.find(
+      ([token]) => token === 'editorViewOptionsCtx',
+    );
+    expect(call).toBeDefined();
+
+    const result = call![1]({ flag: false });
+    expect(result.editable()).toBe(true);
+  });
+
+  it('should configure editable as false when readOnly is true', async () => {
+    state.updateMock.mockClear();
+
+    await createMilkdownEditor({
+      root: {} as HTMLElement,
+      defaultValue: '',
+      readOnly: true,
+    });
+
+    const call = state.updateMock.mock.calls.find(
+      ([token]) => token === 'editorViewOptionsCtx',
+    );
+    expect(call).toBeDefined();
+
+    const result = call![1]({ flag: false });
+    expect(result.editable()).toBe(false);
+  });
+
+  it('should not normalize h1-h3 headings', async () => {
+    state.setMock.mockClear();
+
+    await createMilkdownEditor({
+      root: {} as HTMLElement,
+      defaultValue: '# H1\n## H2\n### H3',
+    });
+
+    expect(state.setMock).toHaveBeenCalledWith(
+      'defaultValueCtx',
+      '# H1\n## H2\n### H3',
+    );
+  });
+
+  it('should keep headings inside tilde fences', async () => {
+    state.setMock.mockClear();
+
+    await createMilkdownEditor({
+      root: {} as HTMLElement,
+      defaultValue: '~~~\n#### inside\n~~~\n#### outside',
+    });
+
+    expect(state.setMock).toHaveBeenCalledWith(
+      'defaultValueCtx',
+      '~~~\n#### inside\n~~~\noutside',
+    );
+  });
+
+  it('should not close a backtick fence with a tilde marker', async () => {
+    state.setMock.mockClear();
+
+    await createMilkdownEditor({
+      root: {} as HTMLElement,
+      defaultValue: '```\n#### inside\n~~~\n#### still inside\n```',
+    });
+
+    expect(state.setMock).toHaveBeenCalledWith(
+      'defaultValueCtx',
+      '```\n#### inside\n~~~\n#### still inside\n```',
+    );
+  });
+
+  it('should normalize heading with trailing hashes', async () => {
+    state.setMock.mockClear();
+
+    await createMilkdownEditor({
+      root: {} as HTMLElement,
+      defaultValue: '#### Heading ####',
+    });
+
+    expect(state.setMock).toHaveBeenCalledWith('defaultValueCtx', 'Heading');
   });
 });

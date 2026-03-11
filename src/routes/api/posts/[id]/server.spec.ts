@@ -120,6 +120,25 @@ describe('GET /api/posts/[id]', () => {
     expect(result.error?.code).toBe('SERVER_ERROR');
     expect(result.error?.message).toBe('fail');
   });
+  it('should use "Unknown error" message when thrown value is not an Error', async () => {
+    const mockGet = vi.fn().mockRejectedValue('non-error value');
+    const platform = createMockPlatform({ get: mockGet });
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'GET',
+    });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
+    const response = await GET(event);
+    const result: GetPostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('Unknown error');
+  });
 });
 
 describe('PUT /api/posts/[id]', () => {
@@ -291,6 +310,27 @@ describe('PUT /api/posts/[id]', () => {
     expect(result.error?.code).toBe('SERVER_ERROR');
     expect(result.error?.message).toBe('fail');
   });
+  it('should use "Unknown error" message when thrown value is not an Error', async () => {
+    const mockGet = vi.fn().mockRejectedValue('non-error value');
+    const platform = createMockPlatform({ get: mockGet });
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title: 'updated', content: 'updated content' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
+    const response = await PUT(event);
+    const result: UpdatePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('Unknown error');
+  });
 });
 
 describe('DELETE /api/posts/[id]', () => {
@@ -421,5 +461,25 @@ describe('DELETE /api/posts/[id]', () => {
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('SERVER_ERROR');
     expect(result.error?.message).toBe('fail-delete');
+  });
+
+  it('should use "Unknown error" message when thrown value is not an Error', async () => {
+    const mockGet = vi.fn().mockRejectedValue('non-error value');
+    const platform = createMockPlatform({ get: mockGet });
+    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
+      method: 'DELETE',
+    });
+    const event = createMockEventWithPost({
+      request,
+      platform,
+      postId: MOCK_POST_ID,
+    });
+    const response = await DELETE(event);
+    const result: DeletePostByIdApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('Unknown error');
   });
 });
