@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint validation
+    name: Lint
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -31,7 +31,7 @@ jobs:
         run: pnpm lint
 
   types:
-    name: Type validation
+    name: Check types
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 5
@@ -67,10 +67,10 @@ jobs:
           fi
 
   test:
-    name: Test validation
+    name: Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -78,14 +78,19 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-env
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install
+      - name: Playwright browser caching note
+        run: |
+          echo "Playwright: do not cache browser binaries; restoring cache can be as slow as downloading them."
+          echo "See: https://playwright.dev/docs/ci#caching-browsers"
+
+      - name: Install playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
 
       - name: Run test
         run: pnpm test
 
   build:
-    name: Build validation
+    name: Build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !github.event.pull_request.draft
     timeout-minutes: 10

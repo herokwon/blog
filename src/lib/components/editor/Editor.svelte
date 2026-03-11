@@ -16,13 +16,13 @@
     ...divProps
   }: Props = $props();
 
-  let editorElement: HTMLElement;
+  let editorElement: HTMLElement | null = null;
 
   function focusEditorOnContainerMouseDown(event: MouseEvent) {
     if (readOnly) return;
 
     const target = event.target;
-    const editable = editorElement.querySelector<HTMLElement>(
+    const editable = editorElement?.querySelector<HTMLElement>(
       '[contenteditable="true"]',
     );
     if (!(target instanceof Node) || !editable) return;
@@ -33,22 +33,21 @@
   }
 
   onMount(async () => {
-    if (!editorElement) return;
+    if (editorElement) {
+      await createMilkdownEditor({
+        root: editorElement,
+        defaultValue: content,
+        readOnly,
+        onChange: (markdown: string) => {
+          content = markdown;
+        },
+      });
 
-    await createMilkdownEditor({
-      root: editorElement,
-      defaultValue: content,
-      readOnly,
-      onChange: (markdown: string) => {
-        content = markdown;
-      },
-    });
-
-    if (readOnly) return;
-
-    editorElement
-      .querySelector('[contenteditable="true"]')
-      ?.setAttribute('aria-label', 'content');
+      if (readOnly) return;
+      editorElement
+        ?.querySelector('[contenteditable="true"]')
+        ?.setAttribute('aria-label', 'content');
+    }
   });
 </script>
 

@@ -15,6 +15,25 @@ vi.mock('$app/navigation', () => ({
   goto: gotoMock,
 }));
 
+vi.mock('$lib/components/editor/config', () => ({
+  createMilkdownEditor: vi.fn(
+    async (options: {
+      root: HTMLElement;
+      defaultValue: string;
+      onChange?: (markdown: string) => void;
+      readOnly?: boolean;
+    }) => {
+      const editable = document.createElement('div');
+      editable.setAttribute('contenteditable', 'true');
+      editable.setAttribute('role', 'textbox');
+      editable.textContent = options.defaultValue ?? '';
+      options.root.appendChild(editable);
+      options.onChange?.(options.defaultValue ?? '');
+      return {};
+    },
+  ),
+}));
+
 const now = new Date().toISOString();
 const mockPost: Post = {
   id: '123e4567-e89b-12d3-a456-426614174100',
@@ -80,6 +99,23 @@ describe('[Routes] /admin/posts/new', () => {
       .toHaveTextContent('Draft Content');
   });
 
+  it('should not save draft when title and content are both empty', async () => {
+    render(Page);
+    await expect
+      .element(page.getByRole('button', { name: 'Save draft' }))
+      .toBeDisabled();
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+    const button = document.querySelector(
+      'button[type="button"]',
+    ) as HTMLButtonElement;
+    button.disabled = false;
+    button.click();
+
+    expect(setItemSpy).not.toHaveBeenCalled();
+  });
+
   it('should save draft to localStorage', async () => {
     render(Page);
 
@@ -107,6 +143,22 @@ describe('[Routes] /admin/posts/new', () => {
 
     expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
     expect(localStorage.getItem('DRAFT_POST')).toBeNull();
+  });
+
+  it('should handle corrupted localStorage data gracefully', async () => {
+    localStorage.setItem('DRAFT_POST', 'not-valid-json');
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    render(Page);
+
+    await expect
+      .element(page.getByRole('textbox', { name: 'Title' }))
+      .toHaveValue('');
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Failed to load draft post from localStorage:',
+      expect.any(Error),
+    );
   });
 
   it('should not navigate on API error response', async () => {

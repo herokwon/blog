@@ -1,5 +1,3 @@
-import type { RequestEvent } from '@sveltejs/kit';
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -9,60 +7,20 @@ import type {
 import type { Post } from '$lib/types/post';
 
 import { GET, POST } from './+server';
+import {
+  createMockEvent,
+  createMockPlatform,
+  type MockBucket,
+} from './test-utils';
 
 const MOCK_FIRST_POST_ID = '7b0f4f50-40ef-4625-b4f7-743f72f36f8f';
 const MOCK_SECOND_POST_ID = 'f2fb88b6-aeb8-4459-a2f4-073022eb35f9';
 const MOCK_REQUEST_POST_ID = '91bb149f-9a73-47c8-b3da-f2327e63ca02';
 
-type MockBucket = {
-  put?: (key: string, value: string) => void;
-  get?: (key: string) => Promise<{ json: <T>() => Promise<T> } | null>;
-  list?: (options?: { cursor?: string }) => Promise<{
-    objects: { key: string }[];
-    truncated: boolean;
-    cursor?: string;
-  }>;
-};
-
-function createMockPlatform(bucketImpl?: MockBucket) {
-  return {
-    env: {
-      BLOG: bucketImpl,
-    },
-    ctx: {},
-    caches: {},
-  };
-}
-
-function createMockEvent({
-  request,
-  platform,
-}: {
-  request: Request;
-  platform?: object;
-}): RequestEvent {
-  return {
-    request,
-    platform,
-    cookies: {
-      get: () => undefined,
-      getAll: () => [],
-      set: () => {},
-      delete: () => {},
-      serialize: () => '',
-    },
-    fetch: global.fetch,
-    getClientAddress: () => '',
-    locals: {},
-    params: {},
-    route: { id: '/api/posts' },
-    url: new URL(request.url),
-    setHeaders: () => {},
-    isDataRequest: false,
-    isSubRequest: false,
-    tracing: { enabled: false, root: null, current: null },
-    isRemoteRequest: false,
-  } as RequestEvent;
+function createMockEventWithPosts(
+  args: Omit<Parameters<typeof createMockEvent>[0], 'routeId'>,
+) {
+  return createMockEvent({ ...args, routeId: '/api/posts' });
 }
 
 describe('GET /api/posts', () => {
@@ -71,7 +29,7 @@ describe('GET /api/posts', () => {
       method: 'GET',
     });
     const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await GET(event);
     const result: ListPostsApiResponse = await response.json();
 
@@ -117,7 +75,7 @@ describe('GET /api/posts', () => {
       method: 'GET',
     });
     const platform = createMockPlatform({ list: mockList, get: mockGet });
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await GET(event);
     const result: ListPostsApiResponse = await response.json();
 
@@ -132,13 +90,46 @@ describe('GET /api/posts', () => {
     expect(mockGet).toHaveBeenCalledTimes(2);
   });
 
+  it('should skip objects that return null from bucket.get', async () => {
+    const existingPost: Post = {
+      id: MOCK_FIRST_POST_ID,
+      title: 'first',
+      content: 'content-1',
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    };
+
+    const mockList = vi.fn().mockResolvedValueOnce({
+      objects: [{ key: 'missing-key' }, { key: existingPost.id }],
+      truncated: false,
+    });
+
+    const mockGet = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ json: async () => existingPost });
+
+    const request = new Request('http://localhost/api/posts', {
+      method: 'GET',
+    });
+    const platform = createMockPlatform({ list: mockList, get: mockGet });
+    const event = createMockEventWithPosts({ request, platform });
+    const response = await GET(event);
+    const result: ListPostsApiResponse = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect(result.data?.[0].id).toBe(existingPost.id);
+  });
+
   it('should handle server errors', async () => {
     const mockList = vi.fn().mockRejectedValue(new Error('fail'));
     const request = new Request('http://localhost/api/posts', {
       method: 'GET',
     });
     const platform = createMockPlatform({ list: mockList });
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await GET(event);
     const result: ListPostsApiResponse = await response.json();
 
@@ -146,6 +137,22 @@ describe('GET /api/posts', () => {
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('SERVER_ERROR');
     expect(result.error?.message).toBe('fail');
+  });
+
+  it('should use "Unknown error" message when thrown value is not an Error', async () => {
+    const mockList = vi.fn().mockRejectedValue('non-error value');
+    const request = new Request('http://localhost/api/posts', {
+      method: 'GET',
+    });
+    const platform = createMockPlatform({ list: mockList });
+    const event = createMockEventWithPosts({ request, platform });
+    const response = await GET(event);
+    const result: ListPostsApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('Unknown error');
   });
 });
 
@@ -165,7 +172,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -184,7 +191,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -210,7 +217,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -227,7 +234,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -255,7 +262,7 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
     });
     const platform = createMockPlatform(mockBucket);
-    const event = createMockEvent({ request, platform });
+    const event = createMockEventWithPosts({ request, platform });
     const response = await POST(event);
     const result: CreatePostApiResponse = await response.json();
 
@@ -263,5 +270,27 @@ describe('POST /api/posts', () => {
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('SERVER_ERROR');
     expect(result.error?.message).toBe('fail');
+  });
+
+  it('should use "Unknown error" message when thrown value is not an Error', async () => {
+    mockPut = vi.fn(() => {
+      throw 'non-error value';
+    });
+    mockBucket = { put: mockPut };
+
+    const request = new Request('http://localhost/api/posts', {
+      method: 'POST',
+      body: JSON.stringify({ title: 't', content: 'c' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const platform = createMockPlatform(mockBucket);
+    const event = createMockEventWithPosts({ request, platform });
+    const response = await POST(event);
+    const result: CreatePostApiResponse = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('SERVER_ERROR');
+    expect(result.error?.message).toBe('Unknown error');
   });
 });

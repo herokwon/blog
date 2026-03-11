@@ -56,6 +56,28 @@ pnpm preview
 
 <br />
 
+## 🧪 Testing
+
+Prerequisites:
+
+- Node.js (recommended LTS)
+- pnpm (package manager)
+
+Install dependencies and Playwright browsers:
+
+```sh
+pnpm install
+pnpm exec playwright install chromium --with-deps
+```
+
+Run the full test suite (this project uses a small test runner wrapper that launches a single Playwright Chromium server and runs Vitest):
+
+```sh
+pnpm test
+```
+
+<br />
+
 ## 📖 Content
 
 This blog uses [Milkdown](https://milkdown.dev) as the writting editor and stores post data in [Cloudflare R2](https://cloudflare.com/developer-platform/products/r2)
