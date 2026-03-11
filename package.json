@@ -14,7 +14,7 @@
     "lint:fix": "pnpm format && eslint . --fix --max-warnings=0",
     "format": "prettier --write .",
     "test:watch": "vitest",
-    "test": "vitest run --coverage",
+    "test": "tsx ./scripts/run-tests-with-chromium.ts",
     "test:ui": "vitest --ui",
     "gen": "wrangler types",
     "gen:api": "openapi-typescript ./openapi.yml -o ./src/lib/types/schema.d.ts && prettier --write ./src/lib/types/schema.d.ts",
