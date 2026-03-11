@@ -11,8 +11,8 @@ export default mergeConfig(viteConfig, {
     expect: { requireAssertions: true },
     reporters:
       process.env.GITHUB_ACTIONS === 'true'
-        ? ['default', 'github-actions']
-        : ['default'],
+        ? ['default', 'hanging-process', 'github-actions']
+        : ['default', 'hanging-process'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,svelte}'],
