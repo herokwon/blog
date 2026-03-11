@@ -21,6 +21,9 @@ jobs:
     name: Deploy to Cloudflare Workers
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    concurrency:
+      group: deploy-worker-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: read
     outputs:
