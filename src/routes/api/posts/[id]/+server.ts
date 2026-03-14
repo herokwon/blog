@@ -5,18 +5,9 @@ import type {
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '$lib/types/api';
-import type { Post, PostInput } from '$lib/types/post';
+import type { Post } from '$lib/types/post';
 
-function isUpdatePostRequestBody(body: unknown): body is PostInput {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'title' in body &&
-    typeof body.title === 'string' &&
-    'content' in body &&
-    typeof body.content === 'string'
-  );
-}
+import { isPostInput } from '../utils';
 
 export const GET: RequestHandler = async ({
   platform,
@@ -140,7 +131,7 @@ export const PUT: RequestHandler = async ({
       );
     }
 
-    if (!isUpdatePostRequestBody(body)) {
+    if (!isPostInput(body)) {
       const error: ApiError = {
         code: 'INVALID_REQUEST',
         message:
