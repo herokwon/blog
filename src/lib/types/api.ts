@@ -1,20 +1,20 @@
 import type { components, operations } from '$lib/types/schema';
 
+type SchemaApiSuccessResponse = components['schemas']['ApiSuccessResponse'];
 type SchemaApiError = components['schemas']['ApiError'];
 type SchemaApiErrorResponse = components['schemas']['ApiErrorResponse'];
 
 export type ApiError = SchemaApiError;
 
-export type ApiSuccessResponse<T> = {
-  success: true;
+export type ApiSuccessResponse<T = null> = Omit<
+  SchemaApiSuccessResponse,
+  'data'
+> & {
   data: T;
-  error: null;
-  message?: string;
 };
 
 export type ApiErrorResponse = Omit<SchemaApiErrorResponse, 'data'> & {
   data: null;
-  message?: string;
 };
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
