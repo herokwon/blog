@@ -5,9 +5,9 @@ import type {
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '$lib/types/api';
-import type { Post, UpdatePostInput } from '$lib/types/post';
+import type { Post, PostInput } from '$lib/types/post';
 
-function isUpdatePostRequestBody(body: unknown): body is UpdatePostInput {
+function isUpdatePostRequestBody(body: unknown): body is PostInput {
   return (
     typeof body === 'object' &&
     body !== null &&
