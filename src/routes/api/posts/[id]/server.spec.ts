@@ -1,485 +1,530 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
+  ApiError,
   DeletePostByIdApiResponse,
   GetPostByIdApiResponse,
   UpdatePostByIdApiResponse,
 } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
 
-import { createMockEvent, createMockPlatform } from '../test-utils';
+import {
+  createMockD1,
+  createMockPost,
+  createMockRequestEvent,
+} from '../test-utils';
 import { DELETE, GET, PUT } from './+server';
 
-const MOCK_POST_ID = '4e9344a8-b642-47fb-8e8b-b0f1343f77df';
+describe('[API] /api/posts/[id]', () => {
+  let mock: ReturnType<typeof createMockD1>;
 
-function createMockEventWithPost(
-  args: Omit<Parameters<typeof createMockEvent>[0], 'routeId'>,
-) {
-  return createMockEvent({
-    ...args,
-    routeId: `/api/posts/${args.postId}`,
-  });
-}
-
-describe('GET /api/posts/[id]', () => {
-  it('should return 400 when post id is missing', async () => {
-    const request = new Request('http://localhost/api/posts/', {
-      method: 'GET',
-    });
-    const platform = createMockPlatform();
-    const event = createMockEventWithPost({ request, platform });
-    const response = await GET(event);
-    const result: GetPostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('INVALID_REQUEST');
+  beforeEach(() => {
+    mock = createMockD1();
   });
 
-  it('should return 500 if BLOG bucket is missing', async () => {
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'GET',
-    });
-    const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await GET(event);
-    const result: GetPostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('BUCKET_NOT_FOUND');
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('should return 404 when post does not exist', async () => {
-    const mockGet = vi.fn().mockResolvedValue(null);
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'GET',
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await GET(event);
-    const result: GetPostByIdApiResponse = await response.json();
+  describe('GET /api/posts/[id]', () => {
+    it('should return 400 when post id is missing', async () => {
+      const event = createMockRequestEvent({
+        db: mock.db,
+      });
+      const response = await GET(event);
+      const result: GetPostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(404);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('POST_NOT_FOUND');
-    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
+      expect(response.status).toBe(400);
+      expect(response.statusText).toBe('Bad Request');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('INVALID_REQUEST');
+      expect(result.error?.message).toBe('Post id is required');
+      expect(result.error?.details).toBeNull();
+    });
+
+    it('should return 500 if BLOG_DB binding is missing', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        params: { id: post.id },
+      });
+      const response = await GET(event);
+      const result: GetPostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('DATABASE_BINDING_MISSING');
+      expect(result.error?.message).toBe(
+        'The server is not configured correctly',
+      );
+      expect(result.error?.details).toEqual({
+        resource: 'BLOG_DB',
+        hint: 'Please check your wrangler config file or environment variables',
+      } satisfies ApiError['details']);
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        params: { id: post.id },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockResolvedValue({ results: [] });
+
+      const response = await GET(event);
+      const result: GetPostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(404);
+      expect(response.statusText).toBe('Not Found');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('POST_NOT_FOUND');
+      expect(result.error?.message).toBe('Post not found');
+      expect(result.error?.details).toEqual({
+        id: post.id,
+      } satisfies ApiError['details']);
+    });
+
+    it('should return post when found', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        params: { id: post.id },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockResolvedValue({ results: [post] });
+
+      const response = await GET(event);
+      const result: GetPostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(200);
+      expect(response.statusText).toBe('OK');
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(post);
+      expect(result.error).toBeNull();
+    });
+
+    it('should handle server errors', async () => {
+      mock.spies.run.mockRejectedValue(new Error('fail'));
+
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        params: { id: post.id },
+        db: mock.db,
+      });
+      const response = await GET(event);
+      const result: GetPostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('SERVER_ERROR');
+      expect(result.error?.message).toBe('fail');
+      expect(result.error?.details).toBeNull();
+    });
+
+    it('should use "Unknown error" message when thrown value is not an Error', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        params: { id: post.id },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockRejectedValue('non-error');
+
+      const response = await GET(event);
+      const result: GetPostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('SERVER_ERROR');
+      expect(result.error?.message).toBe(
+        'Unknown error occurred on the server',
+      );
+      expect(result.error?.details).toBeNull();
+    });
   });
 
-  it('should return post when found', async () => {
-    const post: Post = {
-      id: MOCK_POST_ID,
-      title: 'title',
-      content: 'content',
-      createdAt: '2026-03-01T00:00:00.000Z',
-      updatedAt: '2026-03-01T00:00:00.000Z',
-    };
-    const mockGet = vi.fn().mockResolvedValue({ json: async () => post });
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'GET',
+  describe('PUT /api/posts/[id]', () => {
+    afterEach(() => {
+      vi.useRealTimers();
     });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await GET(event);
-    const result: GetPostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual(post);
-    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
-  });
+    it('should return 400 when post id is missing', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'PUT',
+        body: { ...post },
+        db: mock.db,
+      });
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
 
-  it('should handle server errors', async () => {
-    const mockGet = vi.fn().mockRejectedValue(new Error('fail'));
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'GET',
+      expect(response.status).toBe(400);
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('INVALID_REQUEST');
+      expect(result.error?.message).toBe('Post id is required');
+      expect(result.error?.details).toBeNull();
     });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await GET(event);
-    const result: GetPostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('fail');
-  });
-  it('should use "Unknown error" message when thrown value is not an Error', async () => {
-    const mockGet = vi.fn().mockRejectedValue('non-error value');
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'GET',
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await GET(event);
-    const result: GetPostByIdApiResponse = await response.json();
+    it('should return 400 for malformed JSON body', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: post.id },
+        body: 'not a json',
+        db: mock.db,
+      });
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('Unknown error');
-  });
-});
-
-describe('PUT /api/posts/[id]', () => {
-  it('should return 400 when post id is missing', async () => {
-    const request = new Request('http://localhost/api/posts/', {
-      method: 'PUT',
-      body: JSON.stringify({ title: 'updated', content: 'updated content' }),
-      headers: { 'Content-Type': 'application/json' },
+      expect(response.status).toBe(400);
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('INVALID_REQUEST');
+      expect(result.error?.message).toBe(
+        'Request body must be a valid JSON object',
+      );
+      expect(result.error?.details).toBeNull();
     });
-    const platform = createMockPlatform();
-    const event = createMockEventWithPost({ request, platform });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('INVALID_REQUEST');
-    expect(result.error?.message).toBe('Post id is required');
-  });
+    it.each([{ content: 'content' }, { title: '', content: 'content' }])(
+      'should return 400 when title is missing or invalid',
+      async body => {
+        const post = createMockPost();
+        const event = createMockRequestEvent({
+          method: 'PUT',
+          params: { id: post.id },
+          body,
+          db: mock.db,
+        });
+        const response = await PUT(event);
+        const result: UpdatePostByIdApiResponse = await response.json();
 
-  it('should return 400 for malformed JSON body', async () => {
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'PUT',
-      body: '{"title":"updated",',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const platform = createMockPlatform({ get: vi.fn(), put: vi.fn() });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('INVALID_REQUEST');
-    expect(result.error?.message).toBe(
-      'Request body must be a valid JSON object',
+        expect(response.status).toBe(400);
+        expect(result.success).toBe(false);
+        expect(result.error?.code).toBe('INVALID_REQUEST');
+        expect(result.error?.details).toEqual({
+          title: 'Missing or invalid (must be a non-empty string)',
+          content: null,
+        } satisfies ApiError['details']);
+      },
     );
-  });
 
-  it('should return 400 for invalid request body shape', async () => {
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'PUT',
-      body: JSON.stringify({ title: 'updated' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const platform = createMockPlatform({ get: vi.fn(), put: vi.fn() });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
+    it.each([{ title: 'title' }, { title: 'title', content: '' }])(
+      'should return 400 when content is missing or invalid',
+      async body => {
+        const post = createMockPost();
+        const event = createMockRequestEvent({
+          method: 'PUT',
+          params: { id: post.id },
+          body,
+          db: mock.db,
+        });
+        const response = await PUT(event);
+        const result: UpdatePostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('INVALID_REQUEST');
-    expect(result.error?.message).toBe(
-      'Request body must be a JSON object with string properties "title" and "content"',
+        expect(response.status).toBe(400);
+        expect(result.success).toBe(false);
+        expect(result.error?.code).toBe('INVALID_REQUEST');
+        expect(result.error?.details).toEqual({
+          title: null,
+          content: 'Missing or invalid (must be a non-empty string)',
+        } satisfies ApiError['details']);
+      },
     );
+
+    it('should return 500 if BLOG_DB binding is missing', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: post.id },
+        body: { ...post },
+      });
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('DATABASE_BINDING_MISSING');
+      expect(result.error?.message).toBe(
+        'The server is not configured correctly',
+      );
+      expect(result.error?.details).toEqual({
+        resource: 'BLOG_DB',
+        hint: 'Please check your wrangler config file or environment variables',
+      } satisfies ApiError['details']);
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: post.id },
+        body: { ...post },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockResolvedValue({ results: [] });
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(404);
+      expect(response.statusText).toBe('Not Found');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('POST_NOT_FOUND');
+      expect(result.error?.message).toBe('Post not found');
+      expect(result.error?.details).toEqual({
+        id: post.id,
+      } satisfies ApiError['details']);
+    });
+
+    it('should update post and set updatedAt', async () => {
+      vi.useFakeTimers();
+
+      const updatedAt = new Date('2026-04-01T00:00:00.000Z').toISOString();
+      vi.setSystemTime(updatedAt);
+
+      const existingPost = createMockPost();
+      const updatedPost = createMockPost({
+        title: 'updated title',
+        content: 'updated content',
+        updatedAt,
+      });
+      const event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: existingPost.id },
+        body: { ...updatedPost },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockResolvedValue({ results: [updatedPost] });
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(response.statusText).toBe('OK');
+      expect(result.success).toBe(true);
+      expect(result.data?.id).toBe(existingPost.id);
+      expect(result.data?.title).toBe(updatedPost.title);
+      expect(result.data?.content).toBe(updatedPost.content);
+      expect(result.data?.createdAt).toBe(existingPost.createdAt);
+      expect(result.data?.updatedAt).not.toBe(existingPost.updatedAt);
+      expect(result.data?.updatedAt).toBe(updatedAt);
+      expect(result.error).toBeNull();
+    });
+
+    it('should handle server errors', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: post.id },
+        body: { ...post },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockRejectedValue(new Error('fail'));
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('SERVER_ERROR');
+      expect(result.error?.message).toBe('fail');
+      expect(result.error?.details).toBeNull();
+    });
+
+    it('should use "Unknown error" message when thrown value is not an Error', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: post.id },
+        body: { ...post },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockRejectedValue('non-error');
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('SERVER_ERROR');
+      expect(result.error?.message).toBe(
+        'Unknown error occurred on the server',
+      );
+      expect(result.error?.details).toBeNull();
+    });
   });
 
-  it('should return 500 if BLOG bucket is missing', async () => {
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'PUT',
-      body: JSON.stringify({ title: 'updated', content: 'updated content' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
+  describe('DELETE /api/posts/[id]', () => {
+    it('should return 400 when post id is missing', async () => {
+      const event = createMockRequestEvent({
+        method: 'DELETE',
+        db: mock.db,
+      });
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('BUCKET_NOT_FOUND');
-  });
-
-  it('should return 404 when post does not exist', async () => {
-    const mockGet = vi.fn().mockResolvedValue(null);
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'PUT',
-      body: JSON.stringify({ title: 'updated', content: 'updated content' }),
-      headers: { 'Content-Type': 'application/json' },
+      expect(response.status).toBe(400);
+      expect(response.statusText).toBe('Bad Request');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('INVALID_REQUEST');
+      expect(result.error?.message).toBe('Post id is required');
+      expect(result.error?.details).toBeNull();
     });
-    const platform = createMockPlatform({ get: mockGet });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
+
+    it('should return 500 if BLOG_DB binding is missing', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: post.id },
+      });
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('DATABASE_BINDING_MISSING');
+      expect(result.error?.message).toBe(
+        'The server is not configured correctly',
+      );
+      expect(result.error?.details).toEqual({
+        resource: 'BLOG_DB',
+        hint: 'Please check your wrangler config file or environment variables',
+      } satisfies ApiError['details']);
     });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(404);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('POST_NOT_FOUND');
-    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
-  });
+    it('should return 404 when post does not exist', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: post.id },
+        db: mock.db,
+      });
 
-  it('should update post and set updatedAt', async () => {
-    const oldUpdatedAt = '2026-03-01T00:00:00.000Z';
-    const existingPost: Post = {
-      id: MOCK_POST_ID,
-      title: 'title',
-      content: 'content',
-      createdAt: '2026-02-28T00:00:00.000Z',
-      updatedAt: oldUpdatedAt,
-    };
-    const mockGet = vi
-      .fn()
-      .mockResolvedValue({ json: async () => existingPost });
-    const mockPut = vi.fn().mockResolvedValue(undefined);
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'PUT',
-      body: JSON.stringify({ title: 'updated', content: 'updated content' }),
-      headers: { 'Content-Type': 'application/json' },
+      mock.spies.run.mockResolvedValue({ results: [] });
+
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(404);
+      expect(response.statusText).toBe('Not Found');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('POST_NOT_FOUND');
+      expect(result.error?.message).toBe('Post not found');
+      expect(result.error?.details).toEqual({
+        id: post.id,
+      } satisfies ApiError['details']);
     });
-    const platform = createMockPlatform({ get: mockGet, put: mockPut });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
+
+    it('should return post when found', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: post.id },
+        db: mock.db,
+      });
+
+      mock.spies.run.mockResolvedValue({ results: [post] });
+
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(200);
+      expect(response.statusText).toBe('OK');
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(null);
+      expect(result.error).toBeNull();
     });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(result.success).toBe(true);
-    expect(result.data?.id).toBe(existingPost.id);
-    expect(result.data?.title).toBe('updated');
-    expect(result.data?.content).toBe('updated content');
-    expect(result.data?.createdAt).toBe(existingPost.createdAt);
-    expect(result.data?.updatedAt).not.toBe(oldUpdatedAt);
+    it('should handle server errors', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: post.id },
+        db: mock.db,
+      });
 
-    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
-    expect(mockPut).toHaveBeenCalledWith(
-      MOCK_POST_ID,
-      JSON.stringify(result.data),
-    );
-  });
+      mock.spies.run.mockRejectedValue(new Error('fail'));
 
-  it('should handle server errors', async () => {
-    const mockGet = vi.fn().mockRejectedValue(new Error('fail'));
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'PUT',
-      body: JSON.stringify({ title: 'updated', content: 'updated content' }),
-      headers: { 'Content-Type': 'application/json' },
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('SERVER_ERROR');
+      expect(result.error?.message).toBe('fail');
+      expect(result.error?.details).toBeNull();
     });
-    const platform = createMockPlatform({ get: mockGet });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('fail');
-  });
-  it('should use "Unknown error" message when thrown value is not an Error', async () => {
-    const mockGet = vi.fn().mockRejectedValue('non-error value');
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'PUT',
-      body: JSON.stringify({ title: 'updated', content: 'updated content' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await PUT(event);
-    const result: UpdatePostByIdApiResponse = await response.json();
+    it('should use "Unknown error" message when thrown value is not an Error', async () => {
+      const post = createMockPost();
+      const event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: post.id },
+        db: mock.db,
+      });
 
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('Unknown error');
-  });
-});
+      mock.spies.run.mockRejectedValue('non-error');
 
-describe('DELETE /api/posts/[id]', () => {
-  it('should return 400 when post id is missing', async () => {
-    const request = new Request('http://localhost/api/posts/', {
-      method: 'DELETE',
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe('Internal Server Error');
+      expect(result.success).toBe(false);
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('SERVER_ERROR');
+      expect(result.error?.message).toBe(
+        'Unknown error occurred on the server',
+      );
+      expect(result.error?.details).toBeNull();
     });
-    const platform = createMockPlatform();
-    const event = createMockEventWithPost({ request, platform });
-    const response = await DELETE(event);
-    const result: DeletePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('INVALID_REQUEST');
-  });
-
-  it('should return 500 if BLOG bucket is missing', async () => {
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'DELETE',
-    });
-    const platform = { env: {}, ctx: {}, caches: {} };
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await DELETE(event);
-    const result: DeletePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('BUCKET_NOT_FOUND');
-  });
-
-  it('should return 404 when post does not exist', async () => {
-    const mockGet = vi.fn().mockResolvedValue(null);
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'DELETE',
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await DELETE(event);
-    const result: DeletePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('POST_NOT_FOUND');
-    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
-  });
-
-  it('should return post when found', async () => {
-    const post: Post = {
-      id: MOCK_POST_ID,
-      title: 'title',
-      content: 'content',
-      createdAt: '2026-03-01T00:00:00.000Z',
-      updatedAt: '2026-03-01T00:00:00.000Z',
-    };
-    const mockGet = vi.fn().mockResolvedValue({ json: async () => post });
-    const mockDelete = vi.fn().mockResolvedValue(undefined);
-    const platform = createMockPlatform({ get: mockGet, delete: mockDelete });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'DELETE',
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await DELETE(event);
-    const result: DeletePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual(null);
-    expect(mockGet).toHaveBeenCalledWith(MOCK_POST_ID);
-    expect(mockDelete).toHaveBeenCalledWith(MOCK_POST_ID);
-  });
-
-  it('should handle server errors during get (existence check)', async () => {
-    const mockGet = vi.fn().mockRejectedValue(new Error('fail-get'));
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'DELETE',
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await DELETE(event);
-    const result: DeletePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('fail-get');
-  });
-
-  it('should handle server errors during delete (delete operation)', async () => {
-    const post: Post = {
-      id: MOCK_POST_ID,
-      title: 'title',
-      content: 'content',
-      createdAt: '2026-03-01T00:00:00.000Z',
-      updatedAt: '2026-03-01T00:00:00.000Z',
-    };
-    const mockGet = vi.fn().mockResolvedValue({ json: async () => post });
-    const mockDelete = vi.fn().mockRejectedValue(new Error('fail-delete'));
-    const platform = createMockPlatform({ get: mockGet, delete: mockDelete });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'DELETE',
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await DELETE(event);
-    const result: DeletePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('fail-delete');
-  });
-
-  it('should use "Unknown error" message when thrown value is not an Error', async () => {
-    const mockGet = vi.fn().mockRejectedValue('non-error value');
-    const platform = createMockPlatform({ get: mockGet });
-    const request = new Request(`http://localhost/api/posts/${MOCK_POST_ID}`, {
-      method: 'DELETE',
-    });
-    const event = createMockEventWithPost({
-      request,
-      platform,
-      postId: MOCK_POST_ID,
-    });
-    const response = await DELETE(event);
-    const result: DeletePostByIdApiResponse = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('SERVER_ERROR');
-    expect(result.error?.message).toBe('Unknown error');
   });
 });
