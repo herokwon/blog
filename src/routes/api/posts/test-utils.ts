@@ -1,57 +1,67 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import { vi } from 'vitest';
 
-export type MockBucket = {
-  put?: (key: string, value: string) => void;
-  get?: (key: string) => Promise<{ json: <T>() => Promise<T> } | null>;
-  delete?: (key: string) => void;
-  list?: (options?: { cursor?: string }) => Promise<{
-    objects: { key: string }[];
-    truncated: boolean;
-    cursor?: string;
-  }>;
+import type { Post } from '$lib/types/post';
+
+import type { RequestEvent } from './$types';
+
+type MockEventOptions = {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  url?: string;
+  params?: Record<string, string>;
+  body?: unknown;
+  db?: D1Database;
 };
 
-export function createMockPlatform(bucketImpl?: MockBucket) {
-  return {
-    env: {
-      BLOG: bucketImpl,
-    },
-    ctx: {},
-    caches: {},
-  };
-}
+const MOCK_POST: Post = {
+  id: '4e9344a8-b642-47fb-8e8b-b0f1343f77df',
+  title: 'title',
+  content: 'content',
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-01T00:00:00.000Z',
+};
 
-export function createMockEvent({
-  request,
-  platform,
-  postId = '',
-  routeId,
-}: {
-  request: Request;
-  platform?: object;
-  postId?: string;
-  routeId: string;
-}): RequestEvent {
+export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
+  ...MOCK_POST,
+  ...overrides,
+});
+
+export const createMockD1 = () => {
+  const prepare = vi.fn().mockReturnThis();
+  const bind = vi.fn().mockReturnThis();
+  const all = vi.fn();
+  const run = vi.fn();
+
+  const db = {
+    prepare,
+    bind,
+    all,
+    run,
+  } as unknown as D1Database;
+
+  return {
+    db,
+    spies: { prepare, bind, all, run },
+  };
+};
+
+export const createMockRequestEvent = ({
+  method = 'GET',
+  url = '/api/posts',
+  params = {},
+  body,
+  db,
+}: MockEventOptions = {}): RequestEvent => {
+  const request = new Request('http://localhost' + url, {
+    method,
+    body: body ? JSON.stringify(body) : undefined,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+  });
+
   return {
     request,
-    platform,
-    cookies: {
-      get: () => undefined,
-      getAll: () => [],
-      set: () => {},
-      delete: () => {},
-      serialize: () => '',
+    params,
+    platform: {
+      env: { BLOG_DB: db },
     },
-    fetch: global.fetch,
-    getClientAddress: () => '',
-    locals: {},
-    params: { id: postId },
-    route: { id: routeId },
-    url: new URL(request.url),
-    setHeaders: () => {},
-    isDataRequest: false,
-    isSubRequest: false,
-    tracing: { enabled: false, root: null, current: null },
-    isRemoteRequest: false,
-  } as RequestEvent;
-}
+  } as unknown as RequestEvent;
+};

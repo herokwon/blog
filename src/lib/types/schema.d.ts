@@ -11,7 +11,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List posts */
+    /** Get list of posts */
     get: operations['listPosts'];
     put?: never;
     /** Create a post */
@@ -22,11 +22,14 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/posts/{id}': {
+  '/api/posts/{postId}': {
     parameters: {
       query?: never;
       header?: never;
-      path?: never;
+      path: {
+        /** @description The unique identifier of a post */
+        postId: components['parameters']['PostIdParam'];
+      };
       cookie?: never;
     };
     /** Get post by id */
@@ -45,65 +48,175 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    CreatePostInput: {
-      title: string;
-      content: string;
-    };
-    UpdatePostInput: {
-      title: string;
-      content: string;
-    };
-    Post: {
-      /** Format: uuid */
+    Post: components['schemas']['PostInput'] & {
+      /**
+       * Format: uuid
+       * @description The unique identifier for the post
+       * @example 4e9344a8-b642-47fb-8e8b-b0f1343f77df
+       */
       id: string;
-      title: string;
-      content: string;
-      /** Format: date-time */
+      /**
+       * Format: date-time
+       * @description Post creation time
+       * @example 2026-01-01T12:00:00Z
+       */
       createdAt: string;
-      /** Format: date-time */
+      /**
+       * Format: date-time
+       * @description Post last update time
+       * @example 2026-12-31T12:00:00Z
+       */
       updatedAt: string;
     };
-    ApiError: {
-      code: string;
-      message: string;
-      details: components['schemas']['PostNotFoundErrorDetails'] | null;
+    /** @description Schema for post input when creating or updating a post */
+    PostInput: {
+      /**
+       * @description Post title
+       * @example My First Post
+       */
+      title: string;
+      /**
+       * @description Post content
+       * @example This is the content of my first blog
+       */
+      content: string;
     };
-    PostNotFoundErrorDetails: {
-      /** Format: uuid */
-      id: string;
-    };
-    ApiSuccessResponsePost: {
-      /** @enum {boolean} */
+    /** @description Schema for successful API responses */
+    ApiSuccessResponse: {
+      /**
+       * @description Should always be true for successful responses
+       * @example true
+       * @enum {boolean}
+       */
       success: true;
-      data: components['schemas']['Post'];
-      /** @enum {unknown|null} */
+      data?:
+        | (components['schemas']['Post'] | components['schemas']['Post'][])
+        | null;
+      /**
+       * @description Should always be null for successful responses
+       * @enum {unknown|null}
+       */
       error: null;
     };
-    ApiSuccessResponsePostList: {
-      /** @enum {boolean} */
-      success: true;
-      data: components['schemas']['Post'][];
-      /** @enum {unknown|null} */
-      error: null;
-    };
-    ApiSuccessResponseEmpty: {
-      /** @enum {boolean} */
-      success: true;
-      /** @enum {unknown|null} */
-      data: null;
-      /** @enum {unknown|null} */
-      error: null;
-    };
+    /** @description Schema for error API responses */
     ApiErrorResponse: {
-      /** @enum {boolean} */
+      /**
+       * @description Should always be false for error responses
+       * @example false
+       * @enum {boolean}
+       */
       success: false;
-      /** @enum {unknown|null} */
+      /**
+       * @description Should always be null for error responses
+       * @enum {unknown|null}
+       */
       data: null;
+      /** @description Error details for the response */
       error: components['schemas']['ApiError'];
     };
+    ApiError: {
+      /**
+       * @description A machine-readable error code
+       * @example POST_NOT_FOUND
+       */
+      code: string;
+      /**
+       * @description A human-readable message describing the error
+       * @example Post not found
+       */
+      message: string;
+      details:
+        | (
+            | components['schemas']['InvalidFieldsErrorDetails']
+            | components['schemas']['DatabaseErrorDetails']
+            | components['schemas']['PostNotFoundErrorDetails']
+          )
+        | null;
+    };
+    InvalidFieldsErrorDetails: {
+      /**
+       * @description Validation result for the "title" field (e.g. "missing", "invalid type", etc.)
+       * @example missing
+       */
+      title: string | null;
+      /**
+       * @description Validation result for the "content" field (e.g. "missing", "invalid type", etc.)
+       * @example null
+       */
+      content: string | null;
+    };
+    DatabaseErrorDetails: {
+      /**
+       * @description The name of the missing database resource
+       * @example BLOG_DB
+       */
+      resource: string;
+      /**
+       * @description A hint to help resolve the database configuration issue
+       * @example Please check your wrangler config file or environment variables
+       */
+      hint: string;
+    };
+    PostNotFoundErrorDetails: {
+      /**
+       * Format: uuid
+       * @description The id of the resource that was not found
+       * @example 4e9344a8-b642-47fb-8e8b-b0f1343f77df
+       */
+      id: string;
+    };
   };
-  responses: never;
-  parameters: never;
+  responses: {
+    /** @description The response returned a post */
+    SinglePost: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiSuccessResponse'];
+      };
+    };
+    /** @description The response returned a list of posts */
+    PostList: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiSuccessResponse'];
+      };
+    };
+    /** @description The request was invalid (e.g. missing required fields, invalid JSON) */
+    BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
+    /** @description The specified resource was not found */
+    NotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
+    /** @description An unexpected error occurred on the server */
+    InternalServerError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
+  };
+  parameters: {
+    /** @description The unique identifier of a post */
+    PostIdParam: string;
+  };
   requestBodies: never;
   headers: never;
   pathItems: never;
@@ -119,24 +232,8 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Posts retrieved successfully (sorted by newest first) */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiSuccessResponsePostList'];
-        };
-      };
-      /** @description Internal server error (bucket not found or unknown server error) */
-      500: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
+      200: components['responses']['PostList'];
+      500: components['responses']['InternalServerError'];
     };
   };
   createPost: {
@@ -150,41 +247,20 @@ export interface operations {
       content: {
         /**
          * @example {
-         *       "title": "My First Post",
-         *       "content": "This is the content of my first post."
+         *       "summary": "An example of post input for creating or updating a post",
+         *       "value": {
+         *         "title": "My First Post",
+         *         "content": "This is the content of my first blog"
+         *       }
          *     }
          */
-        'application/json': components['schemas']['CreatePostInput'];
+        'application/json': components['schemas']['PostInput'];
       };
     };
     responses: {
-      /** @description Post created successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiSuccessResponsePost'];
-        };
-      };
-      /** @description Invalid request body */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
-      /** @description Internal server error (bucket not found or unknown server error) */
-      500: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
+      201: components['responses']['SinglePost'];
+      400: components['responses']['BadRequest'];
+      500: components['responses']['InternalServerError'];
     };
   };
   getPostById: {
@@ -192,73 +268,17 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Post id */
-        id: string;
+        /** @description The unique identifier of a post */
+        postId: components['parameters']['PostIdParam'];
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description Post retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiSuccessResponsePost'];
-        };
-      };
-      /** @description Invalid request (missing id) */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "success": false,
-           *       "data": null,
-           *       "error": {
-           *         "code": "INVALID_REQUEST",
-           *         "message": "Post id is required",
-           *         "details": null
-           *       }
-           *     }
-           */
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
-      /** @description Post not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "success": false,
-           *       "data": null,
-           *       "error": {
-           *         "code": "POST_NOT_FOUND",
-           *         "message": "Post not found",
-           *         "details": {
-           *           "id": "4e9344a8-b642-47fb-8e8b-b0f1343f77df"
-           *         }
-           *       }
-           *     }
-           */
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
-      /** @description Internal server error (bucket not found or unknown server error) */
-      500: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
+      200: components['responses']['SinglePost'];
+      400: components['responses']['BadRequest'];
+      404: components['responses']['NotFound'];
+      500: components['responses']['InternalServerError'];
     };
   };
   updatePostById: {
@@ -266,72 +286,17 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Post id */
-        id: string;
+        /** @description The unique identifier of a post */
+        postId: components['parameters']['PostIdParam'];
       };
       cookie?: never;
     };
-    requestBody: {
-      content: {
-        /**
-         * @example {
-         *       "title": "Updated title",
-         *       "content": "Updated post content."
-         *     }
-         */
-        'application/json': components['schemas']['UpdatePostInput'];
-      };
-    };
+    requestBody?: never;
     responses: {
-      /** @description Post updated successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiSuccessResponsePost'];
-        };
-      };
-      /** @description Invalid request body */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
-      /** @description Post not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "success": false,
-           *       "data": null,
-           *       "error": {
-           *         "code": "POST_NOT_FOUND",
-           *         "message": "Post not found",
-           *         "details": {
-           *           "id": "4e9344a8-b642-47fb-8e8b-b0f1343f77df"
-           *         }
-           *       }
-           *     }
-           */
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
-      /** @description Internal server error (bucket not found or unknown server error) */
-      500: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
+      200: components['responses']['SinglePost'];
+      400: components['responses']['BadRequest'];
+      404: components['responses']['NotFound'];
+      500: components['responses']['InternalServerError'];
     };
   };
   deletePostById: {
@@ -339,80 +304,17 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Post id */
-        id: string;
+        /** @description The unique identifier of a post */
+        postId: components['parameters']['PostIdParam'];
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description Post deleted successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "success": true,
-           *       "data": null,
-           *       "error": null
-           *     }
-           */
-          'application/json': components['schemas']['ApiSuccessResponseEmpty'];
-        };
-      };
-      /** @description Invalid request (missing id) */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "success": false,
-           *       "data": null,
-           *       "error": {
-           *         "code": "INVALID_REQUEST",
-           *         "message": "Post id is required",
-           *         "details": null
-           *       }
-           *     }
-           */
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
-      /** @description Post not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "success": false,
-           *       "data": null,
-           *       "error": {
-           *         "code": "POST_NOT_FOUND",
-           *         "message": "Post not found",
-           *         "details": {
-           *           "id": "4e9344a8-b642-47fb-8e8b-b0f1343f77df"
-           *         }
-           *       }
-           *     }
-           */
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
-      /** @description Internal server error (bucket not found or unknown server error) */
-      500: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ApiErrorResponse'];
-        };
-      };
+      200: components['responses']['SinglePost'];
+      400: components['responses']['BadRequest'];
+      404: components['responses']['NotFound'];
+      500: components['responses']['InternalServerError'];
     };
   };
 }

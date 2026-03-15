@@ -5,18 +5,14 @@ import type {
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '$lib/types/api';
-import type { Post, UpdatePostInput } from '$lib/types/post';
+import type { Post } from '$lib/types/post';
 
-function isUpdatePostRequestBody(body: unknown): body is UpdatePostInput {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'title' in body &&
-    typeof body.title === 'string' &&
-    'content' in body &&
-    typeof body.content === 'string'
-  );
-}
+import {
+  hasContentProperty,
+  hasTitleProperty,
+  isNonNullableObject,
+  isPostInput,
+} from '../utils';
 
 export const GET: RequestHandler = async ({
   platform,
@@ -32,7 +28,11 @@ export const GET: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 400,
           statusText: 'Bad Request',
@@ -40,16 +40,23 @@ export const GET: RequestHandler = async ({
       );
     }
 
-    const bucket = platform?.env.BLOG;
-    if (!bucket) {
+    const database = platform?.env.BLOG_DB;
+    if (!database) {
       const error: ApiError = {
-        code: 'BUCKET_NOT_FOUND',
-        message: 'Blog bucket not found in environment variables',
-        details: null,
+        code: 'DATABASE_BINDING_MISSING',
+        message: 'The server is not configured correctly',
+        details: {
+          resource: 'BLOG_DB',
+          hint: 'Please check your wrangler config file or environment variables',
+        },
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 500,
           statusText: 'Internal Server Error',
@@ -57,8 +64,14 @@ export const GET: RequestHandler = async ({
       );
     }
 
-    const storedPost = await bucket.get(postId);
-    if (!storedPost) {
+    const {
+      results: [post],
+    } = await database
+      .prepare('SELECT * FROM posts WHERE id = ?')
+      .bind(postId)
+      .run<Post>();
+
+    if (!post) {
       const error: ApiError = {
         code: 'POST_NOT_FOUND',
         message: 'Post not found',
@@ -66,7 +79,11 @@ export const GET: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 404,
           statusText: 'Not Found',
@@ -74,22 +91,31 @@ export const GET: RequestHandler = async ({
       );
     }
 
-    const post = await storedPost.json<Post>();
-
-    return json({
-      success: true,
-      data: post,
-      error: null,
-    } satisfies ApiSuccessResponse<Post>);
+    return json(
+      {
+        success: true,
+        data: post,
+        error: null,
+      } satisfies ApiSuccessResponse<Post>,
+      {
+        status: 200,
+        statusText: 'OK',
+      },
+    );
   } catch (e) {
     const error: ApiError = {
       code: 'SERVER_ERROR',
-      message: e instanceof Error ? e.message : 'Unknown error',
+      message:
+        e instanceof Error ? e.message : 'Unknown error occurred on the server',
       details: null,
     };
 
     return json(
-      { success: false, data: null, error } satisfies ApiErrorResponse,
+      {
+        success: false,
+        data: null,
+        error,
+      } satisfies ApiErrorResponse,
       {
         status: 500,
         statusText: 'Internal Server Error',
@@ -113,7 +139,11 @@ export const PUT: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 400,
           statusText: 'Bad Request',
@@ -124,6 +154,7 @@ export const PUT: RequestHandler = async ({
     let body: unknown;
     try {
       body = await request.json();
+      if (!isNonNullableObject(body)) throw new Error();
     } catch {
       const error: ApiError = {
         code: 'INVALID_REQUEST',
@@ -132,7 +163,11 @@ export const PUT: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 400,
           statusText: 'Bad Request',
@@ -140,16 +175,27 @@ export const PUT: RequestHandler = async ({
       );
     }
 
-    if (!isUpdatePostRequestBody(body)) {
+    if (!isPostInput(body)) {
       const error: ApiError = {
         code: 'INVALID_REQUEST',
         message:
           'Request body must be a JSON object with string properties "title" and "content"',
-        details: null,
+        details: {
+          title: hasTitleProperty(body)
+            ? null
+            : 'Missing or invalid (must be a non-empty string)',
+          content: hasContentProperty(body)
+            ? null
+            : 'Missing or invalid (must be a non-empty string)',
+        },
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 400,
           statusText: 'Bad Request',
@@ -157,16 +203,23 @@ export const PUT: RequestHandler = async ({
       );
     }
 
-    const bucket = platform?.env.BLOG;
-    if (!bucket) {
+    const database = platform?.env.BLOG_DB;
+    if (!database) {
       const error: ApiError = {
-        code: 'BUCKET_NOT_FOUND',
-        message: 'Blog bucket not found in environment variables',
-        details: null,
+        code: 'DATABASE_BINDING_MISSING',
+        message: 'The server is not configured correctly',
+        details: {
+          resource: 'BLOG_DB',
+          hint: 'Please check your wrangler config file or environment variables',
+        },
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 500,
           statusText: 'Internal Server Error',
@@ -174,8 +227,19 @@ export const PUT: RequestHandler = async ({
       );
     }
 
-    const storedPost = await bucket.get(postId);
-    if (!storedPost) {
+    const { title, content } = body;
+    const now = new Date().toISOString();
+
+    const {
+      results: [updatedPost],
+    } = await database
+      .prepare(
+        'UPDATE posts SET title = ?, content = ?, updatedAt = ? WHERE id = ? RETURNING *',
+      )
+      .bind(title, content, now, postId)
+      .run<Post>();
+
+    if (!updatedPost) {
       const error: ApiError = {
         code: 'POST_NOT_FOUND',
         message: 'Post not found',
@@ -183,7 +247,11 @@ export const PUT: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 404,
           statusText: 'Not Found',
@@ -191,32 +259,31 @@ export const PUT: RequestHandler = async ({
       );
     }
 
-    const post = await storedPost.json<Post>();
-    const now = new Date().toISOString();
-
-    const updatedPost: Post = {
-      ...post,
-      title: body.title,
-      content: body.content,
-      updatedAt: now,
-    };
-
-    await bucket.put(postId, JSON.stringify(updatedPost));
-
-    return json({
-      success: true,
-      data: updatedPost,
-      error: null,
-    } satisfies ApiSuccessResponse<Post>);
+    return json(
+      {
+        success: true,
+        data: updatedPost,
+        error: null,
+      } satisfies ApiSuccessResponse<Post>,
+      {
+        status: 200,
+        statusText: 'OK',
+      },
+    );
   } catch (e) {
     const error: ApiError = {
       code: 'SERVER_ERROR',
-      message: e instanceof Error ? e.message : 'Unknown error',
+      message:
+        e instanceof Error ? e.message : 'Unknown error occurred on the server',
       details: null,
     };
 
     return json(
-      { success: false, data: null, error } satisfies ApiErrorResponse,
+      {
+        success: false,
+        data: null,
+        error,
+      } satisfies ApiErrorResponse,
       {
         status: 500,
         statusText: 'Internal Server Error',
@@ -239,7 +306,11 @@ export const DELETE: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 400,
           statusText: 'Bad Request',
@@ -247,16 +318,23 @@ export const DELETE: RequestHandler = async ({
       );
     }
 
-    const bucket = platform?.env.BLOG;
-    if (!bucket) {
+    const database = platform?.env.BLOG_DB;
+    if (!database) {
       const error: ApiError = {
-        code: 'BUCKET_NOT_FOUND',
-        message: 'Blog bucket not found in environment variables',
-        details: null,
+        code: 'DATABASE_BINDING_MISSING',
+        message: 'The server is not configured correctly',
+        details: {
+          resource: 'BLOG_DB',
+          hint: 'Please check your wrangler config file or environment variables',
+        },
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 500,
           statusText: 'Internal Server Error',
@@ -264,8 +342,14 @@ export const DELETE: RequestHandler = async ({
       );
     }
 
-    const storedPost = await bucket.get(postId);
-    if (!storedPost) {
+    const {
+      results: [deletedPost],
+    } = await database
+      .prepare('DELETE FROM posts WHERE id = ? RETURNING *')
+      .bind(postId)
+      .run<Post>();
+
+    if (!deletedPost) {
       const error: ApiError = {
         code: 'POST_NOT_FOUND',
         message: 'Post not found',
@@ -273,7 +357,11 @@ export const DELETE: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 404,
           statusText: 'Not Found',
@@ -281,22 +369,31 @@ export const DELETE: RequestHandler = async ({
       );
     }
 
-    await bucket.delete(postId);
-
-    return json({
-      success: true,
-      data: null,
-      error: null,
-    } satisfies ApiSuccessResponse<null>);
+    return json(
+      {
+        success: true,
+        data: null,
+        error: null,
+      } satisfies ApiSuccessResponse<null>,
+      {
+        status: 200,
+        statusText: 'OK',
+      },
+    );
   } catch (e) {
     const error: ApiError = {
       code: 'SERVER_ERROR',
-      message: e instanceof Error ? e.message : 'Unknown error',
+      message:
+        e instanceof Error ? e.message : 'Unknown error occurred on the server',
       details: null,
     };
 
     return json(
-      { success: false, data: null, error } satisfies ApiErrorResponse,
+      {
+        success: false,
+        data: null,
+        error,
+      } satisfies ApiErrorResponse,
       {
         status: 500,
         statusText: 'Internal Server Error',
