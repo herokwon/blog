@@ -7,20 +7,32 @@ import type {
 } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 
-import { isPostInput } from './utils';
+import {
+  hasContentProperty,
+  hasTitleProperty,
+  isNonNullableObject,
+  isPostInput,
+} from './utils';
 
 export const GET: RequestHandler = async ({ platform }): Promise<Response> => {
   try {
-    const bucket = platform?.env.BLOG;
-    if (!bucket) {
+    const database = platform?.env.BLOG_DB;
+    if (!database) {
       const error: ApiError = {
-        code: 'BUCKET_NOT_FOUND',
-        message: 'Blog bucket not found in environment variables',
-        details: null,
+        code: 'DATABASE_BINDING_MISSING',
+        message: 'The server is not configured correctly',
+        details: {
+          resource: 'BLOG_DB',
+          hint: 'Please check your wrangler config file or environment variables',
+        },
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 500,
           statusText: 'Internal Server Error',
@@ -28,49 +40,35 @@ export const GET: RequestHandler = async ({ platform }): Promise<Response> => {
       );
     }
 
-    const posts: Post[] = [];
-    let cursor: string | undefined;
+    const { results: posts } = await database
+      .prepare('SELECT * FROM posts ORDER BY createdAt DESC')
+      .all<Post>();
 
-    do {
-      const listedObjects = await bucket.list({ cursor });
-
-      const objectPromises = listedObjects.objects.map(
-        async (object: { key: string }) => {
-          const storedPost = await bucket.get(object.key);
-          if (!storedPost) {
-            return null;
-          }
-          return storedPost.json<Post>();
-        },
-      );
-      const pagePosts = await Promise.all(objectPromises);
-
-      for (const post of pagePosts) {
-        if (post) posts.push(post);
-      }
-
-      cursor = listedObjects.truncated ? listedObjects.cursor : undefined;
-    } while (cursor);
-
-    posts.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    return json(
+      {
+        success: true,
+        data: posts,
+        error: null,
+      } satisfies ApiSuccessResponse<Post[]>,
+      {
+        status: 200,
+        statusText: 'OK',
+      },
     );
-
-    return json({
-      success: true,
-      data: posts,
-      error: null,
-    } satisfies ApiSuccessResponse<Post[]>);
   } catch (e) {
     const error: ApiError = {
       code: 'SERVER_ERROR',
-      message: e instanceof Error ? e.message : 'Unknown error',
+      message:
+        e instanceof Error ? e.message : 'Unknown error occurred on the server',
       details: null,
     };
 
     return json(
-      { success: false, data: null, error } satisfies ApiErrorResponse,
+      {
+        success: false,
+        data: null,
+        error,
+      } satisfies ApiErrorResponse,
       {
         status: 500,
         statusText: 'Internal Server Error',
@@ -85,8 +83,10 @@ export const POST: RequestHandler = async ({
 }): Promise<Response> => {
   try {
     let body: unknown;
+
     try {
       body = await request.json();
+      if (!isNonNullableObject(body)) throw new Error();
     } catch {
       const error: ApiError = {
         code: 'INVALID_REQUEST',
@@ -95,7 +95,11 @@ export const POST: RequestHandler = async ({
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 400,
           statusText: 'Bad Request',
@@ -108,11 +112,22 @@ export const POST: RequestHandler = async ({
         code: 'INVALID_REQUEST',
         message:
           'Request body must be a JSON object with string properties "title" and "content"',
-        details: null,
+        details: {
+          title: hasTitleProperty(body)
+            ? null
+            : 'Missing or invalid (must be a non-empty string)',
+          content: hasContentProperty(body)
+            ? null
+            : 'Missing or invalid (must be a non-empty string)',
+        },
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 400,
           statusText: 'Bad Request',
@@ -120,16 +135,23 @@ export const POST: RequestHandler = async ({
       );
     }
 
-    const bucket = platform?.env.BLOG;
-    if (!bucket) {
+    const database = platform?.env.BLOG_DB;
+    if (!database) {
       const error: ApiError = {
-        code: 'BUCKET_NOT_FOUND',
-        message: 'Blog bucket not found in environment variables',
-        details: null,
+        code: 'DATABASE_BINDING_MISSING',
+        message: 'The server is not configured correctly',
+        details: {
+          resource: 'BLOG_DB',
+          hint: 'Please check your wrangler config file or environment variables',
+        },
       };
 
       return json(
-        { success: false, data: null, error } satisfies ApiErrorResponse,
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
         {
           status: 500,
           statusText: 'Internal Server Error',
@@ -139,24 +161,52 @@ export const POST: RequestHandler = async ({
 
     const postId = crypto.randomUUID();
     const now = new Date().toISOString();
-    const postData: Post = {
-      ...body,
-      id: postId,
-      createdAt: now,
-      updatedAt: now,
-    };
 
-    await bucket.put(postId, JSON.stringify(postData));
+    const {
+      results: [createdPost],
+    } = await database
+      .prepare(
+        'INSERT INTO posts (id, title, content, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?) RETURNING *',
+      )
+      .bind(postId, body.title, body.content, now, now)
+      .run<Post>();
 
-    return json({
-      success: true,
-      data: postData,
-      error: null,
-    } satisfies ApiSuccessResponse<Post>);
+    if (!createdPost) {
+      const error: ApiError = {
+        code: 'POST_CREATION_FAILED',
+        message: 'Failed to retrieve the created post from the database',
+        details: null,
+      };
+
+      return json(
+        {
+          success: false,
+          data: null,
+          error,
+        } satisfies ApiErrorResponse,
+        {
+          status: 500,
+          statusText: 'Internal Server Error',
+        },
+      );
+    }
+
+    return json(
+      {
+        success: true,
+        data: createdPost,
+        error: null,
+      } satisfies ApiSuccessResponse<Post>,
+      {
+        status: 201,
+        statusText: 'Created',
+      },
+    );
   } catch (e) {
     const error: ApiError = {
       code: 'SERVER_ERROR',
-      message: e instanceof Error ? e.message : 'Unknown error',
+      message:
+        e instanceof Error ? e.message : 'Unknown error occurred on the server',
       details: null,
     };
 
