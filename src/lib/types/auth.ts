@@ -19,3 +19,7 @@ export interface Session {
   userId: string;
   expiresAt: number;
 }
+
+export type UserSession = Omit<PublicUser & Session, 'id' | 'createdAt'> & {
+  sessionId: string;
+};
