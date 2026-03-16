@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createMockD1,
+  createMockPost,
+  createMockRequestEvent,
+} from '$lib/test-utils';
 import type {
   ApiError,
   DeletePostByIdApiResponse,
@@ -7,11 +12,6 @@ import type {
   UpdatePostByIdApiResponse,
 } from '$lib/types/api';
 
-import {
-  createMockD1,
-  createMockPost,
-  createMockRequestEvent,
-} from '../test-utils';
 import { DELETE, GET, PUT } from './+server';
 
 describe('[API] /api/posts/[id]', () => {

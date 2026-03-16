@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createMockD1,
+  createMockPost,
+  createMockRequestEvent,
+} from '$lib/test-utils';
 import type {
   ApiError,
   CreatePostApiResponse,
@@ -7,11 +12,6 @@ import type {
 } from '$lib/types/api';
 
 import { GET, POST } from './+server';
-import {
-  createMockD1,
-  createMockPost,
-  createMockRequestEvent,
-} from './test-utils';
 
 describe('[API] /api/posts', () => {
   let mockD1: ReturnType<typeof createMockD1>;
