@@ -20,12 +20,12 @@ describe('[Functions] test-utils', () => {
   it('createMockD1 returns a mock D1 and spies are callable', async () => {
     const { db, spies } = createMockD1();
 
-    expect(typeof db).toBe('object');
-
     spies.prepare('SELECT 1');
     spies.bind('x', 1);
     await spies.all();
     spies.run();
+
+    expect(typeof db).toBe('object');
 
     expect(spies.prepare).toHaveBeenCalled();
     expect(spies.bind).toHaveBeenCalled();
@@ -35,10 +35,8 @@ describe('[Functions] test-utils', () => {
 
   it('createMockRequestEvent attaches platform env, ctx, caches', () => {
     const { db } = createMockD1();
-
-    const event = createMockRequestEvent({
-      url: '/posts',
-      params: { id: '123' },
+    const { event } = createMockRequestEvent({
+      pathname: '/posts',
       db,
     });
 
