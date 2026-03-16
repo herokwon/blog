@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMockD1,
@@ -7,7 +6,6 @@ import {
   createMockRequestEvent,
 } from '$lib/test-utils';
 import type {
-  ApiError,
   ApiError,
   CreatePostApiResponse,
   ListPostsApiResponse,
@@ -92,14 +90,6 @@ describe('[API] /api/posts', () => {
       expect(result.error?.message).toBe('fail');
       expect(result.error?.details).toBeNull();
     });
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('SERVER_ERROR');
-      expect(result.error?.message).toBe('fail');
-      expect(result.error?.details).toBeNull();
-    });
 
     it('should use "Unknown error occurred on the server" when thrown value is not an Error', async () => {
       mockD1.spies.all.mockRejectedValue('non-error');
@@ -109,17 +99,6 @@ describe('[API] /api/posts', () => {
 
       expect(mockD1.spies.all).toHaveBeenCalledTimes(1);
 
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('SERVER_ERROR');
-      expect(result.error?.message).toBe(
-        'Unknown error occurred on the server',
-      );
-      expect(result.error?.details).toBeNull();
-    });
-  });
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
       expect(result.success).toBe(false);
@@ -148,16 +127,6 @@ describe('[API] /api/posts', () => {
       const response = await POST(event);
       const result: CreatePostApiResponse = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(response.statusText).toBe('Bad Request');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('INVALID_REQUEST');
-      expect(result.error?.message).toBe(
-        'Request body must be a valid JSON object',
-      );
-      expect(result.error?.details).toBeNull();
-    });
       expect(response.status).toBe(400);
       expect(response.statusText).toBe('Bad Request');
       expect(result.success).toBe(false);
@@ -324,14 +293,6 @@ describe('[API] /api/posts', () => {
       expect(result.error?.message).toBe('fail');
       expect(result.error?.details).toBeNull();
     });
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('SERVER_ERROR');
-      expect(result.error?.message).toBe('fail');
-      expect(result.error?.details).toBeNull();
-    });
 
     it('should use "Unknown error occurred on the server" when thrown value is not an Error', async () => {
       event = createMockRequestEvent({
@@ -347,16 +308,6 @@ describe('[API] /api/posts', () => {
 
       expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('SERVER_ERROR');
-      expect(result.error?.message).toBe(
-        'Unknown error occurred on the server',
-      );
-      expect(result.error?.details).toBeNull();
-    });
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
       expect(result.success).toBe(false);

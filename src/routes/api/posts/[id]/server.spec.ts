@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMockD1,
@@ -7,7 +6,6 @@ import {
   createMockRequestEvent,
 } from '$lib/test-utils';
 import type {
-  ApiError,
   ApiError,
   DeletePostByIdApiResponse,
   GetPostByIdApiResponse,
@@ -50,14 +48,6 @@ describe('[API] /api/posts/[id]', () => {
       expect(result.error?.message).toBe('Post id is required');
       expect(result.error?.details).toBeNull();
     });
-      expect(response.status).toBe(400);
-      expect(response.statusText).toBe('Bad Request');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('INVALID_REQUEST');
-      expect(result.error?.message).toBe('Post id is required');
-      expect(result.error?.details).toBeNull();
-    });
 
     it('should return 500 if BLOG_DB binding is missing', async () => {
       const post = createMockPost();
@@ -67,19 +57,6 @@ describe('[API] /api/posts/[id]', () => {
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
 
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('DATABASE_BINDING_MISSING');
-      expect(result.error?.message).toBe(
-        'The server is not configured correctly',
-      );
-      expect(result.error?.details).toEqual({
-        resource: 'BLOG_DB',
-        hint: 'Please check your wrangler config file or environment variables',
-      } satisfies ApiError['details']);
-    });
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
       expect(result.success).toBe(false);
@@ -112,16 +89,6 @@ describe('[API] /api/posts/[id]', () => {
         id: post.id,
       } satisfies ApiError['details']);
     });
-      expect(response.status).toBe(404);
-      expect(response.statusText).toBe('Not Found');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('POST_NOT_FOUND');
-      expect(result.error?.message).toBe('Post not found');
-      expect(result.error?.details).toEqual({
-        id: post.id,
-      } satisfies ApiError['details']);
-    });
 
     it('should return post when found', async () => {
       mockD1.spies.run.mockResolvedValue({ results: [post] });
@@ -131,12 +98,6 @@ describe('[API] /api/posts/[id]', () => {
 
       expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
-      expect(response.status).toBe(200);
-      expect(response.statusText).toBe('OK');
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(post);
-      expect(result.error).toBeNull();
-    });
       expect(response.status).toBe(200);
       expect(response.statusText).toBe('OK');
       expect(result.success).toBe(true);
@@ -180,17 +141,6 @@ describe('[API] /api/posts/[id]', () => {
       expect(result.error?.details).toBeNull();
     });
   });
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('SERVER_ERROR');
-      expect(result.error?.message).toBe(
-        'Unknown error occurred on the server',
-      );
-      expect(result.error?.details).toBeNull();
-    });
-  });
 
   describe('PUT /api/posts/[id]', () => {
     beforeEach(() => {
@@ -215,13 +165,6 @@ describe('[API] /api/posts/[id]', () => {
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('INVALID_REQUEST');
-      expect(result.error?.message).toBe('Post id is required');
-      expect(result.error?.details).toBeNull();
-    });
       expect(response.status).toBe(400);
       expect(result.success).toBe(false);
       expect(result.data).toBeNull();
@@ -262,15 +205,6 @@ describe('[API] /api/posts/[id]', () => {
         const response = await PUT(event);
         const result: UpdatePostByIdApiResponse = await response.json();
 
-        expect(response.status).toBe(400);
-        expect(result.success).toBe(false);
-        expect(result.error?.code).toBe('INVALID_REQUEST');
-        expect(result.error?.details).toEqual({
-          title: 'Missing or invalid (must be a non-empty string)',
-          content: null,
-        } satisfies ApiError['details']);
-      },
-    );
         expect(response.status).toBe(400);
         expect(result.success).toBe(false);
         expect(result.error?.code).toBe('INVALID_REQUEST');
@@ -325,19 +259,6 @@ describe('[API] /api/posts/[id]', () => {
         hint: 'Please check your wrangler config file or environment variables',
       } satisfies ApiError['details']);
     });
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('DATABASE_BINDING_MISSING');
-      expect(result.error?.message).toBe(
-        'The server is not configured correctly',
-      );
-      expect(result.error?.details).toEqual({
-        resource: 'BLOG_DB',
-        hint: 'Please check your wrangler config file or environment variables',
-      } satisfies ApiError['details']);
-    });
 
     it('should return 404 when post does not exist', async () => {
       mockD1.spies.run.mockResolvedValue({ results: [] });
@@ -347,16 +268,6 @@ describe('[API] /api/posts/[id]', () => {
 
       expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
-      expect(response.status).toBe(404);
-      expect(response.statusText).toBe('Not Found');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('POST_NOT_FOUND');
-      expect(result.error?.message).toBe('Post not found');
-      expect(result.error?.details).toEqual({
-        id: post.id,
-      } satisfies ApiError['details']);
-    });
       expect(response.status).toBe(404);
       expect(response.statusText).toBe('Not Found');
       expect(result.success).toBe(false);
@@ -403,17 +314,6 @@ describe('[API] /api/posts/[id]', () => {
       expect(result.data?.updatedAt).toBe(updatedAt);
       expect(result.error).toBeNull();
     });
-      expect(response.status).toBe(200);
-      expect(response.statusText).toBe('OK');
-      expect(result.success).toBe(true);
-      expect(result.data?.id).toBe(existingPost.id);
-      expect(result.data?.title).toBe(updatedPost.title);
-      expect(result.data?.content).toBe(updatedPost.content);
-      expect(result.data?.createdAt).toBe(existingPost.createdAt);
-      expect(result.data?.updatedAt).not.toBe(existingPost.updatedAt);
-      expect(result.data?.updatedAt).toBe(updatedAt);
-      expect(result.error).toBeNull();
-    });
 
     it('should handle server errors', async () => {
       mockD1.spies.run.mockRejectedValue(new Error('fail'));
@@ -440,17 +340,6 @@ describe('[API] /api/posts/[id]', () => {
 
       expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('SERVER_ERROR');
-      expect(result.error?.message).toBe(
-        'Unknown error occurred on the server',
-      );
-      expect(result.error?.details).toBeNull();
-    });
-  });
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
       expect(result.success).toBe(false);
@@ -488,14 +377,6 @@ describe('[API] /api/posts/[id]', () => {
       expect(result.error?.message).toBe('Post id is required');
       expect(result.error?.details).toBeNull();
     });
-      expect(response.status).toBe(400);
-      expect(response.statusText).toBe('Bad Request');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('INVALID_REQUEST');
-      expect(result.error?.message).toBe('Post id is required');
-      expect(result.error?.details).toBeNull();
-    });
 
     it('should return 500 if BLOG_DB binding is missing', async () => {
       event = createMockRequestEvent({
@@ -505,19 +386,6 @@ describe('[API] /api/posts/[id]', () => {
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();
 
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('DATABASE_BINDING_MISSING');
-      expect(result.error?.message).toBe(
-        'The server is not configured correctly',
-      );
-      expect(result.error?.details).toEqual({
-        resource: 'BLOG_DB',
-        hint: 'Please check your wrangler config file or environment variables',
-      } satisfies ApiError['details']);
-    });
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
       expect(result.success).toBe(false);
@@ -550,16 +418,6 @@ describe('[API] /api/posts/[id]', () => {
         id: post.id,
       } satisfies ApiError['details']);
     });
-      expect(response.status).toBe(404);
-      expect(response.statusText).toBe('Not Found');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('POST_NOT_FOUND');
-      expect(result.error?.message).toBe('Post not found');
-      expect(result.error?.details).toEqual({
-        id: post.id,
-      } satisfies ApiError['details']);
-    });
 
     it('should return post when found', async () => {
       mockD1.spies.run.mockResolvedValue({ results: [post] });
@@ -569,12 +427,6 @@ describe('[API] /api/posts/[id]', () => {
 
       expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
-      expect(response.status).toBe(200);
-      expect(response.statusText).toBe('OK');
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(null);
-      expect(result.error).toBeNull();
-    });
       expect(response.status).toBe(200);
       expect(response.statusText).toBe('OK');
       expect(result.success).toBe(true);
@@ -607,16 +459,6 @@ describe('[API] /api/posts/[id]', () => {
 
       expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
-      expect(response.status).toBe(500);
-      expect(response.statusText).toBe('Internal Server Error');
-      expect(result.success).toBe(false);
-      expect(result.data).toBeNull();
-      expect(result.error?.code).toBe('SERVER_ERROR');
-      expect(result.error?.message).toBe(
-        'Unknown error occurred on the server',
-      );
-      expect(result.error?.details).toBeNull();
-    });
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
       expect(result.success).toBe(false);
