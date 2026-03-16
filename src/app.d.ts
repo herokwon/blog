@@ -1,4 +1,6 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
+import type { PublicUser, Session } from '$lib/types/auth';
+
 // for information about these interfaces
 declare global {
   namespace App {
@@ -10,7 +12,10 @@ declare global {
     }
 
     // interface Error {}
-    // interface Locals {}
+    interface Locals {
+      user: Pick<PublicUser, 'id' | 'username' | 'role'> | null;
+      session: Pick<Session, 'id' | 'expiresAt'> | null;
+    }
     // interface PageData {}
     // interface PageState {}
     // interface Platform {}

@@ -5,11 +5,11 @@
   import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
   import type { CreatePostApiResponse } from '$lib/types/api';
-  import type { CreatePostInput } from '$lib/types/post';
+  import type { PostInput } from '$lib/types/post';
 
   const STORAGE_KEY = 'DRAFT_POST';
 
-  let postData = $state<CreatePostInput>({
+  let postData = $state<PostInput>({
     title: '',
     content: '',
   });
@@ -63,9 +63,7 @@
     try {
       const rawData = localStorage.getItem(STORAGE_KEY);
       if (rawData) {
-        const { title, content } = JSON.parse(
-          rawData,
-        ) satisfies CreatePostInput;
+        const { title, content } = JSON.parse(rawData) satisfies PostInput;
         postData.title = title;
         postData.content = content;
       }

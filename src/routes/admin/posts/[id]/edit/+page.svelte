@@ -5,13 +5,13 @@
   import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
   import type { UpdatePostByIdApiResponse } from '$lib/types/api';
-  import type { UpdatePostInput } from '$lib/types/post';
+  import type { PostInput } from '$lib/types/post';
 
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
 
-  let postData = $state<UpdatePostInput>({
+  let postData = $state<PostInput>({
     title: '',
     content: '',
   });
