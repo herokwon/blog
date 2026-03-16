@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createMockFetch,
+  createMockLoadEvent,
+  createMockPost,
+} from '$lib/test-utils';
 import type { GetPostByIdApiResponse } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
 
 import type { PageServerLoadEvent } from './$types';
 import { load } from './+page.server';
@@ -12,62 +16,30 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }));
 
-const mockPost: Post = {
-  id: '123e4567-e89b-12d3-a456-426614174221',
-  title: 'Post detail',
-  content: 'content',
-  createdAt: '2026-03-03T00:00:00.000Z',
-  updatedAt: '2026-03-04T00:00:00.000Z',
-};
-
-function createMockFetch(response: GetPostByIdApiResponse, status = 200) {
-  return vi.fn<PageServerLoadEvent['fetch']>(
-    async () =>
-      new Response(JSON.stringify(response), {
-        status,
-        headers: { 'content-type': 'application/json' },
-      }),
-  );
-}
-
-function createLoadEvent(
-  fetch: PageServerLoadEvent['fetch'],
-  id: string,
-): PageServerLoadEvent {
-  return {
-    cookies: {} as PageServerLoadEvent['cookies'],
-    fetch,
-    getClientAddress: () => '127.0.0.1',
-    locals: {} as PageServerLoadEvent['locals'],
-    params: { id },
-    platform: undefined,
-    request: new Request(`http://localhost/posts/${id}`),
-    route: { id: '/posts/[id]' },
-    setHeaders: vi.fn(),
-    url: new URL(`http://localhost/posts/${id}`),
-    isDataRequest: false,
-    isSubRequest: false,
-    isRemoteRequest: false,
-    parent: async () => ({}),
-    depends: vi.fn(),
-    untrack: <T>(fn: () => T) => fn(),
-    tracing: {
-      enabled: false,
-      root: {} as PageServerLoadEvent['tracing']['root'],
-      current: {} as PageServerLoadEvent['tracing']['current'],
-    },
-  };
-}
-
 async function runLoad(fetch: PageServerLoadEvent['fetch'], id: string) {
-  const result = await load(createLoadEvent(fetch, id));
+  const result = await load(
+    createMockLoadEvent<PageServerLoadEvent>({ fetch, params: { id } }),
+  );
   if (!result) throw new Error('Expected load to return data');
   return result;
 }
 
 describe('[Routes] /posts/[id] - load', () => {
+  let mockPost: ReturnType<typeof createMockPost>;
+
+  beforeEach(() => {
+    mockPost = createMockPost();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should fetch post by id and return post data', async () => {
-    const mockFetch = createMockFetch({
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      GetPostByIdApiResponse
+    >({
       success: true,
       data: mockPost,
       error: null,
@@ -80,13 +52,16 @@ describe('[Routes] /posts/[id] - load', () => {
   });
 
   it('should throw 404 when api response is not found', async () => {
-    const mockFetch = createMockFetch(
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      GetPostByIdApiResponse
+    >(
       {
         success: false,
         data: null,
         error: { code: 'NOT_FOUND', message: 'missing', details: null },
       },
-      404,
+      { status: 404 },
     );
 
     await expect(runLoad(mockFetch, mockPost.id)).rejects.toThrow(
@@ -95,7 +70,10 @@ describe('[Routes] /posts/[id] - load', () => {
   });
 
   it('should throw 500 when api response fails with non-404 status', async () => {
-    const mockFetch = createMockFetch(
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      GetPostByIdApiResponse
+    >(
       {
         success: false,
         data: null,
@@ -105,7 +83,7 @@ describe('[Routes] /posts/[id] - load', () => {
           details: null,
         },
       },
-      500,
+      { status: 500 },
     );
 
     await expect(runLoad(mockFetch, mockPost.id)).rejects.toThrow(

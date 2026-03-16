@@ -1,65 +1,41 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createMockFetch,
+  createMockLoadEvent,
+  createMockPost,
+} from '$lib/test-utils';
 import type { ListPostsApiResponse } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
 
 import type { PageServerLoadEvent } from './$types';
 import { load } from './+page.server';
 
-const mockPost: Post = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
-  title: 'Hello World',
-  content: 'Some content',
-  createdAt: '2026-01-15T00:00:00.000Z',
-  updatedAt: '2026-02-20T00:00:00.000Z',
-};
-
-function createMockFetch(response: ListPostsApiResponse) {
-  return vi.fn<PageServerLoadEvent['fetch']>(
-    async () =>
-      new Response(JSON.stringify(response), {
-        headers: { 'content-type': 'application/json' },
-      }),
-  );
-}
-
-function createLoadEvent(
-  fetch: PageServerLoadEvent['fetch'],
-): PageServerLoadEvent {
-  return {
-    cookies: {} as PageServerLoadEvent['cookies'],
-    fetch,
-    getClientAddress: () => '127.0.0.1',
-    locals: {} as PageServerLoadEvent['locals'],
-    params: {} as PageServerLoadEvent['params'],
-    platform: undefined,
-    request: new Request('http://localhost/admin/posts'),
-    route: { id: '/admin/posts' },
-    setHeaders: vi.fn(),
-    url: new URL('http://localhost/admin/posts'),
-    isDataRequest: false,
-    isSubRequest: false,
-    isRemoteRequest: false,
-    parent: async () => ({}),
-    depends: vi.fn(),
-    untrack: <T>(fn: () => T) => fn(),
-    tracing: {
-      enabled: false,
-      root: {} as PageServerLoadEvent['tracing']['root'],
-      current: {} as PageServerLoadEvent['tracing']['current'],
-    },
-  };
-}
-
 async function runLoad(fetch: PageServerLoadEvent['fetch']) {
-  const result = await load(createLoadEvent(fetch));
+  const result = await load(
+    createMockLoadEvent<PageServerLoadEvent>({
+      fetch,
+    }),
+  );
   if (!result) throw new Error('Expected load to return data');
   return result;
 }
 
 describe('[Routes] /admin/posts - load', () => {
+  let mockPost: ReturnType<typeof createMockPost>;
+
+  beforeEach(() => {
+    mockPost = createMockPost();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should fetch from /api/posts', async () => {
-    const mockFetch = createMockFetch({
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      ListPostsApiResponse
+    >({
       success: true,
       data: [mockPost],
       error: null,
@@ -71,7 +47,10 @@ describe('[Routes] /admin/posts - load', () => {
   });
 
   it('should return posts on successful response', async () => {
-    const mockFetch = createMockFetch({
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      ListPostsApiResponse
+    >({
       success: true,
       data: [mockPost],
       error: null,
@@ -83,7 +62,14 @@ describe('[Routes] /admin/posts - load', () => {
   });
 
   it('should return empty posts array on successful response with no posts', async () => {
-    const mockFetch = createMockFetch({ success: true, data: [], error: null });
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      ListPostsApiResponse
+    >({
+      success: true,
+      data: [],
+      error: null,
+    });
 
     const result = await runLoad(mockFetch);
 
@@ -91,7 +77,10 @@ describe('[Routes] /admin/posts - load', () => {
   });
 
   it('should not include loadError on successful response', async () => {
-    const mockFetch = createMockFetch({
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      ListPostsApiResponse
+    >({
       success: true,
       data: [mockPost],
       error: null,
@@ -103,7 +92,10 @@ describe('[Routes] /admin/posts - load', () => {
   });
 
   it('should return empty posts on API error response', async () => {
-    const mockFetch = createMockFetch({
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      ListPostsApiResponse
+    >({
       success: false,
       data: null,
       error: {
@@ -120,7 +112,10 @@ describe('[Routes] /admin/posts - load', () => {
 
   it('should return loadError with error message on API error response', async () => {
     const errorMessage = 'Failed to load posts';
-    const mockFetch = createMockFetch({
+    const mockFetch = createMockFetch<
+      PageServerLoadEvent,
+      ListPostsApiResponse
+    >({
       success: false,
       data: null,
       error: {
