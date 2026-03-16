@@ -6,12 +6,28 @@ import { EXPIRES_IN_SECONDS } from '$lib/constants';
 import type { DBUser, UserSession } from '$lib/types/auth';
 import type { Post } from '$lib/types/post';
 
+import type { PageServerLoadEvent as AdminPostsPageServerLoadEvent } from '../routes/admin/posts/$types';
+import type { PageServerLoadEvent as AdminPostEditPageServerLoadEvent } from '../routes/admin/posts/[id]/edit/$types';
+import type { PageServerLoadEvent as PostsPageServerLoadEvent } from '../routes/posts/$types';
+import type { PageServerLoadEvent as PostPageServerLoadEvent } from '../routes/posts/[id]/$types';
+
+type PageServerLoadEvent =
+  | PostsPageServerLoadEvent
+  | PostPageServerLoadEvent
+  | AdminPostsPageServerLoadEvent
+  | AdminPostEditPageServerLoadEvent;
+
 type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   headers?: HeadersInit;
   pathname?: string;
   body?: unknown;
   db?: D1Database;
+};
+
+type MockLoadEventOptions<T extends PageServerLoadEvent> = Partial<T> & {
+  id?: string;
+  requestUrl?: string;
 };
 
 export const createMockUserSession = (
@@ -44,6 +60,18 @@ export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
   updatedAt: '2026-03-01T00:00:00.000Z',
   ...overrides,
 });
+
+export const createMockFetch = <T extends PageServerLoadEvent, R>(
+  response: R,
+  options: { status?: number; headers?: HeadersInit } = {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  },
+) => {
+  return vi.fn<T['fetch']>(
+    async () => new Response(JSON.stringify(response), options),
+  );
+};
 
 export const createMockD1 = () => {
   const prepare = vi.fn().mockReturnThis();
@@ -109,3 +137,54 @@ export const createMockRequestEvent = ({
     },
   };
 };
+
+export function createMockLoadEvent<T extends PageServerLoadEvent>({
+  id,
+  url,
+  route,
+  params,
+  requestUrl,
+  fetch = vi.fn(),
+  ...rest
+}: MockLoadEventOptions<T> = {}): T {
+  const resolvedRouteId = route?.id ?? (id ? '/posts/[id]' : '/posts');
+  const resolvedUrl =
+    url?.toString() ??
+    `http://localhost${id ? resolvedRouteId.replace('[id]', id) : ''}`;
+  const resolvedRequestUrl = requestUrl ?? resolvedUrl;
+  const resolvedParams = params ?? (id ? { id } : {});
+
+  return {
+    // basic properties
+    cookies: {} as T['cookies'],
+    locals: {} as T['locals'],
+    platform: undefined,
+    isDataRequest: false,
+    isSubRequest: false,
+    isRemoteRequest: false,
+    getClientAddress: () => '127.0.0.1',
+
+    // mockable functions
+    parent: vi.fn().mockResolvedValue({}),
+    depends: vi.fn(),
+    setHeaders: vi.fn(),
+    untrack: vi.fn(<T>(fn: () => T) => fn()),
+
+    // tracing properties
+    tracing: {
+      enabled: false,
+      root: {} as T['tracing']['root'],
+      current: {} as T['tracing']['current'],
+    },
+
+    // dynamic properties
+    fetch,
+    params: resolvedParams as T['params'],
+    request: new Request(resolvedRequestUrl),
+    route: { id: resolvedRouteId },
+    url: new URL(resolvedUrl),
+
+    // allow overrides
+    ...rest,
+  } as unknown as T;
+}
