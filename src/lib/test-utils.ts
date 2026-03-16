@@ -3,43 +3,45 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { vi } from 'vitest';
 
 import { EXPIRES_IN_SECONDS } from '$lib/constants';
-import type { UserSession } from '$lib/types';
+import type { DBUser, UserSession } from '$lib/types';
 import type { Post } from '$lib/types/post';
 
 type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  headers?: HeadersInit;
   pathname?: string;
   body?: unknown;
   db?: D1Database;
-};
-
-const MOCK_POST: Post = {
-  id: '4e9344a8-b642-47fb-8e8b-b0f1343f77df',
-  title: 'title',
-  content: 'content',
-  createdAt: '2026-03-01T00:00:00.000Z',
-  updatedAt: '2026-03-01T00:00:00.000Z',
-};
-
-const MOCK_USER_SESSION: UserSession = {
-  sessionId: 'session-abc',
-  expiresAt: Date.now() + EXPIRES_IN_SECONDS,
-  userId: 'user-123',
-  username: 'testuser',
-  role: 'user',
 };
 
 export const createMockUserSession = (
   overrides: Partial<UserSession> = {},
 ): UserSession => {
   return {
-    ...MOCK_USER_SESSION,
+    sessionId: 'session-abc',
+    expiresAt: Date.now() + EXPIRES_IN_SECONDS,
+    userId: 'user-123',
+    username: 'testuser',
+    role: 'user',
     ...overrides,
   };
 };
 
+export const createMockUser = (overrides: Partial<DBUser> = {}): DBUser => ({
+  id: 'user-123',
+  username: 'testuser',
+  role: 'user',
+  password_hash: 'hashedpassword',
+  created_at: '2026-01-01T00:00:00.000Z',
+  ...overrides,
+});
+
 export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
-  ...MOCK_POST,
+  id: '4e9344a8-b642-47fb-8e8b-b0f1343f77df',
+  title: 'title',
+  content: 'content',
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-01T00:00:00.000Z',
   ...overrides,
 });
 
@@ -66,8 +68,9 @@ export const createMockD1 = () => {
 
 export const createMockRequestEvent = ({
   method = 'GET',
+  headers = { 'Content-Type': 'application/json' },
   params = {},
-  pathname = '/api/posts',
+  pathname = '',
   body,
   db,
 }: MockEventOptions = {}) => {
@@ -85,7 +88,7 @@ export const createMockRequestEvent = ({
   const request = new Request(url, {
     method,
     body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers,
   });
 
   const event = {
