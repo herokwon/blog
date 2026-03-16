@@ -174,6 +174,7 @@ describe('[API] /api/posts', () => {
 
         expect(response.status).toBe(400);
         expect(result.success).toBe(false);
+        expect(result.data).toBeNull();
         expect(result.error?.code).toBe('INVALID_REQUEST');
         expect(result.error?.details).toEqual({
           title: 'Missing or invalid (must be a non-empty string)',
@@ -195,6 +196,7 @@ describe('[API] /api/posts', () => {
 
         expect(response.status).toBe(400);
         expect(result.success).toBe(false);
+        expect(result.data).toBeNull();
         expect(result.error?.code).toBe('INVALID_REQUEST');
         expect(result.error?.details).toEqual({
           title: null,

@@ -166,6 +166,7 @@ describe('[API] /api/posts/[id]', () => {
       const result: UpdatePostByIdApiResponse = await response.json();
 
       expect(response.status).toBe(400);
+      expect(response.statusText).toBe('Bad Request');
       expect(result.success).toBe(false);
       expect(result.data).toBeNull();
       expect(result.error?.code).toBe('INVALID_REQUEST');
@@ -184,6 +185,7 @@ describe('[API] /api/posts/[id]', () => {
       const result: UpdatePostByIdApiResponse = await response.json();
 
       expect(response.status).toBe(400);
+      expect(response.statusText).toBe('Bad Request');
       expect(result.success).toBe(false);
       expect(result.data).toBeNull();
       expect(result.error?.code).toBe('INVALID_REQUEST');
@@ -206,8 +208,13 @@ describe('[API] /api/posts/[id]', () => {
         const result: UpdatePostByIdApiResponse = await response.json();
 
         expect(response.status).toBe(400);
+        expect(response.statusText).toBe('Bad Request');
         expect(result.success).toBe(false);
+        expect(result.data).toBeNull();
         expect(result.error?.code).toBe('INVALID_REQUEST');
+        expect(result.error?.message).toBe(
+          'Request body must be a JSON object with string properties "title" and "content"',
+        );
         expect(result.error?.details).toEqual({
           title: 'Missing or invalid (must be a non-empty string)',
           content: null,
@@ -228,8 +235,13 @@ describe('[API] /api/posts/[id]', () => {
         const result: UpdatePostByIdApiResponse = await response.json();
 
         expect(response.status).toBe(400);
+        expect(response.statusText).toBe('Bad Request');
         expect(result.success).toBe(false);
+        expect(result.data).toBeNull();
         expect(result.error?.code).toBe('INVALID_REQUEST');
+        expect(result.error?.message).toBe(
+          'Request body must be a JSON object with string properties "title" and "content"',
+        );
         expect(result.error?.details).toEqual({
           title: null,
           content: 'Missing or invalid (must be a non-empty string)',
@@ -306,12 +318,12 @@ describe('[API] /api/posts/[id]', () => {
       expect(response.status).toBe(200);
       expect(response.statusText).toBe('OK');
       expect(result.success).toBe(true);
-      expect(result.data?.id).toBe(existingPost.id);
-      expect(result.data?.title).toBe(updatedPost.title);
-      expect(result.data?.content).toBe(updatedPost.content);
-      expect(result.data?.createdAt).toBe(existingPost.createdAt);
-      expect(result.data?.updatedAt).not.toBe(existingPost.updatedAt);
-      expect(result.data?.updatedAt).toBe(updatedAt);
+      expect(result.data).toEqual({
+        ...existingPost,
+        title: updatedPost.title,
+        content: updatedPost.content,
+        updatedAt,
+      });
       expect(result.error).toBeNull();
     });
 
