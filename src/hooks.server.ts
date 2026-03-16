@@ -1,7 +1,7 @@
 import { type Handle, redirect } from '@sveltejs/kit';
 
 import { COOKIE_NAME } from '$lib/constants';
-import type { UserSession } from '$lib/types';
+import type { UserSession } from '$lib/types/auth';
 
 export const handle: Handle = async ({ event, resolve }) => {
   const sessionId = event.cookies.get(COOKIE_NAME);

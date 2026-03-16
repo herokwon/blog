@@ -3,7 +3,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { vi } from 'vitest';
 
 import { EXPIRES_IN_SECONDS } from '$lib/constants';
-import type { DBUser, UserSession } from '$lib/types';
+import type { DBUser, UserSession } from '$lib/types/auth';
 import type { Post } from '$lib/types/post';
 
 type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
