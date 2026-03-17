@@ -68,7 +68,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     beforeNavigateHandlers.length = 0;
   });
 
-  it('should render form elements', async () => {
+  it('should render form with prefilled values', async () => {
     render(Page, { data: { post: mockPost } });
 
     await Promise.all([
