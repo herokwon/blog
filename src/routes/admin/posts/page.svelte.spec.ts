@@ -17,15 +17,22 @@ const mockPost2: Post = createMockPost({
   title: 'title2',
 });
 
+function renderPageWith({
+  posts = [],
+  loadError,
+}: { posts?: Post[]; loadError?: string } = {}) {
+  render(Page, { data: { posts, loadError } });
+}
+
 describe('[Page] /admin/posts', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  describe('header', () => {
-    it('should render page heading', async () => {
-      render(Page, { data: { posts: [] } });
+  describe('empty state', () => {
+    it('should render page header and empty state', async () => {
+      renderPageWith();
 
       await Promise.all([
         expect
@@ -44,8 +51,8 @@ describe('[Page] /admin/posts', () => {
   });
 
   describe('error state', () => {
-    it('should display error message when loadError is present', async () => {
-      render(Page, { data: { posts: [], loadError: 'Failed to load posts' } });
+    it('should display error message and hide posts table', async () => {
+      renderPageWith({ loadError: 'Failed to load posts' });
 
       await Promise.all([
         expect
@@ -68,8 +75,8 @@ describe('[Page] /admin/posts', () => {
       vi.unstubAllGlobals();
     });
 
-    it('should render table when posts exist', async () => {
-      render(Page, { data: { posts: [mockPost] } });
+    it('should render table with all post details, actions, and count', async () => {
+      renderPageWith({ posts: [mockPost] });
       const titleLink = page.getByRole('link', { name: mockPost.title });
 
       await Promise.all([
@@ -92,8 +99,8 @@ describe('[Page] /admin/posts', () => {
       ]);
     });
 
-    it('should render a "Delete" button for the post', async () => {
-      render(Page, { data: { posts: [mockPost] } });
+    it('should render all posts with correct count', async () => {
+      renderPageWith({ posts: [mockPost, mockPost2] });
 
       await Promise.all([
         expect.element(page.getByText(mockPost.title)).toBeInTheDocument(),
@@ -104,7 +111,7 @@ describe('[Page] /admin/posts', () => {
 
     it('should remove post from table when Delete button is clicked', async () => {
       vi.stubGlobal('confirm', () => true);
-      render(Page, { data: { posts: [mockPost] } });
+      renderPageWith({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -116,7 +123,7 @@ describe('[Page] /admin/posts', () => {
 
     it('should not remove post when user cancels the confirmation dialog', async () => {
       vi.stubGlobal('confirm', () => false);
-      render(Page, { data: { posts: [mockPost] } });
+      renderPageWith({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -130,14 +137,18 @@ describe('[Page] /admin/posts', () => {
         vi.fn(() => Promise.resolve({ ok: false, status: 500 })),
       );
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      renderPageWith({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
-      await vi.waitFor(() => {
-        expect(errorSpy).toHaveBeenCalledWith(
-          'Error deleting post: Failed to delete post (status 500)',
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(errorSpy).toHaveBeenCalledWith(
+            'Error deleting post: Failed to delete post (status 500)',
+          );
+        },
+        { interval: 5 },
+      );
       await expect.element(page.getByText(mockPost.title)).toBeInTheDocument();
     });
 
@@ -148,15 +159,18 @@ describe('[Page] /admin/posts', () => {
         vi.fn(() => Promise.reject('Network timeout')),
       );
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      renderPageWith({ posts: [mockPost] });
 
-      render(Page, { data: { posts: [mockPost] } });
       await page.getByRole('button', { name: 'Delete' }).click();
 
-      await vi.waitFor(() => {
-        expect(errorSpy).toHaveBeenCalledWith(
-          'Error deleting post: Network timeout',
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(errorSpy).toHaveBeenCalledWith(
+            'Error deleting post: Network timeout',
+          );
+        },
+        { interval: 5 },
+      );
     });
   });
 
@@ -167,29 +181,24 @@ describe('[Page] /admin/posts', () => {
         'fetch',
         vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
       );
-      render(Page, { data: { posts: [mockPost, mockPost2] } });
+      renderPageWith({ posts: [mockPost, mockPost2] });
 
       await expect.element(page.getByText('2 posts')).toBeInTheDocument();
 
       await page.getByRole('button', { name: 'Delete' }).first().click();
 
-      await vi.waitFor(() => {
-        expect(document.body.textContent).toContain('1 post');
-      });
+      await expect.element(page.getByText('1 post')).toBeInTheDocument();
     });
 
     it('should fall back to empty string when posts.length is nullish', async () => {
-      // Svelte 5 compiles `{data.posts.length}` as `${data().posts.length ?? ''}`.
-      // The `?? ''` fallback branch is only triggered when .length is null/undefined.
-      // We use a Proxy to make .length return null, covering that compiler-generated branch.
-      const posts = new Proxy([] as Post[], {
+      const posts = new Proxy([], {
         get(target, prop, receiver) {
           if (prop === 'length') return null;
           return Reflect.get(target, prop, receiver);
         },
       });
-      render(Page, { data: { posts } });
-      // null !== 0, so the table branch is entered (not empty state)
+      renderPageWith({ posts });
+
       await expect.element(page.getByRole('table')).toBeInTheDocument();
     });
   });
