@@ -132,13 +132,11 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should submit update request and navigate on success', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     stubFetch({
       success: true,
       data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
       error: null,
     });
-
     render(Page, { data: { post: mockPost } });
 
     await expect
@@ -154,7 +152,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     await page.getByRole('button', { name: 'Update' }).click();
 
     expect(confirmSpy).toHaveBeenCalledWith('Update this post?');
-
     expect(fetch).toHaveBeenCalledWith(`/api/posts/${mockPost.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -168,7 +165,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should not navigate on API error response', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     stubFetch({
       success: false,
       data: null,
@@ -178,7 +174,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
         details: null,
       },
     });
-
     render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
@@ -191,13 +186,11 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should not submit when user declines update confirmation', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
     stubFetch({
       success: true,
       data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
       error: null,
     });
-
     render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
@@ -215,7 +208,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const cancel = vi.fn();
-
     beforeNavigateHandlers[0]?.({
       to: { route: { id: '/admin/posts' } },
       cancel,
@@ -234,7 +226,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
     const confirmSpy = vi.spyOn(window, 'confirm');
     const cancel = vi.fn();
-
     beforeNavigateHandlers[0]?.({ to: null, cancel });
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -250,7 +241,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
     const confirmSpy = vi.spyOn(window, 'confirm');
     const cancel = vi.fn();
-
     beforeNavigateHandlers[0]?.({ to: { route: { id: '/other' } }, cancel });
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -263,7 +253,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
       vi.fn(() => new Promise(() => {})),
     );
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
@@ -316,7 +305,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
     const event = new Event('beforeunload', { cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
     window.dispatchEvent(event);
 
     expect(preventDefaultSpy).toHaveBeenCalled();
@@ -336,7 +324,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
     const event = new Event('beforeunload', { cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
     window.dispatchEvent(event);
 
     expect(preventDefaultSpy).not.toHaveBeenCalled();

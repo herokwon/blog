@@ -47,7 +47,6 @@ describe('[Page Server] /admin/posts', () => {
       data: [mockPost],
       error: null,
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.posts).toEqual([mockPost]);
@@ -62,7 +61,6 @@ describe('[Page Server] /admin/posts', () => {
       data: [],
       error: null,
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.posts).toEqual([]);
@@ -77,7 +75,6 @@ describe('[Page Server] /admin/posts', () => {
       data: [mockPost],
       error: null,
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.loadError).toBeUndefined();
@@ -96,7 +93,6 @@ describe('[Page Server] /admin/posts', () => {
         details: null,
       },
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.posts).toEqual([]);
@@ -116,7 +112,6 @@ describe('[Page Server] /admin/posts', () => {
         details: null,
       },
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.loadError).toBe(errorMessage);

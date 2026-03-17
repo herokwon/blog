@@ -159,7 +159,6 @@ describe('[Page] /admin/posts/new', () => {
       'DRAFT_POST',
       JSON.stringify({ title: 'Draft Title', content: 'Draft Content' }),
     );
-
     stubFetch({
       success: false,
       data: null,

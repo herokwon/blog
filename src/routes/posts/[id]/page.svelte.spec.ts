@@ -43,7 +43,6 @@ describe('[Page] /posts/[id]', () => {
     render(Page, {
       data: { post: { ...mockPost, title: null as unknown as string } },
     });
-
     await expect.element(page.getByRole('article')).toBeInTheDocument();
   });
 });
