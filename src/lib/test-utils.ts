@@ -32,16 +32,14 @@ type MockLoadEventOptions<T extends PageServerLoadEvent> = Partial<T> & {
 
 export const createMockUserSession = (
   overrides: Partial<UserSession> = {},
-): UserSession => {
-  return {
-    sessionId: 'session-abc',
-    expiresAt: Date.now() + EXPIRES_IN_SECONDS,
-    userId: 'user-123',
-    username: 'testuser',
-    role: 'user',
-    ...overrides,
-  };
-};
+): UserSession => ({
+  sessionId: 'session-abc',
+  expiresAt: Date.now() + EXPIRES_IN_SECONDS,
+  userId: 'user-123',
+  username: 'testuser',
+  role: 'user',
+  ...overrides,
+});
 
 export const createMockUser = (overrides: Partial<DBUser> = {}): DBUser => ({
   id: 'user-123',

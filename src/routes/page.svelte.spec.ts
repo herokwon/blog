@@ -5,7 +5,7 @@ import { page } from 'vitest/browser';
 
 import Page from './+page.svelte';
 
-describe('[Routes] /', () => {
+describe('[Page] /', () => {
   it('should render h1', async () => {
     render(Page);
     const heading = page.getByRole('heading', { level: 1 });

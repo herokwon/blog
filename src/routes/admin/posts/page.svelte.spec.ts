@@ -1,86 +1,65 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockPost } from '$lib/test-utils';
 import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
 import Page from './+page.svelte';
 
-const mockPost: Post = {
+const mockPost: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174000',
-  title: 'Hello World',
-  content: 'Some content',
-  createdAt: '2026-01-15T00:00:00.000Z',
-  updatedAt: '2026-02-20T00:00:00.000Z',
-};
+  title: 'title1',
+});
 
-const mockPost2: Post = {
+const mockPost2: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174001',
-  title: 'Second Post',
-  content: 'More content',
-  createdAt: '2026-03-01T00:00:00.000Z',
-  updatedAt: '2026-03-02T00:00:00.000Z',
-};
+  title: 'title2',
+});
 
-describe('[Routes] /admin/posts', () => {
+function renderPageWith({
+  posts = [],
+  loadError,
+}: { posts?: Post[]; loadError?: string } = {}) {
+  render(Page, { data: { posts, loadError } });
+}
+
+describe('[Page] /admin/posts', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  describe('header', () => {
-    it('should render page heading', async () => {
-      render(Page, { data: { posts: [] } });
+  describe('empty state', () => {
+    it('should render page header and empty state', async () => {
+      renderPageWith();
 
-      await expect
-        .element(page.getByRole('heading', { level: 1 }))
-        .toHaveTextContent('Posts');
-    });
-
-    it('should render "New post" link', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect
-        .element(page.getByRole('link', { name: 'New post' }))
-        .toBeInTheDocument();
+      await Promise.all([
+        expect
+          .element(page.getByRole('heading', { level: 1 }))
+          .toHaveTextContent('Posts'),
+        expect
+          .element(page.getByRole('link', { name: 'New post' }))
+          .toBeInTheDocument(),
+        expect.element(page.getByText('No posts yet.')).toBeInTheDocument(),
+        expect
+          .element(page.getByRole('link', { name: /Write the first post/ }))
+          .toBeInTheDocument(),
+        expect.element(page.getByRole('table')).not.toBeInTheDocument(),
+      ]);
     });
   });
 
   describe('error state', () => {
-    it('should display error message when loadError is present', async () => {
-      render(Page, { data: { posts: [], loadError: 'Failed to load posts' } });
+    it('should display error message and hide posts table', async () => {
+      renderPageWith({ loadError: 'Failed to load posts' });
 
-      await expect
-        .element(page.getByText('Failed to load posts'))
-        .toBeInTheDocument();
-    });
-
-    it('should not render posts table when loadError is present', async () => {
-      render(Page, { data: { posts: [], loadError: 'Failed to load posts' } });
-
-      await expect.element(page.getByRole('table')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('empty state', () => {
-    it('should display empty state message when no posts exist', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect.element(page.getByText('No posts yet.')).toBeInTheDocument();
-    });
-
-    it('should display "Write the first post" link in empty state', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect
-        .element(page.getByRole('link', { name: /Write the first post/ }))
-        .toBeInTheDocument();
-    });
-
-    it('should not render posts table when posts array is empty', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect.element(page.getByRole('table')).not.toBeInTheDocument();
+      await Promise.all([
+        expect
+          .element(page.getByText('Failed to load posts'))
+          .toBeInTheDocument(),
+        expect.element(page.getByRole('table')).not.toBeInTheDocument(),
+      ]);
     });
   });
 
@@ -96,85 +75,55 @@ describe('[Routes] /admin/posts', () => {
       vi.unstubAllGlobals();
     });
 
-    it('should render table when posts exist', async () => {
-      render(Page, { data: { posts: [mockPost] } });
+    it('should render table with all post details, actions, and count', async () => {
+      renderPageWith({ posts: [mockPost] });
+      const titleLink = page.getByRole('link', { name: mockPost.title });
 
-      await expect.element(page.getByRole('table')).toBeInTheDocument();
+      await Promise.all([
+        expect.element(page.getByRole('table')).toBeInTheDocument(),
+        expect.element(page.getByText(mockPost.title)).toBeInTheDocument(),
+        expect.element(page.getByText(mockPost.id)).toBeInTheDocument(),
+        expect.element(page.getByText('No posts yet.')).not.toBeInTheDocument(),
+        expect.element(page.getByText('1 post')).toBeInTheDocument(),
+        expect
+          .element(titleLink)
+          .toHaveAttribute('href', `/posts/${mockPost.id}`),
+        expect.element(titleLink).toHaveAttribute('target', '_blank'),
+        expect.element(titleLink).toHaveAttribute('rel', 'noopener noreferrer'),
+        expect
+          .element(page.getByRole('link', { name: 'Edit' }))
+          .toBeInTheDocument(),
+        expect
+          .element(page.getByRole('button', { name: 'Delete' }))
+          .toBeInTheDocument(),
+      ]);
     });
 
-    it('should display post title', async () => {
-      render(Page, { data: { posts: [mockPost] } });
+    it('should render all posts with correct count', async () => {
+      renderPageWith({ posts: [mockPost, mockPost2] });
 
-      await expect.element(page.getByText(mockPost.title)).toBeInTheDocument();
-    });
-
-    it('should display post id', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect.element(page.getByText(mockPost.id)).toBeInTheDocument();
-    });
-
-    it('should render all posts', async () => {
-      render(Page, { data: { posts: [mockPost, mockPost2] } });
-
-      await expect.element(page.getByText(mockPost.title)).toBeInTheDocument();
-      await expect.element(page.getByText(mockPost2.title)).toBeInTheDocument();
-    });
-
-    it('should render post title as a link to public post page', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect
-        .element(page.getByRole('link', { name: mockPost.title }))
-        .toHaveAttribute('href', `/posts/${mockPost.id}`);
-      await expect
-        .element(page.getByRole('link', { name: mockPost.title }))
-        .toHaveAttribute('target', '_blank');
-      await expect
-        .element(page.getByRole('link', { name: mockPost.title }))
-        .toHaveAttribute('rel', 'noopener noreferrer');
-    });
-
-    it('should render an "Edit" link for the post', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect
-        .element(page.getByRole('link', { name: 'Edit' }))
-        .toBeInTheDocument();
-    });
-
-    it('should render a "Delete" button for the post', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect
-        .element(page.getByRole('button', { name: 'Delete' }))
-        .toBeInTheDocument();
+      await Promise.all([
+        expect.element(page.getByText(mockPost.title)).toBeInTheDocument(),
+        expect.element(page.getByText(mockPost2.title)).toBeInTheDocument(),
+        expect.element(page.getByText('2 posts')).toBeInTheDocument(),
+      ]);
     });
 
     it('should remove post from table when Delete button is clicked', async () => {
       vi.stubGlobal('confirm', () => true);
-      render(Page, { data: { posts: [mockPost] } });
+      renderPageWith({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
-      await vi.waitFor(() => {
-        const text = document.body.textContent ?? '';
-        expect(text).not.toContain(mockPost.title);
-        expect(text).not.toContain(mockPost.id);
-      });
-    });
-
-    it('should not show empty state when posts exist', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect
-        .element(page.getByText('No posts yet.'))
-        .not.toBeInTheDocument();
+      await Promise.all([
+        expect.element(page.getByText(mockPost.title)).not.toBeInTheDocument(),
+        expect.element(page.getByText(mockPost.id)).not.toBeInTheDocument(),
+      ]);
     });
 
     it('should not remove post when user cancels the confirmation dialog', async () => {
       vi.stubGlobal('confirm', () => false);
-      render(Page, { data: { posts: [mockPost] } });
+      renderPageWith({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -188,15 +137,18 @@ describe('[Routes] /admin/posts', () => {
         vi.fn(() => Promise.resolve({ ok: false, status: 500 })),
       );
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      renderPageWith({ posts: [mockPost] });
 
-      render(Page, { data: { posts: [mockPost] } });
       await page.getByRole('button', { name: 'Delete' }).click();
 
-      await vi.waitFor(() => {
-        expect(errorSpy).toHaveBeenCalledWith(
-          'Error deleting post: Failed to delete post (status 500)',
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(errorSpy).toHaveBeenCalledWith(
+            'Error deleting post: Failed to delete post (status 500)',
+          );
+        },
+        { interval: 5 },
+      );
       await expect.element(page.getByText(mockPost.title)).toBeInTheDocument();
     });
 
@@ -207,60 +159,46 @@ describe('[Routes] /admin/posts', () => {
         vi.fn(() => Promise.reject('Network timeout')),
       );
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      renderPageWith({ posts: [mockPost] });
 
-      render(Page, { data: { posts: [mockPost] } });
       await page.getByRole('button', { name: 'Delete' }).click();
 
-      await vi.waitFor(() => {
-        expect(errorSpy).toHaveBeenCalledWith(
-          'Error deleting post: Network timeout',
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(errorSpy).toHaveBeenCalledWith(
+            'Error deleting post: Network timeout',
+          );
+        },
+        { interval: 5 },
+      );
     });
   });
 
   describe('post count', () => {
-    it('should show singular "post" for one post', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect.element(page.getByText('1 post')).toBeInTheDocument();
-    });
-
-    it('should show plural "posts" for multiple posts', async () => {
-      render(Page, { data: { posts: [mockPost, mockPost2] } });
-
-      await expect.element(page.getByText('2 posts')).toBeInTheDocument();
-    });
-
     it('should update count to singular after deleting one of two posts', async () => {
       vi.stubGlobal('confirm', () => true);
       vi.stubGlobal(
         'fetch',
         vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
       );
-      render(Page, { data: { posts: [mockPost, mockPost2] } });
+      renderPageWith({ posts: [mockPost, mockPost2] });
 
       await expect.element(page.getByText('2 posts')).toBeInTheDocument();
 
       await page.getByRole('button', { name: 'Delete' }).first().click();
 
-      await vi.waitFor(() => {
-        expect(document.body.textContent).toContain('1 post');
-      });
+      await expect.element(page.getByText('1 post')).toBeInTheDocument();
     });
 
     it('should fall back to empty string when posts.length is nullish', async () => {
-      // Svelte 5 compiles `{data.posts.length}` as `${data().posts.length ?? ''}`.
-      // The `?? ''` fallback branch is only triggered when .length is null/undefined.
-      // We use a Proxy to make .length return null, covering that compiler-generated branch.
-      const posts = new Proxy([] as Post[], {
+      const posts = new Proxy([], {
         get(target, prop, receiver) {
           if (prop === 'length') return null;
           return Reflect.get(target, prop, receiver);
         },
       });
-      render(Page, { data: { posts } });
-      // null !== 0, so the table branch is entered (not empty state)
+      renderPageWith({ posts });
+
       await expect.element(page.getByRole('table')).toBeInTheDocument();
     });
   });

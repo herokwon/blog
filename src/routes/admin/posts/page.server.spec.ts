@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   createMockFetch,
@@ -10,6 +10,8 @@ import type { ListPostsApiResponse } from '$lib/types/api';
 import type { PageServerLoadEvent } from './$types';
 import { load } from './+page.server';
 
+const mockPost = createMockPost();
+
 async function runLoad(fetch: PageServerLoadEvent['fetch']) {
   const result = await load(
     createMockLoadEvent<PageServerLoadEvent>({
@@ -20,17 +22,7 @@ async function runLoad(fetch: PageServerLoadEvent['fetch']) {
   return result;
 }
 
-describe('[Routes] /admin/posts - load', () => {
-  let mockPost: ReturnType<typeof createMockPost>;
-
-  beforeEach(() => {
-    mockPost = createMockPost();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
+describe('[Page Server] /admin/posts', () => {
   it('should fetch from /api/posts', async () => {
     const mockFetch = createMockFetch<
       PageServerLoadEvent,
@@ -55,7 +47,6 @@ describe('[Routes] /admin/posts - load', () => {
       data: [mockPost],
       error: null,
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.posts).toEqual([mockPost]);
@@ -70,10 +61,9 @@ describe('[Routes] /admin/posts - load', () => {
       data: [],
       error: null,
     });
-
     const result = await runLoad(mockFetch);
 
-    expect(result.posts).toEqual([]);
+    expect(result.posts).toHaveLength(0);
   });
 
   it('should not include loadError on successful response', async () => {
@@ -85,7 +75,6 @@ describe('[Routes] /admin/posts - load', () => {
       data: [mockPost],
       error: null,
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.loadError).toBeUndefined();
@@ -104,10 +93,9 @@ describe('[Routes] /admin/posts - load', () => {
         details: null,
       },
     });
-
     const result = await runLoad(mockFetch);
 
-    expect(result.posts).toEqual([]);
+    expect(result.posts).toHaveLength(0);
   });
 
   it('should return loadError with error message on API error response', async () => {
@@ -124,7 +112,6 @@ describe('[Routes] /admin/posts - load', () => {
         details: null,
       },
     });
-
     const result = await runLoad(mockFetch);
 
     expect(result.loadError).toBe(errorMessage);

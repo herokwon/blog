@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   createMockFetch,
@@ -16,6 +16,8 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }));
 
+const mockPost = createMockPost();
+
 async function runLoad(fetch: PageServerLoadEvent['fetch'], id: string) {
   const result = await load(
     createMockLoadEvent<PageServerLoadEvent>({ fetch, params: { id } }),
@@ -24,17 +26,7 @@ async function runLoad(fetch: PageServerLoadEvent['fetch'], id: string) {
   return result;
 }
 
-describe('[Routes] /admin/posts/[id]/edit - load', () => {
-  let mockPost: ReturnType<typeof createMockPost>;
-
-  beforeEach(() => {
-    mockPost = createMockPost();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
+describe('[Page Server] /admin/posts/[id]/edit', () => {
   it('should fetch post by id and return post data', async () => {
     const mockFetch = createMockFetch<
       PageServerLoadEvent,

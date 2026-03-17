@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockPost } from '$lib/test-utils';
 import type { UpdatePostByIdApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
@@ -42,22 +43,13 @@ vi.mock('$lib/components/editor/config', () => ({
   ),
 }));
 
-const now = new Date().toISOString();
-const mockPost: Post = {
+const mockPost: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174100',
-  title: 'Original Title',
-  content: 'Original Content',
-  createdAt: now,
-  updatedAt: now,
-};
+});
 
-const mockPost2: Post = {
+const mockPost2: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174101',
-  title: 'Second Title',
-  content: 'Second Content',
-  createdAt: now,
-  updatedAt: now,
-};
+});
 
 function stubFetch(response: UpdatePostByIdApiResponse): void {
   vi.stubGlobal(
@@ -68,7 +60,7 @@ function stubFetch(response: UpdatePostByIdApiResponse): void {
   );
 }
 
-describe('[Routes] /admin/posts/[id]/edit', () => {
+describe('[Page] /admin/posts/[id]/edit', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -76,24 +68,26 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
     beforeNavigateHandlers.length = 0;
   });
 
-  it('should render form elements', async () => {
+  it('should render form with prefilled values', async () => {
     render(Page, { data: { post: mockPost } });
 
-    await expect
-      .element(page.getByRole('heading', { level: 1 }))
-      .toHaveTextContent('Edit post');
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Cancel' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Update' }))
-      .toBeInTheDocument();
+    await Promise.all([
+      expect
+        .element(page.getByRole('heading', { level: 1 }))
+        .toHaveTextContent('Edit post'),
+      expect
+        .element(page.getByRole('textbox', { name: 'Title' }))
+        .toHaveValue(mockPost.title),
+      expect
+        .element(page.getByRole('textbox', { name: 'Content' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Cancel' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Update' }))
+        .toHaveAttribute('disabled'),
+    ]);
   });
 
   it('should navigate to admin posts when cancel is clicked', async () => {
@@ -102,18 +96,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
     await page.getByRole('button', { name: 'Cancel' }).click();
 
     expect(gotoMock).toHaveBeenCalledWith('/admin/posts');
-  });
-
-  it('should prefill title and content from page data', async () => {
-    render(Page, { data: { post: mockPost } });
-
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toHaveValue(mockPost.title);
-
-    await expect
-      .element(page.getByRole('button', { name: 'Update' }))
-      .toHaveAttribute('disabled');
   });
 
   it('should reset form values when post id changes', async () => {
@@ -127,26 +109,26 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
     await view.rerender({ data: { post: mockPost2 } });
 
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toHaveValue(mockPost2.title);
-    await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
-      .toHaveTextContent(mockPost2.content);
-    await expect
-      .element(page.getByRole('button', { name: 'Update' }))
-      .toHaveAttribute('disabled');
+    await Promise.all([
+      expect
+        .element(page.getByRole('textbox', { name: 'Title' }))
+        .toHaveValue(mockPost2.title),
+      expect
+        .element(page.getByRole('textbox', { name: 'Content' }))
+        .toHaveTextContent(mockPost2.content),
+      expect
+        .element(page.getByRole('button', { name: 'Update' }))
+        .toHaveAttribute('disabled'),
+    ]);
   });
 
   it('should submit update request and navigate on success', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     stubFetch({
       success: true,
       data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
       error: null,
     });
-
     render(Page, { data: { post: mockPost } });
 
     await expect
@@ -162,7 +144,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
     await page.getByRole('button', { name: 'Update' }).click();
 
     expect(confirmSpy).toHaveBeenCalledWith('Update this post?');
-
     expect(fetch).toHaveBeenCalledWith(`/api/posts/${mockPost.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -176,7 +157,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
   it('should not navigate on API error response', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     stubFetch({
       success: false,
       data: null,
@@ -186,7 +166,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
         details: null,
       },
     });
-
     render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
@@ -199,13 +178,11 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
   it('should not submit when user declines update confirmation', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
     stubFetch({
       success: true,
       data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
       error: null,
     });
-
     render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
@@ -223,7 +200,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const cancel = vi.fn();
-
     beforeNavigateHandlers[0]?.({
       to: { route: { id: '/admin/posts' } },
       cancel,
@@ -242,7 +218,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
     const confirmSpy = vi.spyOn(window, 'confirm');
     const cancel = vi.fn();
-
     beforeNavigateHandlers[0]?.({ to: null, cancel });
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -258,7 +233,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
     const confirmSpy = vi.spyOn(window, 'confirm');
     const cancel = vi.fn();
-
     beforeNavigateHandlers[0]?.({ to: { route: { id: '/other' } }, cancel });
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -271,7 +245,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
       vi.fn(() => new Promise(() => {})),
     );
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
@@ -324,7 +297,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
     const event = new Event('beforeunload', { cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
     window.dispatchEvent(event);
 
     expect(preventDefaultSpy).toHaveBeenCalled();
@@ -344,7 +316,6 @@ describe('[Routes] /admin/posts/[id]/edit', () => {
 
     const event = new Event('beforeunload', { cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
     window.dispatchEvent(event);
 
     expect(preventDefaultSpy).not.toHaveBeenCalled();
