@@ -94,21 +94,25 @@ jobs:
         id: pr
         env:
           COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          SHORT_SHA="${COMMIT_SHA:0:7}"
+          PR_NUMBER=$(echo "$COMMIT_MSG" | head -n 1 | grep -oE '\(#([0-9]+)\)$' | grep -oE '[0-9]+' | head -1)
 
-          PR_INFO=$(gh api "repos/$REPO/commits/$COMMIT_SHA/pulls" \
-            --jq '.[0] // {} | if .number then {
-              number: .number,
-              title: .title,
-              url: .html_url,
-              commit: (.head.sha[0:7] // "'$SHORT_SHA'"),
-              avatar_url: ("https://github.com/" + (.user.login | gsub("\\[bot\\]"; "")) + ".png")
-            } else {} end')
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh api "repos/$REPO/commits/$COMMIT_SHA/pulls" \
+              --jq '.[0].number // empty')
+          fi
 
-          PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number // empty')
-
-          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+          if [ -n "$PR_NUMBER" ]; then
+            PR_INFO=$(gh api "repos/$REPO/pulls/$PR_NUMBER" \
+              --jq '{
+                number: .number,
+                title: .title,
+                url: .html_url,
+                commit: (.head.sha[0:7]),
+                avatar_url: ("https://github.com/" + (.user.login | gsub("\\[bot\\]"; "")) + ".png")
+              }')
+          else
             echo "No associated PR found."
             PR_INFO=""
           fi
