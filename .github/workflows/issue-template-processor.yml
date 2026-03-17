@@ -9,6 +9,7 @@ permissions:
 
 env:
   GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
   ISSUE_NUMBER: ${{ github.event.issue.number }}
   ISSUE_TITLE: ${{ github.event.issue.title }}
 
@@ -20,9 +21,6 @@ jobs:
       comment-id: ${{ steps.comment.outputs.id }}
       category: ${{ steps.category.outputs.result }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
       - name: Check issue category
         id: category
         env:
@@ -292,15 +290,11 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     env:
-      REPO: ${{ github.repository }}
       COMMENT_ID: ${{ needs.initialize-processing.outputs.comment-id }}
       CATEGORY: ${{ needs.initialize-processing.outputs.category }}
       GENERAL_SKIPPED: ${{ needs.process-general.outputs.skipped }}
       RESULT: ${{ ((needs.initialize-processing.outputs.category == 'bug-report' && needs.process-bug-report.result == 'success') || (needs.initialize-processing.outputs.category == 'feature-request' && needs.process-feature-request.result == 'success') || (needs.initialize-processing.outputs.category == 'general' && needs.process-general.result == 'success')) && 'success' || 'failure'  }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
       - name: Add final comment
         run: |
           COMMENT_ICON="✅"
@@ -319,5 +313,5 @@ jobs:
 
           COMMENT_BODY="### $COMMENT_ICON Processing $COMMENT_STATUS!"$'\n\n'"$COMMENT_DESCRIPTION"
 
-          gh api -X PATCH "repos/$REPO/issues/comments/$COMMENT_ID" \
+          gh api -X PATCH "repos/$GH_REPO/issues/comments/$COMMENT_ID" \
             -f body="$COMMENT_BODY"
