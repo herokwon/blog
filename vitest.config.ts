@@ -19,7 +19,6 @@ export default mergeConfig(viteConfig, {
       exclude: [
         'src/**/*.{test,spec}.{js,ts}',
         'src/**/index.{js,ts}',
-        'src/lib/server/**',
         'src/lib/types/**',
         'src/**/*.d.ts',
       ],

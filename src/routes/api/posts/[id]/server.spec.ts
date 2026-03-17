@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createMockD1,
+  createMockPost,
+  createMockRequestEvent,
+} from '$lib/test-utils';
 import type {
   ApiError,
   DeletePostByIdApiResponse,
@@ -7,18 +12,20 @@ import type {
   UpdatePostByIdApiResponse,
 } from '$lib/types/api';
 
-import {
-  createMockD1,
-  createMockPost,
-  createMockRequestEvent,
-} from '../test-utils';
 import { DELETE, GET, PUT } from './+server';
 
 describe('[API] /api/posts/[id]', () => {
-  let mock: ReturnType<typeof createMockD1>;
+  let mockD1: ReturnType<typeof createMockD1>;
+  let post: ReturnType<typeof createMockPost>;
+  let event: ReturnType<typeof createMockRequestEvent>['event'];
 
   beforeEach(() => {
-    mock = createMockD1();
+    mockD1 = createMockD1();
+    post = createMockPost();
+    event = createMockRequestEvent({
+      params: { id: post.id },
+      db: mockD1.db,
+    }).event;
   });
 
   afterEach(() => {
@@ -27,9 +34,9 @@ describe('[API] /api/posts/[id]', () => {
 
   describe('GET /api/posts/[id]', () => {
     it('should return 400 when post id is missing', async () => {
-      const event = createMockRequestEvent({
-        db: mock.db,
-      });
+      event = createMockRequestEvent({
+        db: mockD1.db,
+      }).event;
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
 
@@ -46,7 +53,7 @@ describe('[API] /api/posts/[id]', () => {
       const post = createMockPost();
       const event = createMockRequestEvent({
         params: { id: post.id },
-      });
+      }).event;
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
 
@@ -65,18 +72,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return 404 when post does not exist', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        params: { id: post.id },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockResolvedValue({ results: [] });
+      mockD1.spies.run.mockResolvedValue({ results: [] });
 
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(404);
       expect(response.statusText).toBe('Not Found');
@@ -90,18 +91,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return post when found', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        params: { id: post.id },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockResolvedValue({ results: [post] });
+      mockD1.spies.run.mockResolvedValue({ results: [post] });
 
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(200);
       expect(response.statusText).toBe('OK');
@@ -111,17 +106,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should handle server errors', async () => {
-      mock.spies.run.mockRejectedValue(new Error('fail'));
+      mockD1.spies.run.mockRejectedValue(new Error('fail'));
 
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        params: { id: post.id },
-        db: mock.db,
-      });
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
@@ -133,18 +123,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should use "Unknown error" message when thrown value is not an Error', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        params: { id: post.id },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockRejectedValue('non-error');
+      mockD1.spies.run.mockRejectedValue('non-error');
 
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
@@ -159,21 +143,30 @@ describe('[API] /api/posts/[id]', () => {
   });
 
   describe('PUT /api/posts/[id]', () => {
+    beforeEach(() => {
+      event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: post.id },
+        body: { ...post },
+        db: mockD1.db,
+      }).event;
+    });
+
     afterEach(() => {
       vi.useRealTimers();
     });
 
     it('should return 400 when post id is missing', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
+      event = createMockRequestEvent({
         method: 'PUT',
         body: { ...post },
-        db: mock.db,
-      });
+        db: mockD1.db,
+      }).event;
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
       expect(response.status).toBe(400);
+      expect(response.statusText).toBe('Bad Request');
       expect(result.success).toBe(false);
       expect(result.data).toBeNull();
       expect(result.error?.code).toBe('INVALID_REQUEST');
@@ -182,17 +175,17 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return 400 for malformed JSON body', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
+      event = createMockRequestEvent({
         method: 'PUT',
         params: { id: post.id },
         body: 'not a json',
-        db: mock.db,
-      });
+        db: mockD1.db,
+      }).event;
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
       expect(response.status).toBe(400);
+      expect(response.statusText).toBe('Bad Request');
       expect(result.success).toBe(false);
       expect(result.data).toBeNull();
       expect(result.error?.code).toBe('INVALID_REQUEST');
@@ -205,19 +198,23 @@ describe('[API] /api/posts/[id]', () => {
     it.each([{ content: 'content' }, { title: '', content: 'content' }])(
       'should return 400 when title is missing or invalid',
       async body => {
-        const post = createMockPost();
-        const event = createMockRequestEvent({
+        event = createMockRequestEvent({
           method: 'PUT',
           params: { id: post.id },
           body,
-          db: mock.db,
-        });
+          db: mockD1.db,
+        }).event;
         const response = await PUT(event);
         const result: UpdatePostByIdApiResponse = await response.json();
 
         expect(response.status).toBe(400);
+        expect(response.statusText).toBe('Bad Request');
         expect(result.success).toBe(false);
+        expect(result.data).toBeNull();
         expect(result.error?.code).toBe('INVALID_REQUEST');
+        expect(result.error?.message).toBe(
+          'Request body must be a JSON object with string properties "title" and "content"',
+        );
         expect(result.error?.details).toEqual({
           title: 'Missing or invalid (must be a non-empty string)',
           content: null,
@@ -228,19 +225,23 @@ describe('[API] /api/posts/[id]', () => {
     it.each([{ title: 'title' }, { title: 'title', content: '' }])(
       'should return 400 when content is missing or invalid',
       async body => {
-        const post = createMockPost();
-        const event = createMockRequestEvent({
+        event = createMockRequestEvent({
           method: 'PUT',
           params: { id: post.id },
           body,
-          db: mock.db,
-        });
+          db: mockD1.db,
+        }).event;
         const response = await PUT(event);
         const result: UpdatePostByIdApiResponse = await response.json();
 
         expect(response.status).toBe(400);
+        expect(response.statusText).toBe('Bad Request');
         expect(result.success).toBe(false);
+        expect(result.data).toBeNull();
         expect(result.error?.code).toBe('INVALID_REQUEST');
+        expect(result.error?.message).toBe(
+          'Request body must be a JSON object with string properties "title" and "content"',
+        );
         expect(result.error?.details).toEqual({
           title: null,
           content: 'Missing or invalid (must be a non-empty string)',
@@ -249,12 +250,11 @@ describe('[API] /api/posts/[id]', () => {
     );
 
     it('should return 500 if BLOG_DB binding is missing', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
+      event = createMockRequestEvent({
         method: 'PUT',
         params: { id: post.id },
         body: { ...post },
-      });
+      }).event;
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
@@ -273,20 +273,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return 404 when post does not exist', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        method: 'PUT',
-        params: { id: post.id },
-        body: { ...post },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockResolvedValue({ results: [] });
+      mockD1.spies.run.mockResolvedValue({ results: [] });
 
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(404);
       expect(response.statusText).toBe('Not Found');
@@ -315,10 +307,10 @@ describe('[API] /api/posts/[id]', () => {
         method: 'PUT',
         params: { id: existingPost.id },
         body: { ...updatedPost },
-        db: mock.db,
-      });
+        db: mockD1.db,
+      }).event;
 
-      mock.spies.run.mockResolvedValue({ results: [updatedPost] });
+      mockD1.spies.run.mockResolvedValue({ results: [updatedPost] });
 
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
@@ -326,30 +318,22 @@ describe('[API] /api/posts/[id]', () => {
       expect(response.status).toBe(200);
       expect(response.statusText).toBe('OK');
       expect(result.success).toBe(true);
-      expect(result.data?.id).toBe(existingPost.id);
-      expect(result.data?.title).toBe(updatedPost.title);
-      expect(result.data?.content).toBe(updatedPost.content);
-      expect(result.data?.createdAt).toBe(existingPost.createdAt);
-      expect(result.data?.updatedAt).not.toBe(existingPost.updatedAt);
-      expect(result.data?.updatedAt).toBe(updatedAt);
+      expect(result.data).toEqual({
+        ...existingPost,
+        title: updatedPost.title,
+        content: updatedPost.content,
+        updatedAt,
+      });
       expect(result.error).toBeNull();
     });
 
     it('should handle server errors', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        method: 'PUT',
-        params: { id: post.id },
-        body: { ...post },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockRejectedValue(new Error('fail'));
+      mockD1.spies.run.mockRejectedValue(new Error('fail'));
 
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
@@ -361,20 +345,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should use "Unknown error" message when thrown value is not an Error', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        method: 'PUT',
-        params: { id: post.id },
-        body: { ...post },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockRejectedValue('non-error');
+      mockD1.spies.run.mockRejectedValue('non-error');
 
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
@@ -389,11 +365,19 @@ describe('[API] /api/posts/[id]', () => {
   });
 
   describe('DELETE /api/posts/[id]', () => {
-    it('should return 400 when post id is missing', async () => {
-      const event = createMockRequestEvent({
+    beforeEach(() => {
+      event = createMockRequestEvent({
         method: 'DELETE',
-        db: mock.db,
-      });
+        params: { id: post.id },
+        db: mockD1.db,
+      }).event;
+    });
+
+    it('should return 400 when post id is missing', async () => {
+      event = createMockRequestEvent({
+        method: 'DELETE',
+        db: mockD1.db,
+      }).event;
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();
 
@@ -407,11 +391,10 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return 500 if BLOG_DB binding is missing', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
+      event = createMockRequestEvent({
         method: 'DELETE',
         params: { id: post.id },
-      });
+      }).event;
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();
 
@@ -430,19 +413,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return 404 when post does not exist', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        method: 'DELETE',
-        params: { id: post.id },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockResolvedValue({ results: [] });
+      mockD1.spies.run.mockResolvedValue({ results: [] });
 
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(404);
       expect(response.statusText).toBe('Not Found');
@@ -456,19 +432,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return post when found', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        method: 'DELETE',
-        params: { id: post.id },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockResolvedValue({ results: [post] });
+      mockD1.spies.run.mockResolvedValue({ results: [post] });
 
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(200);
       expect(response.statusText).toBe('OK');
@@ -478,19 +447,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should handle server errors', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        method: 'DELETE',
-        params: { id: post.id },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockRejectedValue(new Error('fail'));
+      mockD1.spies.run.mockRejectedValue(new Error('fail'));
 
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
@@ -502,19 +464,12 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should use "Unknown error" message when thrown value is not an Error', async () => {
-      const post = createMockPost();
-      const event = createMockRequestEvent({
-        method: 'DELETE',
-        params: { id: post.id },
-        db: mock.db,
-      });
-
-      mock.spies.run.mockRejectedValue('non-error');
+      mockD1.spies.run.mockRejectedValue('non-error');
 
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();
 
-      expect(mock.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
 
       expect(response.status).toBe(500);
       expect(response.statusText).toBe('Internal Server Error');
