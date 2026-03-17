@@ -57,7 +57,7 @@ async function submitForm(): Promise<void> {
   await page.getByRole('button', { name: 'Submit' }).click();
 }
 
-describe('[Routes] /admin/posts/new', () => {
+describe('[Page] /admin/posts/new', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();

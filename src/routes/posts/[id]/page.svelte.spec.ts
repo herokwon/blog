@@ -14,7 +14,7 @@ const mockPost: Post = {
   updatedAt: '2026-03-02T00:00:00.000Z',
 };
 
-describe('[Routes] /posts/[id]', () => {
+describe('[Page] /posts/[id]', () => {
   it('should render back link to posts list', async () => {
     render(Page, { data: { post: mockPost } });
 

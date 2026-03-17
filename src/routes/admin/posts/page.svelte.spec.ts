@@ -22,7 +22,7 @@ const mockPost2: Post = {
   updatedAt: '2026-03-02T00:00:00.000Z',
 };
 
-describe('[Routes] /admin/posts', () => {
+describe('[Page] /admin/posts', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

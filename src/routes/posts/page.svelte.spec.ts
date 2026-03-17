@@ -14,7 +14,7 @@ const mockPost: Post = {
   updatedAt: '2026-02-20T00:00:00.000Z',
 };
 
-describe('[Routes] /posts', () => {
+describe('[Page] /posts', () => {
   it('should render page heading', async () => {
     render(Page, { data: { posts: [] } });
 

@@ -24,7 +24,7 @@ async function runLoad(fetch: PageServerLoadEvent['fetch'], id: string) {
   return result;
 }
 
-describe('[Routes] /admin/posts/[id]/edit - load', () => {
+describe('[Page Server] /admin/posts/[id]/edit', () => {
   let mockPost: ReturnType<typeof createMockPost>;
 
   beforeEach(() => {

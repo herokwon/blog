@@ -68,7 +68,7 @@ function stubFetch(response: UpdatePostByIdApiResponse): void {
   );
 }
 
-describe('[Routes] /admin/posts/[id]/edit', () => {
+describe('[Page] /admin/posts/[id]/edit', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
