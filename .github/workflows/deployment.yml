@@ -103,7 +103,7 @@ jobs:
               title: .title,
               url: .html_url,
               commit: (.head.sha[0:7] // "'$SHORT_SHA'"),
-              avatar_url: ("https://github.com/" + .user.login + ".png")
+              avatar_url: ("https://github.com/" + (.user.login | gsub("\\[bot\\]"; "")) + ".png")
             } else {} end')
 
           PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number // empty')
