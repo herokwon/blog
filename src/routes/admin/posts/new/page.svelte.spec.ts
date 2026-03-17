@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockPost } from '$lib/test-utils';
 import type { CreatePostApiResponse } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
@@ -34,14 +34,7 @@ vi.mock('$lib/components/editor/config', () => ({
   ),
 }));
 
-const now = new Date().toISOString();
-const mockPost: Post = {
-  id: '123e4567-e89b-12d3-a456-426614174100',
-  title: 'Test Title',
-  content: 'Test Content',
-  createdAt: now,
-  updatedAt: now,
-};
+const mockPost = createMockPost();
 
 function stubFetch(response: CreatePostApiResponse): void {
   vi.stubGlobal(

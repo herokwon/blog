@@ -1,26 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockPost } from '$lib/test-utils';
 import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
 import Page from './+page.svelte';
 
-const mockPost: Post = {
+const mockPost: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174000',
-  title: 'Hello World',
-  content: 'Some content',
-  createdAt: '2026-01-15T00:00:00.000Z',
-  updatedAt: '2026-02-20T00:00:00.000Z',
-};
+  title: 'title1',
+});
 
-const mockPost2: Post = {
+const mockPost2: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174001',
-  title: 'Second Post',
-  content: 'More content',
-  createdAt: '2026-03-01T00:00:00.000Z',
-  updatedAt: '2026-03-02T00:00:00.000Z',
-};
+  title: 'title2',
+});
 
 describe('[Page] /admin/posts', () => {
   afterEach(() => {

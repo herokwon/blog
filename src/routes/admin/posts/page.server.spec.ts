@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   createMockFetch,
@@ -9,6 +9,8 @@ import type { ListPostsApiResponse } from '$lib/types/api';
 
 import type { PageServerLoadEvent } from './$types';
 import { load } from './+page.server';
+
+const mockPost = createMockPost();
 
 async function runLoad(fetch: PageServerLoadEvent['fetch']) {
   const result = await load(
@@ -21,16 +23,6 @@ async function runLoad(fetch: PageServerLoadEvent['fetch']) {
 }
 
 describe('[Page Server] /admin/posts', () => {
-  let mockPost: ReturnType<typeof createMockPost>;
-
-  beforeEach(() => {
-    mockPost = createMockPost();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('should fetch from /api/posts', async () => {
     const mockFetch = createMockFetch<
       PageServerLoadEvent,
