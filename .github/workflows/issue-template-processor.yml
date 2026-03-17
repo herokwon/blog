@@ -52,7 +52,7 @@ jobs:
     name: Process bug-report issue
     needs: initialize-processing
     runs-on: ubuntu-latest
-    if: contains(github.event.issue.title, '[Bug]') || contains(join(github.event.issue.labels.*.name), 'BugFix')
+    if: needs.initialize-processing.outputs.category == 'bug-report'
     env:
       TEMPLATE_PATH: .github/ISSUE_TEMPLATE/bug-report.yml
     steps:
@@ -135,7 +135,7 @@ jobs:
     name: Process feature-request issue
     needs: initialize-processing
     runs-on: ubuntu-latest
-    if: contains(github.event.issue.title, '[Feature]') || contains(join(github.event.issue.labels.*.name), 'Feature')
+    if: needs.initialize-processing.outputs.category == 'feature-request'
     env:
       TEMPLATE_PATH: .github/ISSUE_TEMPLATE/feature-request.yml
     steps:
@@ -209,7 +209,7 @@ jobs:
     name: Process general issue
     needs: initialize-processing
     runs-on: ubuntu-latest
-    if: ${{ !contains(github.event.issue.title, '[Bug]') && !contains(github.event.issue.labels.*.name, 'BugFix') && !contains(github.event.issue.title, '[Feature]') && !contains(github.event.issue.labels.*.name, 'Feature') }}
+    if: needs.initialize-processing.outputs.category == 'general'
     env:
       TEMPLATE_PATH: .github/ISSUE_TEMPLATE/general.yml
     outputs:
