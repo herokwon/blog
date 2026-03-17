@@ -217,7 +217,7 @@ jobs:
           | **URL** | ${DEPLOYMENT_URL} |"
 
           [ -n "$AUTHOR" ] && BODY="${BODY}
-          | **Author** | ![avatar](${AVATAR_URL}) [${AUTHOR}](${AUTHOR_URL}) |"
+          | **Author** | <img src=\"${AVATAR_URL}\" alt=\"avatar\" width=\"16\" height=\"16\" /> [${AUTHOR}](${AUTHOR_URL}) |"
 
           BODY="${BODY}
           | **Details** | :arrow_right: [GitHub Actions](https://github.com/${GH_REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
