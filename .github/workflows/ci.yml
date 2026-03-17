@@ -43,7 +43,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Generate worker types
-        run: pnpm gen
+        run: pnpm gen:types
 
       - name: Check types
         run: pnpm check
