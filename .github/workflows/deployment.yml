@@ -110,7 +110,9 @@ jobs:
                 title: .title,
                 url: .html_url,
                 commit: (.head.sha[0:7]),
-                avatar_url: ("https://github.com/" + (.user.login | gsub("\\[bot\\]"; "")) + ".png")
+                author: .user.login,
+                author_url: .user.html_url,
+                avatar_url: .user.avatar_url
               }')
           else
             echo "No associated PR found."
@@ -188,6 +190,8 @@ jobs:
           PR_COMMIT=$(echo "$PR_JSON" | jq -r '.commit // empty')
           PR_TITLE=$(echo "$PR_JSON" | jq -r '.title // empty')
           PR_URL=$(echo "$PR_JSON" | jq -r '.url // empty')
+          AUTHOR=$(echo "$PR_JSON" | jq -r '.author // empty')
+          AUTHOR_URL=$(echo "$PR_JSON" | jq -r '.author_url // empty')
           AVATAR_URL=$(echo "$PR_JSON" | jq -r '.avatar_url // empty')
 
           if [ -z "$PR_NUMBER" ]; then
@@ -209,6 +213,9 @@ jobs:
 
           [ -n "$DEPLOYMENT_URL" ] && BODY="${BODY}
           | **URL** | ${DEPLOYMENT_URL} |"
+
+          [ -n "$AUTHOR" ] && BODY="${BODY}
+          | **Author** | ![avatar](${AVATAR_URL}) [${AUTHOR}](${AUTHOR_URL}) |"
 
           BODY="${BODY}
           | **Details** | :arrow_right: [GitHub Actions](https://github.com/${REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
