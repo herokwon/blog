@@ -24,25 +24,29 @@ describe('[Functions] test-utils', () => {
 
     spies.prepare('SELECT 1');
     spies.bind('x', 1);
-    await spies.all();
+    spies.first();
     spies.run();
+    spies.all();
 
     expect(typeof db).toBe('object');
 
     expect(spies.prepare).toHaveBeenCalled();
     expect(spies.bind).toHaveBeenCalled();
-    expect(spies.all).toHaveBeenCalled();
+    expect(spies.first).toHaveBeenCalled();
     expect(spies.run).toHaveBeenCalled();
+    expect(spies.all).toHaveBeenCalled();
   });
 
   it('createMockRequestEvent attaches platform env, ctx, caches', () => {
     const { db } = createMockD1();
-    const { event } = createMockRequestEvent({
+    const {
+      event: { platform },
+    } = createMockRequestEvent({
       pathname: '/posts',
       db,
     });
 
-    expect(event.platform?.env.BLOG_DB).toBe(db);
+    expect(platform?.env.BLOG_DB).toBe(db);
   });
 
   it('createMockFetch returns Response with JSON and correct headers', async () => {
@@ -68,15 +72,13 @@ describe('[Functions] test-utils', () => {
     expect(event.request).toBeInstanceOf(Request);
     expect(event.getClientAddress()).toBe('127.0.0.1');
 
-    await expect(event.parent()).resolves.toEqual({});
-
-    expect(event.untrack(() => 'untracked')).toBe('untracked');
-
     event.depends('key');
     event.setHeaders({ 'x-test': '1' });
 
+    await expect(event.parent()).resolves.toEqual({});
     expect(event.depends).toHaveBeenCalled();
     expect(event.setHeaders).toHaveBeenCalled();
+    expect(event.untrack(() => 'untracked')).toBe('untracked');
 
     await event.fetch('/api/test');
     expect(mockFetch).toHaveBeenCalled();
@@ -84,17 +86,18 @@ describe('[Functions] test-utils', () => {
 
   it('createMockRequestEvent sets request method, headers and body', async () => {
     const body = { foo: 'bar' };
-    const { event } = createMockRequestEvent({
+    const {
+      event: { request },
+    } = createMockRequestEvent({
       method: 'POST',
       body,
       pathname: '/api/test',
     });
 
-    expect(event.request.method).toBe('POST');
-    expect(event.request.headers.get('Content-Type')).toBe('application/json');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Content-Type')).toBe('application/json');
 
-    const parsed = await event.request.json();
-
+    const parsed = await request.json();
     expect(parsed).toEqual(body);
   });
 });
