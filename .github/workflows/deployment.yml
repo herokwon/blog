@@ -16,7 +16,7 @@ env:
   GH_TOKEN: ${{ github.token }}
   DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && github.actor != 'dependabot[bot]' && 'Production' || 'Preview' }}
   # Ensure all JavaScript-based actions run on Node.js 24
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   deploy-worker:
