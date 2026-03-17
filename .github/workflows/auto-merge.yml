@@ -12,6 +12,10 @@ concurrency:
   group: auto-merge-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+env:
+  # Ensure all JavaScript-based actions run on Node.js 24
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   auto-merge:
     name: Auto Merge

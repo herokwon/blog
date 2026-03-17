@@ -121,7 +121,7 @@ Apply migrations using your D1 tooling or the Cloudflare D1 dashboard.
 
 ## 🔐 Authentication
 
-New `users` and `sessions` tables were added for auth. Store password hashes with a secure algorithm (bcrypt/argon2). Regularly remove expired sessions, e.g.:
+New `users` and `sessions` tables were added for auth. Store password hashes with a secure algorithm (PBKDF2, SHA-256). Regularly remove expired sessions, e.g.:
 
 ```sql
 DELETE FROM sessions WHERE expires_at < strftime('%s','now');

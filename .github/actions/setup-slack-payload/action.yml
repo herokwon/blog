@@ -32,6 +32,12 @@ inputs:
   pr_url:
     description: Pull request URL
     required: true
+  author:
+    description: Pull request author
+    required: true
+  author_url:
+    description: Pull request author's profile URL
+    required: true
   avatar_url:
     description: GitHub avatar URL
     required: true
@@ -58,10 +64,11 @@ runs:
         PR_NUMBER: ${{ inputs.pr_number }}
         PR_TITLE: ${{ inputs.pr_title }}
         PR_URL: ${{ inputs.pr_url }}
+        AUTHOR: ${{ inputs.author }}
+        AUTHOR_URL: ${{ inputs.author_url }}
         AVATAR_URL: ${{ inputs.avatar_url }}
         GH_REPO: ${{ github.repository }}
         GH_RUN_ID: ${{ github.run_id }}
-        GH_REPO_OWNER: ${{ github.repository_owner }}
       run: |
         set -euo pipefail
         node - <<'NODE'
@@ -132,7 +139,7 @@ runs:
           type: 'context',
           elements: [
             { type: 'image', image_url: process.env.AVATAR_URL, alt_text: 'avatar_img' },
-            { type: 'mrkdwn', text: `<https://github.com/${process.env.GH_REPO_OWNER}|*${process.env.GH_REPO_OWNER}*> has approved this message.` }
+            { type: 'mrkdwn', text: `<${process.env.AUTHOR_URL}|*${process.env.AUTHOR}*> has approved this message.` }
           ]
         });
 

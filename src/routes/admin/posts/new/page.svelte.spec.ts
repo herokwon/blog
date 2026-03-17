@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockPost } from '$lib/test-utils';
 import type { CreatePostApiResponse } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
@@ -34,14 +34,7 @@ vi.mock('$lib/components/editor/config', () => ({
   ),
 }));
 
-const now = new Date().toISOString();
-const mockPost: Post = {
-  id: '123e4567-e89b-12d3-a456-426614174100',
-  title: 'Test Title',
-  content: 'Test Content',
-  createdAt: now,
-  updatedAt: now,
-};
+const mockPost = createMockPost();
 
 function stubFetch(response: CreatePostApiResponse): void {
   vi.stubGlobal(
@@ -57,7 +50,7 @@ async function submitForm(): Promise<void> {
   await page.getByRole('button', { name: 'Submit' }).click();
 }
 
-describe('[Routes] /admin/posts/new', () => {
+describe('[Page] /admin/posts/new', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -67,18 +60,20 @@ describe('[Routes] /admin/posts/new', () => {
   it('should render form elements', async () => {
     render(Page);
 
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Save draft' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Submit' }))
-      .toBeInTheDocument();
+    await Promise.all([
+      expect
+        .element(page.getByRole('textbox', { name: 'Title' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('textbox', { name: 'Content' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Save draft' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Submit' }))
+        .toBeInTheDocument(),
+    ]);
   });
 
   it('should restore draft from localStorage on mount', async () => {
@@ -166,7 +161,6 @@ describe('[Routes] /admin/posts/new', () => {
       'DRAFT_POST',
       JSON.stringify({ title: 'Draft Title', content: 'Draft Content' }),
     );
-
     stubFetch({
       success: false,
       data: null,

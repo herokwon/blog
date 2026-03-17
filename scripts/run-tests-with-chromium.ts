@@ -1,22 +1,32 @@
-import { spawn } from 'child_process';
-import { chromium } from 'playwright';
+import { type ChildProcess, spawn } from 'child_process';
+import { type BrowserServer, chromium } from 'playwright';
 
 async function main(): Promise<void> {
-  const server = await chromium.launchServer({ headless: true });
+  const server: BrowserServer = await chromium.launchServer({
+    headless: true,
+  });
   process.env.PW_WS_ENDPOINT = server.wsEndpoint();
   console.log('Started Playwright server:', process.env.PW_WS_ENDPOINT);
 
-  const child = spawn('pnpm exec vitest run --coverage', {
+  const child: ChildProcess = spawn('pnpm exec vitest run --coverage', {
     stdio: 'inherit',
     env: process.env,
     shell: true,
   });
 
-  const cleanup = async () => {
+  let cleanedUp: boolean = false;
+  const cleanup = async (): Promise<void> => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+
     try {
       await server.close();
-    } catch (e) {
-      console.error('Error closing Playwright server:', e);
+      console.log('Closed Playwright server');
+    } catch (error: unknown) {
+      console.error(
+        'Error closing Playwright server:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   };
 
@@ -42,7 +52,10 @@ async function main(): Promise<void> {
   });
 }
 
-main().catch(e => {
-  console.error(e);
+main().catch((error: unknown) => {
+  console.error(
+    'Fatal error:',
+    error instanceof Error ? error.message : String(error),
+  );
   process.exit(1);
 });

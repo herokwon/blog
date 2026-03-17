@@ -1,7 +1,7 @@
 {
   "name": "blog",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test": "tsx ./scripts/run-tests-with-chromium.ts",
     "test:ui": "vitest --ui",
-    "gen": "wrangler types",
+    "gen:types": "wrangler types",
     "gen:api": "openapi-typescript ./openapi.yml -o ./src/lib/types/schema.d.ts && prettier --write ./src/lib/types/schema.d.ts",
     "deploy:preview": "pnpm build && wrangler versions upload",
     "deploy": "pnpm build && wrangler deploy"

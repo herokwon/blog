@@ -12,9 +12,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REPO: ${{ github.repository }}
-  GITHUB_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+  GH_TOKEN: ${{ github.token }}
   DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && github.actor != 'dependabot[bot]' && 'Production' || 'Preview' }}
+  # Ensure all JavaScript-based actions run on Node.js 24
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy-worker:
@@ -94,21 +96,27 @@ jobs:
         id: pr
         env:
           COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          SHORT_SHA="${COMMIT_SHA:0:7}"
+          PR_NUMBER=$(echo "$COMMIT_MSG" | head -n 1 | grep -oE '\(#([0-9]+)\)$' | grep -oE '[0-9]+' | head -1)
 
-          PR_INFO=$(gh api "repos/$REPO/commits/$COMMIT_SHA/pulls" \
-            --jq '.[0] // {} | if .number then {
-              number: .number,
-              title: .title,
-              url: .html_url,
-              commit: (.head.sha[0:7] // "'$SHORT_SHA'"),
-              avatar_url: ("https://github.com/" + .user.login + ".png")
-            } else {} end')
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh api "repos/$GH_REPO/commits/$COMMIT_SHA/pulls" \
+              --jq '.[0].number // empty')
+          fi
 
-          PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number // empty')
-
-          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+          if [ -n "$PR_NUMBER" ]; then
+            PR_INFO=$(gh api "repos/$GH_REPO/pulls/$PR_NUMBER" \
+              --jq '{
+                number: .number,
+                title: .title,
+                url: .html_url,
+                commit: (.head.sha[0:7]),
+                author: .user.login,
+                author_url: .user.html_url,
+                avatar_url: .user.avatar_url
+              }')
+          else
             echo "No associated PR found."
             PR_INFO=""
           fi
@@ -132,7 +140,7 @@ jobs:
         env:
           REF: ${{ github.sha }}
         run: |
-          DEPLOY_ID=$(gh api repos/$REPO/deployments \
+          DEPLOY_ID=$(gh api repos/$GH_REPO/deployments \
             --method POST \
             --header "Accept: application/vnd.github+json" \
             --input - \
@@ -154,7 +162,7 @@ jobs:
           CONCLUSION: ${{ needs.deploy-worker.outputs.result }}
           DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
         run: |
-          gh api repos/$REPO/deployments/$DEPLOY_ID/statuses \
+          gh api repos/$GH_REPO/deployments/$DEPLOY_ID/statuses \
             -F state="$CONCLUSION" \
             -F environment=$DEPLOYMENT_ENV \
             -F environment_url=$DEPLOYMENT_URL
@@ -184,6 +192,8 @@ jobs:
           PR_COMMIT=$(echo "$PR_JSON" | jq -r '.commit // empty')
           PR_TITLE=$(echo "$PR_JSON" | jq -r '.title // empty')
           PR_URL=$(echo "$PR_JSON" | jq -r '.url // empty')
+          AUTHOR=$(echo "$PR_JSON" | jq -r '.author // empty')
+          AUTHOR_URL=$(echo "$PR_JSON" | jq -r '.author_url // empty')
           AVATAR_URL=$(echo "$PR_JSON" | jq -r '.avatar_url // empty')
 
           if [ -z "$PR_NUMBER" ]; then
@@ -201,13 +211,16 @@ jobs:
           | **Environment** | ${DEPLOYMENT_ENV} |"
 
           [ -n "$PR_COMMIT" ] && BODY="${BODY}
-          | **Commit** | [\`${PR_COMMIT}\`](https://github.com/${REPO}/commit/${PR_COMMIT}) |"
+          | **Commit** | [\`${PR_COMMIT}\`](https://github.com/${GH_REPO}/commit/${PR_COMMIT}) |"
 
           [ -n "$DEPLOYMENT_URL" ] && BODY="${BODY}
           | **URL** | ${DEPLOYMENT_URL} |"
 
+          [ -n "$AUTHOR" ] && BODY="${BODY}
+          | **Author** | <img src=\"${AVATAR_URL}\" alt=\"avatar\" width=\"16\" height=\"16\" /> [${AUTHOR}](${AUTHOR_URL}) |"
+
           BODY="${BODY}
-          | **Details** | :arrow_right: [GitHub Actions](https://github.com/${REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
+          | **Details** | :arrow_right: [GitHub Actions](https://github.com/${GH_REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
 
           gh pr comment "$PR_NUMBER" --body "$BODY"
 
@@ -288,6 +301,8 @@ jobs:
           pr_number: ${{ fromJSON(needs.extract-metadata.outputs.pr).number }}
           pr_title: ${{ fromJSON(needs.extract-metadata.outputs.pr).title }}
           pr_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).url }}
+          author: ${{ fromJSON(needs.extract-metadata.outputs.pr).author }}
+          author_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).author_url }}
           avatar_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).avatar_url }}
 
       - name: Send notification to Slack
