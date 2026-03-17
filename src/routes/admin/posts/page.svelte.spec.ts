@@ -27,17 +27,19 @@ describe('[Page] /admin/posts', () => {
     it('should render page heading', async () => {
       render(Page, { data: { posts: [] } });
 
-      await expect
-        .element(page.getByRole('heading', { level: 1 }))
-        .toHaveTextContent('Posts');
-    });
-
-    it('should render "New post" link', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect
-        .element(page.getByRole('link', { name: 'New post' }))
-        .toBeInTheDocument();
+      await Promise.all([
+        expect
+          .element(page.getByRole('heading', { level: 1 }))
+          .toHaveTextContent('Posts'),
+        expect
+          .element(page.getByRole('link', { name: 'New post' }))
+          .toBeInTheDocument(),
+        expect.element(page.getByText('No posts yet.')).toBeInTheDocument(),
+        expect
+          .element(page.getByRole('link', { name: /Write the first post/ }))
+          .toBeInTheDocument(),
+        expect.element(page.getByRole('table')).not.toBeInTheDocument(),
+      ]);
     });
   });
 
@@ -45,37 +47,12 @@ describe('[Page] /admin/posts', () => {
     it('should display error message when loadError is present', async () => {
       render(Page, { data: { posts: [], loadError: 'Failed to load posts' } });
 
-      await expect
-        .element(page.getByText('Failed to load posts'))
-        .toBeInTheDocument();
-    });
-
-    it('should not render posts table when loadError is present', async () => {
-      render(Page, { data: { posts: [], loadError: 'Failed to load posts' } });
-
-      await expect.element(page.getByRole('table')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('empty state', () => {
-    it('should display empty state message when no posts exist', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect.element(page.getByText('No posts yet.')).toBeInTheDocument();
-    });
-
-    it('should display "Write the first post" link in empty state', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect
-        .element(page.getByRole('link', { name: /Write the first post/ }))
-        .toBeInTheDocument();
-    });
-
-    it('should not render posts table when posts array is empty', async () => {
-      render(Page, { data: { posts: [] } });
-
-      await expect.element(page.getByRole('table')).not.toBeInTheDocument();
+      await Promise.all([
+        expect
+          .element(page.getByText('Failed to load posts'))
+          .toBeInTheDocument(),
+        expect.element(page.getByRole('table')).not.toBeInTheDocument(),
+      ]);
     });
   });
 
@@ -93,57 +70,36 @@ describe('[Page] /admin/posts', () => {
 
     it('should render table when posts exist', async () => {
       render(Page, { data: { posts: [mockPost] } });
+      const titleLink = page.getByRole('link', { name: mockPost.title });
 
-      await expect.element(page.getByRole('table')).toBeInTheDocument();
-    });
-
-    it('should display post title', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect.element(page.getByText(mockPost.title)).toBeInTheDocument();
-    });
-
-    it('should display post id', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect.element(page.getByText(mockPost.id)).toBeInTheDocument();
-    });
-
-    it('should render all posts', async () => {
-      render(Page, { data: { posts: [mockPost, mockPost2] } });
-
-      await expect.element(page.getByText(mockPost.title)).toBeInTheDocument();
-      await expect.element(page.getByText(mockPost2.title)).toBeInTheDocument();
-    });
-
-    it('should render post title as a link to public post page', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect
-        .element(page.getByRole('link', { name: mockPost.title }))
-        .toHaveAttribute('href', `/posts/${mockPost.id}`);
-      await expect
-        .element(page.getByRole('link', { name: mockPost.title }))
-        .toHaveAttribute('target', '_blank');
-      await expect
-        .element(page.getByRole('link', { name: mockPost.title }))
-        .toHaveAttribute('rel', 'noopener noreferrer');
-    });
-
-    it('should render an "Edit" link for the post', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect
-        .element(page.getByRole('link', { name: 'Edit' }))
-        .toBeInTheDocument();
+      await Promise.all([
+        expect.element(page.getByRole('table')).toBeInTheDocument(),
+        expect.element(page.getByText(mockPost.title)).toBeInTheDocument(),
+        expect.element(page.getByText(mockPost.id)).toBeInTheDocument(),
+        expect.element(page.getByText('No posts yet.')).not.toBeInTheDocument(),
+        expect.element(page.getByText('1 post')).toBeInTheDocument(),
+        expect
+          .element(titleLink)
+          .toHaveAttribute('href', `/posts/${mockPost.id}`),
+        expect.element(titleLink).toHaveAttribute('target', '_blank'),
+        expect.element(titleLink).toHaveAttribute('rel', 'noopener noreferrer'),
+        expect
+          .element(page.getByRole('link', { name: 'Edit' }))
+          .toBeInTheDocument(),
+        expect
+          .element(page.getByRole('button', { name: 'Delete' }))
+          .toBeInTheDocument(),
+      ]);
     });
 
     it('should render a "Delete" button for the post', async () => {
       render(Page, { data: { posts: [mockPost] } });
 
-      await expect
-        .element(page.getByRole('button', { name: 'Delete' }))
-        .toBeInTheDocument();
+      await Promise.all([
+        expect.element(page.getByText(mockPost.title)).toBeInTheDocument(),
+        expect.element(page.getByText(mockPost2.title)).toBeInTheDocument(),
+        expect.element(page.getByText('2 posts')).toBeInTheDocument(),
+      ]);
     });
 
     it('should remove post from table when Delete button is clicked', async () => {
@@ -152,19 +108,10 @@ describe('[Page] /admin/posts', () => {
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
-      await vi.waitFor(() => {
-        const text = document.body.textContent ?? '';
-        expect(text).not.toContain(mockPost.title);
-        expect(text).not.toContain(mockPost.id);
-      });
-    });
-
-    it('should not show empty state when posts exist', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect
-        .element(page.getByText('No posts yet.'))
-        .not.toBeInTheDocument();
+      await Promise.all([
+        expect.element(page.getByText(mockPost.title)).not.toBeInTheDocument(),
+        expect.element(page.getByText(mockPost.id)).not.toBeInTheDocument(),
+      ]);
     });
 
     it('should not remove post when user cancels the confirmation dialog', async () => {
@@ -184,7 +131,6 @@ describe('[Page] /admin/posts', () => {
       );
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      render(Page, { data: { posts: [mockPost] } });
       await page.getByRole('button', { name: 'Delete' }).click();
 
       await vi.waitFor(() => {
@@ -215,18 +161,6 @@ describe('[Page] /admin/posts', () => {
   });
 
   describe('post count', () => {
-    it('should show singular "post" for one post', async () => {
-      render(Page, { data: { posts: [mockPost] } });
-
-      await expect.element(page.getByText('1 post')).toBeInTheDocument();
-    });
-
-    it('should show plural "posts" for multiple posts', async () => {
-      render(Page, { data: { posts: [mockPost, mockPost2] } });
-
-      await expect.element(page.getByText('2 posts')).toBeInTheDocument();
-    });
-
     it('should update count to singular after deleting one of two posts', async () => {
       vi.stubGlobal('confirm', () => true);
       vi.stubGlobal(

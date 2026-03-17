@@ -60,18 +60,20 @@ describe('[Page] /admin/posts/new', () => {
   it('should render form elements', async () => {
     render(Page);
 
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Save draft' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Submit' }))
-      .toBeInTheDocument();
+    await Promise.all([
+      expect
+        .element(page.getByRole('textbox', { name: 'Title' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('textbox', { name: 'Content' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Save draft' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Submit' }))
+        .toBeInTheDocument(),
+    ]);
   });
 
   it('should restore draft from localStorage on mount', async () => {

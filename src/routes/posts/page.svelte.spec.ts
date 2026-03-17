@@ -34,15 +34,17 @@ describe('[Page] /posts', () => {
   it('should render post title, link, and markdown excerpt', async () => {
     render(Page, { data: { posts: [mockPost] } });
 
-    await expect
-      .element(page.getByRole('link', { name: /Hello World/ }))
-      .toHaveAttribute('href', `/posts/${mockPost.id}`);
-    await expect
-      .element(page.getByText('Heading Hello world text'))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('heading', { level: 2, name: 'Hello World' }))
-      .toBeInTheDocument();
+    await Promise.all([
+      expect
+        .element(page.getByRole('link', { name: /Hello World/ }))
+        .toHaveAttribute('href', `/posts/${mockPost.id}`),
+      expect
+        .element(page.getByText('Heading Hello world text'))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('heading', { level: 2, name: 'Hello World' }))
+        .toBeInTheDocument(),
+    ]);
   });
 
   it('should truncate long post excerpts with an ellipsis', async () => {

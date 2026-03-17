@@ -71,21 +71,23 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   it('should render form elements', async () => {
     render(Page, { data: { post: mockPost } });
 
-    await expect
-      .element(page.getByRole('heading', { level: 1 }))
-      .toHaveTextContent('Edit post');
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Cancel' }))
-      .toBeInTheDocument();
-    await expect
-      .element(page.getByRole('button', { name: 'Update' }))
-      .toBeInTheDocument();
+    await Promise.all([
+      expect
+        .element(page.getByRole('heading', { level: 1 }))
+        .toHaveTextContent('Edit post'),
+      expect
+        .element(page.getByRole('textbox', { name: 'Title' }))
+        .toHaveValue(mockPost.title),
+      expect
+        .element(page.getByRole('textbox', { name: 'Content' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Cancel' }))
+        .toBeInTheDocument(),
+      expect
+        .element(page.getByRole('button', { name: 'Update' }))
+        .toHaveAttribute('disabled'),
+    ]);
   });
 
   it('should navigate to admin posts when cancel is clicked', async () => {
@@ -94,18 +96,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     await page.getByRole('button', { name: 'Cancel' }).click();
 
     expect(gotoMock).toHaveBeenCalledWith('/admin/posts');
-  });
-
-  it('should prefill title and content from page data', async () => {
-    render(Page, { data: { post: mockPost } });
-
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toHaveValue(mockPost.title);
-
-    await expect
-      .element(page.getByRole('button', { name: 'Update' }))
-      .toHaveAttribute('disabled');
   });
 
   it('should reset form values when post id changes', async () => {
@@ -119,15 +109,17 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
     await view.rerender({ data: { post: mockPost2 } });
 
-    await expect
-      .element(page.getByRole('textbox', { name: 'Title' }))
-      .toHaveValue(mockPost2.title);
-    await expect
-      .element(page.getByRole('textbox', { name: 'Content' }))
-      .toHaveTextContent(mockPost2.content);
-    await expect
-      .element(page.getByRole('button', { name: 'Update' }))
-      .toHaveAttribute('disabled');
+    await Promise.all([
+      expect
+        .element(page.getByRole('textbox', { name: 'Title' }))
+        .toHaveValue(mockPost2.title),
+      expect
+        .element(page.getByRole('textbox', { name: 'Content' }))
+        .toHaveTextContent(mockPost2.content),
+      expect
+        .element(page.getByRole('button', { name: 'Update' }))
+        .toHaveAttribute('disabled'),
+    ]);
   });
 
   it('should submit update request and navigate on success', async () => {
