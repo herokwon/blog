@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REPO: ${{ github.repository }}
-  GITHUB_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+  GH_TOKEN: ${{ github.token }}
   DEPLOYMENT_ENV: ${{ github.ref_name == 'main' && github.actor != 'dependabot[bot]' && 'Production' || 'Preview' }}
 
 jobs:
@@ -99,12 +99,12 @@ jobs:
           PR_NUMBER=$(echo "$COMMIT_MSG" | head -n 1 | grep -oE '\(#([0-9]+)\)$' | grep -oE '[0-9]+' | head -1)
 
           if [ -z "$PR_NUMBER" ]; then
-            PR_NUMBER=$(gh api "repos/$REPO/commits/$COMMIT_SHA/pulls" \
+            PR_NUMBER=$(gh api "repos/$GH_REPO/commits/$COMMIT_SHA/pulls" \
               --jq '.[0].number // empty')
           fi
 
           if [ -n "$PR_NUMBER" ]; then
-            PR_INFO=$(gh api "repos/$REPO/pulls/$PR_NUMBER" \
+            PR_INFO=$(gh api "repos/$GH_REPO/pulls/$PR_NUMBER" \
               --jq '{
                 number: .number,
                 title: .title,
@@ -138,7 +138,7 @@ jobs:
         env:
           REF: ${{ github.sha }}
         run: |
-          DEPLOY_ID=$(gh api repos/$REPO/deployments \
+          DEPLOY_ID=$(gh api repos/$GH_REPO/deployments \
             --method POST \
             --header "Accept: application/vnd.github+json" \
             --input - \
@@ -160,7 +160,7 @@ jobs:
           CONCLUSION: ${{ needs.deploy-worker.outputs.result }}
           DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
         run: |
-          gh api repos/$REPO/deployments/$DEPLOY_ID/statuses \
+          gh api repos/$GH_REPO/deployments/$DEPLOY_ID/statuses \
             -F state="$CONCLUSION" \
             -F environment=$DEPLOYMENT_ENV \
             -F environment_url=$DEPLOYMENT_URL
@@ -209,7 +209,7 @@ jobs:
           | **Environment** | ${DEPLOYMENT_ENV} |"
 
           [ -n "$PR_COMMIT" ] && BODY="${BODY}
-          | **Commit** | [\`${PR_COMMIT}\`](https://github.com/${REPO}/commit/${PR_COMMIT}) |"
+          | **Commit** | [\`${PR_COMMIT}\`](https://github.com/${GH_REPO}/commit/${PR_COMMIT}) |"
 
           [ -n "$DEPLOYMENT_URL" ] && BODY="${BODY}
           | **URL** | ${DEPLOYMENT_URL} |"
@@ -218,7 +218,7 @@ jobs:
           | **Author** | ![avatar](${AVATAR_URL}) [${AUTHOR}](${AUTHOR_URL}) |"
 
           BODY="${BODY}
-          | **Details** | :arrow_right: [GitHub Actions](https://github.com/${REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
+          | **Details** | :arrow_right: [GitHub Actions](https://github.com/${GH_REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
 
           gh pr comment "$PR_NUMBER" --body "$BODY"
 
