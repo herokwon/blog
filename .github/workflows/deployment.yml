@@ -299,6 +299,8 @@ jobs:
           pr_number: ${{ fromJSON(needs.extract-metadata.outputs.pr).number }}
           pr_title: ${{ fromJSON(needs.extract-metadata.outputs.pr).title }}
           pr_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).url }}
+          author: ${{ fromJSON(needs.extract-metadata.outputs.pr).author }}
+          author_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).author_url }}
           avatar_url: ${{ fromJSON(needs.extract-metadata.outputs.pr).avatar_url }}
 
       - name: Send notification to Slack
