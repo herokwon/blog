@@ -63,7 +63,7 @@ describe('[Page Server] /admin/posts', () => {
     });
     const result = await runLoad(mockFetch);
 
-    expect(result.posts).toEqual([]);
+    expect(result.posts).toHaveLength(0);
   });
 
   it('should not include loadError on successful response', async () => {
@@ -95,7 +95,7 @@ describe('[Page Server] /admin/posts', () => {
     });
     const result = await runLoad(mockFetch);
 
-    expect(result.posts).toEqual([]);
+    expect(result.posts).toHaveLength(0);
   });
 
   it('should return loadError with error message on API error response', async () => {
