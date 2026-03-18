@@ -4,6 +4,7 @@ import { createMockPost } from '$lib/test-utils';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
+import type { PageData } from './$types';
 import Page from './+page.svelte';
 
 const mockPost = createMockPost({
@@ -13,28 +14,26 @@ const mockPost = createMockPost({
 
 describe('[Page] /posts', () => {
   it('should render page heading', async () => {
-    await render(Page, { data: { posts: [] } });
+    await renderPage();
     await expect
       .element(page.getByRole('heading', { level: 1 }))
       .toHaveTextContent('Posts');
   });
 
   it('should render error message when loadError exists', async () => {
-    await render(Page, {
-      data: { posts: [], loadError: 'Failed to load posts' },
-    });
+    await renderPage({ loadError: 'Failed to load posts' });
     await expect
       .element(page.getByText('Failed to load posts'))
       .toBeInTheDocument();
   });
 
   it('should render empty state when there are no posts', async () => {
-    await render(Page, { data: { posts: [] } });
+    await renderPage();
     await expect.element(page.getByText('No posts yet.')).toBeInTheDocument();
   });
 
   it('should render post title, link, and markdown excerpt', async () => {
-    await render(Page, { data: { posts: [mockPost] } });
+    await renderPage({ posts: [mockPost] });
 
     await Promise.all([
       expect
@@ -53,8 +52,15 @@ describe('[Page] /posts', () => {
     const longPost = createMockPost({
       content: 'a'.repeat(250),
     });
-    await render(Page, { data: { posts: [longPost] } });
+    await renderPage({ posts: [longPost] });
 
     await expect.element(page.getByText(/a{200}…/)).toBeInTheDocument();
   });
 });
+
+async function renderPage({
+  posts = [],
+  loadError,
+}: Partial<PageData> = {}): Promise<void> {
+  await render(Page, { data: { posts, loadError } });
+}

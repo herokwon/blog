@@ -5,6 +5,7 @@ import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
+import type { PageData } from './$types';
 import Page from './+page.svelte';
 
 const mockPost: Post = createMockPost({
@@ -25,7 +26,7 @@ describe('[Page] /admin/posts', () => {
 
   describe('empty state', () => {
     it('should render page header and empty state', async () => {
-      await renderPageWith();
+      await renderPage();
 
       await Promise.all([
         expect
@@ -45,7 +46,7 @@ describe('[Page] /admin/posts', () => {
 
   describe('error state', () => {
     it('should display error message and hide posts table', async () => {
-      await renderPageWith({ loadError: 'Failed to load posts' });
+      await renderPage({ loadError: 'Failed to load posts' });
 
       await Promise.all([
         expect
@@ -69,7 +70,7 @@ describe('[Page] /admin/posts', () => {
     });
 
     it('should render table with all post details, actions, and count', async () => {
-      await renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
       const titleLink = page.getByRole('link', { name: mockPost.title });
 
       await Promise.all([
@@ -93,7 +94,7 @@ describe('[Page] /admin/posts', () => {
     });
 
     it('should render all posts with correct count', async () => {
-      await renderPageWith({ posts: [mockPost, mockPost2] });
+      await renderPage({ posts: [mockPost, mockPost2] });
 
       await Promise.all([
         expect.element(page.getByText(mockPost.title)).toBeInTheDocument(),
@@ -104,7 +105,7 @@ describe('[Page] /admin/posts', () => {
 
     it('should remove post from table when Delete button is clicked', async () => {
       vi.stubGlobal('confirm', () => true);
-      await renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -116,7 +117,7 @@ describe('[Page] /admin/posts', () => {
 
     it('should not remove post when user cancels the confirmation dialog', async () => {
       vi.stubGlobal('confirm', () => false);
-      await renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -130,7 +131,7 @@ describe('[Page] /admin/posts', () => {
         vi.fn(() => Promise.resolve({ ok: false, status: 500 })),
       );
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      await renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -152,7 +153,7 @@ describe('[Page] /admin/posts', () => {
         vi.fn(() => Promise.reject('Network timeout')),
       );
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      await renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -174,7 +175,7 @@ describe('[Page] /admin/posts', () => {
         'fetch',
         vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
       );
-      await renderPageWith({ posts: [mockPost, mockPost2] });
+      await renderPage({ posts: [mockPost, mockPost2] });
 
       await expect.element(page.getByText('2 posts')).toBeInTheDocument();
 
@@ -190,16 +191,16 @@ describe('[Page] /admin/posts', () => {
           return Reflect.get(target, prop, receiver);
         },
       });
-      await renderPageWith({ posts });
+      await renderPage({ posts });
 
       await expect.element(page.getByRole('table')).toBeInTheDocument();
     });
   });
 });
 
-async function renderPageWith({
+async function renderPage({
   posts = [],
   loadError,
-}: { posts?: Post[]; loadError?: string } = {}) {
+}: Partial<PageData> = {}): Promise<void> {
   await render(Page, { data: { posts, loadError } });
 }
