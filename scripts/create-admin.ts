@@ -31,15 +31,16 @@ async function generateAdminSQL({
     (error, _, stderr) => {
       if (error) {
         console.error(`❌ Error: ${error.message}`);
-        return;
+        process.exit(1);
       }
 
       if (stderr) {
         console.error(`❌ Stderr: ${stderr}`);
-        return;
+        process.exit(1);
       }
 
       console.log('✅ Admin user created successfully!');
+      process.exit(0);
     },
   );
 }
