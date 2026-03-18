@@ -10,14 +10,6 @@ import type { ListPostsApiResponse } from '$lib/types/api';
 import type { PageServerLoadEvent } from './$types';
 import { load } from './+page.server';
 
-async function runLoad(fetch: PageServerLoadEvent['fetch']) {
-  const result = await load(
-    createMockLoadEvent<PageServerLoadEvent>({ fetch }),
-  );
-  if (!result) throw new Error('Expected load to return data');
-  return result;
-}
-
 describe('[Page Server] /posts', () => {
   let mockPost: ReturnType<typeof createMockPost>;
 
@@ -80,3 +72,11 @@ describe('[Page Server] /posts', () => {
     expect(result.loadError).toBe('Failed to load posts');
   });
 });
+
+async function runLoad(fetch: PageServerLoadEvent['fetch']) {
+  const result = await load(
+    createMockLoadEvent<PageServerLoadEvent>({ fetch }),
+  );
+  if (!result) throw new Error('Expected load to return data');
+  return result;
+}

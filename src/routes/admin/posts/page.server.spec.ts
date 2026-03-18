@@ -12,16 +12,6 @@ import { load } from './+page.server';
 
 const mockPost = createMockPost();
 
-async function runLoad(fetch: PageServerLoadEvent['fetch']) {
-  const result = await load(
-    createMockLoadEvent<PageServerLoadEvent>({
-      fetch,
-    }),
-  );
-  if (!result) throw new Error('Expected load to return data');
-  return result;
-}
-
 describe('[Page Server] /admin/posts', () => {
   it('should fetch from /api/posts', async () => {
     const mockFetch = createMockFetch<
@@ -117,3 +107,13 @@ describe('[Page Server] /admin/posts', () => {
     expect(result.loadError).toBe(errorMessage);
   });
 });
+
+async function runLoad(fetch: PageServerLoadEvent['fetch']) {
+  const result = await load(
+    createMockLoadEvent<PageServerLoadEvent>({
+      fetch,
+    }),
+  );
+  if (!result) throw new Error('Expected load to return data');
+  return result;
+}

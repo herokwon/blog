@@ -18,14 +18,6 @@ vi.mock('@sveltejs/kit', () => ({
 
 const mockPost = createMockPost();
 
-async function runLoad(fetch: PageServerLoadEvent['fetch'], id: string) {
-  const result = await load(
-    createMockLoadEvent<PageServerLoadEvent>({ fetch, params: { id } }),
-  );
-  if (!result) throw new Error('Expected load to return data');
-  return result;
-}
-
 describe('[Page Server] /admin/posts/[id]/edit', () => {
   it('should fetch post by id and return post data', async () => {
     const mockFetch = createMockFetch<
@@ -87,3 +79,11 @@ describe('[Page Server] /admin/posts/[id]/edit', () => {
     );
   });
 });
+
+async function runLoad(fetch: PageServerLoadEvent['fetch'], id: string) {
+  const result = await load(
+    createMockLoadEvent<PageServerLoadEvent>({ fetch, params: { id } }),
+  );
+  if (!result) throw new Error('Expected load to return data');
+  return result;
+}

@@ -51,15 +51,6 @@ const mockPost2: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174101',
 });
 
-function stubFetch(response: UpdatePostByIdApiResponse): void {
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValueOnce(response) }),
-  );
-}
-
 describe('[Page] /admin/posts/[id]/edit', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -333,3 +324,12 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     );
   });
 });
+
+function stubFetch(response: UpdatePostByIdApiResponse): void {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValueOnce(response) }),
+  );
+}
