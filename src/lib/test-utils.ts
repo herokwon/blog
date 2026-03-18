@@ -89,7 +89,7 @@ export const createMockFetch = <T extends PageServerLoadEvent, R>(
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   },
-) => {
+): T['fetch'] => {
   return vi.fn<T['fetch']>(
     async () => new Response(JSON.stringify(response), options),
   );
@@ -100,7 +100,16 @@ export const createMockFetch = <T extends PageServerLoadEvent, R>(
  * Provides mock implementations for common D1 methods like prepare, bind, first, run, and all.
  * @returns An object containing the mock D1 database and spies for its methods.
  */
-export const createMockD1 = () => {
+export const createMockD1 = (): {
+  db: D1Database;
+  spies: {
+    prepare: ReturnType<typeof vi.fn>;
+    bind: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
+    run: ReturnType<typeof vi.fn>;
+    all: ReturnType<typeof vi.fn>;
+  };
+} => {
   const prepare = vi.fn().mockReturnThis();
   const bind = vi.fn().mockReturnThis();
   const first = vi.fn();
@@ -134,7 +143,16 @@ export const createMockRequestEvent = ({
   pathname = '',
   body,
   db,
-}: MockEventOptions = {}) => {
+}: MockEventOptions = {}): {
+  event: RequestEvent;
+  spies: {
+    cookies: {
+      get: ReturnType<typeof vi.fn>;
+      set: ReturnType<typeof vi.fn>;
+      delete: ReturnType<typeof vi.fn>;
+    };
+  };
+} => {
   const cookies = {
     get: vi.fn(),
     set: vi.fn(),
