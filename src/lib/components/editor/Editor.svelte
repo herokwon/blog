@@ -18,7 +18,7 @@
 
   let editorElement: HTMLElement | null = null;
 
-  function focusEditorOnContainerMouseDown(event: MouseEvent) {
+  const focusEditorOnContainerMouseDown = (event: MouseEvent) => {
     if (readOnly) return;
 
     const target = event.target;
@@ -30,7 +30,7 @@
 
     event.preventDefault();
     editable.focus();
-  }
+  };
 
   onMount(async () => {
     if (editorElement) {

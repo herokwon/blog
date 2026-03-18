@@ -177,7 +177,7 @@ export const createMockRequestEvent = ({
  * @param options - The options to customize the mock PageServerLoadEvent, including id, url, route, params, requestUrl, and a custom fetch function.
  * @returns A mock PageServerLoadEvent object with the specified overrides and default implementations for required properties and methods.
  */
-export function createMockLoadEvent<T extends PageServerLoadEvent>({
+export const createMockLoadEvent = <T extends PageServerLoadEvent>({
   id,
   url,
   route,
@@ -185,7 +185,7 @@ export function createMockLoadEvent<T extends PageServerLoadEvent>({
   requestUrl,
   fetch = vi.fn(),
   ...rest
-}: MockLoadEventOptions<T> = {}): T {
+}: MockLoadEventOptions<T> = {}): T => {
   const resolvedRouteId = route?.id ?? (id ? '/posts/[id]' : '/posts');
   const resolvedUrl =
     url?.toString() ??
@@ -226,4 +226,4 @@ export function createMockLoadEvent<T extends PageServerLoadEvent>({
     // allow overrides
     ...rest,
   } as unknown as T;
-}
+};

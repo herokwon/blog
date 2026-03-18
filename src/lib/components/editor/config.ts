@@ -28,36 +28,6 @@ interface EditorOptions {
   readOnly?: boolean;
 }
 
-function normalizeHeadingLevels(markdown: string): string {
-  const lines = markdown.split('\n');
-  let insideFence = false;
-  let fenceMarker: '`' | '~' | null = null;
-
-  const normalized = lines.map(line => {
-    const fenceLineMatch = line.match(/^(\s*)(`{3,}|~{3,})/);
-    if (fenceLineMatch) {
-      const marker = fenceLineMatch[2][0] as '`' | '~';
-      if (!insideFence) {
-        insideFence = true;
-        fenceMarker = marker;
-      } else if (fenceMarker === marker) {
-        insideFence = false;
-        fenceMarker = null;
-      }
-      return line;
-    }
-
-    if (insideFence) return line;
-
-    const m = line.match(/^(\s{0,3})#{4,6}[ \t]+(.*?)(?:[ \t]+#+[ \t]*)?$/);
-    if (m) return `${m[1]}${m[2]}`;
-
-    return line;
-  });
-
-  return normalized.join('\n');
-}
-
 const wrapInHeadingUpToH3Command = $command('WrapInHeadingUpToH3', ctx => {
   return (level?: number) => {
     const next = level ?? 1;
@@ -125,6 +95,36 @@ const removeDefaultHeadingControls = new Set([
   headingKeymap,
 ]) as ReadonlySet<MilkdownPlugin>;
 
+const normalizeHeadingLevels = (markdown: string): string => {
+  const lines = markdown.split('\n');
+  let insideFence = false;
+  let fenceMarker: '`' | '~' | null = null;
+
+  const normalized = lines.map(line => {
+    const fenceLineMatch = line.match(/^(\s*)(`{3,}|~{3,})/);
+    if (fenceLineMatch) {
+      const marker = fenceLineMatch[2][0] as '`' | '~';
+      if (!insideFence) {
+        insideFence = true;
+        fenceMarker = marker;
+      } else if (fenceMarker === marker) {
+        insideFence = false;
+        fenceMarker = null;
+      }
+      return line;
+    }
+
+    if (insideFence) return line;
+
+    const m = line.match(/^(\s{0,3})#{4,6}[ \t]+(.*?)(?:[ \t]+#+[ \t]*)?$/);
+    if (m) return `${m[1]}${m[2]}`;
+
+    return line;
+  });
+
+  return normalized.join('\n');
+};
+
 /**
  * Creates a Milkdown editor instance with the specified options. The editor is configured to use the CommonMark preset with custom heading controls that only support headings up to level 3. The `onChange` callback is called whenever the markdown content changes, and the editor can be set to read-only mode if needed.
  * @param options.root - The root HTML element where the editor will be mounted.
@@ -141,12 +141,12 @@ const removeDefaultHeadingControls = new Set([
  *   readOnly: false,
  * });
  */
-export const createMilkdownEditor = async ({
+export async function createMilkdownEditor({
   root,
   defaultValue,
   onChange,
   readOnly = false,
-}: EditorOptions): Promise<Editor> => {
+}: EditorOptions): Promise<Editor> {
   return await Editor.make()
     .config(ctx => {
       ctx.set(rootCtx, root);
@@ -171,4 +171,4 @@ export const createMilkdownEditor = async ({
     .use(headingH123KeyMap)
     .use(listener)
     .create();
-};
+}
