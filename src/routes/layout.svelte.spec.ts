@@ -14,7 +14,7 @@ describe('/+layout.svelte', () => {
   });
 
   it('sets a favicon link in head', async () => {
-    render(Layout, {
+    await render(Layout, {
       children: Page as unknown as Snippet,
     });
 

@@ -58,7 +58,7 @@ afterEach(() => {
 
 describe('[Components] Editor', () => {
   it('should create milkdown editor with initial content', async () => {
-    render(Editor, { content: 'hello world' });
+    await render(Editor, { content: 'hello world' });
 
     await expect
       .poll(() => createMilkdownEditorMock.mock.calls)
@@ -73,14 +73,14 @@ describe('[Components] Editor', () => {
   });
 
   it('should set aria-label on editable element when not readonly', async () => {
-    render(Editor, { content: 'hello world' });
+    await render(Editor, { content: 'hello world' });
     await expect
       .poll(() => document.querySelector('[aria-label="content"]'))
       .not.toBeNull();
   });
 
   it('should not set aria-label when readonly', async () => {
-    render(Editor, { content: 'hello world', readOnly: true });
+    await render(Editor, { content: 'hello world', readOnly: true });
 
     await expect
       .poll(() => createMilkdownEditorMock.mock.calls)
@@ -90,7 +90,7 @@ describe('[Components] Editor', () => {
   });
 
   it('should focus editable on container mousedown when target is outside editable', async () => {
-    render(Editor, { content: 'hello' });
+    await render(Editor, { content: 'hello' });
 
     await expect
       .poll(() => createMilkdownEditorMock.mock.calls)
@@ -115,7 +115,7 @@ describe('[Components] Editor', () => {
   });
 
   it('should not focus editable when mousedown target is inside editable', async () => {
-    render(Editor, { content: 'hello' });
+    await render(Editor, { content: 'hello' });
 
     await expect
       .poll(() => createMilkdownEditorMock.mock.calls)
@@ -133,7 +133,7 @@ describe('[Components] Editor', () => {
   });
 
   it('should not focus editable on mousedown when readOnly', async () => {
-    render(Editor, { content: 'hello', readOnly: true });
+    await render(Editor, { content: 'hello', readOnly: true });
 
     await expect
       .poll(() => createMilkdownEditorMock.mock.calls)
@@ -154,7 +154,7 @@ describe('[Components] Editor', () => {
   });
 
   it('should return early when event target is not a Node', async () => {
-    render(Editor, { content: 'hello' });
+    await render(Editor, { content: 'hello' });
 
     await expect
       .poll(() => createMilkdownEditorMock.mock.calls)
@@ -176,7 +176,7 @@ describe('[Components] Editor', () => {
   });
 
   it('should update content via onChange callback', async () => {
-    render(Editor, { content: 'initial' });
+    await render(Editor, { content: 'initial' });
 
     await expect
       .poll(() => createMilkdownEditorMock.mock.calls)
@@ -188,7 +188,7 @@ describe('[Components] Editor', () => {
 
   it('should skip editor initialization when editorElement is null on mount', async () => {
     onMountControl.capturing = true;
-    const view = render(Editor, { content: 'hello' });
+    const view = await render(Editor, { content: 'hello' });
     onMountControl.capturing = false;
 
     await view.unmount();

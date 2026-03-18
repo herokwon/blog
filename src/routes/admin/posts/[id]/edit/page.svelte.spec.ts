@@ -60,7 +60,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should render form with prefilled values', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await Promise.all([
       expect
@@ -82,7 +82,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should navigate to admin posts when cancel is clicked', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('button', { name: 'Cancel' }).click();
 
@@ -90,7 +90,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should reset form values when post id changes', async () => {
-    const view = render(Page, { data: { post: mockPost } });
+    const view = await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -120,7 +120,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
       data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
       error: null,
     });
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -157,7 +157,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
         details: null,
       },
     });
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
     await page.getByRole('button', { name: 'Update' }).click();
@@ -174,7 +174,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
       data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
       error: null,
     });
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
     await page.getByRole('button', { name: 'Update' }).click();
@@ -185,7 +185,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should cancel client-side navigation when user declines with unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -203,7 +203,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should skip navigation guard when navigation.to is null', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -216,7 +216,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should skip navigation guard when there are no unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -236,7 +236,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
       vi.fn(() => new Promise(() => {})),
     );
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
     await page.getByRole('button', { name: 'Update' }).click();
@@ -251,7 +251,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should allow navigation when user confirms leaving with unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -267,7 +267,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should not prevent page unload when there are no unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -282,7 +282,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should prevent page unload when there are unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -300,7 +300,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     );
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    render(Page, { data: { post: mockPost } });
+    await render(Page, { data: { post: mockPost } });
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
     await page.getByRole('button', { name: 'Update' }).click();
@@ -314,7 +314,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should remove beforeunload listener on unmount', async () => {
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
-    const view = render(Page, { data: { post: mockPost } });
+    const view = await render(Page, { data: { post: mockPost } });
 
     await view.unmount();
 

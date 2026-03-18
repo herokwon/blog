@@ -13,26 +13,28 @@ const mockPost = createMockPost({
 
 describe('[Page] /posts', () => {
   it('should render page heading', async () => {
-    render(Page, { data: { posts: [] } });
+    await render(Page, { data: { posts: [] } });
     await expect
       .element(page.getByRole('heading', { level: 1 }))
       .toHaveTextContent('Posts');
   });
 
   it('should render error message when loadError exists', async () => {
-    render(Page, { data: { posts: [], loadError: 'Failed to load posts' } });
+    await render(Page, {
+      data: { posts: [], loadError: 'Failed to load posts' },
+    });
     await expect
       .element(page.getByText('Failed to load posts'))
       .toBeInTheDocument();
   });
 
   it('should render empty state when there are no posts', async () => {
-    render(Page, { data: { posts: [] } });
+    await render(Page, { data: { posts: [] } });
     await expect.element(page.getByText('No posts yet.')).toBeInTheDocument();
   });
 
   it('should render post title, link, and markdown excerpt', async () => {
-    render(Page, { data: { posts: [mockPost] } });
+    await render(Page, { data: { posts: [mockPost] } });
 
     await Promise.all([
       expect
@@ -51,7 +53,7 @@ describe('[Page] /posts', () => {
     const longPost = createMockPost({
       content: 'a'.repeat(250),
     });
-    render(Page, { data: { posts: [longPost] } });
+    await render(Page, { data: { posts: [longPost] } });
 
     await expect.element(page.getByText(/a{200}…/)).toBeInTheDocument();
   });

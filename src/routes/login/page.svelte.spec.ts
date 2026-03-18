@@ -11,7 +11,7 @@ describe('[Page] /login', () => {
   });
 
   it('renders "Admin Login" heading', async () => {
-    render(Page, { form: null });
+    await render(Page, { form: null });
 
     await expect
       .element(page.getByRole('heading', { level: 2 }))
@@ -19,19 +19,19 @@ describe('[Page] /login', () => {
   });
 
   it('renders username input', async () => {
-    render(Page, { form: null });
+    await render(Page, { form: null });
 
     await expect.element(page.getByLabelText('Username')).toBeInTheDocument();
   });
 
   it('renders password input', async () => {
-    render(Page, { form: null });
+    await render(Page, { form: null });
 
     await expect.element(page.getByLabelText('Password')).toBeInTheDocument();
   });
 
   it('renders Login submit button', async () => {
-    render(Page, { form: null });
+    await render(Page, { form: null });
 
     await expect
       .element(page.getByRole('button', { name: 'Login' }))
@@ -39,13 +39,13 @@ describe('[Page] /login', () => {
   });
 
   it('does not render error message when form is null', async () => {
-    render(Page, { form: null });
+    await render(Page, { form: null });
 
     await expect.element(page.getByRole('paragraph')).not.toBeInTheDocument();
   });
 
   it('renders error message when form.message is present', async () => {
-    render(Page, { form: { message: 'Invalid username or password' } });
+    await render(Page, { form: { message: 'Invalid username or password' } });
 
     await expect
       .element(page.getByText('Invalid username or password'))
