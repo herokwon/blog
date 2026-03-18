@@ -3,12 +3,20 @@ import { stdin as input, stdout as output } from 'process';
 import readline from 'readline/promises';
 
 import { hashPassword } from '../src/lib/server';
-import type { LoginInput } from '../src/lib/types';
+import type { LoginInput } from '../src/lib/types/auth';
 
 type GenerateAdminSQLProps = LoginInput & {
   isLocal: boolean;
 };
 
+/**
+ * Generates SQL to create an admin user in the database.
+ * This function uses the `wrangler d1 execute` command to run an SQL statement that inserts a new admin user into the `users` table. The password is hashed before being stored in the database.
+ * @param props.username - The username for the admin user.
+ * @param props.password - The password for the admin user.
+ * @param props.isLocal - Whether to execute the command locally or remotely.
+ * @returns A promise that resolves when the SQL command has been executed.
+ */
 async function generateAdminSQL({
   username,
   password,

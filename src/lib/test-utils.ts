@@ -30,6 +30,12 @@ type MockLoadEventOptions<T extends PageServerLoadEvent> = Partial<T> & {
   requestUrl?: string;
 };
 
+/**
+ * Creates a mock user session for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param overrides - Partial properties to override the default session values.
+ * @returns A mock UserSession object with the specified overrides.
+ */
 export const createMockUserSession = (
   overrides: Partial<UserSession> = {},
 ): UserSession => ({
@@ -41,6 +47,12 @@ export const createMockUserSession = (
   ...overrides,
 });
 
+/**
+ * Creates a mock user for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param overrides - Partial properties to override the default user values.
+ * @returns A mock DBUser object with the specified overrides.
+ */
 export const createMockUser = (overrides: Partial<DBUser> = {}): DBUser => ({
   id: 'user-123',
   username: 'testuser',
@@ -50,6 +62,12 @@ export const createMockUser = (overrides: Partial<DBUser> = {}): DBUser => ({
   ...overrides,
 });
 
+/**
+ * Creates a mock post for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param overrides - Partial properties to override the default post values.
+ * @returns A mock Post object with the specified overrides.
+ */
 export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
   id: '4e9344a8-b642-47fb-8e8b-b0f1343f77df',
   title: 'title',
@@ -59,6 +77,12 @@ export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
   ...overrides,
 });
 
+/**
+ * Creates a mock fetch function for testing purposes.
+ * @param response - The response to return when the fetch is called.
+ * @param options - The options for the mock response.
+ * @returns A mock fetch function.
+ */
 export const createMockFetch = <T extends PageServerLoadEvent, R>(
   response: R,
   options: { status?: number; headers?: HeadersInit } = {
@@ -71,6 +95,11 @@ export const createMockFetch = <T extends PageServerLoadEvent, R>(
   );
 };
 
+/**
+ * Creates a mock D1 database for testing purposes.
+ * Provides mock implementations for common D1 methods like prepare, bind, first, run, and all.
+ * @returns An object containing the mock D1 database and spies for its methods.
+ */
 export const createMockD1 = () => {
   const prepare = vi.fn().mockReturnThis();
   const bind = vi.fn().mockReturnThis();
@@ -92,6 +121,12 @@ export const createMockD1 = () => {
   };
 };
 
+/**
+ * Creates a mock RequestEvent for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param options - The options to customize the mock RequestEvent, including method, headers, params, pathname, body, and a mock D1 database.
+ * @returns An object containing the mock RequestEvent and spies for its cookies.
+ */
 export const createMockRequestEvent = ({
   method = 'GET',
   headers = { 'Content-Type': 'application/json' },
@@ -136,6 +171,12 @@ export const createMockRequestEvent = ({
   };
 };
 
+/**
+ * Creates a mock PageServerLoadEvent for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param options - The options to customize the mock PageServerLoadEvent, including id, url, route, params, requestUrl, and a custom fetch function.
+ * @returns A mock PageServerLoadEvent object with the specified overrides and default implementations for required properties and methods.
+ */
 export function createMockLoadEvent<T extends PageServerLoadEvent>({
   id,
   url,

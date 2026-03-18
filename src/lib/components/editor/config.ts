@@ -125,6 +125,22 @@ const removeDefaultHeadingControls = new Set([
   headingKeymap,
 ]) as ReadonlySet<MilkdownPlugin>;
 
+/**
+ * Creates a Milkdown editor instance with the specified options. The editor is configured to use the CommonMark preset with custom heading controls that only support headings up to level 3. The `onChange` callback is called whenever the markdown content changes, and the editor can be set to read-only mode if needed.
+ * @param options.root - The root HTML element where the editor will be mounted.
+ * @param options.defaultValue - The initial markdown content to be loaded into the editor.
+ * @param options.onChange - An optional callback function that is called with the updated markdown content whenever it changes.
+ * @param options.readOnly - A boolean flag indicating whether the editor should be in read-only mode. If true, the editor will not allow any changes to the content.
+ * @returns A promise that resolves to the created Editor instance.
+ * @example
+ * const root = document.getElementById('editor');
+ * const editor = await createMilkdownEditor({
+ *   root,
+ *   defaultValue: '# Hello World',
+ *   onChange: markdown => console.log(markdown),
+ *   readOnly: false,
+ * });
+ */
 export const createMilkdownEditor = async ({
   root,
   defaultValue,
