@@ -21,6 +21,62 @@ type MockLoadEventOptions<T extends ServerLoadEvent> = Partial<T> &
   }>;
 
 /**
+ * Stubs the global fetch function to return a specified response or error.
+ * @param response - The response to return when the fetch function is called. Should be an object that will be JSON-stringified.
+ * @param options - Optional settings for the mock response, including status code, headers, and whether the fetch should be pending (never resolve).
+ * @param error - An optional error to reject the fetch promise with. If set to true, it will reject with a generic Error. If set to an object, it will reject with that object.
+ * If error is provided, it takes precedence over the response and options parameters.
+ * @example
+ * // Mock a successful fetch response
+ * stubGlobalFetch({ success: true, data: { id: 1 } });
+ *
+ * // Mock a fetch that returns a 404 error
+ * stubGlobalFetch({ success: false, error: { message: 'Not found' } }, { status: 404 });
+ */
+export const stubGlobalFetch = <T extends Record<string, unknown>>({
+  response,
+  options = {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    pending: false,
+  },
+  error,
+}: {
+  response?: T;
+  options?: Partial<{ status: number; headers: HeadersInit; pending: boolean }>;
+  error?: unknown;
+} = {}) => {
+  // custom rejection takes precedence
+  if (error !== undefined) {
+    const rejectValue =
+      typeof error === 'boolean' ? new Error('Fetch error') : error;
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(rejectValue));
+    return;
+  }
+
+  // pending (never-resolving) fetch
+  if (options?.pending) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => new Promise(() => {})),
+    );
+    return;
+  }
+
+  // resolved Response
+  const { status = 200, headers = { 'Content-Type': 'application/json' } } =
+    options;
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(response), { status, headers }),
+      ),
+  );
+};
+
+/**
  * Creates a mock user session for testing purposes.
  * Allows overriding default properties with custom values.
  * @param overrides - Partial properties to override the default session values.

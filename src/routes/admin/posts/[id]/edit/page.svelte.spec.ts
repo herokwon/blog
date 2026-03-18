@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createMockPost } from '$lib/test-utils';
+import { createMockPost, stubGlobalFetch } from '$lib/test-utils';
 import type { UpdatePostByIdApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
 import { render, type RenderResult } from 'vitest-browser-svelte';
@@ -115,10 +115,16 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should submit update request and navigate on success', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    stubFetch({
-      success: true,
-      data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
-      error: null,
+    stubGlobalFetch<UpdatePostByIdApiResponse>({
+      response: {
+        success: true,
+        data: {
+          ...mockPost,
+          title: 'Updated Title',
+          content: 'Updated Content',
+        },
+        error: null,
+      },
     });
     await renderPage();
 
@@ -148,14 +154,17 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should not navigate on API error response', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    stubFetch({
-      success: false,
-      data: null,
-      error: {
-        code: 'INVALID_REQUEST',
-        message: 'Invalid input data.',
-        details: null,
+    stubGlobalFetch<UpdatePostByIdApiResponse>({
+      response: {
+        success: false,
+        data: null,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Invalid input data.',
+          details: null,
+        },
       },
+      options: { status: 400 },
     });
     await renderPage();
 
@@ -168,10 +177,16 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should not submit when user declines update confirmation', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    stubFetch({
-      success: true,
-      data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
-      error: null,
+    stubGlobalFetch<UpdatePostByIdApiResponse>({
+      response: {
+        success: true,
+        data: {
+          ...mockPost,
+          title: 'Updated Title',
+          content: 'Updated Content',
+        },
+        error: null,
+      },
     });
     await renderPage();
 
@@ -229,10 +244,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should skip navigation guard while the form is being submitted', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise(() => {})),
-    );
+    stubGlobalFetch({ options: { pending: true } });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     await renderPage();
 
@@ -291,10 +303,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should not prevent page unload while the form is being submitted', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise(() => {})),
-    );
+    stubGlobalFetch({ options: { pending: true } });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     await renderPage();
@@ -320,15 +329,6 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     );
   });
 });
-
-function stubFetch(response: UpdatePostByIdApiResponse): void {
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValueOnce(response) }),
-  );
-}
 
 async function renderPage(): Promise<RenderResult<typeof Page>> {
   return await render(Page, { data: { post: mockPost } });

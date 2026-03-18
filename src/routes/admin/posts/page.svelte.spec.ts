@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createMockPost } from '$lib/test-utils';
+import { createMockPost, stubGlobalFetch } from '$lib/test-utils';
 import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
@@ -59,10 +59,7 @@ describe('[Page] /admin/posts', () => {
 
   describe('posts table', () => {
     beforeEach(() => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
-      );
+      stubGlobalFetch();
     });
 
     afterEach(() => {
@@ -126,10 +123,11 @@ describe('[Page] /admin/posts', () => {
 
     it('should log error and keep post when server returns a non-ok response', async () => {
       vi.stubGlobal('confirm', () => true);
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.resolve({ ok: false, status: 500 })),
-      );
+      stubGlobalFetch({
+        options: {
+          status: 500,
+        },
+      });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       await renderPage({ posts: [mockPost] });
 
@@ -148,10 +146,9 @@ describe('[Page] /admin/posts', () => {
 
     it('should log error when fetch rejects with a non-Error value', async () => {
       vi.stubGlobal('confirm', () => true);
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.reject('Network timeout')),
-      );
+      stubGlobalFetch({
+        error: 'Network timeout',
+      });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       await renderPage({ posts: [mockPost] });
 
@@ -171,10 +168,7 @@ describe('[Page] /admin/posts', () => {
   describe('post count', () => {
     it('should update count to singular after deleting one of two posts', async () => {
       vi.stubGlobal('confirm', () => true);
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
-      );
+      stubGlobalFetch();
       await renderPage({ posts: [mockPost, mockPost2] });
 
       await expect.element(page.getByText('2 posts')).toBeInTheDocument();
