@@ -17,8 +17,8 @@ describe('/+layout.svelte', () => {
     await render(Layout, {
       children: Page as unknown as Snippet,
     });
-
     const link = document.querySelector('link[rel="icon"]');
+
     expect(link).toBeTruthy();
     expect(link?.getAttribute('href')).toMatch(/favicon|favicon\.svg/);
   });

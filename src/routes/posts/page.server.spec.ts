@@ -77,6 +77,7 @@ async function runLoad(fetch: PageServerLoadEvent['fetch']) {
   const result = await load(
     createMockLoadEvent<PageServerLoadEvent>({ fetch }),
   );
+
   if (!result) throw new Error('Expected load to return data');
   return result;
 }

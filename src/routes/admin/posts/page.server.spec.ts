@@ -22,7 +22,6 @@ describe('[Page Server] /admin/posts', () => {
       data: [mockPost],
       error: null,
     });
-
     await runLoad(mockFetch);
 
     expect(mockFetch).toHaveBeenCalledWith('/api/posts');
@@ -114,6 +113,7 @@ async function runLoad(fetch: PageServerLoadEvent['fetch']) {
       fetch,
     }),
   );
+
   if (!result) throw new Error('Expected load to return data');
   return result;
 }
