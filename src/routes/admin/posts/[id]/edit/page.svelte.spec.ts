@@ -159,8 +159,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     });
     await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     expect(confirmSpy).toHaveBeenCalledWith('Update this post?');
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -176,8 +175,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     });
     await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     expect(confirmSpy).toHaveBeenCalledWith('Update this post?');
     expect(fetch).not.toHaveBeenCalled();
@@ -238,8 +236,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
 
@@ -302,8 +299,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
     await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     const event = new Event('beforeunload', { cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
@@ -336,4 +332,9 @@ function stubFetch(response: UpdatePostByIdApiResponse): void {
 
 async function renderPage(): Promise<RenderResult<typeof Page>> {
   return await render(Page, { data: { post: mockPost } });
+}
+
+async function submitForm(): Promise<void> {
+  await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+  await page.getByRole('button', { name: 'Update' }).click();
 }
