@@ -1,21 +1,10 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
 
 import { vi } from 'vitest';
 
 import { EXPIRES_IN_SECONDS } from '$lib/constants';
 import type { DBUser, UserSession } from '$lib/types/auth';
 import type { Post } from '$lib/types/post';
-
-import type { PageServerLoadEvent as AdminPostsPageServerLoadEvent } from '../routes/admin/posts/$types';
-import type { PageServerLoadEvent as AdminPostEditPageServerLoadEvent } from '../routes/admin/posts/[id]/edit/$types';
-import type { PageServerLoadEvent as PostsPageServerLoadEvent } from '../routes/posts/$types';
-import type { PageServerLoadEvent as PostPageServerLoadEvent } from '../routes/posts/[id]/$types';
-
-type PageServerLoadEvent =
-  | PostsPageServerLoadEvent
-  | PostPageServerLoadEvent
-  | AdminPostsPageServerLoadEvent
-  | AdminPostEditPageServerLoadEvent;
 
 type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -25,10 +14,11 @@ type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
   db?: D1Database;
 };
 
-type MockLoadEventOptions<T extends PageServerLoadEvent> = Partial<T> & {
-  id?: string;
-  requestUrl?: string;
-};
+type MockLoadEventOptions<T extends ServerLoadEvent> = Partial<T> &
+  Partial<{
+    id: string;
+    requestUrl: string;
+  }>;
 
 /**
  * Creates a mock user session for testing purposes.
@@ -83,7 +73,7 @@ export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
  * @param options - The options for the mock response.
  * @returns A mock fetch function.
  */
-export const createMockFetch = <T extends PageServerLoadEvent, R>(
+export const createMockFetch = <T extends ServerLoadEvent, R>(
   response: R,
   options: { status?: number; headers?: HeadersInit } = {
     status: 200,
@@ -195,7 +185,7 @@ export const createMockRequestEvent = ({
  * @param options - The options to customize the mock PageServerLoadEvent, including id, url, route, params, requestUrl, and a custom fetch function.
  * @returns A mock PageServerLoadEvent object with the specified overrides and default implementations for required properties and methods.
  */
-export const createMockLoadEvent = <T extends PageServerLoadEvent>({
+export const createMockLoadEvent = <T extends ServerLoadEvent>({
   id,
   url,
   route,
