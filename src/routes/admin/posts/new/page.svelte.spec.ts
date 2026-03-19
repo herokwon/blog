@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createMockPost } from '$lib/test-utils';
+import { createMockPost, stubGlobalFetch } from '$lib/test-utils';
 import type { CreatePostApiResponse } from '$lib/types/api';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
@@ -36,20 +36,6 @@ vi.mock('$lib/components/editor/config', () => ({
 
 const mockPost = createMockPost();
 
-function stubFetch(response: CreatePostApiResponse): void {
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValueOnce(response) }),
-  );
-}
-
-async function submitForm(): Promise<void> {
-  await page.getByRole('textbox', { name: 'Title' }).fill('Hello');
-  await page.getByRole('button', { name: 'Submit' }).click();
-}
-
 describe('[Page] /admin/posts/new', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -58,7 +44,7 @@ describe('[Page] /admin/posts/new', () => {
   });
 
   it('should render form elements', async () => {
-    render(Page);
+    await render(Page);
 
     await Promise.all([
       expect
@@ -84,7 +70,7 @@ describe('[Page] /admin/posts/new', () => {
         content: 'Draft Content',
       }),
     );
-    render(Page);
+    await render(Page);
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -95,7 +81,7 @@ describe('[Page] /admin/posts/new', () => {
   });
 
   it('should not save draft when title and content are both empty', async () => {
-    render(Page);
+    await render(Page);
     await expect
       .element(page.getByRole('button', { name: 'Save draft' }))
       .toBeDisabled();
@@ -112,7 +98,7 @@ describe('[Page] /admin/posts/new', () => {
   });
 
   it('should save draft to localStorage', async () => {
-    render(Page);
+    await render(Page);
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Hello');
     await page.getByRole('button', { name: 'Save draft' }).click();
@@ -123,16 +109,18 @@ describe('[Page] /admin/posts/new', () => {
   });
 
   it('should navigate to post detail on successful submission', async () => {
-    stubFetch({
-      success: true,
-      data: mockPost,
-      error: null,
+    stubGlobalFetch<CreatePostApiResponse>({
+      response: {
+        success: true,
+        data: mockPost,
+        error: null,
+      },
     });
     localStorage.setItem(
       'DRAFT_POST',
       JSON.stringify({ title: 'A', content: 'B' }),
     );
-    render(Page);
+    await render(Page);
 
     await submitForm();
 
@@ -145,7 +133,7 @@ describe('[Page] /admin/posts/new', () => {
     const consoleErrorSpy = vi
       .spyOn(console, 'error')
       .mockImplementation(() => {});
-    render(Page);
+    await render(Page);
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -161,19 +149,27 @@ describe('[Page] /admin/posts/new', () => {
       'DRAFT_POST',
       JSON.stringify({ title: 'Draft Title', content: 'Draft Content' }),
     );
-    stubFetch({
-      success: false,
-      data: null,
-      error: {
-        code: 'INVALID_REQUEST',
-        message: 'Invalid input data.',
-        details: null,
+    stubGlobalFetch<CreatePostApiResponse>({
+      response: {
+        success: false,
+        data: null,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Invalid input data.',
+          details: null,
+        },
       },
+      options: { status: 400 },
     });
-    render(Page);
+    await render(Page);
 
     await submitForm();
 
     expect(gotoMock).not.toHaveBeenCalled();
   });
 });
+
+async function submitForm(): Promise<void> {
+  await page.getByRole('textbox', { name: 'Title' }).fill('Hello');
+  await page.getByRole('button', { name: 'Submit' }).click();
+}

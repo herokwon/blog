@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createMockPost } from '$lib/test-utils';
+import { createMockPost, stubGlobalFetch } from '$lib/test-utils';
 import type { UpdatePostByIdApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
-import { render } from 'vitest-browser-svelte';
+import { render, type RenderResult } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
 import Page from './+page.svelte';
@@ -51,15 +51,6 @@ const mockPost2: Post = createMockPost({
   id: '123e4567-e89b-12d3-a456-426614174101',
 });
 
-function stubFetch(response: UpdatePostByIdApiResponse): void {
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValueOnce(response) }),
-  );
-}
-
 describe('[Page] /admin/posts/[id]/edit', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -69,7 +60,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should render form with prefilled values', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await Promise.all([
       expect
@@ -91,7 +82,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should navigate to admin posts when cancel is clicked', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await page.getByRole('button', { name: 'Cancel' }).click();
 
@@ -99,7 +90,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should reset form values when post id changes', async () => {
-    const view = render(Page, { data: { post: mockPost } });
+    const view = await renderPage();
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -124,12 +115,18 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should submit update request and navigate on success', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    stubFetch({
-      success: true,
-      data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
-      error: null,
+    stubGlobalFetch<UpdatePostByIdApiResponse>({
+      response: {
+        success: true,
+        data: {
+          ...mockPost,
+          title: 'Updated Title',
+          content: 'Updated Content',
+        },
+        error: null,
+      },
     });
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -157,19 +154,21 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should not navigate on API error response', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    stubFetch({
-      success: false,
-      data: null,
-      error: {
-        code: 'INVALID_REQUEST',
-        message: 'Invalid input data.',
-        details: null,
+    stubGlobalFetch<UpdatePostByIdApiResponse>({
+      response: {
+        success: false,
+        data: null,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Invalid input data.',
+          details: null,
+        },
       },
+      options: { status: 400 },
     });
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     expect(confirmSpy).toHaveBeenCalledWith('Update this post?');
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -178,15 +177,20 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should not submit when user declines update confirmation', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    stubFetch({
-      success: true,
-      data: { ...mockPost, title: 'Updated Title', content: 'Updated Content' },
-      error: null,
+    stubGlobalFetch<UpdatePostByIdApiResponse>({
+      response: {
+        success: true,
+        data: {
+          ...mockPost,
+          title: 'Updated Title',
+          content: 'Updated Content',
+        },
+        error: null,
+      },
     });
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     expect(confirmSpy).toHaveBeenCalledWith('Update this post?');
     expect(fetch).not.toHaveBeenCalled();
@@ -194,7 +198,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should cancel client-side navigation when user declines with unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -212,7 +216,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should skip navigation guard when navigation.to is null', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -225,7 +229,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should skip navigation guard when there are no unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -240,15 +244,11 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should skip navigation guard while the form is being submitted', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise(() => {})),
-    );
+    stubGlobalFetch({ options: { pending: true } });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
 
@@ -260,7 +260,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should allow navigation when user confirms leaving with unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -276,7 +276,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should not prevent page unload when there are no unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await expect
       .element(page.getByRole('textbox', { name: 'Title' }))
@@ -291,7 +291,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should prevent page unload when there are unsaved changes', async () => {
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
     await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
 
@@ -303,16 +303,12 @@ describe('[Page] /admin/posts/[id]/edit', () => {
   });
 
   it('should not prevent page unload while the form is being submitted', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise(() => {})),
-    );
+    stubGlobalFetch({ options: { pending: true } });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    render(Page, { data: { post: mockPost } });
+    await renderPage();
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    await submitForm();
 
     const event = new Event('beforeunload', { cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
@@ -323,7 +319,7 @@ describe('[Page] /admin/posts/[id]/edit', () => {
 
   it('should remove beforeunload listener on unmount', async () => {
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
-    const view = render(Page, { data: { post: mockPost } });
+    const view = await renderPage();
 
     await view.unmount();
 
@@ -333,3 +329,12 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     );
   });
 });
+
+async function renderPage(): Promise<RenderResult<typeof Page>> {
+  return await render(Page, { data: { post: mockPost } });
+}
+
+async function submitForm(): Promise<void> {
+  await page.getByRole('textbox', { name: 'Title' }).fill('Changed Title');
+  await page.getByRole('button', { name: 'Update' }).click();
+}

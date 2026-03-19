@@ -28,36 +28,6 @@ interface EditorOptions {
   readOnly?: boolean;
 }
 
-function normalizeHeadingLevels(markdown: string): string {
-  const lines = markdown.split('\n');
-  let insideFence = false;
-  let fenceMarker: '`' | '~' | null = null;
-
-  const normalized = lines.map(line => {
-    const fenceLineMatch = line.match(/^(\s*)(`{3,}|~{3,})/);
-    if (fenceLineMatch) {
-      const marker = fenceLineMatch[2][0] as '`' | '~';
-      if (!insideFence) {
-        insideFence = true;
-        fenceMarker = marker;
-      } else if (fenceMarker === marker) {
-        insideFence = false;
-        fenceMarker = null;
-      }
-      return line;
-    }
-
-    if (insideFence) return line;
-
-    const m = line.match(/^(\s{0,3})#{4,6}[ \t]+(.*?)(?:[ \t]+#+[ \t]*)?$/);
-    if (m) return `${m[1]}${m[2]}`;
-
-    return line;
-  });
-
-  return normalized.join('\n');
-}
-
 const wrapInHeadingUpToH3Command = $command('WrapInHeadingUpToH3', ctx => {
   return (level?: number) => {
     const next = level ?? 1;
@@ -125,12 +95,58 @@ const removeDefaultHeadingControls = new Set([
   headingKeymap,
 ]) as ReadonlySet<MilkdownPlugin>;
 
-export const createMilkdownEditor = async ({
+const normalizeHeadingLevels = (markdown: string): string => {
+  const lines = markdown.split('\n');
+  let insideFence = false;
+  let fenceMarker: '`' | '~' | null = null;
+
+  const normalized = lines.map(line => {
+    const fenceLineMatch = line.match(/^(\s*)(`{3,}|~{3,})/);
+    if (fenceLineMatch) {
+      const marker = fenceLineMatch[2][0] as '`' | '~';
+      if (!insideFence) {
+        insideFence = true;
+        fenceMarker = marker;
+      } else if (fenceMarker === marker) {
+        insideFence = false;
+        fenceMarker = null;
+      }
+      return line;
+    }
+
+    if (insideFence) return line;
+
+    const m = line.match(/^(\s{0,3})#{4,6}[ \t]+(.*?)(?:[ \t]+#+[ \t]*)?$/);
+    if (m) return `${m[1]}${m[2]}`;
+
+    return line;
+  });
+
+  return normalized.join('\n');
+};
+
+/**
+ * Creates a Milkdown editor instance with the specified options. The editor is configured to use the CommonMark preset with custom heading controls that only support headings up to level 3. The `onChange` callback is called whenever the markdown content changes, and the editor can be set to read-only mode if needed.
+ * @param options.root - The root HTML element where the editor will be mounted.
+ * @param options.defaultValue - The initial markdown content to be loaded into the editor.
+ * @param options.onChange - An optional callback function that is called with the updated markdown content whenever it changes.
+ * @param options.readOnly - A boolean flag indicating whether the editor should be in read-only mode. If true, the editor will not allow any changes to the content.
+ * @returns A promise that resolves to the created Editor instance.
+ * @example
+ * const root = document.getElementById('editor');
+ * const editor = await createMilkdownEditor({
+ *   root,
+ *   defaultValue: '# Hello World',
+ *   onChange: markdown => console.log(markdown),
+ *   readOnly: false,
+ * });
+ */
+export async function createMilkdownEditor({
   root,
   defaultValue,
   onChange,
   readOnly = false,
-}: EditorOptions): Promise<Editor> => {
+}: EditorOptions): Promise<Editor> {
   return await Editor.make()
     .config(ctx => {
       ctx.set(rootCtx, root);
@@ -155,4 +171,4 @@ export const createMilkdownEditor = async ({
     .use(headingH123KeyMap)
     .use(listener)
     .create();
-};
+}

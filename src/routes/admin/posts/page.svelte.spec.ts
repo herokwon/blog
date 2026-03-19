@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createMockPost } from '$lib/test-utils';
+import { createMockPost, stubGlobalFetch } from '$lib/test-utils';
 import type { Post } from '$lib/types/post';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
+import type { PageData } from './$types';
 import Page from './+page.svelte';
 
 const mockPost: Post = createMockPost({
@@ -17,13 +18,6 @@ const mockPost2: Post = createMockPost({
   title: 'title2',
 });
 
-function renderPageWith({
-  posts = [],
-  loadError,
-}: { posts?: Post[]; loadError?: string } = {}) {
-  render(Page, { data: { posts, loadError } });
-}
-
 describe('[Page] /admin/posts', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -32,7 +26,7 @@ describe('[Page] /admin/posts', () => {
 
   describe('empty state', () => {
     it('should render page header and empty state', async () => {
-      renderPageWith();
+      await renderPage();
 
       await Promise.all([
         expect
@@ -52,7 +46,7 @@ describe('[Page] /admin/posts', () => {
 
   describe('error state', () => {
     it('should display error message and hide posts table', async () => {
-      renderPageWith({ loadError: 'Failed to load posts' });
+      await renderPage({ loadError: 'Failed to load posts' });
 
       await Promise.all([
         expect
@@ -65,10 +59,7 @@ describe('[Page] /admin/posts', () => {
 
   describe('posts table', () => {
     beforeEach(() => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
-      );
+      stubGlobalFetch();
     });
 
     afterEach(() => {
@@ -76,7 +67,7 @@ describe('[Page] /admin/posts', () => {
     });
 
     it('should render table with all post details, actions, and count', async () => {
-      renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
       const titleLink = page.getByRole('link', { name: mockPost.title });
 
       await Promise.all([
@@ -100,7 +91,7 @@ describe('[Page] /admin/posts', () => {
     });
 
     it('should render all posts with correct count', async () => {
-      renderPageWith({ posts: [mockPost, mockPost2] });
+      await renderPage({ posts: [mockPost, mockPost2] });
 
       await Promise.all([
         expect.element(page.getByText(mockPost.title)).toBeInTheDocument(),
@@ -111,7 +102,7 @@ describe('[Page] /admin/posts', () => {
 
     it('should remove post from table when Delete button is clicked', async () => {
       vi.stubGlobal('confirm', () => true);
-      renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -123,7 +114,7 @@ describe('[Page] /admin/posts', () => {
 
     it('should not remove post when user cancels the confirmation dialog', async () => {
       vi.stubGlobal('confirm', () => false);
-      renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -132,12 +123,13 @@ describe('[Page] /admin/posts', () => {
 
     it('should log error and keep post when server returns a non-ok response', async () => {
       vi.stubGlobal('confirm', () => true);
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.resolve({ ok: false, status: 500 })),
-      );
+      stubGlobalFetch({
+        options: {
+          status: 500,
+        },
+      });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -154,12 +146,11 @@ describe('[Page] /admin/posts', () => {
 
     it('should log error when fetch rejects with a non-Error value', async () => {
       vi.stubGlobal('confirm', () => true);
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.reject('Network timeout')),
-      );
+      stubGlobalFetch({
+        error: 'Network timeout',
+      });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      renderPageWith({ posts: [mockPost] });
+      await renderPage({ posts: [mockPost] });
 
       await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -177,11 +168,8 @@ describe('[Page] /admin/posts', () => {
   describe('post count', () => {
     it('should update count to singular after deleting one of two posts', async () => {
       vi.stubGlobal('confirm', () => true);
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => Promise.resolve({ ok: true, status: 200 })),
-      );
-      renderPageWith({ posts: [mockPost, mockPost2] });
+      stubGlobalFetch();
+      await renderPage({ posts: [mockPost, mockPost2] });
 
       await expect.element(page.getByText('2 posts')).toBeInTheDocument();
 
@@ -197,9 +185,16 @@ describe('[Page] /admin/posts', () => {
           return Reflect.get(target, prop, receiver);
         },
       });
-      renderPageWith({ posts });
+      await renderPage({ posts });
 
       await expect.element(page.getByRole('table')).toBeInTheDocument();
     });
   });
 });
+
+async function renderPage({
+  posts = [],
+  loadError,
+}: Partial<PageData> = {}): Promise<void> {
+  await render(Page, { data: { posts, loadError } });
+}

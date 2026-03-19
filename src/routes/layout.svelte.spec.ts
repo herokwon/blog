@@ -14,11 +14,11 @@ describe('/+layout.svelte', () => {
   });
 
   it('sets a favicon link in head', async () => {
-    render(Layout, {
+    await render(Layout, {
       children: Page as unknown as Snippet,
     });
-
     const link = document.querySelector('link[rel="icon"]');
+
     expect(link).toBeTruthy();
     expect(link?.getAttribute('href')).toMatch(/favicon|favicon\.svg/);
   });

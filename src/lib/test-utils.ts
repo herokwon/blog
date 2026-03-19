@@ -1,21 +1,10 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
 
 import { vi } from 'vitest';
 
 import { EXPIRES_IN_SECONDS } from '$lib/constants';
 import type { DBUser, UserSession } from '$lib/types/auth';
 import type { Post } from '$lib/types/post';
-
-import type { PageServerLoadEvent as AdminPostsPageServerLoadEvent } from '../routes/admin/posts/$types';
-import type { PageServerLoadEvent as AdminPostEditPageServerLoadEvent } from '../routes/admin/posts/[id]/edit/$types';
-import type { PageServerLoadEvent as PostsPageServerLoadEvent } from '../routes/posts/$types';
-import type { PageServerLoadEvent as PostPageServerLoadEvent } from '../routes/posts/[id]/$types';
-
-type PageServerLoadEvent =
-  | PostsPageServerLoadEvent
-  | PostPageServerLoadEvent
-  | AdminPostsPageServerLoadEvent
-  | AdminPostEditPageServerLoadEvent;
 
 type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -25,11 +14,74 @@ type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
   db?: D1Database;
 };
 
-type MockLoadEventOptions<T extends PageServerLoadEvent> = Partial<T> & {
-  id?: string;
-  requestUrl?: string;
+type MockLoadEventOptions<T extends ServerLoadEvent> = Partial<T> &
+  Partial<{
+    id: string;
+    requestUrl: string;
+  }>;
+
+/**
+ * Stubs the global fetch function to return a specified response or error.
+ * @param response - The response to return when the fetch function is called. Should be an object that will be JSON-stringified.
+ * @param options - Optional settings for the mock response, including status code, headers, and whether the fetch should be pending (never resolve).
+ * @param error - An optional error to reject the fetch promise with. If set to true, it will reject with a generic Error. If set to an object, it will reject with that object.
+ * If error is provided, it takes precedence over the response and options parameters.
+ * @example
+ * // Mock a successful fetch response
+ * stubGlobalFetch({ success: true, data: { id: 1 } });
+ *
+ * // Mock a fetch that returns a 404 error
+ * stubGlobalFetch({ success: false, error: { message: 'Not found' } }, { status: 404 });
+ */
+export const stubGlobalFetch = <T extends Record<string, unknown>>({
+  response,
+  options = {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    pending: false,
+  },
+  error,
+}: {
+  response?: T;
+  options?: Partial<{ status: number; headers: HeadersInit; pending: boolean }>;
+  error?: unknown;
+} = {}) => {
+  // custom rejection takes precedence
+  if (error !== undefined) {
+    const rejectValue =
+      typeof error === 'boolean' ? new Error('Fetch error') : error;
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(rejectValue));
+    return;
+  }
+
+  // pending (never-resolving) fetch
+  if (options?.pending) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => new Promise(() => {})),
+    );
+    return;
+  }
+
+  // resolved Response
+  const { status = 200, headers = { 'Content-Type': 'application/json' } } =
+    options;
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(response), { status, headers }),
+      ),
+  );
 };
 
+/**
+ * Creates a mock user session for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param overrides - Partial properties to override the default session values.
+ * @returns A mock UserSession object with the specified overrides.
+ */
 export const createMockUserSession = (
   overrides: Partial<UserSession> = {},
 ): UserSession => ({
@@ -41,6 +93,12 @@ export const createMockUserSession = (
   ...overrides,
 });
 
+/**
+ * Creates a mock user for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param overrides - Partial properties to override the default user values.
+ * @returns A mock DBUser object with the specified overrides.
+ */
 export const createMockUser = (overrides: Partial<DBUser> = {}): DBUser => ({
   id: 'user-123',
   username: 'testuser',
@@ -50,6 +108,12 @@ export const createMockUser = (overrides: Partial<DBUser> = {}): DBUser => ({
   ...overrides,
 });
 
+/**
+ * Creates a mock post for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param overrides - Partial properties to override the default post values.
+ * @returns A mock Post object with the specified overrides.
+ */
 export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
   id: '4e9344a8-b642-47fb-8e8b-b0f1343f77df',
   title: 'title',
@@ -59,19 +123,39 @@ export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
   ...overrides,
 });
 
-export const createMockFetch = <T extends PageServerLoadEvent, R>(
+/**
+ * Creates a mock fetch function for testing purposes.
+ * @param response - The response to return when the fetch is called.
+ * @param options - The options for the mock response.
+ * @returns A mock fetch function.
+ */
+export const createMockFetch = <T extends ServerLoadEvent, R>(
   response: R,
   options: { status?: number; headers?: HeadersInit } = {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   },
-) => {
+): T['fetch'] => {
   return vi.fn<T['fetch']>(
     async () => new Response(JSON.stringify(response), options),
   );
 };
 
-export const createMockD1 = () => {
+/**
+ * Creates a mock D1 database for testing purposes.
+ * Provides mock implementations for common D1 methods like prepare, bind, first, run, and all.
+ * @returns An object containing the mock D1 database and spies for its methods.
+ */
+export const createMockD1 = (): {
+  db: D1Database;
+  spies: {
+    prepare: ReturnType<typeof vi.fn>;
+    bind: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
+    run: ReturnType<typeof vi.fn>;
+    all: ReturnType<typeof vi.fn>;
+  };
+} => {
   const prepare = vi.fn().mockReturnThis();
   const bind = vi.fn().mockReturnThis();
   const first = vi.fn();
@@ -92,6 +176,12 @@ export const createMockD1 = () => {
   };
 };
 
+/**
+ * Creates a mock RequestEvent for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param options - The options to customize the mock RequestEvent, including method, headers, params, pathname, body, and a mock D1 database.
+ * @returns An object containing the mock RequestEvent and spies for its cookies.
+ */
 export const createMockRequestEvent = ({
   method = 'GET',
   headers = { 'Content-Type': 'application/json' },
@@ -99,7 +189,16 @@ export const createMockRequestEvent = ({
   pathname = '',
   body,
   db,
-}: MockEventOptions = {}) => {
+}: MockEventOptions = {}): {
+  event: RequestEvent;
+  spies: {
+    cookies: {
+      get: ReturnType<typeof vi.fn>;
+      set: ReturnType<typeof vi.fn>;
+      delete: ReturnType<typeof vi.fn>;
+    };
+  };
+} => {
   const cookies = {
     get: vi.fn(),
     set: vi.fn(),
@@ -136,7 +235,13 @@ export const createMockRequestEvent = ({
   };
 };
 
-export function createMockLoadEvent<T extends PageServerLoadEvent>({
+/**
+ * Creates a mock PageServerLoadEvent for testing purposes.
+ * Allows overriding default properties with custom values.
+ * @param options - The options to customize the mock PageServerLoadEvent, including id, url, route, params, requestUrl, and a custom fetch function.
+ * @returns A mock PageServerLoadEvent object with the specified overrides and default implementations for required properties and methods.
+ */
+export const createMockLoadEvent = <T extends ServerLoadEvent>({
   id,
   url,
   route,
@@ -144,7 +249,7 @@ export function createMockLoadEvent<T extends PageServerLoadEvent>({
   requestUrl,
   fetch = vi.fn(),
   ...rest
-}: MockLoadEventOptions<T> = {}): T {
+}: MockLoadEventOptions<T> = {}): T => {
   const resolvedRouteId = route?.id ?? (id ? '/posts/[id]' : '/posts');
   const resolvedUrl =
     url?.toString() ??
@@ -185,4 +290,4 @@ export function createMockLoadEvent<T extends PageServerLoadEvent>({
     // allow overrides
     ...rest,
   } as unknown as T;
-}
+};
