@@ -147,6 +147,32 @@ Main types:
 - **Arrow function parentheses**: Omit when single parameter (`arrowParens: "avoid"`)
 - **Import order**: Auto-sorted by Prettier plugin (Svelte → SvelteKit → Testing → Third-party → CSS → Local)
 
+### Import Patterns
+
+#### Barrel Files (Index Exports)
+
+The project enforces the barrel file pattern for component imports:
+
+- **Rule**: Always import from the directory-level `index.ts`, not directly from nested files
+- **Enforcement**: ESLint rule `no-restricted-imports` blocks patterns like `$lib/components/*/*`
+
+```typescript
+// ✅ Correct - Import from barrel file
+import { Editor } from '$lib/components/editor';
+
+// ❌ Wrong - Direct import from nested file (blocked by ESLint)
+import Editor from '$lib/components/editor/Editor.svelte';
+```
+
+**Benefits**:
+
+- **Encapsulation**: Hide internal implementation details
+- **Maintainability**: Change internal file structure without affecting consumers
+- **Consistency**: Enforce uniform import patterns across the codebase
+- **Refactoring**: Clear module boundaries make refactoring safer
+
+**Convention**: When creating a new component directory, always include an `index.ts` that exports the public API
+
 ### File Structure
 
 ```
