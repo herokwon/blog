@@ -60,13 +60,13 @@ export interface components {
        * @description Post creation time
        * @example 2026-01-01T12:00:00Z
        */
-      createdAt: string;
+      created_at: string;
       /**
        * Format: date-time
        * @description Post last update time
        * @example 2026-12-31T12:00:00Z
        */
-      updatedAt: string;
+      updated_at: string;
     };
     /** @description Schema for post input when creating or updating a post */
     PostInput: {
