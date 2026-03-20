@@ -114,7 +114,7 @@ This project uses Cloudflare D1 for data storage. Recent migrations include:
 - [migrations/0001_create_posts_table.sql](migrations/0001_create_posts_table.sql)
 - [migrations/0002_add_index_to_posts.sql](migrations/0002_add_index_to_posts.sql)
 - [migrations/0003_create_auth_tables.sql](migrations/0003_create_auth_tables.sql)
-- [migrations/004_migrate_posts_table-schema.sql](migrations/0004_migrate_posts-table-schema.sql)
+- [migrations/004_migrate_posts_table_schema.sql](migrations/0004_migrate_posts_table_schema.sql)
 
 Apply migrations using your D1 tooling or the Cloudflare D1 dashboard.
 
