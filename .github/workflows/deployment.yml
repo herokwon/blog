@@ -6,6 +6,7 @@ on:
       - main
       - 'release/*'
       - 'dependabot/**'
+      - '*update*deps*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
