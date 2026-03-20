@@ -6,6 +6,7 @@ import {
   createMockLoadEvent,
   createMockPost,
   createMockRequestEvent,
+  stubGlobalFetch,
 } from './test-utils';
 
 describe('[Functions] test-utils', () => {
@@ -20,21 +21,24 @@ describe('[Functions] test-utils', () => {
   });
 
   it('createMockD1 returns a mock D1 and spies are callable', async () => {
-    const { db, spies } = createMockD1();
+    const {
+      db,
+      spies: { prepare, bind, first, run, all },
+    } = createMockD1();
 
-    spies.prepare('SELECT 1');
-    spies.bind('x', 1);
-    spies.first();
-    spies.run();
-    spies.all();
+    new prepare('SELECT 1');
+    new bind('x', 1);
+    new first();
+    new run();
+    new all();
 
     expect(typeof db).toBe('object');
 
-    expect(spies.prepare).toHaveBeenCalled();
-    expect(spies.bind).toHaveBeenCalled();
-    expect(spies.first).toHaveBeenCalled();
-    expect(spies.run).toHaveBeenCalled();
-    expect(spies.all).toHaveBeenCalled();
+    expect(prepare).toHaveBeenCalled();
+    expect(bind).toHaveBeenCalled();
+    expect(first).toHaveBeenCalled();
+    expect(run).toHaveBeenCalled();
+    expect(all).toHaveBeenCalled();
   });
 
   it('createMockRequestEvent attaches platform env, ctx, caches', () => {
@@ -99,5 +103,46 @@ describe('[Functions] test-utils', () => {
 
     const parsed = await request.json();
     expect(parsed).toEqual(body);
+  });
+
+  it('stubGlobalFetch: resolves with JSON (default and custom options)', async () => {
+    const defaultPayload = { ok: true, items: [createMockPost()] };
+    stubGlobalFetch({
+      response: defaultPayload,
+    });
+
+    const defaultResp = await fetch('/api/test');
+
+    expect(defaultResp.status).toBe(200);
+    expect(defaultResp.headers.get('Content-Type')).toBe('application/json');
+    expect(await defaultResp.json()).toEqual(defaultPayload);
+
+    const customPayload = { hello: 'world' };
+    stubGlobalFetch({
+      response: customPayload,
+      options: {
+        status: 201,
+        headers: { 'Content-Type': 'application/custom' },
+      },
+    });
+
+    const customResp = await fetch('/api/custom');
+
+    expect(customResp.status).toBe(201);
+    expect(customResp.headers.get('Content-Type')).toBe('application/custom');
+    expect(await customResp.json()).toEqual(customPayload);
+  });
+
+  it('stubGlobalFetch: rejects for boolean and custom error inputs', async () => {
+    stubGlobalFetch({
+      error: true,
+    });
+    await expect(fetch('/api/err')).rejects.toThrow('Fetch error');
+
+    const customError = new Error('Custom fetch failure');
+    stubGlobalFetch({
+      error: customError,
+    });
+    await expect(fetch('/api/err')).rejects.toThrow('Custom fetch failure');
   });
 });
