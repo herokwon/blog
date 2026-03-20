@@ -5,7 +5,8 @@ import type {
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
+import type { DBPost, Post } from '$lib/types/post';
+import { dbPostToPost } from '$lib/types/post';
 
 import {
   hasContentProperty,
@@ -65,13 +66,13 @@ export const GET: RequestHandler = async ({
     }
 
     const {
-      results: [post],
+      results: [dbPost],
     } = await database
       .prepare('SELECT * FROM posts WHERE id = ?')
       .bind(postId)
-      .run<Post>();
+      .run<DBPost>();
 
-    if (!post) {
+    if (!dbPost) {
       const error: ApiError = {
         code: 'POST_NOT_FOUND',
         message: 'Post not found',
@@ -90,6 +91,8 @@ export const GET: RequestHandler = async ({
         },
       );
     }
+
+    const post = dbPostToPost(dbPost);
 
     return json(
       {
@@ -231,15 +234,15 @@ export const PUT: RequestHandler = async ({
     const now = new Date().toISOString();
 
     const {
-      results: [updatedPost],
+      results: [updatedDbPost],
     } = await database
       .prepare(
-        'UPDATE posts SET title = ?, content = ?, updatedAt = ? WHERE id = ? RETURNING *',
+        'UPDATE posts SET title = ?, content = ?, updated_at = ? WHERE id = ? RETURNING *',
       )
       .bind(title, content, now, postId)
-      .run<Post>();
+      .run<DBPost>();
 
-    if (!updatedPost) {
+    if (!updatedDbPost) {
       const error: ApiError = {
         code: 'POST_NOT_FOUND',
         message: 'Post not found',
@@ -258,6 +261,8 @@ export const PUT: RequestHandler = async ({
         },
       );
     }
+
+    const updatedPost = dbPostToPost(updatedDbPost);
 
     return json(
       {
@@ -343,13 +348,13 @@ export const DELETE: RequestHandler = async ({
     }
 
     const {
-      results: [deletedPost],
+      results: [deletedDbPost],
     } = await database
       .prepare('DELETE FROM posts WHERE id = ? RETURNING *')
       .bind(postId)
-      .run<Post>();
+      .run<DBPost>();
 
-    if (!deletedPost) {
+    if (!deletedDbPost) {
       const error: ApiError = {
         code: 'POST_NOT_FOUND',
         message: 'Post not found',

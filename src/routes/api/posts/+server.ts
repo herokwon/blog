@@ -5,7 +5,8 @@ import type {
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '$lib/types/api';
-import type { Post } from '$lib/types/post';
+import type { DBPost, Post } from '$lib/types/post';
+import { dbPostToPost } from '$lib/types/post';
 
 import {
   hasContentProperty,
@@ -40,9 +41,11 @@ export const GET: RequestHandler = async ({ platform }): Promise<Response> => {
       );
     }
 
-    const { results: posts } = await database
-      .prepare('SELECT * FROM posts ORDER BY createdAt DESC')
-      .all<Post>();
+    const { results: dbPosts } = await database
+      .prepare('SELECT * FROM posts ORDER BY created_at DESC')
+      .all<DBPost>();
+
+    const posts = dbPosts.map(dbPostToPost);
 
     return json(
       {
@@ -163,15 +166,15 @@ export const POST: RequestHandler = async ({
     const now = new Date().toISOString();
 
     const {
-      results: [createdPost],
+      results: [createdDbPost],
     } = await database
       .prepare(
-        'INSERT INTO posts (id, title, content, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?) RETURNING *',
+        'INSERT INTO posts (id, title, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING *',
       )
       .bind(postId, body.title, body.content, now, now)
-      .run<Post>();
+      .run<DBPost>();
 
-    if (!createdPost) {
+    if (!createdDbPost) {
       const error: ApiError = {
         code: 'POST_CREATION_FAILED',
         message: 'Failed to retrieve the created post from the database',
@@ -190,6 +193,8 @@ export const POST: RequestHandler = async ({
         },
       );
     }
+
+    const createdPost = dbPostToPost(createdDbPost);
 
     return json(
       {
