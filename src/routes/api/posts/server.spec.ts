@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMockD1,
+  createMockDBPost,
   createMockPost,
   createMockRequestEvent,
 } from '$lib/test-utils';
@@ -49,16 +50,16 @@ describe('[API] /api/posts', () => {
     });
 
     it('should return posts ordered by createdAt descending', async () => {
-      const post1 = createMockPost();
-      const post2 = createMockPost({
+      const dbPost1 = createMockDBPost();
+      const dbPost2 = createMockDBPost({
         id: 'f2fb88b6-aeb8-4459-a2f4-073022eb35f9',
-        createdAt: '2026-03-02T00:00:00.000Z',
-        updatedAt: '2026-03-02T00:00:00.000Z',
+        created_at: '2026-03-02T00:00:00.000Z',
+        updated_at: '2026-03-02T00:00:00.000Z',
       });
 
       mockD1.spies.all.mockResolvedValue({
-        results: [post1, post2].sort((a, b) =>
-          b.createdAt.localeCompare(a.createdAt),
+        results: [dbPost1, dbPost2].sort((a, b) =>
+          b.created_at.localeCompare(a.created_at),
         ),
       });
 
@@ -70,7 +71,7 @@ describe('[API] /api/posts', () => {
       expect(response.status).toBe(200);
       expect(response.statusText).toBe('OK');
       expect(result.success).toBe(true);
-      expect(result.data?.map(p => p.id)).toEqual([post2.id, post1.id]);
+      expect(result.data?.map(p => p.id)).toEqual([dbPost2.id, dbPost1.id]);
       expect(result.error).toBeNull();
     });
 
@@ -113,9 +114,11 @@ describe('[API] /api/posts', () => {
 
   describe('POST /api/posts', () => {
     let post: ReturnType<typeof createMockPost>;
+    let dbPost: ReturnType<typeof createMockDBPost>;
 
     beforeEach(() => {
       post = createMockPost();
+      dbPost = createMockDBPost();
     });
 
     it('should return 400 for malformed JSON body', async () => {
@@ -234,7 +237,7 @@ describe('[API] /api/posts', () => {
         db: mockD1.db,
       }).event;
 
-      mockD1.spies.run.mockResolvedValue({ results: [post] });
+      mockD1.spies.run.mockResolvedValue({ results: [dbPost] });
 
       const response = await POST(event);
       const result: CreatePostApiResponse = await response.json();

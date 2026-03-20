@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMockD1,
+  createMockDBPost,
   createMockPost,
   createMockRequestEvent,
 } from '$lib/test-utils';
@@ -17,11 +18,13 @@ import { DELETE, GET, PUT } from './+server';
 describe('[API] /api/posts/[id]', () => {
   let mockD1: ReturnType<typeof createMockD1>;
   let post: ReturnType<typeof createMockPost>;
+  let dbPost: ReturnType<typeof createMockDBPost>;
   let event: ReturnType<typeof createMockRequestEvent>['event'];
 
   beforeEach(() => {
     mockD1 = createMockD1();
     post = createMockPost();
+    dbPost = createMockDBPost();
     event = createMockRequestEvent({
       params: { id: post.id },
       db: mockD1.db,
@@ -91,7 +94,7 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return post when found', async () => {
-      mockD1.spies.run.mockResolvedValue({ results: [post] });
+      mockD1.spies.run.mockResolvedValue({ results: [dbPost] });
 
       const response = await GET(event);
       const result: GetPostByIdApiResponse = await response.json();
@@ -303,6 +306,11 @@ describe('[API] /api/posts/[id]', () => {
         content: 'updated content',
         updatedAt,
       });
+      const updatedDbPost = createMockDBPost({
+        title: 'updated title',
+        content: 'updated content',
+        updated_at: updatedAt,
+      });
       const event = createMockRequestEvent({
         method: 'PUT',
         params: { id: existingPost.id },
@@ -310,7 +318,7 @@ describe('[API] /api/posts/[id]', () => {
         db: mockD1.db,
       }).event;
 
-      mockD1.spies.run.mockResolvedValue({ results: [updatedPost] });
+      mockD1.spies.run.mockResolvedValue({ results: [updatedDbPost] });
 
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
@@ -432,7 +440,7 @@ describe('[API] /api/posts/[id]', () => {
     });
 
     it('should return post when found', async () => {
-      mockD1.spies.run.mockResolvedValue({ results: [post] });
+      mockD1.spies.run.mockResolvedValue({ results: [dbPost] });
 
       const response = await DELETE(event);
       const result: DeletePostByIdApiResponse = await response.json();

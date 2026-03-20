@@ -1,3 +1,4 @@
+import type { Post } from '$lib/types/post';
 import type { components, operations } from '$lib/types/schema';
 
 type SchemaApiSuccessResponse = components['schemas']['ApiSuccessResponse'];
@@ -19,12 +20,10 @@ export type ApiErrorResponse = Omit<SchemaApiErrorResponse, 'data'> & {
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
-type SchemaPost = components['schemas']['Post'];
-
-export type ListPostsApiResponse = ApiResponse<SchemaPost[]>;
-export type CreatePostApiResponse = ApiResponse<SchemaPost>;
-export type GetPostByIdApiResponse = ApiResponse<SchemaPost>;
-export type UpdatePostByIdApiResponse = ApiResponse<SchemaPost>;
+export type ListPostsApiResponse = ApiResponse<Post[]>;
+export type CreatePostApiResponse = ApiResponse<Post>;
+export type GetPostByIdApiResponse = ApiResponse<Post>;
+export type UpdatePostByIdApiResponse = ApiResponse<Post>;
 export type DeletePostByIdApiResponse = ApiResponse<null>;
 
 export type ListPostsOperation = operations['listPosts'];
