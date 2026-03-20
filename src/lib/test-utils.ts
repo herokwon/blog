@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 
 import { EXPIRES_IN_SECONDS } from '$lib/constants';
 import type { DBUser, UserSession } from '$lib/types/auth';
-import type { Post } from '$lib/types/post';
+import type { DBPost, Post } from '$lib/types/post';
 
 type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -120,6 +120,21 @@ export const createMockPost = (overrides: Partial<Post> = {}): Post => ({
   content: 'content',
   createdAt: '2026-03-01T00:00:00.000Z',
   updatedAt: '2026-03-01T00:00:00.000Z',
+  ...overrides,
+});
+
+/**
+ * Creates a mock database post for testing purposes.
+ * Uses snake_case property names matching the database schema.
+ * @param overrides - Partial properties to override the default DB post values.
+ * @returns A mock DBPost object with the specified overrides.
+ */
+export const createMockDBPost = (overrides: Partial<DBPost> = {}): DBPost => ({
+  id: '4e9344a8-b642-47fb-8e8b-b0f1343f77df',
+  title: 'title',
+  content: 'content',
+  created_at: '2026-03-01T00:00:00.000Z',
+  updated_at: '2026-03-01T00:00:00.000Z',
   ...overrides,
 });
 
