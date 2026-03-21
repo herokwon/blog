@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
+  import { createImageManager } from '$lib/services';
   import type { CreatePostApiResponse } from '$lib/types/api';
   import type { PostInput } from '$lib/types/post';
 
   const STORAGE_KEY = 'DRAFT_POST';
+
+  const imageManager = createImageManager();
 
   let postData = $state<PostInput>({
     title: '',
@@ -16,6 +19,7 @@
 
   let isSubmitting = $state(false);
   let isDraftLoaded = $state<boolean>(false);
+  let imageError = $state<string | null>(null);
 
   const canSave = $derived(
     postData.title.trim().length > 0 && postData.content.trim().length > 0,
@@ -29,6 +33,7 @@
       title: '',
       content: '',
     };
+    imageManager.cleanup();
   }
 
   function handleSaveDraft() {
@@ -36,15 +41,34 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(postData));
   }
 
+  function handleImageAdd(file: File, blobUrl: string) {
+    imageManager.registerImage(file, blobUrl);
+    imageError = null;
+  }
+
+  function handleImageError(error: string) {
+    imageError = error;
+  }
+
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     isSubmitting = true;
 
     try {
+      let finalContent = postData.content;
+
+      if (imageManager.hasPending) {
+        const urlMap = await imageManager.uploadAll();
+
+        for (const [blobUrl, r2Url] of urlMap) {
+          finalContent = finalContent.replaceAll(blobUrl, r2Url);
+        }
+      }
+
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(postData),
+        body: JSON.stringify({ ...postData, content: finalContent }),
       });
       const apiResponse: CreatePostApiResponse = await res.json();
 
@@ -72,6 +96,10 @@
     } finally {
       isDraftLoaded = true;
     }
+  });
+
+  onDestroy(() => {
+    imageManager.cleanup();
   });
 </script>
 
@@ -101,6 +129,11 @@
         {isSubmitting ? 'Submitting...' : 'Submit'}
       </button>
     </div>
+    {#if imageError}
+      <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        {imageError}
+      </div>
+    {/if}
     <div class="space-y-2">
       <label for="title" class="block text-sm font-medium">Title</label>
       <input
@@ -115,7 +148,12 @@
     <div class="flex h-full flex-col gap-y-2">
       <p class="block text-sm font-medium">Content</p>
       {#if isDraftLoaded}
-        <Editor bind:content={postData.content} class="flex-1" />
+        <Editor
+          bind:content={postData.content}
+          onImageAdd={handleImageAdd}
+          onImageError={handleImageError}
+          class="flex-1"
+        />
       {:else}
         <div class="milkdown-container flex-1"></div>
       {/if}

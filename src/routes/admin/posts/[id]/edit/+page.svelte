@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   import { beforeNavigate, goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
+  import { createImageManager } from '$lib/services';
   import type { UpdatePostByIdApiResponse } from '$lib/types/api';
   import type { PostInput } from '$lib/types/post';
 
@@ -11,11 +12,14 @@
 
   let { data }: { data: PageData } = $props();
 
+  const imageManager = createImageManager();
+
   let postData = $state<PostInput>({
     title: '',
     content: '',
   });
   let currentPostId = $state<unknown | null>(null);
+  let imageError = $state<string | null>(null);
 
   $effect(() => {
     if (currentPostId === data.post.id) return;
@@ -25,6 +29,7 @@
       content: data.post.content,
     };
     currentPostId = data.post.id;
+    imageManager.cleanup();
   });
 
   let isSubmitting = $state(false);
@@ -39,6 +44,15 @@
       isChanged,
   );
 
+  function handleImageAdd(file: File, blobUrl: string) {
+    imageManager.registerImage(file, blobUrl);
+    imageError = null;
+  }
+
+  function handleImageError(error: string) {
+    imageError = error;
+  }
+
   async function handleCancel() {
     await goto(resolve('/admin/posts'));
   }
@@ -52,15 +66,27 @@
     isSubmitting = true;
 
     try {
+      let finalContent = postData.content;
+
+      if (imageManager.hasPending) {
+        const urlMap = await imageManager.uploadAll();
+
+        for (const [blobUrl, r2Url] of urlMap) {
+          finalContent = finalContent.replaceAll(blobUrl, r2Url);
+        }
+      }
+
       const res = await fetch(`/api/posts/${data.post.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(postData),
+        body: JSON.stringify({ ...postData, content: finalContent }),
       });
       const apiResponse: UpdatePostByIdApiResponse = await res.json();
 
-      if (apiResponse.success)
+      if (apiResponse.success) {
+        imageManager.cleanup();
         await goto(resolve(`/posts/${apiResponse.data.id}`));
+      }
     } finally {
       isSubmitting = false;
     }
@@ -85,6 +111,10 @@
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
+  });
+
+  onDestroy(() => {
+    imageManager.cleanup();
   });
 </script>
 
@@ -119,6 +149,11 @@
         {isSubmitting ? 'Updating...' : 'Update'}
       </button>
     </div>
+    {#if imageError}
+      <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        {imageError}
+      </div>
+    {/if}
     <div class="space-y-2">
       <label for="title" class="block text-sm font-medium">Title</label>
       <input
@@ -133,7 +168,12 @@
     <div class="flex h-full flex-col gap-y-2">
       <p class="block text-sm font-medium">Content</p>
       {#if currentPostId === data.post.id}
-        <Editor bind:content={postData.content} class="flex-1" />
+        <Editor
+          bind:content={postData.content}
+          onImageAdd={handleImageAdd}
+          onImageError={handleImageError}
+          class="flex-1"
+        />
       {:else}
         <div class="milkdown-container flex-1"></div>
       {/if}
