@@ -8,12 +8,21 @@ import { page } from 'vitest/browser';
 
 import Page from './+page.svelte';
 
-const { gotoMock, beforeNavigateHandlers } = vi.hoisted(() => ({
-  gotoMock: vi.fn(),
-  beforeNavigateHandlers: [] as Array<
-    (navigation: { to: object | null; cancel: () => void }) => void
-  >,
-}));
+const { gotoMock, beforeNavigateHandlers, mockImageManager } = vi.hoisted(
+  () => ({
+    gotoMock: vi.fn(),
+    beforeNavigateHandlers: [] as Array<
+      (navigation: { to: object | null; cancel: () => void }) => void
+    >,
+    mockImageManager: {
+      registerImage: vi.fn(),
+      getPendingImages: vi.fn().mockReturnValue([]),
+      hasPending: false,
+      uploadAll: vi.fn().mockResolvedValue(new Map()),
+      cleanup: vi.fn(),
+    },
+  }),
+);
 
 vi.mock('$app/navigation', () => ({
   goto: gotoMock,
@@ -24,6 +33,13 @@ vi.mock('$app/navigation', () => ({
   },
 }));
 
+vi.mock('$lib/services/image-manager', () => ({
+  createImageManager: vi.fn(() => mockImageManager),
+}));
+
+let capturedOnImageAdd: ((file: File, blobUrl: string) => void) | undefined;
+let capturedOnImageError: ((error: string) => void) | undefined;
+
 vi.mock('$lib/components/editor/config', () => ({
   createMilkdownEditor: vi.fn(
     async (options: {
@@ -31,7 +47,12 @@ vi.mock('$lib/components/editor/config', () => ({
       defaultValue: string;
       onChange?: (markdown: string) => void;
       readOnly?: boolean;
+      onImageAdd?: (file: File, blobUrl: string) => void;
+      onImageError?: (error: string) => void;
     }) => {
+      capturedOnImageAdd = options.onImageAdd;
+      capturedOnImageError = options.onImageError;
+
       const editable = document.createElement('div');
       editable.setAttribute('contenteditable', 'true');
       editable.setAttribute('role', 'textbox');
@@ -57,6 +78,13 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     vi.unstubAllGlobals();
     gotoMock.mockReset();
     beforeNavigateHandlers.length = 0;
+    mockImageManager.registerImage.mockClear();
+    mockImageManager.getPendingImages.mockReset().mockReturnValue([]);
+    mockImageManager.hasPending = false;
+    mockImageManager.uploadAll.mockReset().mockResolvedValue(new Map());
+    mockImageManager.cleanup.mockClear();
+    capturedOnImageAdd = undefined;
+    capturedOnImageError = undefined;
   });
 
   it('should render form with prefilled values', async () => {
@@ -327,6 +355,86 @@ describe('[Page] /admin/posts/[id]/edit', () => {
       'beforeunload',
       expect.any(Function),
     );
+  });
+
+  it('should register image and clear error when handleImageAdd is called', async () => {
+    await renderPage();
+
+    const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+    const blobUrl = 'blob:http://localhost/test-image';
+
+    capturedOnImageAdd?.(mockFile, blobUrl);
+
+    expect(mockImageManager.registerImage).toHaveBeenCalledWith(
+      mockFile,
+      blobUrl,
+    );
+  });
+
+  it('should display image error when handleImageError is called', async () => {
+    await renderPage();
+
+    capturedOnImageError?.('Failed to upload image');
+
+    await expect
+      .element(page.getByText('Failed to upload image'))
+      .toBeInTheDocument();
+  });
+
+  it('should clear image error when new image is added after error', async () => {
+    await renderPage();
+
+    capturedOnImageError?.('Failed to upload image');
+
+    await expect
+      .element(page.getByText('Failed to upload image'))
+      .toBeInTheDocument();
+
+    const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+    capturedOnImageAdd?.(mockFile, 'blob:http://localhost/new-image');
+
+    await expect
+      .element(page.getByText('Failed to upload image'))
+      .not.toBeInTheDocument();
+  });
+
+  it('should upload images and replace URLs on submit when pending images exist', async () => {
+    const urlMap = new Map([
+      ['blob:http://localhost/image1', 'https://r2.example.com/image1.png'],
+    ]);
+    mockImageManager.hasPending = true;
+    mockImageManager.uploadAll.mockResolvedValue(urlMap);
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    stubGlobalFetch<UpdatePostByIdApiResponse>({
+      response: {
+        success: true,
+        data: {
+          ...mockPost,
+          title: 'Updated Title',
+          content: '![image](https://r2.example.com/image1.png)',
+        },
+        error: null,
+      },
+    });
+
+    const postWithImage = createMockPost({
+      id: mockPost.id,
+      content: '![image](blob:http://localhost/image1)',
+    });
+    await render(Page, { data: { post: postWithImage } });
+
+    await page.getByRole('textbox', { name: 'Title' }).fill('Updated Title');
+    await page.getByRole('button', { name: 'Update' }).click();
+
+    expect(mockImageManager.uploadAll).toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/posts/${mockPost.id}`,
+      expect.objectContaining({
+        body: expect.stringContaining('https://r2.example.com/image1.png'),
+      }),
+    );
+    expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
   });
 });
 
