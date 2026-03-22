@@ -9,23 +9,23 @@ importers:
   .:
     dependencies:
       '@milkdown/core':
-        specifier: ^7.19.0
-        version: 7.19.0
+        specifier: ^7.19.1
+        version: 7.19.1
       '@milkdown/ctx':
-        specifier: ^7.19.0
-        version: 7.19.0
+        specifier: ^7.19.1
+        version: 7.19.1
       '@milkdown/plugin-listener':
-        specifier: ^7.19.0
-        version: 7.19.0
+        specifier: ^7.19.1
+        version: 7.19.1
       '@milkdown/preset-commonmark':
-        specifier: ^7.19.0
-        version: 7.19.0
+        specifier: ^7.19.1
+        version: 7.19.1
       '@milkdown/prose':
-        specifier: ^7.19.0
-        version: 7.19.0
+        specifier: ^7.19.1
+        version: 7.19.1
       '@milkdown/utils':
-        specifier: ^7.19.0
-        version: 7.19.0
+        specifier: ^7.19.1
+        version: 7.19.1
     devDependencies:
       '@eslint/compat':
         specifier: ^2.0.3
@@ -482,105 +482,89 @@ packages:
     resolution: {integrity: sha512-excjX8DfsIcJ10x1Kzr4RcWe1edC9PquDRRPx3YVCvQv+U5p7Yin2s32ftzikXojb1PIFc/9Mt28/y+iRklkrw==}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-libvips-linux-arm@1.2.4':
     resolution: {integrity: sha512-bFI7xcKFELdiNCVov8e44Ia4u2byA+l3XtsAj+Q8tfCwO6BQ8iDojYdvoPMqsKDkuoOo+X6HZA0s0q11ANMQ8A==}
     cpu: [arm]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-libvips-linux-ppc64@1.2.4':
     resolution: {integrity: sha512-FMuvGijLDYG6lW+b/UvyilUWu5Ayu+3r2d1S8notiGCIyYU/76eig1UfMmkZ7vwgOrzKzlQbFSuQfgm7GYUPpA==}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-libvips-linux-riscv64@1.2.4':
     resolution: {integrity: sha512-oVDbcR4zUC0ce82teubSm+x6ETixtKZBh/qbREIOcI3cULzDyb18Sr/Wcyx7NRQeQzOiHTNbZFF1UwPS2scyGA==}
     cpu: [riscv64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-libvips-linux-s390x@1.2.4':
     resolution: {integrity: sha512-qmp9VrzgPgMoGZyPvrQHqk02uyjA0/QrTO26Tqk6l4ZV0MPWIW6LTkqOIov+J1yEu7MbFQaDpwdwJKhbJvuRxQ==}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-libvips-linux-x64@1.2.4':
     resolution: {integrity: sha512-tJxiiLsmHc9Ax1bz3oaOYBURTXGIRDODBqhveVHonrHJ9/+k89qbLl0bcJns+e4t4rvaNBxaEZsFtSfAdquPrw==}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-libvips-linuxmusl-arm64@1.2.4':
     resolution: {integrity: sha512-FVQHuwx1IIuNow9QAbYUzJ+En8KcVm9Lk5+uGUQJHaZmMECZmOlix9HnH7n1TRkXMS0pGxIJokIVB9SuqZGGXw==}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@img/sharp-libvips-linuxmusl-x64@1.2.4':
     resolution: {integrity: sha512-+LpyBk7L44ZIXwz/VYfglaX/okxezESc6UxDSoyo2Ks6Jxc4Y7sGjpgU9s4PMgqgjj1gZCylTieNamqA1MF7Dg==}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@img/sharp-linux-arm64@0.34.5':
     resolution: {integrity: sha512-bKQzaJRY/bkPOXyKx5EVup7qkaojECG6NLYswgktOZjaXecSAeCWiZwwiFf3/Y+O1HrauiE3FVsGxFg8c24rZg==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-linux-arm@0.34.5':
     resolution: {integrity: sha512-9dLqsvwtg1uuXBGZKsxem9595+ujv0sJ6Vi8wcTANSFpwV/GONat5eCkzQo/1O6zRIkh0m/8+5BjrRr7jDUSZw==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [arm]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-linux-ppc64@0.34.5':
     resolution: {integrity: sha512-7zznwNaqW6YtsfrGGDA6BRkISKAAE1Jo0QdpNYXNMHu2+0dTrPflTLNkpc8l7MUP5M16ZJcUvysVWWrMefZquA==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-linux-riscv64@0.34.5':
     resolution: {integrity: sha512-51gJuLPTKa7piYPaVs8GmByo7/U7/7TZOq+cnXJIHZKavIRHAP77e3N2HEl3dgiqdD/w0yUfiJnII77PuDDFdw==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [riscv64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-linux-s390x@0.34.5':
     resolution: {integrity: sha512-nQtCk0PdKfho3eC5MrbQoigJ2gd1CgddUMkabUj+rBevs8tZ2cULOx46E7oyX+04WGfABgIwmMC0VqieTiR4jg==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-linux-x64@0.34.5':
     resolution: {integrity: sha512-MEzd8HPKxVxVenwAa+JRPwEC7QFjoPWuS5NZnBt6B3pu7EG2Ge0id1oLHZpPJdn3OQK+BQDiw9zStiHBTJQQQQ==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@img/sharp-linuxmusl-arm64@0.34.5':
     resolution: {integrity: sha512-fprJR6GtRsMt6Kyfq44IsChVZeGN97gTD331weR1ex1c1rypDEABN6Tm2xa1wE6lYb5DdEnk03NZPqA7Id21yg==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@img/sharp-linuxmusl-x64@0.34.5':
     resolution: {integrity: sha512-Jg8wNT1MUzIvhBFxViqrEhWDGzqymo3sV7z7ZsaWbZNDLXRJZoRGrjulp60YYtV4wfY8VIKcWidjojlLcWrd8Q==}
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@img/sharp-wasm32@0.34.5':
     resolution: {integrity: sha512-OdWTEiVkY2PHwqkbBI8frFxQQFekHaSSkUIJkwzclWZe64O1X4UlUjqqqLaPbUpMOQk6FBu/HtlGXNblIs0huw==}
@@ -624,29 +608,29 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@milkdown/core@7.19.0':
-    resolution: {integrity: sha512-x5vxnVCxxKSGCa1+J7I4RzEDl4KkvsXJF6xm1zCtvj0BCsbCFGiUVx2AtLcFkkvWZ5530CuOouDJ9FC27yoCoA==}
+  '@milkdown/core@7.19.1':
+    resolution: {integrity: sha512-ejUgmqpxjpxSTOw/dmVbMx09Qxo8/FBouIc8o9S/S3EKPvfC7nO4gXh7wA49MG0zJfwHWw7l0NGU3ljWQR2JSw==}
 
-  '@milkdown/ctx@7.19.0':
-    resolution: {integrity: sha512-tdG9jm6yk6PRSvFZW5rRSqOGrKdcNdbXJwfGiEGr538pgKYhJ/yKPF3HmfupkhGyxabRP/PydQa4q/N/OOs03g==}
+  '@milkdown/ctx@7.19.1':
+    resolution: {integrity: sha512-TMee4Rwfw3snjOPSpceMNLg5KN0XLPPFsneFT6IbH4RDjkpdtCvg7h4LNbBDer2YLlqxHyG+VlcbktKhdxRLlA==}
 
-  '@milkdown/exception@7.19.0':
-    resolution: {integrity: sha512-ykgjxqrOueTCjmDGr0aidulZa1mC6bg4f8eDyMiT0wd4vB+3iYmQxY8NxdKwUqlz4UM5KBnbyFlGlgQsQDL+ew==}
+  '@milkdown/exception@7.19.1':
+    resolution: {integrity: sha512-rJIDJeVER2gj6AdlpvLupv/fv6pgSB3mzpUZW+jbmkAi8T2Sx68vKWq09Uzxy8v0BOenuG6QSMVdrtsYftGYvg==}
 
-  '@milkdown/plugin-listener@7.19.0':
-    resolution: {integrity: sha512-shEVqcC2SKH0jaB74ReztNxG5hXjby26S1lN+evHKtsy2cB2vbWH2eHqSZkl8EGbLZJrqDsHwDKxTNTwB/oMSg==}
+  '@milkdown/plugin-listener@7.19.1':
+    resolution: {integrity: sha512-2TNEIzD9yZgbi5lliQm0xX5qwIBXa5NqH3dRfLQUVg/mlN1NJ1FTAGi6QN47skKl5+lnpN4ytOeqJLTCfyguPg==}
 
-  '@milkdown/preset-commonmark@7.19.0':
-    resolution: {integrity: sha512-8rPEd4S3ny5wuFJvnZdieedKxFeW3KU5Rz54LYhA/nYPG+tE9q5lqDs0ZzHNoJdXMiLWbNf/dd0QokHVNlbQLQ==}
+  '@milkdown/preset-commonmark@7.19.1':
+    resolution: {integrity: sha512-7X7RBlcII0AmagYBDGI8BGakTXDWCzxIJVYC4BxfJIg0w+2lYMN0F924vg5Hp6E6ZOuR3A2aEyiwJ1I8ttEHCQ==}
 
-  '@milkdown/prose@7.19.0':
-    resolution: {integrity: sha512-T/uYqSr4YT4uZtu4nBxTWyvZhVs2Lzh9qpcYH81PVwtZUT3b57+e+39s1D7UKAwFGi0qB7qZu/53l6pcw8radg==}
+  '@milkdown/prose@7.19.1':
+    resolution: {integrity: sha512-Yc76/T+cy2nzjpaQjDRbrcUq69DARouT7MjCP9rQjr55PoQQduZ7GF1QZpAprB5SQya0EM3HFL1PEgjpWl98LQ==}
 
-  '@milkdown/transformer@7.19.0':
-    resolution: {integrity: sha512-Ui1vwbyTd1nAaieTylI8ibNbXSAxygkiFjkwOPGO5w0Eu7leH+0hVrbeGUCSzYdJfjGsN537CYu/8kvLIR+lQg==}
+  '@milkdown/transformer@7.19.1':
+    resolution: {integrity: sha512-Gezu8Ds7/3HPw6Wi7VWcYuTJCzceFx+9l2TgDNiacWe0WNqVuVc/PWoBfZu1j9x4fVrGYSKBlHBErJMGqPceJQ==}
 
-  '@milkdown/utils@7.19.0':
-    resolution: {integrity: sha512-aIu8j7TypVn+4ZWgrIUjpljIulAVwNERWNZgkfYLQLOv+BbF1gIbpoB7t3w0RD2EeENrEu0P3J0Sl5LDMbyDRQ==}
+  '@milkdown/utils@7.19.1':
+    resolution: {integrity: sha512-OXstf0rIUfPStze9SdBK+4fJPhXL2EZnv6R5H10vxbdqWRAdtKB/uqIZnHePNww49Lz5+ClCdVybtoZ1vvZWaA==}
 
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
@@ -716,42 +700,36 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-rc.10':
     resolution: {integrity: sha512-vELN+HNb2IzuzSBUOD4NHmP9yrGwl1DVM29wlQvx1OLSclL0NgVWnVDKl/8tEks79EFek/kebQKnNJkIAA4W2g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-linux-ppc64-gnu@1.0.0-rc.10':
     resolution: {integrity: sha512-ZqrufYTgzxbHwpqOjzSsb0UV/aV2TFIY5rP8HdsiPTv/CuAgCRjM6s9cYFwQ4CNH+hf9Y4erHW1GjZuZ7WoI7w==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.0.0-rc.10':
     resolution: {integrity: sha512-gSlmVS1FZJSRicA6IyjoRoKAFK7IIHBs7xJuHRSmjImqk3mPPWbR7RhbnfH2G6bcmMEllCt2vQ/7u9e6bBnByg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-rc.10':
     resolution: {integrity: sha512-eOCKUpluKgfObT2pHjztnaWEIbUabWzk3qPZ5PuacuPmr4+JtQG4k2vGTY0H15edaTnicgU428XW/IH6AimcQw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-musl@1.0.0-rc.10':
     resolution: {integrity: sha512-Xdf2jQbfQowJnLcgYfD/m0Uu0Qj5OdxKallD78/IPPfzaiaI4KRAwZzHcKQ4ig1gtg1SuzC7jovNiM2TzQsBXA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-openharmony-arm64@1.0.0-rc.10':
     resolution: {integrity: sha512-o1hYe8hLi1EY6jgPFyxQgQ1wcycX+qz8eEbVmot2hFkgUzPxy9+kF0u0NIQBeDq+Mko47AkaFFaChcvZa9UX9Q==}
@@ -866,28 +844,24 @@ packages:
     engines: {node: '>= 20'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@tailwindcss/oxide-linux-arm64-musl@4.2.2':
     resolution: {integrity: sha512-oCfG/mS+/+XRlwNjnsNLVwnMWYH7tn/kYPsNPh+JSOMlnt93mYNCKHYzylRhI51X+TbR+ufNhhKKzm6QkqX8ag==}
     engines: {node: '>= 20'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@tailwindcss/oxide-linux-x64-gnu@4.2.2':
     resolution: {integrity: sha512-rTAGAkDgqbXHNp/xW0iugLVmX62wOp2PoE39BTCGKjv3Iocf6AFbRP/wZT/kuCxC9QBh9Pu8XPkv/zCZB2mcMg==}
     engines: {node: '>= 20'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@tailwindcss/oxide-linux-x64-musl@4.2.2':
     resolution: {integrity: sha512-XW3t3qwbIwiSyRCggeO2zxe3KWaEbM0/kW9e8+0XpBgyKU4ATYzcVSMKteZJ1iukJ3HgHBjbg9P5YPRCVUxlnQ==}
     engines: {node: '>= 20'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@tailwindcss/oxide-wasm32-wasi@4.2.2':
     resolution: {integrity: sha512-eKSztKsmEsn1O5lJ4ZAfyn41NfG7vzCg496YiGtMDV86jz1q/irhms5O0VrY6ZwTUkFy/EKG3RfWgxSI3VbZ8Q==}
@@ -961,8 +935,8 @@ packages:
   '@types/cookie@0.6.0':
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
 
-  '@types/debug@4.1.12':
-    resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
+  '@types/debug@4.1.13':
+    resolution: {integrity: sha512-KSVgmQmzMwPlmtljOomayoR89W4FynCAi3E8PPs7vmDVPe84hT+vGPKkJfThkmXs0x0jAaa9U8uW8bbfyS2fWw==}
 
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
@@ -1568,28 +1542,24 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.32.0:
     resolution: {integrity: sha512-UpQkoenr4UJEzgVIYpI80lDFvRmPVg6oqboNHfoH4CQIfNA+HOrZ7Mo7KZP02dC6LjghPQJeBsvXhJod/wnIBg==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-linux-x64-gnu@1.32.0:
     resolution: {integrity: sha512-V7Qr52IhZmdKPVr+Vtw8o+WLsQJYCTd8loIfpDaMRWGUZfBOYEJeyJIkqGIDMZPwPx24pUMfwSxxI8phr/MbOA==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-x64-musl@1.32.0:
     resolution: {integrity: sha512-bYcLp+Vb0awsiXg/80uCRezCYHNg1/l3mt0gzHnWV9XP1W5sKa5/TCdGWaR/zBM2PeF/HbsQv/j2URNOiVuxWg==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-win32-arm64-msvc@1.32.0:
     resolution: {integrity: sha512-8SbC8BR40pS6baCM8sbtYDSwEVQd4JlFTOlaD3gWGHfThTcABnNDBda6eTZeqbofalIJhFx0qKzgHJmcPTnGdw==}
@@ -1749,8 +1719,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@5.1.6:
-    resolution: {integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==}
+  nanoid@5.1.7:
+    resolution: {integrity: sha512-ua3NDgISf6jdwezAheMOk4mbE1LXjm1DfMUDMuJf4AqxLFK3ccGpgWizwa5YV7Yz9EpXwEaWoRXSb/BnV0t5dQ==}
     engines: {node: ^18 || >=20}
     hasBin: true
 
@@ -1972,8 +1942,8 @@ packages:
   prosemirror-transform@1.11.0:
     resolution: {integrity: sha512-4I7Ce4KpygXb9bkiPS3hTEk4dSHorfRw8uI0pE8IhxlK2GXsqv5tIA7JUSxtSu7u8APVOTtbUBxTmnHIxVkIJw==}
 
-  prosemirror-view@1.41.6:
-    resolution: {integrity: sha512-mxpcDG4hNQa/CPtzxjdlir5bJFDlm0/x5nGBbStB2BWX+XOQ9M8ekEG+ojqB5BcVu2Rc80/jssCMZzSstJuSYg==}
+  prosemirror-view@1.41.7:
+    resolution: {integrity: sha512-jUwKNCEIGiqdvhlS91/2QAg21e4dfU5bH2iwmSDQeosXJgKF7smG0YSplOWK0cjSNgIqXe7VXqo7EIfUFJdt3w==}
 
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
@@ -2713,51 +2683,51 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@milkdown/core@7.19.0':
+  '@milkdown/core@7.19.1':
     dependencies:
-      '@milkdown/ctx': 7.19.0
-      '@milkdown/exception': 7.19.0
-      '@milkdown/prose': 7.19.0
-      '@milkdown/transformer': 7.19.0
+      '@milkdown/ctx': 7.19.1
+      '@milkdown/exception': 7.19.1
+      '@milkdown/prose': 7.19.1
+      '@milkdown/transformer': 7.19.1
       remark-parse: 11.0.0
       remark-stringify: 11.0.0
       unified: 11.0.5
     transitivePeerDependencies:
       - supports-color
 
-  '@milkdown/ctx@7.19.0':
+  '@milkdown/ctx@7.19.1':
     dependencies:
-      '@milkdown/exception': 7.19.0
+      '@milkdown/exception': 7.19.1
 
-  '@milkdown/exception@7.19.0': {}
+  '@milkdown/exception@7.19.1': {}
 
-  '@milkdown/plugin-listener@7.19.0':
+  '@milkdown/plugin-listener@7.19.1':
     dependencies:
-      '@milkdown/core': 7.19.0
-      '@milkdown/ctx': 7.19.0
-      '@milkdown/prose': 7.19.0
+      '@milkdown/core': 7.19.1
+      '@milkdown/ctx': 7.19.1
+      '@milkdown/prose': 7.19.1
       '@types/lodash-es': 4.17.12
       lodash-es: 4.17.23
     transitivePeerDependencies:
       - supports-color
 
-  '@milkdown/preset-commonmark@7.19.0':
+  '@milkdown/preset-commonmark@7.19.1':
     dependencies:
-      '@milkdown/core': 7.19.0
-      '@milkdown/ctx': 7.19.0
-      '@milkdown/exception': 7.19.0
-      '@milkdown/prose': 7.19.0
-      '@milkdown/transformer': 7.19.0
-      '@milkdown/utils': 7.19.0
+      '@milkdown/core': 7.19.1
+      '@milkdown/ctx': 7.19.1
+      '@milkdown/exception': 7.19.1
+      '@milkdown/prose': 7.19.1
+      '@milkdown/transformer': 7.19.1
+      '@milkdown/utils': 7.19.1
       remark-inline-links: 7.0.0
       unist-util-visit: 5.1.0
       unist-util-visit-parents: 6.0.2
     transitivePeerDependencies:
       - supports-color
 
-  '@milkdown/prose@7.19.0':
+  '@milkdown/prose@7.19.1':
     dependencies:
-      '@milkdown/exception': 7.19.0
+      '@milkdown/exception': 7.19.1
       prosemirror-changeset: 2.4.0
       prosemirror-commands: 1.7.1
       prosemirror-dropcursor: 1.8.2
@@ -2770,25 +2740,25 @@ snapshots:
       prosemirror-state: 1.4.4
       prosemirror-tables: 1.8.5
       prosemirror-transform: 1.11.0
-      prosemirror-view: 1.41.6
+      prosemirror-view: 1.41.7
 
-  '@milkdown/transformer@7.19.0':
+  '@milkdown/transformer@7.19.1':
     dependencies:
-      '@milkdown/exception': 7.19.0
-      '@milkdown/prose': 7.19.0
+      '@milkdown/exception': 7.19.1
+      '@milkdown/prose': 7.19.1
       remark: 15.0.1
       unified: 11.0.5
     transitivePeerDependencies:
       - supports-color
 
-  '@milkdown/utils@7.19.0':
+  '@milkdown/utils@7.19.1':
     dependencies:
-      '@milkdown/core': 7.19.0
-      '@milkdown/ctx': 7.19.0
-      '@milkdown/exception': 7.19.0
-      '@milkdown/prose': 7.19.0
-      '@milkdown/transformer': 7.19.0
-      nanoid: 5.1.6
+      '@milkdown/core': 7.19.1
+      '@milkdown/ctx': 7.19.1
+      '@milkdown/exception': 7.19.1
+      '@milkdown/prose': 7.19.1
+      '@milkdown/transformer': 7.19.1
+      nanoid: 5.1.7
     transitivePeerDependencies:
       - supports-color
 
@@ -3048,7 +3018,7 @@ snapshots:
 
   '@types/cookie@0.6.0': {}
 
-  '@types/debug@4.1.12':
+  '@types/debug@4.1.13':
     dependencies:
       '@types/ms': 2.1.0
 
@@ -3893,7 +3863,7 @@ snapshots:
 
   micromark@4.0.2:
     dependencies:
-      '@types/debug': 4.1.12
+      '@types/debug': 4.1.13
       debug: 4.4.3(supports-color@10.2.2)
       decode-named-character-reference: 1.3.0
       devlop: 1.1.0
@@ -3947,7 +3917,7 @@ snapshots:
 
   nanoid@3.3.11: {}
 
-  nanoid@5.1.6: {}
+  nanoid@5.1.7: {}
 
   natural-compare@1.4.0: {}
 
@@ -4079,20 +4049,20 @@ snapshots:
     dependencies:
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.11.0
-      prosemirror-view: 1.41.6
+      prosemirror-view: 1.41.7
 
   prosemirror-gapcursor@1.4.1:
     dependencies:
       prosemirror-keymap: 1.2.3
       prosemirror-model: 1.25.4
       prosemirror-state: 1.4.4
-      prosemirror-view: 1.41.6
+      prosemirror-view: 1.41.7
 
   prosemirror-history@1.5.0:
     dependencies:
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.11.0
-      prosemirror-view: 1.41.6
+      prosemirror-view: 1.41.7
       rope-sequence: 1.3.4
 
   prosemirror-inputrules@1.5.1:
@@ -4119,7 +4089,7 @@ snapshots:
     dependencies:
       prosemirror-model: 1.25.4
       prosemirror-transform: 1.11.0
-      prosemirror-view: 1.41.6
+      prosemirror-view: 1.41.7
 
   prosemirror-tables@1.8.5:
     dependencies:
@@ -4127,13 +4097,13 @@ snapshots:
       prosemirror-model: 1.25.4
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.11.0
-      prosemirror-view: 1.41.6
+      prosemirror-view: 1.41.7
 
   prosemirror-transform@1.11.0:
     dependencies:
       prosemirror-model: 1.25.4
 
-  prosemirror-view@1.41.6:
+  prosemirror-view@1.41.7:
     dependencies:
       prosemirror-model: 1.25.4
       prosemirror-state: 1.4.4
