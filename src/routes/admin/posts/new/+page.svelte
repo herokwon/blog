@@ -4,7 +4,12 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
-  import { createImageManager } from '$lib/services';
+  import {
+    clearDraftImages,
+    createImageManager,
+    loadDraftImages,
+    saveDraftImages,
+  } from '$lib/services';
   import type { CreatePostApiResponse } from '$lib/types/api';
   import type { PostInput } from '$lib/types/post';
 
@@ -36,9 +41,21 @@
     imageManager.cleanup();
   }
 
-  function handleSaveDraft() {
+  async function handleSaveDraft() {
     if (!canSaveDraft) return;
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(postData));
+
+    const pendingImages = imageManager.getPendingImages();
+    try {
+      if (pendingImages.length > 0) {
+        await saveDraftImages(pendingImages);
+      } else {
+        await clearDraftImages();
+      }
+    } catch (error) {
+      console.warn('Failed to save draft images:', error);
+    }
   }
 
   function handleImageAdd(file: File, blobUrl: string) {
@@ -76,6 +93,12 @@
         clearData();
         localStorage.removeItem(STORAGE_KEY);
 
+        try {
+          await clearDraftImages();
+        } catch (error) {
+          console.warn('Failed to clear draft images after submit:', error);
+        }
+
         await goto(resolve(`/posts/${apiResponse.data.id}`));
       }
     } finally {
@@ -83,7 +106,7 @@
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     try {
       const rawData = localStorage.getItem(STORAGE_KEY);
       if (rawData) {
@@ -91,8 +114,30 @@
         postData.title = title;
         postData.content = content;
       }
+
+      const savedImages = await loadDraftImages();
+      if (savedImages.length > 0) {
+        for (const { blobUrl, file } of savedImages) {
+          const newBlobUrl = URL.createObjectURL(file);
+          imageManager.registerImage(file, newBlobUrl);
+          postData.content = postData.content.replaceAll(blobUrl, newBlobUrl);
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(postData));
+
+        const pendingImages = imageManager.getPendingImages();
+        if (pendingImages.length > 0) {
+          await clearDraftImages();
+          await saveDraftImages(pendingImages);
+        }
+      } else {
+        await clearDraftImages();
+      }
     } catch (error) {
-      console.error('Failed to load draft post from localStorage:', error);
+      console.error(
+        'Failed to load draft post from localStorage or IndexedDB:',
+        error,
+      );
     } finally {
       isDraftLoaded = true;
     }

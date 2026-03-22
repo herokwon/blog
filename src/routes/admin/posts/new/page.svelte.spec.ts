@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { clearDraftImages, saveDraftImages } from '$lib/services';
 import { createMockPost, stubGlobalFetch } from '$lib/test-utils';
 import type { CreatePostApiResponse } from '$lib/types/api';
 import { render } from 'vitest-browser-svelte';
@@ -13,6 +14,12 @@ const { gotoMock } = vi.hoisted(() => ({
 
 vi.mock('$app/navigation', () => ({
   goto: gotoMock,
+}));
+
+vi.mock('$lib/utils/draft-storage', () => ({
+  saveDraftImages: vi.fn().mockResolvedValue(undefined),
+  loadDraftImages: vi.fn().mockResolvedValue([]),
+  clearDraftImages: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('$lib/components/editor/config', () => ({
@@ -106,6 +113,8 @@ describe('[Page] /admin/posts/new', () => {
     expect(localStorage.getItem('DRAFT_POST')).toBe(
       JSON.stringify({ title: 'Hello', content: '' }),
     );
+    expect(saveDraftImages).not.toHaveBeenCalled();
+    expect(clearDraftImages).toHaveBeenCalled();
   });
 
   it('should navigate to post detail on successful submission', async () => {
@@ -126,6 +135,7 @@ describe('[Page] /admin/posts/new', () => {
 
     expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
     expect(localStorage.getItem('DRAFT_POST')).toBeNull();
+    expect(clearDraftImages).toHaveBeenCalled();
   });
 
   it('should handle corrupted localStorage data gracefully', async () => {
@@ -139,7 +149,7 @@ describe('[Page] /admin/posts/new', () => {
       .element(page.getByRole('textbox', { name: 'Title' }))
       .toHaveValue('');
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to load draft post from localStorage:',
+      'Failed to load draft post from localStorage or IndexedDB:',
       expect.any(Error),
     );
   });
