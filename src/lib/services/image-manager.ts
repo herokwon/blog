@@ -8,7 +8,7 @@ export interface ImageManager {
   registerImage: (file: File, blobUrl: string) => void;
   removeImage: (blobUrl: string) => void;
   getPendingImages: () => Array<PendingImage>;
-  uploadAll: () => Promise<Map<string, string>>;
+  uploadAll: () => Promise<SvelteMap<string, string>>;
   cleanup: () => void;
 }
 
@@ -40,10 +40,8 @@ export function createImageManager(): ImageManager {
     return Array.from(pendingImages.values());
   }
 
-  async function uploadAll(): Promise<Map<string, string>> {
-    // Return value is not reactive state, regular Map is appropriate
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const urlMap = new Map<string, string>();
+  async function uploadAll(): Promise<SvelteMap<string, string>> {
+    const urlMap = new SvelteMap<string, string>();
 
     for (const [blobUrl, pending] of pendingImages) {
       const formData = new FormData();

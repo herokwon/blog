@@ -3,4 +3,4 @@ export {
   loadDraftImages,
   saveDraftImages,
 } from './draft-storage';
-export { createImageManager, type ImageManager } from './image-manager.svelte';
+export { createImageManager, type ImageManager } from './image-manager';
