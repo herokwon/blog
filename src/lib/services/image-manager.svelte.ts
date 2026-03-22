@@ -7,6 +7,7 @@ export interface ImageManager {
   addImage: (file: File) => string;
   registerImage: (file: File, blobUrl: string) => void;
   removeImage: (blobUrl: string) => void;
+  getPendingImages: () => Array<PendingImage>;
   uploadAll: () => Promise<Map<string, string>>;
   cleanup: () => void;
 }
@@ -33,6 +34,10 @@ export function createImageManager(): ImageManager {
       URL.revokeObjectURL(blobUrl);
       pendingImages.delete(blobUrl);
     }
+  }
+
+  function getPendingImages(): Array<PendingImage> {
+    return Array.from(pendingImages.values());
   }
 
   async function uploadAll(): Promise<Map<string, string>> {
@@ -76,5 +81,6 @@ export function createImageManager(): ImageManager {
     removeImage,
     uploadAll,
     cleanup,
+    getPendingImages,
   };
 }
