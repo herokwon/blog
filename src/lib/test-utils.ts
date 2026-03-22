@@ -1,9 +1,34 @@
+/**
+ * Test utilities and mock factories for consistent testing.
+ *
+ * ## Using fake-indexeddb (Opt-in)
+ *
+ * To use fake-indexeddb in a test file instead of real IndexedDB:
+ *
+ * ```typescript
+ * import 'fake-indexeddb/auto';  // Add this at the top of your test file
+ *
+ * // Your tests will now use fake-indexeddb instead of real IndexedDB
+ * describe('my tests', () => { ... });
+ * ```
+ *
+ * **When to use fake-indexeddb:**
+ * - Component tests that need fast isolation
+ * - Tests that don't need real browser IndexedDB behavior
+ * - Tests running in non-browser environments
+ *
+ * **When NOT to use (keep real IndexedDB):**
+ * - Unit tests for IndexedDB services (draft-storage, etc.)
+ * - Integration tests that verify actual browser behavior
+ * - When test speed is acceptable with real IndexedDB
+ */
 import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
 
 import { vi } from 'vitest';
 
 import { EXPIRES_IN_SECONDS } from '$lib/constants';
 import type { DBUser, UserSession } from '$lib/types/auth';
+import type { PendingImage } from '$lib/types/image';
 import type { DBPost, Post } from '$lib/types/post';
 
 type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
@@ -305,4 +330,23 @@ export const createMockLoadEvent = <T extends ServerLoadEvent>({
     // allow overrides
     ...rest,
   } as unknown as T;
+};
+
+/**
+ * Creates a mock PendingImage for testing purposes.
+ * Generates a File object and a corresponding blob URL.
+ * @param filename - The name of the file (e.g., "image.png")
+ * @param content - The file content (default: "test content")
+ * @returns A mock PendingImage object with file and blobUrl properties
+ * @example
+ * const image = createMockPendingImage('test.png');
+ * expect(image.file.name).toBe('test.png');
+ */
+export const createMockPendingImage = (
+  filename: string,
+  content = 'test content',
+): PendingImage => {
+  const file = new File([content], filename, { type: 'image/png' });
+  const blobUrl = URL.createObjectURL(file);
+  return { file, blobUrl };
 };
