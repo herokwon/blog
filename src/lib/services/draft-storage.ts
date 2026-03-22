@@ -2,33 +2,44 @@ import type { PendingImage } from '$lib/types/image';
 
 const DB_NAME = 'blog-draft-images';
 const DB_VERSION = 1;
-const OBJECT_STORE_NAME = 'draft-images';
+export const OBJECT_STORE_NAME = 'draft-images';
 
 function isIndexedDBAvailable(): boolean {
   return typeof window !== 'undefined' && 'indexedDB' in window;
 }
 
+/**
+ * Handles database upgrade by creating the object store if it doesn't exist.
+ * @internal Exported for testing purposes.
+ */
+export function handleUpgradeNeeded(db: IDBDatabase): void {
+  if (!db.objectStoreNames.contains(OBJECT_STORE_NAME)) {
+    db.createObjectStore(OBJECT_STORE_NAME, { keyPath: 'blobUrl' });
+  }
+}
+
+/**
+ * Creates the promise executor for opening the IndexedDB database.
+ * @internal Exported for testing purposes.
+ */
+export function createOpenDBExecutor(
+  resolve: (db: IDBDatabase) => void,
+  reject: (error: DOMException | null) => void,
+): void {
+  const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+
+  request.onupgradeneeded = () => handleUpgradeNeeded(request.result);
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+  request.onblocked = () => {
+    console.warn(
+      'IndexedDB open blocked; make sure no other tabs are using this DB.',
+    );
+  };
+}
+
 async function openDraftDB(): Promise<IDBDatabase> {
-  if (!isIndexedDBAvailable())
-    throw new Error('IndexedDB is not supported in this environment');
-
-  return new Promise<IDBDatabase>((resolve, reject) => {
-    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(OBJECT_STORE_NAME)) {
-        db.createObjectStore(OBJECT_STORE_NAME, { keyPath: 'blobUrl' });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-    request.onblocked = () => {
-      console.warn(
-        'IndexedDB open blocked; make sure no other tabs are using this DB.',
-      );
-    };
-  });
+  return new Promise<IDBDatabase>(createOpenDBExecutor);
 }
 
 /**
