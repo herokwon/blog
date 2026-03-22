@@ -4,7 +4,7 @@ export const GET: RequestHandler = async ({
   platform,
   params,
 }): Promise<Response> => {
-  const bucket = platform?.env.BLOG;
+  const bucket = platform?.env.BLOG_BUCKET;
   if (!bucket) {
     throw error(500, 'R2 binding not configured');
   }

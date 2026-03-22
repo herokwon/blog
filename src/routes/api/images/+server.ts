@@ -48,7 +48,7 @@ export const POST: RequestHandler = async ({
       );
     }
 
-    const bucket = platform?.env.BLOG;
+    const bucket = platform?.env.BLOG_BUCKET;
     if (!bucket) {
       const error: ApiError = {
         code: 'R2_BINDING_MISSING',
