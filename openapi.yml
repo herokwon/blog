@@ -2,7 +2,13 @@ openapi: 3.0.3
 info:
   title: Blog API
   version: 0.2.1
-  description: Posts API specification
+  description: API specification for blog posts and image management
+
+tags:
+  - name: Posts
+    description: Operations for managing blog posts
+  - name: Images
+    description: Operations for uploading and retrieving images
 
 paths:
   /api/posts:
@@ -77,6 +83,77 @@ paths:
         500:
           $ref: '#/components/responses/InternalServerError'
 
+  /api/images:
+    post:
+      summary: Upload an image
+      operationId: uploadImage
+      description: |
+        Upload an image file to R2 storage. The image will be stored with a unique
+        UUID-based filename and returned with a URL for future retrieval.
+
+        **Authentication Required**: Admin role
+
+        **Constraints**:
+        - Maximum file size: 10MB
+        - Allowed types: PNG, JPEG, GIF, WebP
+      tags:
+        - Images
+      security:
+        - sessionAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/ImageUpload'
+      responses:
+        201:
+          $ref: '#/components/responses/ImageUploadSuccess'
+        400:
+          $ref: '#/components/responses/ImageBadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ImageInternalServerError'
+
+  /api/images/{path}:
+    parameters:
+      - $ref: '#/components/parameters/ImagePathParam'
+      - $ref: '#/components/parameters/IfNoneMatchHeader'
+
+    get:
+      summary: Retrieve an image
+      operationId: getImage
+      description: |
+        Retrieve an image file from R2 storage by its full storage key.
+
+        **No Authentication Required**: Publicly accessible
+
+        **Caching**: This endpoint supports conditional requests using ETags.
+        If the `If-None-Match` header matches the current ETag, a 304 response
+        is returned with no body. Images are cached with a 1-year max-age.
+
+        **Error Format Note**: Unlike other API endpoints, errors from this endpoint
+        return SvelteKit error pages (HTML), not JSON API format.
+      tags:
+        - Images
+      responses:
+        200:
+          $ref: '#/components/responses/ImageBinaryResponse'
+        304:
+          $ref: '#/components/responses/ImageNotModified'
+        400:
+          description: |
+            Image path is missing or invalid.
+
+            **Note**: Returns HTML error page, not JSON.
+        404:
+          description: |
+            Image not found in R2 storage.
+
+            **Note**: Returns HTML error page, not JSON.
+        500:
+          description: |
+            R2 bucket binding not configured.
+
+            **Note**: Returns HTML error page, not JSON.
+
 components:
   schemas:
     Post:
@@ -139,6 +216,7 @@ components:
         data:
           oneOf:
             - $ref: '#/components/schemas/Post'
+            - $ref: '#/components/schemas/ImageUploadData'
             - type: array
               description: The list of posts returned in the response
               items:
@@ -193,6 +271,9 @@ components:
             - $ref: '#/components/schemas/InvalidFieldsErrorDetails'
             - $ref: '#/components/schemas/DatabaseErrorDetails'
             - $ref: '#/components/schemas/PostNotFoundErrorDetails'
+            - $ref: '#/components/schemas/FileValidationErrorDetails'
+            - $ref: '#/components/schemas/R2BindingErrorDetails'
+            - $ref: '#/components/schemas/UnauthorizedErrorDetails'
           nullable: true
 
     InvalidFieldsErrorDetails:
@@ -241,6 +322,85 @@ components:
           description: The id of the resource that was not found
           example: 4e9344a8-b642-47fb-8e8b-b0f1343f77df
 
+    ImageUploadData:
+      type: object
+      description: Schema for image upload response data
+      additionalProperties: false
+      required:
+        - key
+        - url
+      properties:
+        key:
+          type: string
+          description: The R2 storage key for the uploaded image
+          example: posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+        url:
+          type: string
+          description: The URL path to access the uploaded image
+          format: uri-reference
+          example: /api/images/posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+
+    FileValidationErrorDetails:
+      type: object
+      description: Error details for file validation failures
+      additionalProperties: false
+      required:
+        - fileType
+        - allowedTypes
+        - maxSizeMB
+        - actualSizeMB
+      properties:
+        fileType:
+          type: string
+          description: The MIME type of the rejected file
+          nullable: true
+          example: image/bmp
+        allowedTypes:
+          type: array
+          description: List of allowed MIME types
+          items:
+            type: string
+          nullable: true
+          example: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+        maxSizeMB:
+          type: number
+          description: Maximum allowed file size in megabytes
+          nullable: true
+          example: 10
+        actualSizeMB:
+          type: number
+          description: Actual file size in megabytes
+          nullable: true
+          example: 15.42
+
+    R2BindingErrorDetails:
+      type: object
+      description: Error details for missing R2 bucket binding
+      additionalProperties: false
+      required:
+        - resource
+        - hint
+      properties:
+        resource:
+          type: string
+          description: The name of the missing R2 resource
+          example: BLOG_BUCKET
+        hint:
+          type: string
+          description: A hint to help resolve the configuration issue
+          example: Please check your wrangler config file or environment variables
+
+    UnauthorizedErrorDetails:
+      type: object
+      description: Error details for unauthorized access
+      additionalProperties: false
+      properties:
+        requiredRole:
+          type: string
+          description: The role required to perform this action
+          example: admin
+          nullable: true
+
   parameters:
     PostIdParam:
       name: postId
@@ -250,6 +410,48 @@ components:
       schema:
         type: string
         format: uuid
+
+    ImagePathParam:
+      name: path
+      in: path
+      description: |
+        The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+        This is a catch-all parameter that captures the entire path including slashes.
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9/_.-]+$'
+      example: posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+
+    IfNoneMatchHeader:
+      name: If-None-Match
+      in: header
+      description: ETag value from a previous response for conditional requests
+      required: false
+      schema:
+        type: string
+      example: '"abc123etag"'
+
+  requestBodies:
+    ImageUpload:
+      description: Multipart form data for image upload
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - file
+            properties:
+              file:
+                type: string
+                format: binary
+                description: |
+                  Image file to upload. Must be one of: PNG, JPEG, GIF, or WebP.
+                  Maximum file size: 10MB.
+          encoding:
+            file:
+              contentType: image/png, image/jpeg, image/gif, image/webp
 
   responses:
     SinglePost:
@@ -313,6 +515,93 @@ components:
               $ref: '#/components/examples/DatabaseErrorExample'
             serverError:
               $ref: '#/components/examples/ServerErrorExample'
+
+    ImageUploadSuccess:
+      description: Image uploaded successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiSuccessResponse'
+          examples:
+            success:
+              $ref: '#/components/examples/ImageUploadSuccessExample'
+
+    ImageBinaryResponse:
+      description: Image file binary data with caching headers
+      headers:
+        Content-Type:
+          description: MIME type of the image
+          schema:
+            type: string
+            enum:
+              - image/png
+              - image/jpeg
+              - image/gif
+              - image/webp
+              - application/octet-stream
+          example: image/png
+        Cache-Control:
+          description: Cache directive for CDN and browser caching
+          schema:
+            type: string
+          example: 'public, max-age=31536000, s-maxage=31536000, immutable'
+        ETag:
+          description: Entity tag for cache validation
+          schema:
+            type: string
+          example: '"abc123etag"'
+      content:
+        image/*:
+          schema:
+            type: string
+            format: binary
+
+    ImageNotModified:
+      description: Image not modified (ETag matches)
+      headers:
+        ETag:
+          description: Entity tag matching the If-None-Match request header
+          schema:
+            type: string
+          example: '"abc123etag"'
+
+    Unauthorized:
+      description: User is not authenticated or lacks admin privileges
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            notLoggedIn:
+              $ref: '#/components/examples/UnauthorizedErrorExample'
+
+    ImageBadRequest:
+      description: Invalid request (missing file, wrong type, or too large)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            missingFile:
+              $ref: '#/components/examples/MissingFileErrorExample'
+            invalidFileType:
+              $ref: '#/components/examples/InvalidFileTypeErrorExample'
+            fileTooLarge:
+              $ref: '#/components/examples/FileTooLargeErrorExample'
+            invalidFormData:
+              $ref: '#/components/examples/InvalidFormDataErrorExample'
+
+    ImageInternalServerError:
+      description: Server configuration error or R2 storage error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            r2BindingMissing:
+              $ref: '#/components/examples/R2BindingErrorExample'
+            r2UploadFailed:
+              $ref: '#/components/examples/R2UploadErrorExample'
 
   examples:
     PostInputExample:
@@ -453,3 +742,118 @@ components:
           code: SERVER_ERROR
           message: An unknown error occurred on the server
           details: null
+
+    ImageUploadSuccessExample:
+      summary: Image uploaded successfully
+      value:
+        status: 201
+        statusText: Created
+        success: true
+        data:
+          key: posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+          url: /api/images/posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+        error: null
+
+    UnauthorizedErrorExample:
+      summary: User not authorized to upload images
+      value:
+        status: 401
+        statusText: Unauthorized
+        success: false
+        data: null
+        error:
+          code: UNAUTHORIZED
+          message: You must be logged in as an admin to upload images
+          details: null
+
+    MissingFileErrorExample:
+      summary: File field missing from request
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: INVALID_REQUEST
+          message: Request must include a file in the "file" field
+          details: null
+
+    InvalidFileTypeErrorExample:
+      summary: File type not allowed
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: INVALID_FILE_TYPE
+          message: 'File type "image/bmp" is not allowed. Allowed types: image/png, image/jpeg, image/gif, image/webp'
+          details:
+            fileType: image/bmp
+            allowedTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+            maxSizeMB: null
+            actualSizeMB: null
+
+    FileTooLargeErrorExample:
+      summary: File exceeds maximum size
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: FILE_TOO_LARGE
+          message: File size (15.42MB) exceeds the maximum allowed size of 10MB
+          details:
+            fileType: null
+            allowedTypes: null
+            maxSizeMB: 10
+            actualSizeMB: 15.42
+
+    InvalidFormDataErrorExample:
+      summary: Request body is not valid multipart/form-data
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: INVALID_REQUEST
+          message: Request body must be valid multipart/form-data
+          details: null
+
+    R2BindingErrorExample:
+      summary: R2 bucket binding not configured
+      value:
+        status: 500
+        statusText: Internal Server Error
+        success: false
+        data: null
+        error:
+          code: R2_BINDING_MISSING
+          message: The server is not configured correctly
+          details:
+            resource: BLOG_BUCKET
+            hint: Please check your wrangler config file or environment variables
+
+    R2UploadErrorExample:
+      summary: R2 upload operation failed
+      value:
+        status: 500
+        statusText: Internal Server Error
+        success: false
+        data: null
+        error:
+          code: SERVER_ERROR
+          message: Failed to upload image to R2 storage
+          details: null
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: |
+        Session-based authentication using HTTP-only cookies.
+        Only users with the 'admin' role can access protected endpoints.
+        Sessions are validated server-side on each request.
