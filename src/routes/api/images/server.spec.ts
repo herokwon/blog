@@ -3,6 +3,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MAX_IMAGE_SIZE_BYTES } from '$lib/constants';
+import type { ImageUploadApiResponse } from '$lib/types/image';
 
 vi.mock('$lib/constants', async importOriginal => {
   const actual = await importOriginal<typeof import('$lib/constants')>();
@@ -38,7 +39,7 @@ const createMockEvent = ({
   } as unknown as Request;
 
   return {
-    platform: bucket ? { env: { BLOG: bucket } } : { env: {} },
+    platform: bucket ? { env: { BLOG_BUCKET: bucket } } : { env: {} },
     request,
     locals: { user },
   } as unknown as RequestEvent;
@@ -47,7 +48,7 @@ const createMockEvent = ({
 const createFile = (type: string, size = 100, name = 'test.png'): File =>
   new File([new ArrayBuffer(size)], name, { type });
 
-describe('POST /api/images', () => {
+describe('[API] POST /api/images', () => {
   beforeEach(() => {
     vi.stubGlobal('crypto', {
       randomUUID: () => 'test-uuid-1234',
@@ -60,29 +61,29 @@ describe('POST /api/images', () => {
   ])('should return 401 for %s', async (_, user) => {
     const event = createMockEvent({ user });
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(401);
-    expect(json.error.code).toBe('UNAUTHORIZED');
+    expect(json.error?.code).toBe('UNAUTHORIZED');
   });
 
   it('should return 500 when R2 bucket is not configured', async () => {
     const event = createMockEvent({ bucket: null });
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(500);
-    expect(json.error.code).toBe('R2_BINDING_MISSING');
+    expect(json.error?.code).toBe('R2_BINDING_MISSING');
   });
 
   it('should return 400 when formData parsing fails', async () => {
     const event = createMockEvent({ formDataError: true });
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(400);
-    expect(json.error.code).toBe('INVALID_REQUEST');
-    expect(json.error.message).toContain('multipart/form-data');
+    expect(json.error?.code).toBe('INVALID_REQUEST');
+    expect(json.error?.message).toContain('multipart/form-data');
   });
 
   it.each([
@@ -98,10 +99,10 @@ describe('POST /api/images', () => {
   ])('should return 400 when %s', async (_, formData) => {
     const event = createMockEvent({ formData });
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(400);
-    expect(json.error.code).toBe('INVALID_REQUEST');
+    expect(json.error?.code).toBe('INVALID_REQUEST');
   });
 
   it('should return 400 for invalid file type', async () => {
@@ -109,11 +110,11 @@ describe('POST /api/images', () => {
     formData.append('file', createFile('text/plain'));
     const event = createMockEvent({ formData });
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(400);
-    expect(json.error.code).toBe('INVALID_FILE_TYPE');
-    expect(json.error.message).toContain('text/plain');
+    expect(json.error?.code).toBe('INVALID_FILE_TYPE');
+    expect(json.error?.message).toContain('text/plain');
   });
 
   it('should return 400 when file exceeds max size', async () => {
@@ -121,10 +122,10 @@ describe('POST /api/images', () => {
     formData.append('file', createFile('image/png', MAX_IMAGE_SIZE_BYTES + 1));
     const event = createMockEvent({ formData });
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(400);
-    expect(json.error.code).toBe('FILE_TOO_LARGE');
+    expect(json.error?.code).toBe('FILE_TOO_LARGE');
   });
 
   it.each(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])(
@@ -136,12 +137,12 @@ describe('POST /api/images', () => {
       const event = createMockEvent({ formData, bucket });
 
       const response = await POST(event);
-      const json = await response.json();
+      const json: ImageUploadApiResponse = await response.json();
 
       expect(response.status).toBe(201);
       expect(json.success).toBe(true);
-      expect(json.data.key).toContain('test-uuid-1234');
-      expect(json.data.url).toBe(`/api/images/${json.data.key}`);
+      expect(json.data?.key).toContain('test-uuid-1234');
+      expect(json.data?.url).toBe(`/api/images/${json.data?.key}`);
       expect(bucket.put).toHaveBeenCalled();
     },
   );
@@ -168,11 +169,11 @@ describe('POST /api/images', () => {
     const event = createMockEvent({ formData, bucket });
 
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(500);
-    expect(json.error.code).toBe('SERVER_ERROR');
-    expect(json.error.message).toBe('R2 error');
+    expect(json.error?.code).toBe('SERVER_ERROR');
+    expect(json.error?.message).toBe('R2 error');
   });
 
   it('should handle non-Error exceptions', async () => {
@@ -182,9 +183,9 @@ describe('POST /api/images', () => {
     const event = createMockEvent({ formData, bucket });
 
     const response = await POST(event);
-    const json = await response.json();
+    const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(500);
-    expect(json.error.message).toBe('Unknown error occurred on the server');
+    expect(json.error?.message).toBe('Unknown error occurred on the server');
   });
 });
