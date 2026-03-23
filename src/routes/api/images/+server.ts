@@ -54,7 +54,7 @@ export const POST: RequestHandler = async ({
         code: 'R2_BINDING_MISSING',
         message: 'The server is not configured correctly',
         details: {
-          resource: 'BLOG',
+          resource: 'BLOG_BUCKET',
           hint: 'Please check your wrangler config file or environment variables',
         },
       };
