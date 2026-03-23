@@ -35,7 +35,7 @@ describe('[API] /api/posts/[id]', () => {
     vi.restoreAllMocks();
   });
 
-  describe('GET /api/posts/[id]', () => {
+  describe('[API] GET /api/posts/[id]', () => {
     it('should return 400 when post id is missing', async () => {
       event = createMockRequestEvent({
         db: mockD1.db,
@@ -145,7 +145,7 @@ describe('[API] /api/posts/[id]', () => {
     });
   });
 
-  describe('PUT /api/posts/[id]', () => {
+  describe('[API] PUT /api/posts/[id]', () => {
     beforeEach(() => {
       event = createMockRequestEvent({
         method: 'PUT',
@@ -372,7 +372,7 @@ describe('[API] /api/posts/[id]', () => {
     });
   });
 
-  describe('DELETE /api/posts/[id]', () => {
+  describe('[API] DELETE /api/posts/[id]', () => {
     beforeEach(() => {
       event = createMockRequestEvent({
         method: 'DELETE',

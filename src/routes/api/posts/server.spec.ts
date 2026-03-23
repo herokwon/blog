@@ -29,7 +29,7 @@ describe('[API] /api/posts', () => {
     vi.restoreAllMocks();
   });
 
-  describe('GET /api/posts', () => {
+  describe('[API] GET /api/posts', () => {
     it('should return 500 if BLOG_DB binding is missing', async () => {
       const { event } = createMockRequestEvent();
       const response = await GET(event);
@@ -112,7 +112,7 @@ describe('[API] /api/posts', () => {
     });
   });
 
-  describe('POST /api/posts', () => {
+  describe('[API] POST /api/posts', () => {
     let post: ReturnType<typeof createMockPost>;
     let dbPost: ReturnType<typeof createMockDBPost>;
 
