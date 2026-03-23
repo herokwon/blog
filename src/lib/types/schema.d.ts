@@ -44,6 +44,75 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/images': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload an image
+     * @description Upload an image file to R2 storage. The image will be stored with a unique
+     *     UUID-based filename and returned with a URL for future retrieval.
+     *
+     *     **Authentication Required**: Admin role
+     *
+     *     **Constraints**:
+     *     - Maximum file size: 10MB
+     *     - Allowed types: PNG, JPEG, GIF, WebP
+     */
+    post: operations['uploadImage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/images/{path}': {
+    parameters: {
+      query?: never;
+      header?: {
+        /**
+         * @description ETag value from a previous response for conditional requests
+         * @example "abc123etag"
+         */
+        'If-None-Match'?: components['parameters']['IfNoneMatchHeader'];
+      };
+      path: {
+        /**
+         * @description The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+         *     This is a catch-all parameter that captures the entire path including slashes.
+         * @example posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+         */
+        path: components['parameters']['ImagePathParam'];
+      };
+      cookie?: never;
+    };
+    /**
+     * Retrieve an image
+     * @description Retrieve an image file from R2 storage by its full storage key.
+     *
+     *     **No Authentication Required**: Publicly accessible
+     *
+     *     **Caching**: This endpoint supports conditional requests using ETags.
+     *     If the `If-None-Match` header matches the current ETag, a 304 response
+     *     is returned with no body. Images are cached with a 1-year max-age.
+     *
+     *     **Error Format Note**: Unlike other API endpoints, errors from this endpoint
+     *     return SvelteKit error pages (HTML), not JSON API format.
+     */
+    get: operations['getImage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -90,7 +159,11 @@ export interface components {
        */
       success: true;
       data?:
-        | (components['schemas']['Post'] | components['schemas']['Post'][])
+        | (
+            | components['schemas']['Post']
+            | components['schemas']['ImageUploadData']
+            | components['schemas']['Post'][]
+          )
         | null;
       /**
        * @description Should always be null for successful responses
@@ -130,6 +203,9 @@ export interface components {
             | components['schemas']['InvalidFieldsErrorDetails']
             | components['schemas']['DatabaseErrorDetails']
             | components['schemas']['PostNotFoundErrorDetails']
+            | components['schemas']['FileValidationErrorDetails']
+            | components['schemas']['R2BindingErrorDetails']
+            | components['schemas']['UnauthorizedErrorDetails']
           )
         | null;
     };
@@ -164,6 +240,69 @@ export interface components {
        * @example 4e9344a8-b642-47fb-8e8b-b0f1343f77df
        */
       id: string;
+    };
+    /** @description Schema for image upload response data */
+    ImageUploadData: {
+      /**
+       * @description The R2 storage key for the uploaded image
+       * @example posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+       */
+      key: string;
+      /**
+       * Format: uri-reference
+       * @description The URL path to access the uploaded image
+       * @example /api/images/posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+       */
+      url: string;
+    };
+    /** @description Error details for file validation failures */
+    FileValidationErrorDetails: {
+      /**
+       * @description The MIME type of the rejected file
+       * @example image/bmp
+       */
+      fileType: string | null;
+      /**
+       * @description List of allowed MIME types
+       * @example [
+       *       "image/png",
+       *       "image/jpeg",
+       *       "image/gif",
+       *       "image/webp"
+       *     ]
+       */
+      allowedTypes: string[] | null;
+      /**
+       * @description Maximum allowed file size in megabytes
+       * @example 10
+       */
+      maxSizeMB: number | null;
+      /**
+       * @description Actual file size in megabytes
+       * @example 15.42
+       */
+      actualSizeMB: number | null;
+    };
+    /** @description Error details for missing R2 bucket binding */
+    R2BindingErrorDetails: {
+      /**
+       * @description The name of the missing R2 resource
+       * @example BLOG_BUCKET
+       */
+      resource: string;
+      /**
+       * @description A hint to help resolve the configuration issue
+       * @example Please check your wrangler config file or environment variables
+       */
+      hint: string;
+    };
+    /** @description Error details for unauthorized access */
+    UnauthorizedErrorDetails: {
+      /**
+       * @description The role required to perform this action
+       * @example admin
+       */
+      requiredRole?: string | null;
     };
   };
   responses: {
@@ -212,12 +351,114 @@ export interface components {
         'application/json': components['schemas']['ApiErrorResponse'];
       };
     };
+    /** @description Image uploaded successfully */
+    ImageUploadSuccess: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiSuccessResponse'];
+      };
+    };
+    /** @description Image file binary data with caching headers */
+    ImageBinaryResponse: {
+      headers: {
+        /**
+         * @description MIME type of the image
+         * @example image/png
+         */
+        'Content-Type'?:
+          | 'image/png'
+          | 'image/jpeg'
+          | 'image/gif'
+          | 'image/webp'
+          | 'application/octet-stream';
+        /**
+         * @description Cache directive for CDN and browser caching
+         * @example public, max-age=31536000, s-maxage=31536000, immutable
+         */
+        'Cache-Control'?: string;
+        /**
+         * @description Entity tag for cache validation
+         * @example "abc123etag"
+         */
+        ETag?: string;
+        [name: string]: unknown;
+      };
+      content: {
+        'image/*': string;
+      };
+    };
+    /** @description Image not modified (ETag matches) */
+    ImageNotModified: {
+      headers: {
+        /**
+         * @description Entity tag matching the If-None-Match request header
+         * @example "abc123etag"
+         */
+        ETag?: string;
+        [name: string]: unknown;
+      };
+      content?: never;
+    };
+    /** @description User is not authenticated or lacks admin privileges */
+    Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
+    /** @description Invalid request (missing file, wrong type, or too large) */
+    ImageBadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
+    /** @description Server configuration error or R2 storage error */
+    ImageInternalServerError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
   };
   parameters: {
     /** @description The unique identifier of a post */
     PostIdParam: string;
+    /**
+     * @description The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+     *     This is a catch-all parameter that captures the entire path including slashes.
+     * @example posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+     */
+    ImagePathParam: string;
+    /**
+     * @description ETag value from a previous response for conditional requests
+     * @example "abc123etag"
+     */
+    IfNoneMatchHeader: string;
   };
-  requestBodies: never;
+  requestBodies: {
+    /** @description Multipart form data for image upload */
+    ImageUpload: {
+      content: {
+        'multipart/form-data': {
+          /**
+           * Format: binary
+           * @description Image file to upload. Must be one of: PNG, JPEG, GIF, or WebP.
+           *     Maximum file size: 10MB.
+           */
+          file: string;
+        };
+      };
+    };
+  };
   headers: never;
   pathItems: never;
 }
@@ -315,6 +556,80 @@ export interface operations {
       400: components['responses']['BadRequest'];
       404: components['responses']['NotFound'];
       500: components['responses']['InternalServerError'];
+    };
+  };
+  uploadImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: components['requestBodies']['ImageUpload'];
+    responses: {
+      201: components['responses']['ImageUploadSuccess'];
+      400: components['responses']['ImageBadRequest'];
+      401: components['responses']['Unauthorized'];
+      500: components['responses']['ImageInternalServerError'];
+    };
+  };
+  getImage: {
+    parameters: {
+      query?: never;
+      header?: {
+        /**
+         * @description ETag value from a previous response for conditional requests
+         * @example "abc123etag"
+         */
+        'If-None-Match'?: components['parameters']['IfNoneMatchHeader'];
+      };
+      path: {
+        /**
+         * @description The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+         *     This is a catch-all parameter that captures the entire path including slashes.
+         * @example posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+         */
+        path: components['parameters']['ImagePathParam'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: components['responses']['ImageBinaryResponse'];
+      304: components['responses']['ImageNotModified'];
+      /**
+       * @description Image path is missing or invalid.
+       *
+       *     **Note**: Returns HTML error page, not JSON.
+       */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /**
+       * @description Image not found in R2 storage.
+       *
+       *     **Note**: Returns HTML error page, not JSON.
+       */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /**
+       * @description R2 bucket binding not configured.
+       *
+       *     **Note**: Returns HTML error page, not JSON.
+       */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
   };
 }
