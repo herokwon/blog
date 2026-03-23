@@ -1,111 +1,97 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { describe, expect, it, vi } from 'vitest';
+import { createMockR2, createMockRequestEvent } from '$lib/test-utils';
 
 import { GET } from './+server';
 
-type MockR2Object = {
-  body: ReadableStream | null;
-  httpMetadata?: { contentType?: string };
-  etag: string;
-};
+describe('[API] GET /api/images/[...path]', () => {
+  let mockR2: ReturnType<typeof createMockR2>;
+  let mockEvent: ReturnType<typeof createMockRequestEvent>;
 
-type MockOptions = {
-  bucket?: { get: ReturnType<typeof vi.fn> } | null;
-  path?: string;
-  object?: MockR2Object | null;
-};
+  beforeEach(() => {
+    mockR2 = createMockR2();
+    mockEvent = createMockRequestEvent({
+      params: { path: 'test-image.png' },
+      request: new Request('http://localhost/api/images/test.png'),
+      bucket: mockR2.bucket,
+    });
+  });
 
-const createMockEvent = ({
-  bucket,
-  path = 'posts/images/test.png',
-  object = {
-    body: new ReadableStream(),
-    httpMetadata: { contentType: 'image/png' },
-    etag: '"abc123"',
-  },
-}: MockOptions = {}) => {
-  const mockBucket = bucket ?? { get: vi.fn().mockResolvedValue(object) };
-
-  return {
-    platform: bucket === null ? { env: {} } : { env: { BLOG: mockBucket } },
-    params: { path },
-  } as unknown as RequestEvent;
-};
-
-describe('GET /api/images/[...path]', () => {
   it('should throw 500 when R2 bucket is not configured', async () => {
-    const event = createMockEvent({ bucket: null });
+    mockEvent = createMockRequestEvent();
 
-    await expect(GET(event)).rejects.toMatchObject({
+    await expect(GET(mockEvent.event)).rejects.toMatchObject({
       status: 500,
       body: { message: 'R2 binding not configured' },
     });
   });
 
   it('should throw 400 when path is missing', async () => {
-    const event = createMockEvent({ path: '' });
+    mockEvent = createMockRequestEvent({
+      bucket: mockR2.bucket,
+    });
 
-    await expect(GET(event)).rejects.toMatchObject({
+    await expect(GET(mockEvent.event)).rejects.toMatchObject({
       status: 400,
       body: { message: 'Image path is required' },
     });
   });
 
   it('should throw 404 when image is not found', async () => {
-    const event = createMockEvent({ object: null });
+    mockEvent = createMockRequestEvent({
+      params: { path: 'non-existent.png' },
+      bucket: mockR2.bucket,
+    });
 
-    await expect(GET(event)).rejects.toMatchObject({
+    await expect(GET(mockEvent.event)).rejects.toMatchObject({
       status: 404,
       body: { message: 'Image not found' },
     });
   });
 
-  it('should return image with correct headers', async () => {
-    const mockBody = new ReadableStream();
-    const event = createMockEvent({
-      object: {
-        body: mockBody,
-        httpMetadata: { contentType: 'image/webp' },
-        etag: '"etag-value"',
-      },
+  it('should return 304 when ETag matches', async () => {
+    mockEvent = createMockRequestEvent({
+      params: { path: 'test-image.png' },
+      request: new Request('http://localhost/api/images/test.png', {
+        headers: { 'If-None-Match': 'abc123' },
+      }),
+      bucket: mockR2.bucket,
     });
 
-    const response = await GET(event);
+    mockR2.spies.get.mockResolvedValue({
+      body: new ReadableStream(),
+      etag: 'abc123',
+    });
+
+    const response = await GET(mockEvent.event);
+
+    expect(response.status).toBe(304);
+    expect(response.headers.get('ETag')).toBe('abc123');
+  });
+
+  it('should return image with correct headers', async () => {
+    mockR2.spies.get.mockResolvedValue({
+      body: new ReadableStream(),
+      httpMetadata: { contentType: 'image/webp' },
+      etag: 'abc123',
+    });
+
+    const response = await GET(mockEvent.event);
 
     expect(response.headers.get('Content-Type')).toBe('image/webp');
     expect(response.headers.get('Cache-Control')).toBe(
-      'public, max-age=31536000, immutable',
+      'public, max-age=31536000, s-maxage=31536000, immutable',
     );
-    expect(response.headers.get('ETag')).toBe('"etag-value"');
+    expect(response.headers.get('ETag')).toBe('abc123');
   });
 
   it('should use fallback content-type when httpMetadata is missing', async () => {
-    const event = createMockEvent({
-      object: {
-        body: new ReadableStream(),
-        httpMetadata: undefined,
-        etag: '"etag"',
-      },
+    mockR2.spies.get.mockResolvedValue({
+      body: new ReadableStream(),
+      etag: 'abc123',
     });
 
-    const response = await GET(event);
-
-    expect(response.headers.get('Content-Type')).toBe(
-      'application/octet-stream',
-    );
-  });
-
-  it('should use fallback content-type when contentType is undefined', async () => {
-    const event = createMockEvent({
-      object: {
-        body: new ReadableStream(),
-        httpMetadata: {},
-        etag: '"etag"',
-      },
-    });
-
-    const response = await GET(event);
+    const response = await GET(mockEvent.event);
 
     expect(response.headers.get('Content-Type')).toBe(
       'application/octet-stream',
