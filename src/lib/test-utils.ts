@@ -31,12 +31,13 @@ import type { DBUser, UserSession } from '$lib/types/auth';
 import type { PendingImage } from '$lib/types/image';
 import type { DBPost, Post } from '$lib/types/post';
 
-type MockEventOptions = Partial<Pick<RequestEvent, 'params'>> & {
+type MockEventOptions = Partial<Pick<RequestEvent, 'request' | 'params'>> & {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   headers?: HeadersInit;
   pathname?: string;
   body?: unknown;
   db?: D1Database;
+  bucket?: R2Bucket;
 };
 
 type MockLoadEventOptions<T extends ServerLoadEvent> = Partial<T> &
@@ -217,18 +218,53 @@ export const createMockD1 = (): {
 };
 
 /**
+ * Creates a mock R2 bucket for testing purposes.
+ * Provides mock implementations for common R2 methods like get, put, and delete.
+ * @returns An object containing the mock R2 bucket and spies for its methods.
+ */
+export const createMockR2 = (): {
+  bucket: R2Bucket;
+  spies: {
+    get: ReturnType<typeof vi.fn>;
+    put: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+  };
+} => {
+  const get = vi.fn();
+  const put = vi.fn();
+  const del = vi.fn();
+
+  const bucket = {
+    get,
+    put,
+    delete: del,
+  } as unknown as R2Bucket;
+
+  return {
+    bucket: bucket,
+    spies: {
+      get,
+      put,
+      delete: del,
+    },
+  };
+};
+
+/**
  * Creates a mock RequestEvent for testing purposes.
  * Allows overriding default properties with custom values.
- * @param options - The options to customize the mock RequestEvent, including method, headers, params, pathname, body, and a mock D1 database.
+ * @param options - The options to customize the mock RequestEvent, including request, method, headers, params, pathname, body, and a mock D1 database.
  * @returns An object containing the mock RequestEvent and spies for its cookies.
  */
 export const createMockRequestEvent = ({
+  request: requestOverride,
   method = 'GET',
   headers = { 'Content-Type': 'application/json' },
   params = {},
   pathname = '',
   body,
   db,
+  bucket,
 }: MockEventOptions = {}): {
   event: RequestEvent;
   spies: {
@@ -250,11 +286,13 @@ export const createMockRequestEvent = ({
   };
 
   const url = new URL('http://localhost' + pathname);
-  const request = new Request(url, {
-    method,
-    body: body ? JSON.stringify(body) : undefined,
-    headers,
-  });
+  const request =
+    requestOverride ??
+    new Request(url, {
+      method,
+      body: body ? JSON.stringify(body) : undefined,
+      headers,
+    });
 
   const event = {
     request,
@@ -263,7 +301,10 @@ export const createMockRequestEvent = ({
     locals,
     url,
     platform: {
-      env: { BLOG_DB: db },
+      env: {
+        BLOG_DB: db,
+        BLOG_BUCKET: bucket,
+      },
     },
   } as unknown as RequestEvent;
 
