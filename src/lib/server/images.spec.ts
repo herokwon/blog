@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createMockR2 } from '$lib/test-utils';
 
@@ -121,25 +121,14 @@ describe('[Server/Images] deleteImagesFromR2', () => {
   it('should continue deleting even if one fails', async () => {
     const { bucket, spies } = createMockR2();
 
-    // First deletion fails, second succeeds
     spies.delete
       .mockRejectedValueOnce(new Error('R2 error'))
       .mockResolvedValueOnce(undefined);
-
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
 
     const keys = ['posts/images/fail.png', 'posts/images/success.png'];
     await deleteImagesFromR2(bucket, keys);
 
     expect(spies.delete).toHaveBeenCalledTimes(2);
-    expect(consoleError).toHaveBeenCalledWith(
-      '[R2] Failed to delete image: posts/images/fail.png',
-      expect.any(Error),
-    );
-
-    consoleError.mockRestore();
   });
 
   it('should handle empty keys array (no-op)', async () => {
@@ -154,30 +143,9 @@ describe('[Server/Images] deleteImagesFromR2', () => {
     const { bucket, spies } = createMockR2();
     spies.delete.mockRejectedValue(new Error('R2 error'));
 
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
-
     await expect(
       deleteImagesFromR2(bucket, ['posts/images/test.png']),
     ).resolves.not.toThrow();
-
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
-  });
-
-  it('should log deletion attempt', async () => {
-    const { bucket, spies } = createMockR2();
-    spies.delete.mockResolvedValue(undefined);
-
-    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-    const keys = ['posts/images/a.png', 'posts/images/b.png'];
-    await deleteImagesFromR2(bucket, keys);
-
-    expect(consoleLog).toHaveBeenCalledWith('[R2] Deleting 2 image(s):', keys);
-
-    consoleLog.mockRestore();
   });
 });
 

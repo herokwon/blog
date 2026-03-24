@@ -36,8 +36,8 @@ export async function deleteImagesFromR2(
   const deletePromises = keys.map(async key => {
     try {
       await bucket.delete(key);
-    } catch (error) {
-      console.error(`[R2] Failed to delete image: ${key}`, error);
+    } catch {
+      // Ignore deletion errors
     }
   });
 

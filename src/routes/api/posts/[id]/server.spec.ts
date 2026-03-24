@@ -502,10 +502,6 @@ describe('[API] /api/posts/[id]', () => {
       const mockR2 = createMockR2();
       mockR2.spies.delete.mockRejectedValue(new Error('R2 error'));
 
-      const consoleError = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
       mockD1.spies.run
         .mockResolvedValueOnce({ results: [oldPost] })
         .mockResolvedValueOnce({ results: [updatedPost] });
@@ -523,16 +519,6 @@ describe('[API] /api/posts/[id]', () => {
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
-
-      // Wait for async error logging (individual image deletion failure)
-      await vi.waitFor(() => {
-        expect(consoleError).toHaveBeenCalledWith(
-          '[R2] Failed to delete image: posts/images/old.png',
-          expect.any(Error),
-        );
-      });
-
-      consoleError.mockRestore();
     });
   });
 
@@ -747,10 +733,6 @@ describe('[API] /api/posts/[id]', () => {
       const mockR2 = createMockR2();
       mockR2.spies.delete.mockRejectedValue(new Error('R2 error'));
 
-      const consoleError = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
       mockD1.spies.run.mockResolvedValue({ results: [postWithImages] });
 
       event = createMockRequestEvent({
@@ -765,16 +747,6 @@ describe('[API] /api/posts/[id]', () => {
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
-
-      // Wait for async error logging (individual image deletion failure)
-      await vi.waitFor(() => {
-        expect(consoleError).toHaveBeenCalledWith(
-          '[R2] Failed to delete image: posts/images/test.png',
-          expect.any(Error),
-        );
-      });
-
-      consoleError.mockRestore();
     });
   });
 });
