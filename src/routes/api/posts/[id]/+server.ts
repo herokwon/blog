@@ -1,5 +1,10 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 
+import {
+  deleteImagesFromR2,
+  extractImageKeysFromContent,
+  getImageKeysToDelete,
+} from '$lib/server';
 import type {
   ApiError,
   ApiErrorResponse,
@@ -234,6 +239,13 @@ export const PUT: RequestHandler = async ({
     const now = new Date().toISOString();
 
     const {
+      results: [existingPost],
+    } = await database
+      .prepare('SELECT content FROM posts WHERE id = ?')
+      .bind(postId)
+      .run<Pick<Post, 'content'>>();
+
+    const {
       results: [updatedDbPost],
     } = await database
       .prepare(
@@ -264,6 +276,11 @@ export const PUT: RequestHandler = async ({
 
     const updatedPost = dbPostToPost(updatedDbPost);
 
+    const bucket = platform?.env.BLOG_BUCKET;
+    if (bucket && existingPost) {
+      const keysToDelete = getImageKeysToDelete(existingPost.content, content);
+      await deleteImagesFromR2(bucket, keysToDelete);
+    }
     return json(
       {
         success: true,
@@ -374,6 +391,11 @@ export const DELETE: RequestHandler = async ({
       );
     }
 
+    const bucket = platform?.env.BLOG_BUCKET;
+    if (bucket && deletedDbPost) {
+      const imageKeys = extractImageKeysFromContent(deletedDbPost.content);
+      await deleteImagesFromR2(bucket, imageKeys);
+    }
     return json(
       {
         success: true,

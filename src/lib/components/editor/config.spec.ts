@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { MAX_IMAGE_SIZE_BYTES } from '$lib/constants';
 import type { Editor as MilkdownEditor } from '@milkdown/core';
 
 import { createMilkdownEditor } from './config';
@@ -26,6 +27,24 @@ type ListenerCallback = (
   prevMarkdown: string,
 ) => void;
 
+interface MockEditorView {
+  state: {
+    schema: { nodes: { image?: { create: (attrs: object) => object } } };
+    tr: { replaceSelectionWith: (node: object) => object };
+  };
+  dispatch: (tr: object) => void;
+}
+
+interface ImagePluginHandlers {
+  handlePaste: (
+    view: MockEditorView,
+    event: Partial<ClipboardEvent>,
+  ) => boolean;
+  handleDrop: (view: MockEditorView, event: Partial<DragEvent>) => boolean;
+}
+
+type EventType = 'paste' | 'drop';
+
 const state = vi.hoisted(() => ({
   listenerCallback: null as ListenerCallback | null,
   setMock: vi.fn<(token: string, value: HTMLElement | string) => void>(),
@@ -41,6 +60,7 @@ const state = vi.hoisted(() => ({
   createMock: vi.fn(async (): Promise<MilkdownEditor> => {
     return {} as MilkdownEditor;
   }),
+  imagePluginHandlers: null as ImagePluginHandlers | null,
 }));
 
 vi.mock('@milkdown/core', () => ({
@@ -140,7 +160,6 @@ vi.mock('@milkdown/prose/inputrules', () => ({
   ) => {
     void regexp;
     void type;
-    // Execute attrs to cover the match callback body in config.ts
     attrs(
       Object.assign(['##'], {
         groups: { hashes: '##' },
@@ -157,52 +176,43 @@ vi.mock('@milkdown/prose/inputrules', () => ({
   },
 }));
 
+vi.mock('@milkdown/prose/state', () => ({
+  Plugin: class MockPlugin {
+    constructor(options: { props: ImagePluginHandlers }) {
+      state.imagePluginHandlers = options.props;
+    }
+  },
+  PluginKey: class MockPluginKey {
+    constructor(name: string) {
+      void name;
+    }
+  },
+}));
+
 vi.mock('@milkdown/utils', () => ({
   $command: (
     key: string,
     factory: (ctx: object) => (level?: number) => object,
   ) => {
     const commandFn = factory({});
-    commandFn(); // undefined → next = 1 (valid heading)
-    commandFn(0); // next < 1 → paragraph
-    commandFn(4); // next > 3 → paragraph
-    commandFn(2); // valid → heading
+    [undefined, 0, 4, 2].forEach(level => commandFn(level));
     return { key };
   },
   $inputRule: (factory: (ctx: object) => object) => {
-    // Non-heading node: covers return { level: x }
-    factory({
+    const createMockCtx = (nodeName: string, attrs = {}) => ({
       get: (token: string) =>
         token === 'editorViewCtx'
           ? {
               state: {
                 selection: {
-                  $from: {
-                    node: () => ({ type: { name: 'paragraph' }, attrs: {} }),
-                  },
+                  $from: { node: () => ({ type: { name: nodeName }, attrs }) },
                 },
               },
             }
           : null,
     });
-    // Heading node: covers Math.min + return { level }
-    factory({
-      get: (token: string) =>
-        token === 'editorViewCtx'
-          ? {
-              state: {
-                selection: {
-                  $from: {
-                    node: () => ({
-                      type: { name: 'heading' },
-                      attrs: { level: 1 },
-                    }),
-                  },
-                },
-              },
-            }
-          : null,
-    });
+    factory(createMockCtx('paragraph'));
+    factory(createMockCtx('heading', { level: 1 }));
     return { key: 'inputRule' };
   },
   $useKeymap: (
@@ -212,168 +222,306 @@ vi.mock('@milkdown/utils', () => ({
       {
         shortcuts: string | string[];
         command: (ctx: {
-          get: (token: string) => {
-            call: (key: string, level?: number) => boolean;
-          };
+          get: (token: string) => { call: () => boolean };
         }) => () => boolean;
       }
     >,
   ) => {
-    const mockCommands = { call: (): boolean => true };
-    const mockCtx = { get: () => mockCommands };
-    for (const entry of Object.values(keymap)) {
-      entry.command(mockCtx)();
-    }
+    const mockCtx = { get: () => ({ call: () => true }) };
+    Object.values(keymap).forEach(entry => entry.command(mockCtx)());
     return { key };
   },
+  $prose: (factory: () => object) => factory(),
 }));
 
-function getListenerCallback(): ListenerCallback {
-  if (state.listenerCallback === null)
-    throw new Error('listener callback is required');
+// Helper functions
+const createMockView = (hasImageNode = false): MockEditorView => ({
+  state: {
+    schema: {
+      nodes: hasImageNode
+        ? { image: { create: () => ({ type: 'image' }) } }
+        : {},
+    },
+    tr: { replaceSelectionWith: vi.fn().mockReturnThis() },
+  },
+  dispatch: vi.fn(),
+});
 
-  return state.listenerCallback as ListenerCallback;
-}
+const createMockImageEvent = (
+  eventType: EventType,
+  options: { file?: File | null; hasData?: boolean } = {},
+) => {
+  const { file, hasData = true } = options;
+  const dataKey = eventType === 'paste' ? 'clipboardData' : 'dataTransfer';
+  const mockItem =
+    file !== undefined
+      ? { type: file?.type ?? 'image/png', getAsFile: () => file }
+      : null;
+
+  return {
+    preventDefault: vi.fn(),
+    [dataKey]: hasData ? { items: mockItem ? [mockItem] : [] } : null,
+  } as unknown as Partial<ClipboardEvent | DragEvent>;
+};
+
+const initImageEditor = async (
+  callbacks: {
+    onImageAdd?: ReturnType<typeof vi.fn>;
+    onImageError?: ReturnType<typeof vi.fn>;
+  } = {},
+) => {
+  await createMilkdownEditor({
+    root: {} as HTMLElement,
+    defaultValue: '',
+    ...(callbacks as Pick<
+      Parameters<typeof createMilkdownEditor>[0],
+      'onImageAdd' | 'onImageError'
+    >),
+  });
+};
+
+const invokeHandler = (
+  eventType: EventType,
+  view: MockEditorView,
+  event: Partial<ClipboardEvent | DragEvent>,
+) =>
+  eventType === 'paste'
+    ? state.imagePluginHandlers!.handlePaste(
+        view,
+        event as Partial<ClipboardEvent>,
+      )
+    : state.imagePluginHandlers!.handleDrop(view, event as Partial<DragEvent>);
 
 describe('[Components] Editor config', () => {
-  it('should normalize heading levels before setting default value', async () => {
-    state.setMock.mockClear();
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-    const root = {} as HTMLElement;
-    const markdown = '#### Heading\\n```\\n##### keep\\n```\\n###### Tail';
+  describe('Heading normalization', () => {
+    it.each([
+      [
+        '#### Heading\\n```\\n##### keep\\n```\\n###### Tail',
+        'Heading\\n```\\n##### keep\\n```\\n###### Tail',
+      ],
+      ['# H1\n## H2\n### H3', '# H1\n## H2\n### H3'],
+      ['~~~\n#### inside\n~~~\n#### outside', '~~~\n#### inside\n~~~\noutside'],
+      [
+        '```\n#### inside\n~~~\n#### still inside\n```',
+        '```\n#### inside\n~~~\n#### still inside\n```',
+      ],
+      ['#### Heading ####', 'Heading'],
+    ])('should normalize "%s" to "%s"', async (input, expected) => {
+      state.setMock.mockClear();
+      await createMilkdownEditor({
+        root: {} as HTMLElement,
+        defaultValue: input,
+      });
+      expect(state.setMock).toHaveBeenCalledWith('defaultValueCtx', expected);
+    });
+  });
 
-    await createMilkdownEditor({ root, defaultValue: markdown });
+  describe('Listener configuration', () => {
+    it('should call onChange with normalized markdown only when changed', async () => {
+      state.listenerCallback = null;
+      const onChange = vi.fn();
+      await createMilkdownEditor({
+        root: {} as HTMLElement,
+        defaultValue: '',
+        onChange,
+      });
 
-    expect(state.setMock).toHaveBeenCalledWith('rootCtx', root);
-    expect(state.setMock).toHaveBeenCalledWith(
-      'defaultValueCtx',
-      'Heading\\n```\\n##### keep\\n```\\n###### Tail',
+      state.listenerCallback!('ctx', '#### Same', 'Same');
+      expect(onChange).not.toHaveBeenCalled();
+
+      state.listenerCallback!('ctx', '###### Next', 'Old');
+      expect(onChange).toHaveBeenCalledWith('Next');
+    });
+
+    it.each([
+      ['onChange is not provided', {}],
+      ['readOnly is true', { onChange: vi.fn(), readOnly: true }],
+    ])('should not set up listener when %s', async (_, options) => {
+      state.listenerCallback = null;
+      await createMilkdownEditor({
+        root: {} as HTMLElement,
+        defaultValue: '',
+        ...options,
+      });
+      expect(state.listenerCallback).toBeNull();
+    });
+  });
+
+  describe('Editable configuration', () => {
+    it.each([
+      [false, true],
+      [true, false],
+    ])(
+      'should configure editable=%s when readOnly=%s',
+      async (readOnly, expectedEditable) => {
+        state.updateMock.mockClear();
+        await createMilkdownEditor({
+          root: {} as HTMLElement,
+          defaultValue: '',
+          readOnly,
+        });
+
+        const call = state.updateMock.mock.calls.find(
+          ([token]) => token === 'editorViewOptionsCtx',
+        );
+        expect(call![1]({ flag: false }).editable()).toBe(expectedEditable);
+      },
     );
   });
 
-  it('should call onChange with normalized markdown only when changed', async () => {
-    state.listenerCallback = null;
-    const onChange = vi.fn<(markdown: string) => void>();
-
-    await createMilkdownEditor({
-      root: {} as HTMLElement,
-      defaultValue: '',
-      onChange,
+  describe('Image upload plugin', () => {
+    it.each([
+      ['onImageAdd', { onImageAdd: vi.fn() }],
+      ['onImageError', { onImageError: vi.fn() }],
+    ])('should use plugin when %s is provided', async (_, callbacks) => {
+      state.imagePluginHandlers = null;
+      await initImageEditor(callbacks);
+      expect(state.imagePluginHandlers).not.toBeNull();
     });
 
-    const callback = getListenerCallback();
-
-    callback('ctx', '#### Same', 'Same');
-    expect(onChange).not.toHaveBeenCalled();
-
-    callback('ctx', '###### Next', 'Old');
-    expect(onChange).toHaveBeenCalledWith('Next');
-  });
-
-  it('should not set up listener when onChange is not provided', async () => {
-    state.listenerCallback = null;
-
-    await createMilkdownEditor({ root: {} as HTMLElement, defaultValue: '' });
-
-    expect(state.listenerCallback).toBeNull();
-  });
-
-  it('should not set up listener when readOnly is true even if onChange is provided', async () => {
-    state.listenerCallback = null;
-    const onChange = vi.fn<(markdown: string) => void>();
-
-    await createMilkdownEditor({
-      root: {} as HTMLElement,
-      defaultValue: '',
-      onChange,
-      readOnly: true,
+    it('should not use plugin in readOnly mode', async () => {
+      state.imagePluginHandlers = null;
+      await createMilkdownEditor({
+        root: {} as HTMLElement,
+        defaultValue: '',
+        readOnly: true,
+        onImageAdd: vi.fn(),
+      });
+      expect(state.imagePluginHandlers).toBeNull();
     });
-
-    expect(state.listenerCallback).toBeNull();
   });
 
-  it('should configure editable as true when not readOnly', async () => {
-    state.updateMock.mockClear();
+  describe('Image handling (paste/drop)', () => {
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should handle %s with valid image file',
+      async eventType => {
+        vi.stubGlobal('URL', {
+          ...URL,
+          createObjectURL: () => 'blob:test-url',
+        });
+        const onImageAdd = vi.fn();
+        await initImageEditor({ onImageAdd });
 
-    await createMilkdownEditor({ root: {} as HTMLElement, defaultValue: '' });
+        const file = new File(['test'], 'test.png', { type: 'image/png' });
+        const event = createMockImageEvent(eventType, { file });
+        const view = createMockView(true);
 
-    const call = state.updateMock.mock.calls.find(
-      ([token]) => token === 'editorViewOptionsCtx',
+        const result = invokeHandler(eventType, view, event);
+
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(onImageAdd).toHaveBeenCalledWith(file, 'blob:test-url');
+        expect(view.dispatch).toHaveBeenCalled();
+      },
     );
-    expect(call).toBeDefined();
 
-    const result = call![1]({ flag: false });
-    expect(result.editable()).toBe(true);
-  });
+    it.each<[EventType, string, string]>([
+      ['paste', 'image/bmp', 'File type "image/bmp" is not allowed'],
+      ['drop', 'image/svg+xml', 'File type "image/svg+xml" is not allowed'],
+    ])(
+      'should reject %s with invalid type %s',
+      async (eventType, type, errorMsg) => {
+        const onImageError = vi.fn();
+        await initImageEditor({ onImageError });
 
-  it('should configure editable as false when readOnly is true', async () => {
-    state.updateMock.mockClear();
+        const file = new File(['test'], 'test.file', { type });
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockImageEvent(eventType, { file }),
+        );
 
-    await createMilkdownEditor({
-      root: {} as HTMLElement,
-      defaultValue: '',
-      readOnly: true,
-    });
-
-    const call = state.updateMock.mock.calls.find(
-      ([token]) => token === 'editorViewOptionsCtx',
+        expect(result).toBe(true);
+        expect(onImageError).toHaveBeenCalledWith(
+          expect.stringContaining(errorMsg),
+        );
+      },
     );
-    expect(call).toBeDefined();
 
-    const result = call![1]({ flag: false });
-    expect(result.editable()).toBe(false);
-  });
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should reject %s with oversized image',
+      async eventType => {
+        const onImageError = vi.fn();
+        await initImageEditor({ onImageError });
 
-  it('should not normalize h1-h3 headings', async () => {
-    state.setMock.mockClear();
+        const file = new File(
+          [new Uint8Array(MAX_IMAGE_SIZE_BYTES + 1)],
+          'large.png',
+          { type: 'image/png' },
+        );
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockImageEvent(eventType, { file }),
+        );
 
-    await createMilkdownEditor({
-      root: {} as HTMLElement,
-      defaultValue: '# H1\n## H2\n### H3',
-    });
-
-    expect(state.setMock).toHaveBeenCalledWith(
-      'defaultValueCtx',
-      '# H1\n## H2\n### H3',
+        expect(result).toBe(true);
+        expect(onImageError).toHaveBeenCalledWith(
+          expect.stringContaining('File size exceeds'),
+        );
+      },
     );
-  });
 
-  it('should keep headings inside tilde fences', async () => {
-    state.setMock.mockClear();
-
-    await createMilkdownEditor({
-      root: {} as HTMLElement,
-      defaultValue: '~~~\n#### inside\n~~~\n#### outside',
-    });
-
-    expect(state.setMock).toHaveBeenCalledWith(
-      'defaultValueCtx',
-      '~~~\n#### inside\n~~~\noutside',
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should return false when no data on %s',
+      async eventType => {
+        await initImageEditor({ onImageAdd: vi.fn() });
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockImageEvent(eventType, { hasData: false }),
+        );
+        expect(result).toBe(false);
+      },
     );
-  });
 
-  it('should not close a backtick fence with a tilde marker', async () => {
-    state.setMock.mockClear();
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should return false when %s contains no image items',
+      async eventType => {
+        await initImageEditor({ onImageAdd: vi.fn() });
 
-    await createMilkdownEditor({
-      root: {} as HTMLElement,
-      defaultValue: '```\n#### inside\n~~~\n#### still inside\n```',
-    });
+        const event = {
+          [eventType === 'paste' ? 'clipboardData' : 'dataTransfer']: {
+            items: [{ type: 'text/plain', getAsFile: () => null }],
+          },
+        } as unknown as Partial<ClipboardEvent | DragEvent>;
 
-    expect(state.setMock).toHaveBeenCalledWith(
-      'defaultValueCtx',
-      '```\n#### inside\n~~~\n#### still inside\n```',
+        const result = invokeHandler(eventType, createMockView(), event);
+        expect(result).toBe(false);
+      },
     );
-  });
 
-  it('should normalize heading with trailing hashes', async () => {
-    state.setMock.mockClear();
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should return true but not process %s when getAsFile returns null',
+      async eventType => {
+        const onImageAdd = vi.fn();
+        await initImageEditor({ onImageAdd });
 
-    await createMilkdownEditor({
-      root: {} as HTMLElement,
-      defaultValue: '#### Heading ####',
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockImageEvent(eventType, { file: null }),
+        );
+
+        expect(result).toBe(true);
+        expect(onImageAdd).not.toHaveBeenCalled();
+      },
+    );
+
+    it('should not insert image when imageNodeType is not available', async () => {
+      vi.stubGlobal('URL', { ...URL, createObjectURL: () => 'blob:test' });
+      const onImageAdd = vi.fn();
+      await initImageEditor({ onImageAdd });
+
+      const file = new File(['test'], 'test.png', { type: 'image/png' });
+      const view = createMockView(false);
+      invokeHandler('paste', view, createMockImageEvent('paste', { file }));
+
+      expect(view.dispatch).not.toHaveBeenCalled();
     });
-
-    expect(state.setMock).toHaveBeenCalledWith('defaultValueCtx', 'Heading');
   });
 });

@@ -7,11 +7,15 @@
   type Props = HTMLAttributes<HTMLDivElement> & {
     content: string;
     readOnly?: boolean;
+    onImageAdd?: (file: File, blobUrl: string) => void;
+    onImageError?: (error: string) => void;
   };
 
   let {
     content = $bindable(),
     readOnly = false,
+    onImageAdd,
+    onImageError,
     class: className,
     ...divProps
   }: Props = $props();
@@ -41,6 +45,8 @@
         onChange: (markdown: string) => {
           content = markdown;
         },
+        onImageAdd,
+        onImageError,
       });
 
       if (readOnly) return;

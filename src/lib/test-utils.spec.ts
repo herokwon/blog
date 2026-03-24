@@ -5,6 +5,7 @@ import {
   createMockFetch,
   createMockLoadEvent,
   createMockPost,
+  createMockR2,
   createMockRequestEvent,
   stubGlobalFetch,
 } from './test-utils';
@@ -39,6 +40,18 @@ describe('[Functions] test-utils', () => {
     expect(first).toHaveBeenCalled();
     expect(run).toHaveBeenCalled();
     expect(all).toHaveBeenCalled();
+  });
+
+  it('createMockR2 returns a mock R2 and spies are callable', async () => {
+    const { bucket, spies } = createMockR2();
+
+    await bucket.get('test-key');
+    await bucket.put('test-key', new ArrayBuffer(0));
+    await bucket.delete('test-key');
+
+    expect(spies.get).toHaveBeenCalled();
+    expect(spies.put).toHaveBeenCalled();
+    expect(spies.delete).toHaveBeenCalled();
   });
 
   it('createMockRequestEvent attaches platform env, ctx, caches', () => {

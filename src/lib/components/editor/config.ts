@@ -1,3 +1,4 @@
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '$lib/constants';
 import {
   commandsCtx,
   defaultValueCtx,
@@ -19,14 +20,105 @@ import {
 } from '@milkdown/preset-commonmark';
 import { setBlockType } from '@milkdown/prose/commands';
 import { textblockTypeInputRule } from '@milkdown/prose/inputrules';
-import { $command, $inputRule, $useKeymap } from '@milkdown/utils';
+import { Plugin, PluginKey } from '@milkdown/prose/state';
+import type { EditorView } from '@milkdown/prose/view';
+import { $command, $inputRule, $prose, $useKeymap } from '@milkdown/utils';
 
 interface EditorOptions {
   root: HTMLElement;
   defaultValue: string;
   onChange?: (markdown: string) => void;
   readOnly?: boolean;
+  onImageAdd?: (file: File, blobUrl: string) => void;
+  onImageError?: (error: string) => void;
 }
+
+function validateImage(file: File): string | null {
+  const allowedTypes = ALLOWED_IMAGE_TYPES as readonly string[];
+  if (!allowedTypes.includes(file.type)) {
+    return `File type "${file.type}" is not allowed. Allowed types: ${ALLOWED_IMAGE_TYPES.join(', ')}`;
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    return `File size exceeds the maximum allowed size of ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB`;
+  }
+  return null;
+}
+
+function insertImageAtCursorFromView(
+  view: EditorView,
+  src: string,
+  alt: string = '',
+): void {
+  const { state, dispatch } = view;
+  const imageNodeType = state.schema.nodes.image;
+  if (!imageNodeType) return;
+
+  const imageNode = imageNodeType.create({ src, alt });
+  const tr = state.tr.replaceSelectionWith(imageNode);
+  dispatch(tr);
+}
+
+interface ImageUploadPluginOptions {
+  onImageAdd?: (file: File, blobUrl: string) => void;
+  onImageError?: (error: string) => void;
+}
+
+const imageUploadPluginKey = new PluginKey('image-upload');
+
+const createImageUploadPlugin = (options: ImageUploadPluginOptions) =>
+  $prose(() => {
+    return new Plugin({
+      key: imageUploadPluginKey,
+      props: {
+        handlePaste(view, event) {
+          const items = event.clipboardData?.items;
+          if (!items) return false;
+
+          for (const item of items) {
+            if (item.type.startsWith('image/')) {
+              event.preventDefault();
+              const file = item.getAsFile();
+              if (file) {
+                const error = validateImage(file);
+                if (error) {
+                  options.onImageError?.(error);
+                  return true;
+                }
+                const blobUrl = URL.createObjectURL(file);
+                options.onImageAdd?.(file, blobUrl);
+                insertImageAtCursorFromView(view, blobUrl, '');
+              }
+              return true;
+            }
+          }
+          return false;
+        },
+        handleDrop(view, event) {
+          const items = event.dataTransfer?.items;
+          if (!items) return false;
+
+          for (const item of items) {
+            if (item.type.startsWith('image/')) {
+              event.preventDefault();
+              const file = item.getAsFile();
+              if (file) {
+                const error = validateImage(file);
+                if (error) {
+                  options.onImageError?.(error);
+                  return true;
+                }
+                const blobUrl = URL.createObjectURL(file);
+                options.onImageAdd?.(file, blobUrl);
+                insertImageAtCursorFromView(view, blobUrl, '');
+              }
+              return true;
+            }
+          }
+          return false;
+        },
+      },
+    });
+  });
 
 const wrapInHeadingUpToH3Command = $command('WrapInHeadingUpToH3', ctx => {
   return (level?: number) => {
@@ -131,6 +223,8 @@ const normalizeHeadingLevels = (markdown: string): string => {
  * @param options.defaultValue - The initial markdown content to be loaded into the editor.
  * @param options.onChange - An optional callback function that is called with the updated markdown content whenever it changes.
  * @param options.readOnly - A boolean flag indicating whether the editor should be in read-only mode. If true, the editor will not allow any changes to the content.
+ * @param options.onImageAdd - An optional callback function that is called when an image is pasted or dropped into the editor.
+ * @param options.onImageError - An optional callback function that is called when an image validation error occurs.
  * @returns A promise that resolves to the created Editor instance.
  * @example
  * const root = document.getElementById('editor');
@@ -146,8 +240,10 @@ export async function createMilkdownEditor({
   defaultValue,
   onChange,
   readOnly = false,
+  onImageAdd,
+  onImageError,
 }: EditorOptions): Promise<Editor> {
-  return await Editor.make()
+  const editor = Editor.make()
     .config(ctx => {
       ctx.set(rootCtx, root);
       ctx.set(defaultValueCtx, normalizeHeadingLevels(defaultValue));
@@ -169,6 +265,11 @@ export async function createMilkdownEditor({
     .use(wrapInHeadingUpToH3Command)
     .use(wrapInHeadingUpToH3InputRule)
     .use(headingH123KeyMap)
-    .use(listener)
-    .create();
+    .use(listener);
+
+  if (!readOnly && (onImageAdd || onImageError)) {
+    editor.use(createImageUploadPlugin({ onImageAdd, onImageError }));
+  }
+
+  return await editor.create();
 }

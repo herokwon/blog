@@ -36,17 +36,17 @@
       "preview_id": "b81282d43e574952ba3103ff01b96f21"
     }
   ],
-  "r2_buckets": [
-    {
-      "bucket_name": "blog",
-      "binding": "BLOG"
-    }
-  ],
   "d1_databases": [
     {
       "binding": "BLOG_DB",
       "database_name": "blog-db",
       "database_id": "9f302f87-8a7e-4d97-9f69-6befbc38d73f"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "bucket_name": "blog-bucket",
+      "binding": "BLOG_BUCKET"
     }
   ]
 }
