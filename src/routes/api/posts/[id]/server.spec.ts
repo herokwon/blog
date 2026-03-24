@@ -4,6 +4,7 @@ import {
   createMockD1,
   createMockDBPost,
   createMockPost,
+  createMockR2,
   createMockRequestEvent,
 } from '$lib/test-utils';
 import type {
@@ -281,7 +282,7 @@ describe('[API] /api/posts/[id]', () => {
       const response = await PUT(event);
       const result: UpdatePostByIdApiResponse = await response.json();
 
-      expect(mockD1.spies.run).toHaveBeenCalledTimes(1);
+      expect(mockD1.spies.run).toHaveBeenCalledTimes(2);
 
       expect(response.status).toBe(404);
       expect(response.statusText).toBe('Not Found');
@@ -369,6 +370,169 @@ describe('[API] /api/posts/[id]', () => {
         'Unknown error occurred on the server',
       );
       expect(result.error?.details).toBeNull();
+    });
+
+    it('should delete orphaned images when content is updated', async () => {
+      const oldPost = createMockDBPost({
+        content: `
+          ![old](/api/images/posts/images/old.png)
+          ![keep](/api/images/posts/images/keep.png)
+        `,
+      });
+      const newContent = `
+        ![keep](/api/images/posts/images/keep.png)
+        ![new](/api/images/posts/images/new.png)
+      `;
+      const updatedPost = createMockDBPost({
+        ...oldPost,
+        content: newContent,
+      });
+
+      const mockR2 = createMockR2();
+      mockR2.spies.delete.mockResolvedValue(undefined);
+
+      mockD1.spies.run
+        .mockResolvedValueOnce({ results: [oldPost] }) // SELECT old content
+        .mockResolvedValueOnce({ results: [updatedPost] }); // UPDATE
+
+      event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: oldPost.id },
+        body: { title: oldPost.title, content: newContent },
+        db: mockD1.db,
+        bucket: mockR2.bucket,
+      }).event;
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+
+      // Wait for async deletion
+      await vi.waitFor(() => {
+        expect(mockR2.spies.delete).toHaveBeenCalledWith(
+          'posts/images/old.png',
+        );
+      });
+      expect(mockR2.spies.delete).toHaveBeenCalledTimes(1);
+      expect(mockR2.spies.delete).not.toHaveBeenCalledWith(
+        'posts/images/keep.png',
+      );
+    });
+
+    it('should not delete images still referenced in new content', async () => {
+      const oldPost = createMockDBPost({
+        content: `![img](/api/images/posts/images/image.png)`,
+      });
+      const newContent = `
+        ![img](/api/images/posts/images/image.png)
+        Some updated text
+      `;
+      const updatedPost = createMockDBPost({
+        ...oldPost,
+        content: newContent,
+      });
+
+      const mockR2 = createMockR2();
+      mockR2.spies.delete.mockResolvedValue(undefined);
+
+      mockD1.spies.run
+        .mockResolvedValueOnce({ results: [oldPost] })
+        .mockResolvedValueOnce({ results: [updatedPost] });
+
+      event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: oldPost.id },
+        body: { title: oldPost.title, content: newContent },
+        db: mockD1.db,
+        bucket: mockR2.bucket,
+      }).event;
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+
+      // Wait a bit to ensure no async deletion happens
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(mockR2.spies.delete).not.toHaveBeenCalled();
+    });
+
+    it('should not fail if R2 bucket is unavailable', async () => {
+      const oldPost = createMockDBPost({
+        content: `![img](/api/images/posts/images/old.png)`,
+      });
+      const newContent = 'No images';
+      const updatedPost = createMockDBPost({
+        ...oldPost,
+        content: newContent,
+      });
+
+      mockD1.spies.run
+        .mockResolvedValueOnce({ results: [oldPost] })
+        .mockResolvedValueOnce({ results: [updatedPost] });
+
+      // No R2 bucket provided
+      event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: oldPost.id },
+        body: { title: oldPost.title, content: newContent },
+        db: mockD1.db,
+      }).event;
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+    });
+
+    it('should not fail if image deletion fails', async () => {
+      const oldPost = createMockDBPost({
+        content: `![img](/api/images/posts/images/old.png)`,
+      });
+      const newContent = 'No images';
+      const updatedPost = createMockDBPost({
+        ...oldPost,
+        content: newContent,
+      });
+
+      const mockR2 = createMockR2();
+      mockR2.spies.delete.mockRejectedValue(new Error('R2 error'));
+
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      mockD1.spies.run
+        .mockResolvedValueOnce({ results: [oldPost] })
+        .mockResolvedValueOnce({ results: [updatedPost] });
+
+      event = createMockRequestEvent({
+        method: 'PUT',
+        params: { id: oldPost.id },
+        body: { title: oldPost.title, content: newContent },
+        db: mockD1.db,
+        bucket: mockR2.bucket,
+      }).event;
+
+      const response = await PUT(event);
+      const result: UpdatePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+
+      // Wait for async error logging (individual image deletion failure)
+      await vi.waitFor(() => {
+        expect(consoleError).toHaveBeenCalledWith(
+          '[R2] Failed to delete image: posts/images/old.png',
+          expect.any(Error),
+        );
+      });
+
+      consoleError.mockRestore();
     });
   });
 
@@ -488,6 +652,129 @@ describe('[API] /api/posts/[id]', () => {
         'Unknown error occurred on the server',
       );
       expect(result.error?.details).toBeNull();
+    });
+
+    it('should delete all associated images when post is deleted', async () => {
+      const postWithImages = createMockDBPost({
+        content: `
+          # Post Title
+          ![img1](/api/images/posts/images/a.png)
+          Some content
+          ![img2](/api/images/posts/images/b.jpg)
+        `,
+      });
+
+      const mockR2 = createMockR2();
+      mockR2.spies.delete.mockResolvedValue(undefined);
+
+      mockD1.spies.run.mockResolvedValue({ results: [postWithImages] });
+
+      event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: postWithImages.id },
+        db: mockD1.db,
+        bucket: mockR2.bucket,
+      }).event;
+
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+
+      // Wait for async deletion
+      await vi.waitFor(() => {
+        expect(mockR2.spies.delete).toHaveBeenCalledTimes(2);
+      });
+      expect(mockR2.spies.delete).toHaveBeenCalledWith('posts/images/a.png');
+      expect(mockR2.spies.delete).toHaveBeenCalledWith('posts/images/b.jpg');
+    });
+
+    it('should not fail if R2 bucket is unavailable', async () => {
+      const postWithImages = createMockDBPost({
+        content: `![img](/api/images/posts/images/test.png)`,
+      });
+
+      mockD1.spies.run.mockResolvedValue({ results: [postWithImages] });
+
+      // No R2 bucket provided
+      event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: postWithImages.id },
+        db: mockD1.db,
+      }).event;
+
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle posts with no images', async () => {
+      const postNoImages = createMockDBPost({
+        content: 'Just text content, no images.',
+      });
+
+      const mockR2 = createMockR2();
+      mockR2.spies.delete.mockResolvedValue(undefined);
+
+      mockD1.spies.run.mockResolvedValue({ results: [postNoImages] });
+
+      event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: postNoImages.id },
+        db: mockD1.db,
+        bucket: mockR2.bucket,
+      }).event;
+
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+
+      // Wait a bit to ensure no deletion happens
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(mockR2.spies.delete).not.toHaveBeenCalled();
+    });
+
+    it('should not fail if image deletion fails', async () => {
+      const postWithImages = createMockDBPost({
+        content: `![img](/api/images/posts/images/test.png)`,
+      });
+
+      const mockR2 = createMockR2();
+      mockR2.spies.delete.mockRejectedValue(new Error('R2 error'));
+
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      mockD1.spies.run.mockResolvedValue({ results: [postWithImages] });
+
+      event = createMockRequestEvent({
+        method: 'DELETE',
+        params: { id: postWithImages.id },
+        db: mockD1.db,
+        bucket: mockR2.bucket,
+      }).event;
+
+      const response = await DELETE(event);
+      const result: DeletePostByIdApiResponse = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+
+      // Wait for async error logging (individual image deletion failure)
+      await vi.waitFor(() => {
+        expect(consoleError).toHaveBeenCalledWith(
+          '[R2] Failed to delete image: posts/images/test.png',
+          expect.any(Error),
+        );
+      });
+
+      consoleError.mockRestore();
     });
   });
 });
