@@ -13,6 +13,8 @@ export default defineConfig({
       '@milkdown/prose/commands',
       '@milkdown/prose/inputrules',
       '@milkdown/utils',
+      '@prosemirror-adapter/svelte',
+      'remark-directive',
     ],
   },
   build: {
