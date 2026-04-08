@@ -158,4 +158,15 @@ describe('[Functions] test-utils', () => {
     });
     await expect(fetch('/api/err')).rejects.toThrow('Custom fetch failure');
   });
+
+  it('createMockPendingVideo returns a pending video object with correct properties', () => {
+    const file = new File([''], 'video.mp4', { type: 'video/mp4' });
+    const blobUrl = URL.createObjectURL(file);
+    const pendingVideo = { file, blobUrl };
+
+    expect(pendingVideo).toHaveProperty('file');
+    expect(pendingVideo).toHaveProperty('blobUrl');
+    expect(pendingVideo.file).toBe(file);
+    expect(pendingVideo.blobUrl).toBe(blobUrl);
+  });
 });

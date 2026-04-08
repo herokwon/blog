@@ -1,8 +1,10 @@
 import type { PendingImage } from '$lib/types/image';
+import type { PendingVideo } from '$lib/types/video';
 
-const DB_NAME = 'blog-draft-images';
-const DB_VERSION = 1;
-export const OBJECT_STORE_NAME = 'draft-images';
+const DB_NAME = 'blog-draft';
+const DB_VERSION = 2;
+export const IMAGE_OBJECT_STORE_NAME = 'draft-images';
+export const VIDEO_OBJECT_STORE_NAME = 'draft-videos';
 
 function isIndexedDBAvailable(): boolean {
   return typeof window !== 'undefined' && 'indexedDB' in window;
@@ -13,8 +15,12 @@ function isIndexedDBAvailable(): boolean {
  * @internal Exported for testing purposes.
  */
 export function handleUpgradeNeeded(db: IDBDatabase): void {
-  if (!db.objectStoreNames.contains(OBJECT_STORE_NAME)) {
-    db.createObjectStore(OBJECT_STORE_NAME, { keyPath: 'blobUrl' });
+  if (!db.objectStoreNames.contains(IMAGE_OBJECT_STORE_NAME)) {
+    db.createObjectStore(IMAGE_OBJECT_STORE_NAME, { keyPath: 'blobUrl' });
+  }
+
+  if (!db.objectStoreNames.contains(VIDEO_OBJECT_STORE_NAME)) {
+    db.createObjectStore(VIDEO_OBJECT_STORE_NAME, { keyPath: 'blobUrl' });
   }
 }
 
@@ -55,13 +61,44 @@ export async function saveDraftImages(
   const db = await openDraftDB();
 
   return new Promise<void>((resolve, reject) => {
-    const trans = db.transaction(OBJECT_STORE_NAME, 'readwrite');
-    const objectStore = trans.objectStore(OBJECT_STORE_NAME);
+    const trans = db.transaction(IMAGE_OBJECT_STORE_NAME, 'readwrite');
+    const objectStore = trans.objectStore(IMAGE_OBJECT_STORE_NAME);
 
     objectStore.clear();
 
     for (const image of images) {
       objectStore.put(image);
+    }
+
+    trans.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    trans.onerror = () => {
+      db.close();
+      reject(trans.error);
+    };
+  });
+}
+
+/**
+ * Saves the given draft videos to IndexedDB, replacing any existing entries.
+ * @param videos - An array of PendingVideo objects to save.
+ * @returns A promise that resolves when the save operation is complete.
+ */
+export async function saveDraftVideos(videos: PendingVideo[]): Promise<void> {
+  if (!isIndexedDBAvailable()) return;
+
+  const db = await openDraftDB();
+
+  return new Promise<void>((resolve, reject) => {
+    const trans = db.transaction(VIDEO_OBJECT_STORE_NAME, 'readwrite');
+    const objectStore = trans.objectStore(VIDEO_OBJECT_STORE_NAME);
+
+    objectStore.clear();
+
+    for (const video of videos) {
+      objectStore.put(video);
     }
 
     trans.oncomplete = () => {
@@ -85,8 +122,34 @@ export async function loadDraftImages(): Promise<Array<PendingImage>> {
   const db = await openDraftDB();
 
   return new Promise<Array<PendingImage>>((resolve, reject) => {
-    const trans = db.transaction(OBJECT_STORE_NAME, 'readonly');
-    const objectStore = trans.objectStore(OBJECT_STORE_NAME);
+    const trans = db.transaction(IMAGE_OBJECT_STORE_NAME, 'readonly');
+    const objectStore = trans.objectStore(IMAGE_OBJECT_STORE_NAME);
+
+    const request = objectStore.getAll();
+
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+  });
+}
+
+/**
+ * Loads all draft videos from IndexedDB.
+ * @returns A promise that resolves to an array of PendingVideo objects.
+ */
+export async function loadDraftVideos(): Promise<PendingVideo[]> {
+  if (!isIndexedDBAvailable()) return [];
+
+  const db = await openDraftDB();
+
+  return new Promise<PendingVideo[]>((resolve, reject) => {
+    const trans = db.transaction(VIDEO_OBJECT_STORE_NAME, 'readonly');
+    const objectStore = trans.objectStore(VIDEO_OBJECT_STORE_NAME);
 
     const request = objectStore.getAll();
 
@@ -111,8 +174,34 @@ export async function clearDraftImages(): Promise<void> {
   const db = await openDraftDB();
 
   return new Promise<void>((resolve, reject) => {
-    const trans = db.transaction(OBJECT_STORE_NAME, 'readwrite');
-    const objectStore = trans.objectStore(OBJECT_STORE_NAME);
+    const trans = db.transaction(IMAGE_OBJECT_STORE_NAME, 'readwrite');
+    const objectStore = trans.objectStore(IMAGE_OBJECT_STORE_NAME);
+
+    const request = objectStore.clear();
+
+    request.onsuccess = () => {
+      db.close();
+      resolve();
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+  });
+}
+
+/**
+ * Clears all draft videos from IndexedDB.
+ * @returns A promise that resolves when the clear operation is complete.
+ */
+export async function clearDraftVideos(): Promise<void> {
+  if (!isIndexedDBAvailable()) return;
+
+  const db = await openDraftDB();
+
+  return new Promise<void>((resolve, reject) => {
+    const trans = db.transaction(VIDEO_OBJECT_STORE_NAME, 'readwrite');
+    const objectStore = trans.objectStore(VIDEO_OBJECT_STORE_NAME);
 
     const request = objectStore.clear();
 
