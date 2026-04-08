@@ -215,6 +215,11 @@ vi.mock('@milkdown/utils', () => ({
     factory(createMockCtx('heading', { level: 1 }));
     return { key: 'inputRule' };
   },
+  $remark: (name: string, factory: () => unknown) => {
+    void name;
+    factory();
+    return { key: `${name}Remark` };
+  },
   $useKeymap: (
     key: string,
     keymap: Record<

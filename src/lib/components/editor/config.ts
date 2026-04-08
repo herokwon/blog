@@ -1,4 +1,5 @@
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '$lib/constants';
+import { sharedRemarkDirective } from '$lib/milkdown/shared/remarkDirective';
 import {
   commandsCtx,
   defaultValueCtx,
@@ -265,7 +266,8 @@ export async function createMilkdownEditor({
     .use(wrapInHeadingUpToH3Command)
     .use(wrapInHeadingUpToH3InputRule)
     .use(headingH123KeyMap)
-    .use(listener);
+    .use(listener)
+    .use(sharedRemarkDirective);
 
   if (!readOnly && (onImageAdd || onImageError)) {
     editor.use(createImageUploadPlugin({ onImageAdd, onImageError }));
