@@ -27,7 +27,9 @@
     "@milkdown/plugin-listener": "^7.19.1",
     "@milkdown/preset-commonmark": "^7.19.1",
     "@milkdown/prose": "^7.19.1",
-    "@milkdown/utils": "^7.19.1"
+    "@milkdown/utils": "^7.19.1",
+    "@prosemirror-adapter/svelte": "^0.5.3",
+    "remark-directive": "^4.0.0"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.3",
