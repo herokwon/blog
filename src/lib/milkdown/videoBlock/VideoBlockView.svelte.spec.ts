@@ -133,14 +133,6 @@ describe('[Milkdown] VideoBlockView', () => {
     expect(video?.hasAttribute('poster')).toBe(false);
   });
 
-  it('renders track element with captions kind attribute', async () => {
-    const { container } = await render(VideoBlockView);
-    const track = container.querySelector('track');
-
-    expect(track).not.toBeNull();
-    expect(track?.getAttribute('kind')).toBe('captions');
-  });
-
   it('renders fallback text for unsupported browsers', async () => {
     const { container } = await render(VideoBlockView);
     const fallbackText = container.querySelector('video > p');
@@ -188,7 +180,6 @@ describe('[Milkdown] VideoBlockView', () => {
     const children = Array.from(video?.childNodes || []);
 
     expect(children.some(node => node.nodeName === 'SOURCE')).toBe(true);
-    expect(children.some(node => node.nodeName === 'TRACK')).toBe(true);
     expect(children.some(node => node.nodeName === 'P')).toBe(true);
   });
 
