@@ -8,6 +8,7 @@ describe('[Services] video-manager', () => {
 
   beforeEach(() => {
     globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: vi.fn().mockResolvedValue({
         success: true,
         data: { key: 'test-key', url: '/api/videos/posts/videos/test.mp4' },
@@ -97,8 +98,9 @@ describe('[Services] video-manager', () => {
     expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalled();
   });
 
-  it('should handle upload failure and not add to urlMap', async () => {
+  it('should handle upload failure and keep video in pending', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: vi.fn().mockResolvedValue({
         success: false,
         data: null,
@@ -117,11 +119,12 @@ describe('[Services] video-manager', () => {
 
     expect(map.size).toBe(0);
     expect(map.has(blobUrl)).toBe(false);
-    expect(manager.hasPending).toBe(false);
+    expect(manager.hasPending).toBe(true);
+    expect(manager.getPendingVideos()).toHaveLength(1);
     expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalled();
   });
 
-  it('should handle partial upload failures', async () => {
+  it('should handle partial upload failures and keep failed videos in pending', async () => {
     let urlCounter = 0;
     globalThis.URL = {
       ...globalThis.URL,
@@ -133,6 +136,7 @@ describe('[Services] video-manager', () => {
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++;
       return Promise.resolve({
+        ok: callCount === 1,
         json: vi.fn().mockResolvedValue(
           callCount === 1
             ? {
@@ -163,12 +167,19 @@ describe('[Services] video-manager', () => {
     manager.queueVideo(file2, blobUrl2);
 
     expect(manager.hasPending).toBe(true);
+    expect(manager.getPendingVideos()).toHaveLength(2);
 
     const map = await manager.uploadAll();
 
     expect(map.size).toBe(1);
     expect(map.get(blobUrl1)).toBe('/api/videos/posts/videos/test1.mp4');
     expect(map.has(blobUrl2)).toBe(false);
-    expect(manager.hasPending).toBe(false);
+
+    expect(manager.hasPending).toBe(true);
+    expect(manager.getPendingVideos()).toHaveLength(1);
+    expect(manager.getPendingVideos()[0].blobUrl).toBe(blobUrl2);
+
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith(blobUrl1);
+    expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalledWith(blobUrl2);
   });
 });

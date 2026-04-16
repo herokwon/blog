@@ -33,22 +33,28 @@ export function createVideoManager(): VideoManager {
     const urlMap = new SvelteMap<string, string>();
 
     for (const [blobUrl, pending] of pendingVideos) {
-      const formData = new FormData();
-      formData.append('file', pending.file);
+      try {
+        const formData = new FormData();
+        formData.append('file', pending.file);
 
-      const response = await fetch('/api/videos', {
-        method: 'POST',
-        body: formData,
-      });
+        const response = await fetch('/api/videos', {
+          method: 'POST',
+          body: formData,
+        });
 
-      const result: VideoUploadApiResponse = await response.json();
-      if (result.success && result.data) {
-        urlMap.set(blobUrl, result.data.url);
-        URL.revokeObjectURL(blobUrl);
+        if (!response.ok) continue;
+
+        const result: VideoUploadApiResponse = await response.json();
+        if (result.success && result.data) {
+          urlMap.set(blobUrl, result.data.url);
+          URL.revokeObjectURL(blobUrl);
+          pendingVideos.delete(blobUrl);
+        }
+      } catch {
+        continue;
       }
     }
 
-    pendingVideos.clear();
     return urlMap;
   }
 
