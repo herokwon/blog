@@ -1,5 +1,6 @@
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES } from '$lib/constants';
 import { sharedRemarkDirective } from '$lib/milkdown/shared/remarkDirective';
+import { videoBlockInsertPlugin } from '$lib/milkdown/videoBlock';
 import {
   commandsCtx,
   defaultValueCtx,
@@ -22,16 +23,25 @@ import {
 import { setBlockType } from '@milkdown/prose/commands';
 import { textblockTypeInputRule } from '@milkdown/prose/inputrules';
 import { Plugin, PluginKey } from '@milkdown/prose/state';
-import type { EditorView } from '@milkdown/prose/view';
-import { $command, $inputRule, $prose, $useKeymap } from '@milkdown/utils';
+import type { EditorView, NodeViewConstructor } from '@milkdown/prose/view';
+import {
+  $command,
+  $inputRule,
+  type $Node,
+  $prose,
+  $useKeymap,
+  type $View,
+} from '@milkdown/utils';
 
-interface EditorOptions {
+import type { EditorAssetEventHandlers } from './types';
+
+interface EditorOptions extends Partial<EditorAssetEventHandlers> {
   root: HTMLElement;
   defaultValue: string;
   onChange?: (markdown: string) => void;
   readOnly?: boolean;
-  onImageAdd?: (file: File, blobUrl: string) => void;
-  onImageError?: (error: string) => void;
+  nodes?: $Node[];
+  nodeViews?: $View<$Node, NodeViewConstructor>[];
 }
 
 function validateImage(file: File): string | null {
@@ -239,10 +249,14 @@ const normalizeHeadingLevels = (markdown: string): string => {
 export async function createMilkdownEditor({
   root,
   defaultValue,
-  onChange,
   readOnly = false,
+  nodes = [],
+  nodeViews = [],
+  onChange,
   onImageAdd,
   onImageError,
+  onVideoAdd,
+  onVideoError,
 }: EditorOptions): Promise<Editor> {
   const editor = Editor.make()
     .config(ctx => {
@@ -267,11 +281,25 @@ export async function createMilkdownEditor({
     .use(wrapInHeadingUpToH3InputRule)
     .use(headingH123KeyMap)
     .use(listener)
-    .use(sharedRemarkDirective);
+    .use(sharedRemarkDirective)
+    .use(nodes)
+    .use(nodeViews);
 
-  if (!readOnly && (onImageAdd || onImageError)) {
-    editor.use(createImageUploadPlugin({ onImageAdd, onImageError }));
-  }
+  if (!readOnly && onImageAdd && onImageError)
+    editor.use(
+      createImageUploadPlugin({
+        onImageAdd,
+        onImageError,
+      }),
+    );
+
+  if (!readOnly && onVideoAdd && onVideoError)
+    editor.use(
+      videoBlockInsertPlugin({
+        onVideoAdd,
+        onVideoError,
+      }),
+    );
 
   return await editor.create();
 }

@@ -5,6 +5,7 @@
   import { resolve } from '$app/paths';
   import { Editor } from '$lib/components/editor';
   import { createImageManager } from '$lib/services';
+  import { createVideoManager } from '$lib/services/video-manager';
   import type { UpdatePostByIdApiResponse } from '$lib/types/api';
   import type { PostInput } from '$lib/types/post';
 
@@ -13,6 +14,7 @@
   let { data }: { data: PageData } = $props();
 
   const imageManager = createImageManager();
+  const videoManager = createVideoManager();
 
   let postData = $state<PostInput>({
     title: '',
@@ -20,6 +22,7 @@
   });
   let currentPostId = $state<unknown | null>(null);
   let imageError = $state<string | null>(null);
+  let videoError = $state<string | null>(null);
 
   $effect(() => {
     if (currentPostId === data.post.id) return;
@@ -29,7 +32,9 @@
       content: data.post.content,
     };
     currentPostId = data.post.id;
+
     imageManager.cleanup();
+    videoManager.cleanup();
   });
 
   let isSubmitting = $state(false);
@@ -51,6 +56,15 @@
 
   function handleImageError(error: string) {
     imageError = error;
+  }
+
+  function handleVideoAdd(file: File, blobUrl: string) {
+    videoManager.queueVideo(file, blobUrl);
+    videoError = null;
+  }
+
+  function handleVideoError(error: string) {
+    videoError = error;
   }
 
   async function handleCancel() {
@@ -76,6 +90,14 @@
         }
       }
 
+      if (videoManager.hasPending) {
+        const urlMap = await videoManager.uploadAll();
+
+        for (const [blobUrl, r2Url] of urlMap) {
+          finalContent = finalContent.replaceAll(blobUrl, r2Url);
+        }
+      }
+
       const res = await fetch(`/api/posts/${data.post.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -85,6 +107,8 @@
 
       if (apiResponse.success) {
         imageManager.cleanup();
+        videoManager.cleanup();
+
         await goto(resolve(`/posts/${apiResponse.data.id}`));
       }
     } finally {
@@ -115,6 +139,7 @@
 
   onDestroy(() => {
     imageManager.cleanup();
+    videoManager.cleanup();
   });
 </script>
 
@@ -154,6 +179,11 @@
         {imageError}
       </div>
     {/if}
+    {#if videoError}
+      <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        {videoError}
+      </div>
+    {/if}
     <div class="space-y-2">
       <label for="title" class="block text-sm font-medium">Title</label>
       <input
@@ -172,6 +202,8 @@
           bind:content={postData.content}
           onImageAdd={handleImageAdd}
           onImageError={handleImageError}
+          onVideoAdd={handleVideoAdd}
+          onVideoError={handleVideoError}
           class="flex-1"
         />
       {:else}
