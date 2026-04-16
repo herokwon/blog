@@ -63,6 +63,8 @@ vi.mock('$lib/services/draft-storage', () => ({
   saveDraftVideos: vi.fn().mockResolvedValue(undefined),
   loadDraftVideos: vi.fn().mockResolvedValue([]),
   clearDraftVideos: vi.fn().mockResolvedValue(undefined),
+  extractBlobUrlsFromContent: vi.fn().mockReturnValue(new Set()),
+  cleanupOrphanedVideos: vi.fn().mockResolvedValue(undefined),
 }));
 
 let capturedOnImageAdd: EditorAssetEventHandlers['onImageAdd'] | undefined;

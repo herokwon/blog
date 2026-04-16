@@ -9,9 +9,11 @@ import type { PendingVideo } from '$lib/types/video';
 import 'fake-indexeddb/auto';
 
 import {
+  cleanupOrphanedVideos,
   clearDraftImages,
   clearDraftVideos,
   createOpenDBExecutor,
+  extractBlobUrlsFromContent,
   handleUpgradeNeeded,
   IMAGE_OBJECT_STORE_NAME,
   loadDraftImages,
@@ -376,6 +378,190 @@ describe('[Services] draft-storage', () => {
 
       expect(imagesAfterClear).toHaveLength(0);
       expect(videosAfterClear).toHaveLength(2);
+    });
+  });
+
+  describe('extractBlobUrlsFromContent', () => {
+    it('should extract single blob URL from content', () => {
+      const content =
+        'Here is a video: ![video](blob:http://localhost:8000/abc123)';
+      const urls = extractBlobUrlsFromContent(content);
+
+      expect(urls.size).toBe(1);
+      expect(urls).toContain('blob:http://localhost:8000/abc123');
+    });
+
+    it('should extract multiple blob URLs from content', () => {
+      const content = `
+        ![image](blob:http://localhost:8000/img1)
+        ![video](blob:http://localhost:8000/vid1)
+        Some text
+        ![another](blob:http://localhost:8000/img2)
+      `;
+      const urls = extractBlobUrlsFromContent(content);
+
+      expect(urls.size).toBe(3);
+      expect(urls).toContain('blob:http://localhost:8000/img1');
+      expect(urls).toContain('blob:http://localhost:8000/vid1');
+      expect(urls).toContain('blob:http://localhost:8000/img2');
+    });
+
+    it('should return empty set when no blob URLs found', () => {
+      const content = 'Regular content without any blob URLs';
+      const urls = extractBlobUrlsFromContent(content);
+
+      expect(urls.size).toBe(0);
+    });
+
+    it('should handle duplicate blob URLs', () => {
+      const content =
+        '![img](blob:http://localhost:8000/same) and ![img2](blob:http://localhost:8000/same)';
+      const urls = extractBlobUrlsFromContent(content);
+
+      // Set should deduplicate
+      expect(urls.size).toBe(1);
+      expect(urls).toContain('blob:http://localhost:8000/same');
+    });
+
+    it('should extract blob URLs with different formats', () => {
+      const content = `
+        blob:https://example.com/12345
+        blob:http://localhost/abcdef
+        blob:file:///path/ghijkl
+      `;
+      const urls = extractBlobUrlsFromContent(content);
+
+      expect(urls.size).toBe(3);
+    });
+
+    it('should handle empty content', () => {
+      const urls = extractBlobUrlsFromContent('');
+      expect(urls.size).toBe(0);
+    });
+  });
+
+  describe('cleanupOrphanedVideos', () => {
+    it('should remove videos not referenced in content', async () => {
+      const video1 = createMockPendingVideo('keep.mp4');
+      const video2 = createMockPendingVideo('delete.mp4');
+
+      await saveDraftVideos([video1, video2]);
+
+      // Only video1's blobUrl is "used"
+      const usedUrls = new Set([video1.blobUrl]);
+      await cleanupOrphanedVideos(usedUrls);
+
+      const remaining = await getAllVideosFromDB();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].blobUrl).toBe(video1.blobUrl);
+    });
+
+    it('should keep all videos when all are referenced', async () => {
+      const video1 = createMockPendingVideo('video1.mp4');
+      const video2 = createMockPendingVideo('video2.mp4');
+      const video3 = createMockPendingVideo('video3.mp4');
+
+      await saveDraftVideos([video1, video2, video3]);
+
+      const usedUrls = new Set([
+        video1.blobUrl,
+        video2.blobUrl,
+        video3.blobUrl,
+      ]);
+      await cleanupOrphanedVideos(usedUrls);
+
+      const remaining = await getAllVideosFromDB();
+      expect(remaining).toHaveLength(3);
+    });
+
+    it('should remove all videos when none are referenced', async () => {
+      const video1 = createMockPendingVideo('video1.mp4');
+      const video2 = createMockPendingVideo('video2.mp4');
+
+      await saveDraftVideos([video1, video2]);
+
+      const usedUrls = new Set<string>();
+      await cleanupOrphanedVideos(usedUrls);
+
+      const remaining = await getAllVideosFromDB();
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('should handle cleanup when no videos exist', async () => {
+      const usedUrls = new Set(['blob:http://localhost/any-url']);
+
+      // Should not throw
+      await expect(cleanupOrphanedVideos(usedUrls)).resolves.toBeUndefined();
+
+      const remaining = await getAllVideosFromDB();
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('should only remove specific orphaned videos', async () => {
+      const videos = [
+        createMockPendingVideo('keep1.mp4'),
+        createMockPendingVideo('remove1.mp4'),
+        createMockPendingVideo('keep2.mp4'),
+        createMockPendingVideo('remove2.mp4'),
+      ];
+
+      await saveDraftVideos(videos);
+
+      const usedUrls = new Set([videos[0].blobUrl, videos[2].blobUrl]);
+      await cleanupOrphanedVideos(usedUrls);
+
+      const remaining = await getAllVideosFromDB();
+      expect(remaining).toHaveLength(2);
+      expect(remaining.map(v => v.blobUrl)).toContain(videos[0].blobUrl);
+      expect(remaining.map(v => v.blobUrl)).toContain(videos[2].blobUrl);
+    });
+  });
+
+  describe('integration: extractBlobUrlsFromContent + cleanupOrphanedVideos', () => {
+    it('should clean up orphaned videos based on content', async () => {
+      // Create multiple videos
+      const video1 = createMockPendingVideo('used.mp4');
+      const video2 = createMockPendingVideo('orphaned.mp4');
+
+      await saveDraftVideos([video1, video2]);
+
+      // Simulate content that only references video1
+      const content = `
+        # My Post
+        Here's a video: ![video](${video1.blobUrl})
+      `;
+
+      // Extract used URLs and cleanup
+      const usedUrls = extractBlobUrlsFromContent(content);
+      await cleanupOrphanedVideos(usedUrls);
+
+      // Only video1 should remain
+      const remaining = await getAllVideosFromDB();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].blobUrl).toBe(video1.blobUrl);
+    });
+
+    it('should preserve multiple referenced videos', async () => {
+      const video1 = createMockPendingVideo('video1.mp4');
+      const video2 = createMockPendingVideo('video2.mp4');
+      const video3 = createMockPendingVideo('video3.mp4');
+
+      await saveDraftVideos([video1, video2, video3]);
+
+      // Content references video1 and video2
+      const content = `
+        First: ![v1](${video1.blobUrl})
+        Second: ![v2](${video2.blobUrl})
+      `;
+
+      const usedUrls = extractBlobUrlsFromContent(content);
+      await cleanupOrphanedVideos(usedUrls);
+
+      const remaining = await getAllVideosFromDB();
+      expect(remaining).toHaveLength(2);
+      const remainingBlobUrls = remaining.map(v => v.blobUrl);
+      expect(remainingBlobUrls).toContain(video1.blobUrl);
+      expect(remainingBlobUrls).toContain(video2.blobUrl);
     });
   });
 

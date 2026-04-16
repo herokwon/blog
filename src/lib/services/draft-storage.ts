@@ -215,3 +215,59 @@ export async function clearDraftVideos(): Promise<void> {
     };
   });
 }
+
+/**
+ * Extracts all blob URLs from content (Markdown/HTML).
+ * @param content - The content string to analyze.
+ * @returns A set of blob URLs found in the content.
+ */
+export function extractBlobUrlsFromContent(content: string): Set<string> {
+  const blobUrlPattern = /blob:[^"'\s)]+/g;
+  const matches = content.match(blobUrlPattern) || [];
+  return new Set(matches);
+}
+
+/**
+ * Removes orphaned videos from IndexedDB that are not referenced in content.
+ * @param usedBlobUrls - A set of blob URLs that are currently used in content.
+ * @returns A promise that resolves when the cleanup is complete.
+ */
+export async function cleanupOrphanedVideos(
+  usedBlobUrls: Set<string>,
+): Promise<void> {
+  if (!isIndexedDBAvailable()) return;
+
+  const db = await openDraftDB();
+
+  return new Promise<void>((resolve, reject) => {
+    const trans = db.transaction(VIDEO_OBJECT_STORE_NAME, 'readwrite');
+    const objectStore = trans.objectStore(VIDEO_OBJECT_STORE_NAME);
+
+    const request = objectStore.getAll();
+
+    request.onsuccess = () => {
+      const allVideos = request.result as PendingVideo[];
+
+      for (const video of allVideos) {
+        if (!usedBlobUrls.has(video.blobUrl)) {
+          objectStore.delete(video.blobUrl);
+        }
+      }
+
+      trans.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+    };
+
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+
+    trans.onerror = () => {
+      db.close();
+      reject(trans.error);
+    };
+  });
+}

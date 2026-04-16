@@ -11,7 +11,9 @@
     saveDraftImages,
   } from '$lib/services';
   import {
+    cleanupOrphanedVideos,
     clearDraftVideos,
+    extractBlobUrlsFromContent,
     loadDraftVideos,
     saveDraftVideos,
   } from '$lib/services/draft-storage';
@@ -173,6 +175,10 @@
       } else {
         await clearDraftImages();
       }
+
+      // Clean up orphaned videos from IndexedDB before loading
+      const usedBlobUrls = extractBlobUrlsFromContent(postData.content);
+      await cleanupOrphanedVideos(usedBlobUrls);
 
       const savedVideos = await loadDraftVideos();
       if (savedVideos.length > 0) {
