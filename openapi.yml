@@ -107,8 +107,6 @@ paths:
       responses:
         201:
           $ref: '#/components/responses/ImageBinary'
-        304:
-          $ref: '#/components/responses/FileNotModified'
         400:
           $ref: '#/components/responses/FileBadRequest'
         401:
@@ -197,8 +195,6 @@ paths:
       responses:
         201:
           $ref: '#/components/responses/VideoBinary'
-        304:
-          $ref: '#/components/responses/FileNotModified'
         400:
           $ref: '#/components/responses/FileBadRequest'
         401:
