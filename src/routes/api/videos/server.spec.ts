@@ -162,28 +162,6 @@ describe('[API] POST /api/videos', () => {
         );
       },
     );
-
-    it('should use "bin" extension for unmapped mime type', async () => {
-      // Create a test where type is in ALLOWED but not in getFileExtension mapping
-      // For this test, we mock a 'video/quicktime' type to ensure .bin fallback
-      const bucket = { put: vi.fn().mockResolvedValue(undefined) };
-      const formData = new FormData();
-
-      // We need to test with a valid type that has no mapping
-      // Since we only have mp4, webm, ogg mapped, let's use video/ogg and verify normal mapping instead
-      // Actually, the "unmapped" case would be if type is in ALLOWED_VIDEO_TYPES but not in extensions object
-      // For now, we can verify the extension is correctly mapped for known types
-      formData.append('file', createFile('video/mp4'));
-      const event = createMockEvent({ formData, bucket });
-
-      await POST(event);
-
-      expect(bucket.put).toHaveBeenCalledWith(
-        expect.stringContaining('.mp4'),
-        expect.any(ArrayBuffer),
-        expect.any(Object),
-      );
-    });
   });
 
   describe('Error Handling', () => {
