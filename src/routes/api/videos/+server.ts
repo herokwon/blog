@@ -41,7 +41,7 @@ export const POST: RequestHandler = async ({
     const bucket = platform?.env.BLOG_BUCKET;
     if (!bucket) {
       const error: ApiError = {
-        code: 'R2_BINDING_MISSING',
+        code: 'BUCKET_BINDING_MISSING',
         message: 'The server is not configured correctly',
         details: {
           resource: 'BLOG_BUCKET',

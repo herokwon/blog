@@ -75,7 +75,7 @@ describe('[API] POST /api/videos', () => {
       const json: VideoUploadApiResponse = await response.json();
 
       expect(response.status).toBe(500);
-      expect(json.error?.code).toBe('R2_BINDING_MISSING');
+      expect(json.error?.code).toBe('BUCKET_BINDING_MISSING');
     });
   });
 

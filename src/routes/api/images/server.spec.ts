@@ -73,7 +73,7 @@ describe('[API] POST /api/images', () => {
     const json: ImageUploadApiResponse = await response.json();
 
     expect(response.status).toBe(500);
-    expect(json.error?.code).toBe('R2_BINDING_MISSING');
+    expect(json.error?.code).toBe('BUCKET_BINDING_MISSING');
   });
 
   it('should return 400 when formData parsing fails', async () => {
