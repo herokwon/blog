@@ -671,7 +671,6 @@ export interface operations {
     requestBody: components['requestBodies']['ImageUpload'];
     responses: {
       201: components['responses']['ImageBinary'];
-      304: components['responses']['FileNotModified'];
       400: components['responses']['FileBadRequest'];
       401: components['responses']['Unauthorized'];
       500: components['responses']['InternalServerError'];
@@ -757,7 +756,6 @@ export interface operations {
     };
     responses: {
       201: components['responses']['VideoBinary'];
-      304: components['responses']['FileNotModified'];
       400: components['responses']['FileBadRequest'];
       401: components['responses']['Unauthorized'];
       500: components['responses']['InternalServerError'];
