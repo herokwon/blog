@@ -1118,5 +1118,148 @@ describe('[Services] draft-storage', () => {
         warnSpy.mockRestore();
       }
     });
+
+    it('should reject when request fails during cleanupOrphanedVideos', async () => {
+      const originalOpen = indexedDB.open;
+
+      indexedDB.open = function (): IDBOpenDBRequest {
+        const request = {} as IDBOpenDBRequest;
+
+        setTimeout(() => {
+          let getAllRequest: {
+            onsuccess: ((ev: Event) => void) | null;
+            onerror: ((ev: Event) => void) | null;
+            error: DOMException | null;
+            result: PendingVideo[];
+          } | null = null;
+
+          const mockTransaction = {
+            objectStore: () => ({
+              getAll: () => {
+                getAllRequest = {
+                  onsuccess: null,
+                  onerror: null,
+                  error: null,
+                  result: [] as PendingVideo[],
+                };
+
+                // Trigger error after handler is set
+                setTimeout(() => {
+                  if (getAllRequest) {
+                    getAllRequest.error = new DOMException(
+                      'getAll failed during cleanup',
+                    );
+                    if (getAllRequest.onerror) {
+                      getAllRequest.onerror(new Event('error'));
+                    }
+                  }
+                }, 5);
+
+                return getAllRequest;
+              },
+            }),
+            oncomplete: null,
+            onerror: null,
+            error: null,
+          };
+
+          const mockDb = {
+            transaction: () => mockTransaction,
+            close: () => {},
+          };
+
+          Object.defineProperty(request, 'result', { value: mockDb });
+          if (request.onsuccess) request.onsuccess(new Event('success'));
+        }, 0);
+
+        return request;
+      };
+
+      await expect(
+        cleanupOrphanedVideos(new Set(['blob://keep'])),
+      ).rejects.toBeDefined();
+
+      indexedDB.open = originalOpen;
+    }, 5000);
+
+    it('should reject when transaction fails during cleanupOrphanedVideos delete', async () => {
+      const originalOpen = indexedDB.open;
+
+      indexedDB.open = function (): IDBOpenDBRequest {
+        const request = {} as IDBOpenDBRequest;
+
+        setTimeout(() => {
+          const mockGetAllRequest: {
+            onsuccess: ((ev: Event) => void) | null;
+            onerror: ((ev: Event) => void) | null;
+            error: DOMException | null;
+            result: PendingVideo[];
+          } = {
+            onsuccess: null,
+            onerror: null,
+            error: null,
+            result: [],
+          };
+
+          const mockTransaction: {
+            objectStore: () => {
+              getAll: () => IDBRequest<PendingVideo[]>;
+              delete: (key: string) => object;
+            };
+            oncomplete: ((ev: Event) => void) | null;
+            onerror: ((ev: Event) => void) | null;
+            error: DOMException | null;
+          } = {
+            objectStore: () => ({
+              getAll: () => {
+                // Setup onsuccess to be called
+                setTimeout(() => {
+                  mockGetAllRequest.result = [
+                    createMockPendingVideo('video.mp4'),
+                  ];
+                  if (mockGetAllRequest.onsuccess) {
+                    mockGetAllRequest.onsuccess(new Event('success'));
+                  }
+
+                  // Then trigger transaction error
+                  setTimeout(() => {
+                    mockTransaction.error = new DOMException(
+                      'Transaction failed',
+                    );
+                    if (mockTransaction.onerror) {
+                      mockTransaction.onerror(new Event('error'));
+                    }
+                  }, 5);
+                }, 0);
+
+                return mockGetAllRequest as unknown as IDBRequest<
+                  PendingVideo[]
+                >;
+              },
+              delete: () => ({}),
+            }),
+            oncomplete: null,
+            onerror: null,
+            error: null,
+          };
+
+          const mockDb = {
+            transaction: () => mockTransaction,
+            close: () => {},
+          };
+
+          Object.defineProperty(request, 'result', { value: mockDb });
+          if (request.onsuccess) request.onsuccess(new Event('success'));
+        }, 0);
+
+        return request;
+      };
+
+      await expect(
+        cleanupOrphanedVideos(new Set<string>()),
+      ).rejects.toBeDefined();
+
+      indexedDB.open = originalOpen;
+    }, 5000);
   });
 });

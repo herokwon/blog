@@ -182,4 +182,67 @@ describe('[Services] video-manager', () => {
     expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith(blobUrl1);
     expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalledWith(blobUrl2);
   });
+
+  it('should handle fetch error and keep video in pending', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    const manager = createVideoManager();
+    const file = new File(['content'], 'test.mp4', { type: 'video/mp4' });
+    const blobUrl = 'blob://test-url';
+
+    manager.queueVideo(file, blobUrl);
+    expect(manager.hasPending).toBe(true);
+
+    const map = await manager.uploadAll();
+
+    expect(map.size).toBe(0);
+    expect(map.has(blobUrl)).toBe(false);
+    expect(manager.hasPending).toBe(true);
+    expect(manager.getPendingVideos()).toHaveLength(1);
+    expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('should handle response.ok false and keep video in pending', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    }) as unknown as typeof fetch;
+
+    const manager = createVideoManager();
+    const file = new File(['content'], 'test.mp4', { type: 'video/mp4' });
+    const blobUrl = 'blob://test-url';
+
+    manager.queueVideo(file, blobUrl);
+    expect(manager.hasPending).toBe(true);
+
+    const map = await manager.uploadAll();
+
+    expect(map.size).toBe(0);
+    expect(map.has(blobUrl)).toBe(false);
+    expect(manager.hasPending).toBe(true);
+    expect(manager.getPendingVideos()).toHaveLength(1);
+    expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('should handle response.json parse error and keep video in pending', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockRejectedValue(new Error('Invalid JSON')),
+    }) as unknown as typeof fetch;
+
+    const manager = createVideoManager();
+    const file = new File(['content'], 'test.mp4', { type: 'video/mp4' });
+    const blobUrl = 'blob://test-url';
+
+    manager.queueVideo(file, blobUrl);
+    expect(manager.hasPending).toBe(true);
+
+    const map = await manager.uploadAll();
+
+    expect(map.size).toBe(0);
+    expect(map.has(blobUrl)).toBe(false);
+    expect(manager.hasPending).toBe(true);
+    expect(manager.getPendingVideos()).toHaveLength(1);
+    expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalled();
+  });
 });
