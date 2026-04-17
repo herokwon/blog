@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type {
+  createMilkdownEditor,
+  EditorAssetEventHandlers,
+} from '$lib/components/editor';
 import { createMockPost, stubGlobalFetch } from '$lib/test-utils';
 import type { UpdatePostByIdApiResponse } from '$lib/types/api';
 import type { Post } from '$lib/types/post';
@@ -8,8 +12,8 @@ import { page } from 'vitest/browser';
 
 import Page from './+page.svelte';
 
-const { gotoMock, beforeNavigateHandlers, mockImageManager } = vi.hoisted(
-  () => ({
+const { gotoMock, beforeNavigateHandlers, mockImageManager, mockVideoManager } =
+  vi.hoisted(() => ({
     gotoMock: vi.fn(),
     beforeNavigateHandlers: [] as Array<
       (navigation: { to: object | null; cancel: () => void }) => void
@@ -21,8 +25,14 @@ const { gotoMock, beforeNavigateHandlers, mockImageManager } = vi.hoisted(
       uploadAll: vi.fn().mockResolvedValue(new Map()),
       cleanup: vi.fn(),
     },
-  }),
-);
+    mockVideoManager: {
+      queueVideo: vi.fn(),
+      getPendingVideos: vi.fn().mockReturnValue([]),
+      hasPending: false,
+      uploadAll: vi.fn().mockResolvedValue(new Map()),
+      cleanup: vi.fn(),
+    },
+  }));
 
 vi.mock('$app/navigation', () => ({
   goto: gotoMock,
@@ -37,21 +47,22 @@ vi.mock('$lib/services/image-manager', () => ({
   createImageManager: vi.fn(() => mockImageManager),
 }));
 
-let capturedOnImageAdd: ((file: File, blobUrl: string) => void) | undefined;
-let capturedOnImageError: ((error: string) => void) | undefined;
+vi.mock('$lib/services/video-manager', () => ({
+  createVideoManager: vi.fn(() => mockVideoManager),
+}));
+
+let capturedOnImageAdd: EditorAssetEventHandlers['onImageAdd'] | undefined;
+let capturedOnImageError: EditorAssetEventHandlers['onImageError'] | undefined;
+let capturedOnVideoAdd: EditorAssetEventHandlers['onVideoAdd'] | undefined;
+let capturedOnVideoError: EditorAssetEventHandlers['onVideoError'] | undefined;
 
 vi.mock('$lib/components/editor/config', () => ({
   createMilkdownEditor: vi.fn(
-    async (options: {
-      root: HTMLElement;
-      defaultValue: string;
-      onChange?: (markdown: string) => void;
-      readOnly?: boolean;
-      onImageAdd?: (file: File, blobUrl: string) => void;
-      onImageError?: (error: string) => void;
-    }) => {
+    async (options: Parameters<typeof createMilkdownEditor>[0]) => {
       capturedOnImageAdd = options.onImageAdd;
       capturedOnImageError = options.onImageError;
+      capturedOnVideoAdd = options.onVideoAdd;
+      capturedOnVideoError = options.onVideoError;
 
       const editable = document.createElement('div');
       editable.setAttribute('contenteditable', 'true');
@@ -78,13 +89,23 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     vi.unstubAllGlobals();
     gotoMock.mockReset();
     beforeNavigateHandlers.length = 0;
+
     mockImageManager.registerImage.mockClear();
     mockImageManager.getPendingImages.mockReset().mockReturnValue([]);
     mockImageManager.hasPending = false;
     mockImageManager.uploadAll.mockReset().mockResolvedValue(new Map());
     mockImageManager.cleanup.mockClear();
+
+    mockVideoManager.queueVideo.mockClear();
+    mockVideoManager.getPendingVideos.mockReset().mockReturnValue([]);
+    mockVideoManager.hasPending = false;
+    mockVideoManager.uploadAll.mockReset().mockResolvedValue(new Map());
+    mockVideoManager.cleanup.mockClear();
+
     capturedOnImageAdd = undefined;
     capturedOnImageError = undefined;
+    capturedOnVideoAdd = undefined;
+    capturedOnVideoError = undefined;
   });
 
   it('should render form with prefilled values', async () => {
@@ -357,84 +378,168 @@ describe('[Page] /admin/posts/[id]/edit', () => {
     );
   });
 
-  it('should register image and clear error when handleImageAdd is called', async () => {
-    await renderPage();
+  describe('Image handling', () => {
+    it('should register image and clear error when handleImageAdd is called', async () => {
+      await renderPage();
 
-    const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
-    const blobUrl = 'blob:http://localhost/test-image';
+      const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+      const blobUrl = 'blob:http://localhost/test-image';
 
-    capturedOnImageAdd?.(mockFile, blobUrl);
+      capturedOnImageAdd?.(mockFile, blobUrl);
 
-    expect(mockImageManager.registerImage).toHaveBeenCalledWith(
-      mockFile,
-      blobUrl,
-    );
-  });
+      expect(mockImageManager.registerImage).toHaveBeenCalledWith(
+        mockFile,
+        blobUrl,
+      );
+    });
 
-  it('should display image error when handleImageError is called', async () => {
-    await renderPage();
+    it('should display image error when handleImageError is called', async () => {
+      await renderPage();
 
-    capturedOnImageError?.('Failed to upload image');
+      capturedOnImageError?.('Failed to upload image');
 
-    await expect
-      .element(page.getByText('Failed to upload image'))
-      .toBeInTheDocument();
-  });
+      await expect
+        .element(page.getByText('Failed to upload image'))
+        .toBeInTheDocument();
+    });
 
-  it('should clear image error when new image is added after error', async () => {
-    await renderPage();
+    it('should clear image error when new image is added after error', async () => {
+      await renderPage();
 
-    capturedOnImageError?.('Failed to upload image');
+      capturedOnImageError?.('Failed to upload image');
 
-    await expect
-      .element(page.getByText('Failed to upload image'))
-      .toBeInTheDocument();
+      await expect
+        .element(page.getByText('Failed to upload image'))
+        .toBeInTheDocument();
 
-    const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
-    capturedOnImageAdd?.(mockFile, 'blob:http://localhost/new-image');
+      const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+      capturedOnImageAdd?.(mockFile, 'blob:http://localhost/new-image');
 
-    await expect
-      .element(page.getByText('Failed to upload image'))
-      .not.toBeInTheDocument();
-  });
+      await expect
+        .element(page.getByText('Failed to upload image'))
+        .not.toBeInTheDocument();
+    });
 
-  it('should upload images and replace URLs on submit when pending images exist', async () => {
-    const urlMap = new Map([
-      ['blob:http://localhost/image1', 'https://r2.example.com/image1.png'],
-    ]);
-    mockImageManager.hasPending = true;
-    mockImageManager.uploadAll.mockResolvedValue(urlMap);
+    it('should upload images and replace URLs on submit when pending images exist', async () => {
+      const urlMap = new Map([
+        ['blob:http://localhost/image1', 'https://r2.example.com/image1.png'],
+      ]);
+      mockImageManager.hasPending = true;
+      mockImageManager.uploadAll.mockResolvedValue(urlMap);
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    stubGlobalFetch<UpdatePostByIdApiResponse>({
-      response: {
-        success: true,
-        data: {
-          ...mockPost,
-          title: 'Updated Title',
-          content: '![image](https://r2.example.com/image1.png)',
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      stubGlobalFetch<UpdatePostByIdApiResponse>({
+        response: {
+          success: true,
+          data: {
+            ...mockPost,
+            title: 'Updated Title',
+            content: '![image](https://r2.example.com/image1.png)',
+          },
+          error: null,
         },
-        error: null,
-      },
+      });
+
+      const postWithImage = createMockPost({
+        id: mockPost.id,
+        content: '![image](blob:http://localhost/image1)',
+      });
+      await render(Page, { data: { post: postWithImage } });
+
+      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Title');
+      await page.getByRole('button', { name: 'Update' }).click();
+
+      expect(mockImageManager.uploadAll).toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/posts/${mockPost.id}`,
+        expect.objectContaining({
+          body: expect.stringContaining('https://r2.example.com/image1.png'),
+        }),
+      );
+      expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
+    });
+  });
+
+  describe('Video handling', () => {
+    it('should register video and clear error when handleVideoAdd is called', async () => {
+      await renderPage();
+
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      const blobUrl = 'blob:http://localhost/test-video';
+
+      capturedOnVideoAdd?.(mockFile, blobUrl);
+
+      expect(mockVideoManager.queueVideo).toHaveBeenCalledWith(
+        mockFile,
+        blobUrl,
+      );
     });
 
-    const postWithImage = createMockPost({
-      id: mockPost.id,
-      content: '![image](blob:http://localhost/image1)',
+    it('should display video error when handleVideoError is called', async () => {
+      await renderPage();
+
+      capturedOnVideoError?.('Failed to upload video');
+
+      await expect
+        .element(page.getByText('Failed to upload video'))
+        .toBeInTheDocument();
     });
-    await render(Page, { data: { post: postWithImage } });
 
-    await page.getByRole('textbox', { name: 'Title' }).fill('Updated Title');
-    await page.getByRole('button', { name: 'Update' }).click();
+    it('should clear video error when new video is added after error', async () => {
+      await renderPage();
 
-    expect(mockImageManager.uploadAll).toHaveBeenCalled();
-    expect(fetch).toHaveBeenCalledWith(
-      `/api/posts/${mockPost.id}`,
-      expect.objectContaining({
-        body: expect.stringContaining('https://r2.example.com/image1.png'),
-      }),
-    );
-    expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
+      capturedOnVideoError?.('Failed to upload video');
+
+      await expect
+        .element(page.getByText('Failed to upload video'))
+        .toBeInTheDocument();
+
+      const mockFile = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      capturedOnVideoAdd?.(mockFile, 'blob:http://localhost/new-video');
+
+      await expect
+        .element(page.getByText('Failed to upload video'))
+        .not.toBeInTheDocument();
+    });
+
+    it('should upload videos and replace URLs on submit when pending videos exist', async () => {
+      const urlMap = new Map([
+        ['blob:http://localhost/video1', 'https://r2.example.com/video1.mp4'],
+      ]);
+      mockVideoManager.hasPending = true;
+      mockVideoManager.uploadAll.mockResolvedValue(urlMap);
+
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      stubGlobalFetch<UpdatePostByIdApiResponse>({
+        response: {
+          success: true,
+          data: {
+            ...mockPost,
+            title: 'Updated Title',
+            content: '![video](https://r2.example.com/video1.mp4)',
+          },
+          error: null,
+        },
+      });
+
+      const postWithVideo = createMockPost({
+        id: mockPost.id,
+        content: '![video](blob:http://localhost/video1)',
+      });
+      await render(Page, { data: { post: postWithVideo } });
+
+      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Title');
+      await page.getByRole('button', { name: 'Update' }).click();
+
+      expect(mockVideoManager.uploadAll).toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/posts/${mockPost.id}`,
+        expect.objectContaining({
+          body: expect.stringContaining('https://r2.example.com/video1.mp4'),
+        }),
+      );
+      expect(gotoMock).toHaveBeenCalledWith(`/posts/${mockPost.id}`);
+    });
   });
 });
 

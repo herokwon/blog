@@ -4,13 +4,71 @@ import {
   createMockD1,
   createMockFetch,
   createMockLoadEvent,
+  createMockPendingImage,
+  createMockPendingVideo,
   createMockPost,
   createMockR2,
   createMockRequestEvent,
+  createMockUserSession,
   stubGlobalFetch,
 } from './test-utils';
 
 describe('[Functions] test-utils', () => {
+  it('stubGlobalFetch: resolves with JSON (default and custom options)', async () => {
+    const defaultPayload = { ok: true, items: [createMockPost()] };
+    stubGlobalFetch({
+      response: defaultPayload,
+    });
+
+    const defaultResp = await fetch('/api/test');
+
+    expect(defaultResp.status).toBe(200);
+    expect(defaultResp.headers.get('Content-Type')).toBe('application/json');
+    expect(await defaultResp.json()).toEqual(defaultPayload);
+
+    const customPayload = { hello: 'world' };
+    stubGlobalFetch({
+      response: customPayload,
+      options: {
+        status: 201,
+        headers: { 'Content-Type': 'application/custom' },
+      },
+    });
+
+    const customResp = await fetch('/api/custom');
+
+    expect(customResp.status).toBe(201);
+    expect(customResp.headers.get('Content-Type')).toBe('application/custom');
+    expect(await customResp.json()).toEqual(customPayload);
+  });
+
+  it('stubGlobalFetch: rejects for boolean and custom error inputs', async () => {
+    stubGlobalFetch({
+      error: true,
+    });
+    await expect(fetch('/api/err')).rejects.toThrow('Fetch error');
+
+    const customError = new Error('Custom fetch failure');
+    stubGlobalFetch({
+      error: customError,
+    });
+    await expect(fetch('/api/err')).rejects.toThrow('Custom fetch failure');
+  });
+
+  it('createMockUserSession returns a user session object with default values', () => {
+    const session = createMockUserSession({
+      userId: 'user-123-456',
+      username: 'test admin',
+      role: 'admin',
+      sessionId: 'session-123-456',
+    });
+
+    expect(session).toHaveProperty('userId', 'user-123-456');
+    expect(session).toHaveProperty('username', 'test admin');
+    expect(session).toHaveProperty('role', 'admin');
+    expect(session).toHaveProperty('sessionId', 'session-123-456');
+  });
+
   it('createMockPost returns a post object with default values', () => {
     const post = createMockPost();
 
@@ -118,44 +176,23 @@ describe('[Functions] test-utils', () => {
     expect(parsed).toEqual(body);
   });
 
-  it('stubGlobalFetch: resolves with JSON (default and custom options)', async () => {
-    const defaultPayload = { ok: true, items: [createMockPost()] };
-    stubGlobalFetch({
-      response: defaultPayload,
-    });
+  it('createMockPendingImage returns an object with file and blobUrl properties', () => {
+    const file = new File([''], 'image.png', { type: 'image/png' });
+    const pendingImage = createMockPendingImage(file.name);
 
-    const defaultResp = await fetch('/api/test');
-
-    expect(defaultResp.status).toBe(200);
-    expect(defaultResp.headers.get('Content-Type')).toBe('application/json');
-    expect(await defaultResp.json()).toEqual(defaultPayload);
-
-    const customPayload = { hello: 'world' };
-    stubGlobalFetch({
-      response: customPayload,
-      options: {
-        status: 201,
-        headers: { 'Content-Type': 'application/custom' },
-      },
-    });
-
-    const customResp = await fetch('/api/custom');
-
-    expect(customResp.status).toBe(201);
-    expect(customResp.headers.get('Content-Type')).toBe('application/custom');
-    expect(await customResp.json()).toEqual(customPayload);
+    expect(pendingImage).toHaveProperty('file');
+    expect(pendingImage).toHaveProperty('blobUrl');
+    expect(pendingImage.file).toHaveProperty('name', file.name);
+    expect(pendingImage.file).toHaveProperty('type', file.type);
   });
 
-  it('stubGlobalFetch: rejects for boolean and custom error inputs', async () => {
-    stubGlobalFetch({
-      error: true,
-    });
-    await expect(fetch('/api/err')).rejects.toThrow('Fetch error');
+  it('createMockPendingVideo returns a pending video object with correct properties', async () => {
+    const file = new File([''], 'video.mp4', { type: 'video/mp4' });
+    const pendingVideo = createMockPendingVideo(file.name, '');
 
-    const customError = new Error('Custom fetch failure');
-    stubGlobalFetch({
-      error: customError,
-    });
-    await expect(fetch('/api/err')).rejects.toThrow('Custom fetch failure');
+    expect(pendingVideo).toHaveProperty('file');
+    expect(pendingVideo).toHaveProperty('blobUrl');
+    expect(pendingVideo.file).toHaveProperty('name', file.name);
+    expect(pendingVideo.file).toHaveProperty('type', file.type);
   });
 });

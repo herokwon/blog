@@ -2,13 +2,15 @@ openapi: 3.0.3
 info:
   title: Blog API
   version: 0.2.1
-  description: API specification for blog posts and image management
+  description: API specification for blog posts and data management
 
 tags:
   - name: Posts
     description: Operations for managing blog posts
   - name: Images
     description: Operations for uploading and retrieving images
+  - name: Videos
+    description: Operations for uploading and retrieving videos
 
 paths:
   /api/posts:
@@ -104,17 +106,17 @@ paths:
         $ref: '#/components/requestBodies/ImageUpload'
       responses:
         201:
-          $ref: '#/components/responses/ImageUploadSuccess'
+          $ref: '#/components/responses/ImageBinary'
         400:
-          $ref: '#/components/responses/ImageBadRequest'
+          $ref: '#/components/responses/FileBadRequest'
         401:
           $ref: '#/components/responses/Unauthorized'
         500:
-          $ref: '#/components/responses/ImageInternalServerError'
+          $ref: '#/components/responses/InternalServerError'
 
   /api/images/{path}:
     parameters:
-      - $ref: '#/components/parameters/ImagePathParam'
+      - $ref: '#/components/parameters/FilePathParam'
       - $ref: '#/components/parameters/IfNoneMatchHeader'
 
     get:
@@ -135,9 +137,9 @@ paths:
         - Images
       responses:
         200:
-          $ref: '#/components/responses/ImageBinaryResponse'
+          $ref: '#/components/responses/ImageBinary'
         304:
-          $ref: '#/components/responses/ImageNotModified'
+          $ref: '#/components/responses/FileNotModified'
         400:
           description: |
             Image path is missing or invalid.
@@ -146,6 +148,94 @@ paths:
         404:
           description: |
             Image not found in R2 storage.
+
+            **Note**: Returns HTML error page, not JSON.
+        500:
+          description: |
+            R2 bucket binding not configured.
+
+            **Note**: Returns HTML error page, not JSON.
+
+  /api/videos:
+    post:
+      summary: Upload a video
+      operationId: uploadVideo
+      description: |
+        Upload a video file to R2 storage. The video will be stored with a unique
+        UUID-based filename and returned with a URL for future retrieval.
+
+        **Authentication Required**: Admin role
+
+        **Constraints**:
+        - Maximum file size: 100MB
+        - Allowed types: MP4, WebM, Ogg
+      tags:
+        - Videos
+      security:
+        - sessionAuth: []
+      requestBody:
+        description: Multipart form data for video upload
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: |
+                    Video file to upload. Must be one of: MP4, WebM, or Ogg.
+                    Maximum file size: 100MB.
+            encoding:
+              file:
+                contentType: video/mp4, video/webm, video/ogg
+      responses:
+        201:
+          $ref: '#/components/responses/VideoBinary'
+        400:
+          $ref: '#/components/responses/FileBadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/videos/{path}:
+    parameters:
+      - $ref: '#/components/parameters/FilePathParam'
+      - $ref: '#/components/parameters/IfNoneMatchHeader'
+
+    get:
+      summary: Retrieve a video
+      operationId: getVideo
+      description: |
+        Retrieve a video file from R2 storage by its full storage key.
+
+        **No Authentication Required**: Publicly accessible
+
+        **Caching**: This endpoint supports conditional requests using ETags.
+        If the `If-None-Match` header matches the current ETag, a 304 response
+        is returned with no body. Videos are cached with a 1-year max-age.
+
+        **Error Format Note**: Unlike other API endpoints, errors from this endpoint
+        return SvelteKit error pages (HTML), not JSON API format.
+      tags:
+        - Videos
+      responses:
+        200:
+          $ref: '#/components/responses/VideoBinary'
+        304:
+          $ref: '#/components/responses/FileNotModified'
+        400:
+          description: |
+            Video path is missing or invalid.
+
+            **Note**: Returns HTML error page, not JSON.
+        404:
+          description: |
+            Video not found in R2 storage.
 
             **Note**: Returns HTML error page, not JSON.
         500:
@@ -340,6 +430,24 @@ components:
           format: uri-reference
           example: /api/images/posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
 
+    VideoUploadData:
+      type: object
+      description: Schema for video upload response data
+      additionalProperties: false
+      required:
+        - key
+        - url
+      properties:
+        key:
+          type: string
+          description: The R2 storage key for the uploaded video
+          example: posts/videos/4e9344a8-b642-47fb-8e8b-b0f1343f77df.mp4
+        url:
+          type: string
+          description: The URL path to access the uploaded video
+          format: uri-reference
+          example: /api/videos/posts/videos/4e9344a8-b642-47fb-8e8b-b0f1343f77df.mp4
+
     FileValidationErrorDetails:
       type: object
       description: Error details for file validation failures
@@ -411,17 +519,23 @@ components:
         type: string
         format: uuid
 
-    ImagePathParam:
+    FilePathParam:
       name: path
       in: path
       description: |
-        The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+        The full R2 storage key for the file (e.g., 'posts/images/uuid.png' or 'posts/videos/uuid.mp4').
         This is a catch-all parameter that captures the entire path including slashes.
       required: true
       schema:
         type: string
         pattern: '^[a-zA-Z0-9/_.-]+$'
-      example: posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+      examples:
+        imageFilePath:
+          summary: Example image path parameter
+          value: posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+        videoFilePath:
+          summary: Example video path parameter
+          value: posts/videos/4e9344a8-b642-47fb-8e8b-b0f1343f77df.mp4
 
     IfNoneMatchHeader:
       name: If-None-Match
@@ -453,6 +567,26 @@ components:
             file:
               contentType: image/png, image/jpeg, image/gif, image/webp
 
+    VideoUpload:
+      description: Multipart form data for video upload
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - file
+            properties:
+              file:
+                type: string
+                format: binary
+                description: |
+                  Video file to upload. Must be one of: MP4, WebM, or Ogg.
+                  Maximum file size: 100MB.
+          encoding:
+            file:
+              contentType: video/mp4, video/webm, video/ogg
+
   responses:
     SinglePost:
       description: The response returned a post
@@ -479,6 +613,65 @@ components:
           examples:
             default:
               $ref: '#/components/examples/PostListExample'
+
+    ImageBinary:
+      description: Image file binary data with caching headers
+      headers:
+        Content-Type:
+          description: MIME type of the image
+          schema:
+            type: string
+            enum:
+              - image/png
+              - image/jpeg
+              - image/gif
+              - image/webp
+              - application/octet-stream
+          example: image/png
+        Cache-Control:
+          description: Cache directive for CDN and browser caching
+          schema:
+            type: string
+          example: 'public, max-age=31536000, s-maxage=31536000, immutable'
+        ETag:
+          description: Entity tag for cache validation
+          schema:
+            type: string
+          example: '"abc123etag"'
+      content:
+        image/*:
+          schema:
+            type: string
+            format: binary
+
+    VideoBinary:
+      description: Video file binary data with caching headers
+      headers:
+        Content-Type:
+          description: MIME type of the video
+          schema:
+            type: string
+            enum:
+              - video/mp4
+              - video/webm
+              - video/ogg
+              - application/octet-stream
+          example: video/mp4
+        Cache-Control:
+          description: Cache directive for CDN and browser caching
+          schema:
+            type: string
+          example: 'public, max-age=31536000, s-maxage=31536000, immutable'
+        ETag:
+          description: Entity tag for cache validation
+          schema:
+            type: string
+          example: '"abc123etag"'
+      content:
+        video/*:
+          schema:
+            type: string
+            format: binary
 
     BadRequest:
       description: The request was invalid (e.g. missing required fields, invalid JSON)
@@ -513,57 +706,10 @@ components:
           examples:
             databaseBindingMissing:
               $ref: '#/components/examples/DatabaseErrorExample'
+            bucketBindingMissing:
+              $ref: '#/components/examples/BucketErrorExample'
             serverError:
               $ref: '#/components/examples/ServerErrorExample'
-
-    ImageUploadSuccess:
-      description: Image uploaded successfully
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiSuccessResponse'
-          examples:
-            success:
-              $ref: '#/components/examples/ImageUploadSuccessExample'
-
-    ImageBinaryResponse:
-      description: Image file binary data with caching headers
-      headers:
-        Content-Type:
-          description: MIME type of the image
-          schema:
-            type: string
-            enum:
-              - image/png
-              - image/jpeg
-              - image/gif
-              - image/webp
-              - application/octet-stream
-          example: image/png
-        Cache-Control:
-          description: Cache directive for CDN and browser caching
-          schema:
-            type: string
-          example: 'public, max-age=31536000, s-maxage=31536000, immutable'
-        ETag:
-          description: Entity tag for cache validation
-          schema:
-            type: string
-          example: '"abc123etag"'
-      content:
-        image/*:
-          schema:
-            type: string
-            format: binary
-
-    ImageNotModified:
-      description: Image not modified (ETag matches)
-      headers:
-        ETag:
-          description: Entity tag matching the If-None-Match request header
-          schema:
-            type: string
-          example: '"abc123etag"'
 
     Unauthorized:
       description: User is not authenticated or lacks admin privileges
@@ -575,7 +721,7 @@ components:
             notLoggedIn:
               $ref: '#/components/examples/UnauthorizedErrorExample'
 
-    ImageBadRequest:
+    FileBadRequest:
       description: Invalid request (missing file, wrong type, or too large)
       content:
         application/json:
@@ -584,24 +730,21 @@ components:
           examples:
             missingFile:
               $ref: '#/components/examples/MissingFileErrorExample'
-            invalidFileType:
-              $ref: '#/components/examples/InvalidFileTypeErrorExample'
-            fileTooLarge:
-              $ref: '#/components/examples/FileTooLargeErrorExample'
+            invalidImageFileType:
+              $ref: '#/components/examples/InvalidImageFileTypeErrorExample'
+            imageFileTooLarge:
+              $ref: '#/components/examples/ImageFileTooLargeErrorExample'
             invalidFormData:
               $ref: '#/components/examples/InvalidFormDataErrorExample'
 
-    ImageInternalServerError:
-      description: Server configuration error or R2 storage error
-      content:
-        application/json:
+    FileNotModified:
+      description: File not modified (ETag matches)
+      headers:
+        ETag:
+          description: Entity tag matching the If-None-Match request header
           schema:
-            $ref: '#/components/schemas/ApiErrorResponse'
-          examples:
-            r2BindingMissing:
-              $ref: '#/components/examples/R2BindingErrorExample'
-            r2UploadFailed:
-              $ref: '#/components/examples/R2UploadErrorExample'
+            type: string
+          example: '"abc123etag"'
 
   examples:
     PostInputExample:
@@ -666,6 +809,17 @@ components:
             updated_at: '2026-12-30T12:00:00Z'
         error: null
 
+    ImageUploadSuccessExample:
+      summary: Image uploaded successfully
+      value:
+        status: 201
+        statusText: Created
+        success: true
+        data:
+          key: posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+          url: /api/images/posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
+        error: null
+
     MissingIdErrorExample:
       summary: An example of missing id error response
       value:
@@ -676,6 +830,18 @@ components:
         error:
           code: INVALID_REQUEST
           message: Post id is required
+          details: null
+
+    MissingFileErrorExample:
+      summary: File field missing from request
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: INVALID_REQUEST
+          message: Request must include a file in the "file" field
           details: null
 
     InvalidJsonErrorExample:
@@ -704,6 +870,50 @@ components:
             title: missing
             content: null
 
+    InvalidImageFileTypeErrorExample:
+      summary: Image file type not allowed
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: INVALID_FILE_TYPE
+          message: 'File type "image/bmp" is not allowed. Allowed types: image/png, image/jpeg, image/gif, image/webp'
+          details:
+            fileType: image/bmp
+            allowedTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+            maxSizeMB: null
+            actualSizeMB: null
+
+    InvalidVideoFileTypeErrorExample:
+      summary: Video file type not allowed
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: INVALID_FILE_TYPE
+          message: 'File type "video/avi" is not allowed. Allowed types: video/mp4, video/webm, video/ogg'
+          details:
+            fileType: video/avi
+            allowedTypes: ['video/mp4', 'video/webm', 'video/ogg']
+            maxSizeMB: null
+            actualSizeMB: null
+
+    InvalidFormDataErrorExample:
+      summary: Request body is not valid multipart/form-data
+      value:
+        status: 400
+        statusText: Bad Request
+        success: false
+        data: null
+        error:
+          code: INVALID_REQUEST
+          message: Request body must be valid multipart/form-data
+          details: null
+
     DatabaseErrorExample:
       summary: An example of database binding missing error response
       value:
@@ -716,6 +926,20 @@ components:
           message: The server is not configured correctly
           details:
             resource: BLOG_DB
+            hint: Please check your wrangler config file or environment variables
+
+    BucketErrorExample:
+      summary: An example of R2 bucket binding missing error response
+      value:
+        status: 500
+        statusText: Internal Server Error
+        success: false
+        data: null
+        error:
+          code: BUCKET_BINDING_MISSING
+          message: The server is not configured correctly
+          details:
+            resource: BLOG_BUCKET
             hint: Please check your wrangler config file or environment variables
 
     PostNotFoundErrorExample:
@@ -731,31 +955,8 @@ components:
           details:
             id: 4e9344a8-b642-47fb-8e8b-b0f1343f77df
 
-    ServerErrorExample:
-      summary: An example of an unknown server error response
-      value:
-        status: 500
-        statusText: Internal Server Error
-        success: false
-        data: null
-        error:
-          code: SERVER_ERROR
-          message: An unknown error occurred on the server
-          details: null
-
-    ImageUploadSuccessExample:
-      summary: Image uploaded successfully
-      value:
-        status: 201
-        statusText: Created
-        success: true
-        data:
-          key: posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
-          url: /api/images/posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
-        error: null
-
     UnauthorizedErrorExample:
-      summary: User not authorized to upload images
+      summary: User not authorized to upload files
       value:
         status: 401
         statusText: Unauthorized
@@ -763,39 +964,11 @@ components:
         data: null
         error:
           code: UNAUTHORIZED
-          message: You must be logged in as an admin to upload images
+          message: You must be logged in as an admin to upload files
           details: null
 
-    MissingFileErrorExample:
-      summary: File field missing from request
-      value:
-        status: 400
-        statusText: Bad Request
-        success: false
-        data: null
-        error:
-          code: INVALID_REQUEST
-          message: Request must include a file in the "file" field
-          details: null
-
-    InvalidFileTypeErrorExample:
-      summary: File type not allowed
-      value:
-        status: 400
-        statusText: Bad Request
-        success: false
-        data: null
-        error:
-          code: INVALID_FILE_TYPE
-          message: 'File type "image/bmp" is not allowed. Allowed types: image/png, image/jpeg, image/gif, image/webp'
-          details:
-            fileType: image/bmp
-            allowedTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-            maxSizeMB: null
-            actualSizeMB: null
-
-    FileTooLargeErrorExample:
-      summary: File exceeds maximum size
+    ImageFileTooLargeErrorExample:
+      summary: File exceeds maximum allowed size for images
       value:
         status: 400
         statusText: Bad Request
@@ -810,34 +983,24 @@ components:
             maxSizeMB: 10
             actualSizeMB: 15.42
 
-    InvalidFormDataErrorExample:
-      summary: Request body is not valid multipart/form-data
+    VideoFileTooLargeErrorExample:
+      summary: Video file exceeds maximum allowed size for videos
       value:
         status: 400
         statusText: Bad Request
         success: false
         data: null
         error:
-          code: INVALID_REQUEST
-          message: Request body must be valid multipart/form-data
-          details: null
-
-    R2BindingErrorExample:
-      summary: R2 bucket binding not configured
-      value:
-        status: 500
-        statusText: Internal Server Error
-        success: false
-        data: null
-        error:
-          code: R2_BINDING_MISSING
-          message: The server is not configured correctly
+          code: FILE_TOO_LARGE
+          message: File size (120.5MB) exceeds the maximum allowed size of 100MB
           details:
-            resource: BLOG_BUCKET
-            hint: Please check your wrangler config file or environment variables
+            fileType: null
+            allowedTypes: null
+            maxSizeMB: 100
+            actualSizeMB: 120.5
 
-    R2UploadErrorExample:
-      summary: R2 upload operation failed
+    ServerErrorExample:
+      summary: An example of an unknown server error response
       value:
         status: 500
         statusText: Internal Server Error
@@ -845,7 +1008,7 @@ components:
         data: null
         error:
           code: SERVER_ERROR
-          message: Failed to upload image to R2 storage
+          message: An unknown error occurred on the server
           details: null
 
   securitySchemes:

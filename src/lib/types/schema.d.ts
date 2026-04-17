@@ -83,11 +83,10 @@ export interface paths {
       };
       path: {
         /**
-         * @description The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+         * @description The full R2 storage key for the file (e.g., 'posts/images/uuid.png' or 'posts/videos/uuid.mp4').
          *     This is a catch-all parameter that captures the entire path including slashes.
-         * @example posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
          */
-        path: components['parameters']['ImagePathParam'];
+        path: components['parameters']['FilePathParam'];
       };
       cookie?: never;
     };
@@ -105,6 +104,74 @@ export interface paths {
      *     return SvelteKit error pages (HTML), not JSON API format.
      */
     get: operations['getImage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/videos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload a video
+     * @description Upload a video file to R2 storage. The video will be stored with a unique
+     *     UUID-based filename and returned with a URL for future retrieval.
+     *
+     *     **Authentication Required**: Admin role
+     *
+     *     **Constraints**:
+     *     - Maximum file size: 100MB
+     *     - Allowed types: MP4, WebM, Ogg
+     */
+    post: operations['uploadVideo'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/videos/{path}': {
+    parameters: {
+      query?: never;
+      header?: {
+        /**
+         * @description ETag value from a previous response for conditional requests
+         * @example "abc123etag"
+         */
+        'If-None-Match'?: components['parameters']['IfNoneMatchHeader'];
+      };
+      path: {
+        /**
+         * @description The full R2 storage key for the file (e.g., 'posts/images/uuid.png' or 'posts/videos/uuid.mp4').
+         *     This is a catch-all parameter that captures the entire path including slashes.
+         */
+        path: components['parameters']['FilePathParam'];
+      };
+      cookie?: never;
+    };
+    /**
+     * Retrieve a video
+     * @description Retrieve a video file from R2 storage by its full storage key.
+     *
+     *     **No Authentication Required**: Publicly accessible
+     *
+     *     **Caching**: This endpoint supports conditional requests using ETags.
+     *     If the `If-None-Match` header matches the current ETag, a 304 response
+     *     is returned with no body. Videos are cached with a 1-year max-age.
+     *
+     *     **Error Format Note**: Unlike other API endpoints, errors from this endpoint
+     *     return SvelteKit error pages (HTML), not JSON API format.
+     */
+    get: operations['getVideo'];
     put?: never;
     post?: never;
     delete?: never;
@@ -255,6 +322,20 @@ export interface components {
        */
       url: string;
     };
+    /** @description Schema for video upload response data */
+    VideoUploadData: {
+      /**
+       * @description The R2 storage key for the uploaded video
+       * @example posts/videos/4e9344a8-b642-47fb-8e8b-b0f1343f77df.mp4
+       */
+      key: string;
+      /**
+       * Format: uri-reference
+       * @description The URL path to access the uploaded video
+       * @example /api/videos/posts/videos/4e9344a8-b642-47fb-8e8b-b0f1343f77df.mp4
+       */
+      url: string;
+    };
     /** @description Error details for file validation failures */
     FileValidationErrorDetails: {
       /**
@@ -324,44 +405,8 @@ export interface components {
         'application/json': components['schemas']['ApiSuccessResponse'];
       };
     };
-    /** @description The request was invalid (e.g. missing required fields, invalid JSON) */
-    BadRequest: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ApiErrorResponse'];
-      };
-    };
-    /** @description The specified resource was not found */
-    NotFound: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ApiErrorResponse'];
-      };
-    };
-    /** @description An unexpected error occurred on the server */
-    InternalServerError: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ApiErrorResponse'];
-      };
-    };
-    /** @description Image uploaded successfully */
-    ImageUploadSuccess: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ApiSuccessResponse'];
-      };
-    };
     /** @description Image file binary data with caching headers */
-    ImageBinaryResponse: {
+    ImageBinary: {
       headers: {
         /**
          * @description MIME type of the image
@@ -389,17 +434,60 @@ export interface components {
         'image/*': string;
       };
     };
-    /** @description Image not modified (ETag matches) */
-    ImageNotModified: {
+    /** @description Video file binary data with caching headers */
+    VideoBinary: {
       headers: {
         /**
-         * @description Entity tag matching the If-None-Match request header
+         * @description MIME type of the video
+         * @example video/mp4
+         */
+        'Content-Type'?:
+          | 'video/mp4'
+          | 'video/webm'
+          | 'video/ogg'
+          | 'application/octet-stream';
+        /**
+         * @description Cache directive for CDN and browser caching
+         * @example public, max-age=31536000, s-maxage=31536000, immutable
+         */
+        'Cache-Control'?: string;
+        /**
+         * @description Entity tag for cache validation
          * @example "abc123etag"
          */
         ETag?: string;
         [name: string]: unknown;
       };
-      content?: never;
+      content: {
+        'video/*': string;
+      };
+    };
+    /** @description The request was invalid (e.g. missing required fields, invalid JSON) */
+    BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
+    /** @description The specified resource was not found */
+    NotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
+    };
+    /** @description An unexpected error occurred on the server */
+    InternalServerError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['ApiErrorResponse'];
+      };
     };
     /** @description User is not authenticated or lacks admin privileges */
     Unauthorized: {
@@ -411,7 +499,7 @@ export interface components {
       };
     };
     /** @description Invalid request (missing file, wrong type, or too large) */
-    ImageBadRequest: {
+    FileBadRequest: {
       headers: {
         [name: string]: unknown;
       };
@@ -419,25 +507,27 @@ export interface components {
         'application/json': components['schemas']['ApiErrorResponse'];
       };
     };
-    /** @description Server configuration error or R2 storage error */
-    ImageInternalServerError: {
+    /** @description File not modified (ETag matches) */
+    FileNotModified: {
       headers: {
+        /**
+         * @description Entity tag matching the If-None-Match request header
+         * @example "abc123etag"
+         */
+        ETag?: string;
         [name: string]: unknown;
       };
-      content: {
-        'application/json': components['schemas']['ApiErrorResponse'];
-      };
+      content?: never;
     };
   };
   parameters: {
     /** @description The unique identifier of a post */
     PostIdParam: string;
     /**
-     * @description The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+     * @description The full R2 storage key for the file (e.g., 'posts/images/uuid.png' or 'posts/videos/uuid.mp4').
      *     This is a catch-all parameter that captures the entire path including slashes.
-     * @example posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
      */
-    ImagePathParam: string;
+    FilePathParam: string;
     /**
      * @description ETag value from a previous response for conditional requests
      * @example "abc123etag"
@@ -453,6 +543,19 @@ export interface components {
            * Format: binary
            * @description Image file to upload. Must be one of: PNG, JPEG, GIF, or WebP.
            *     Maximum file size: 10MB.
+           */
+          file: string;
+        };
+      };
+    };
+    /** @description Multipart form data for video upload */
+    VideoUpload: {
+      content: {
+        'multipart/form-data': {
+          /**
+           * Format: binary
+           * @description Video file to upload. Must be one of: MP4, WebM, or Ogg.
+           *     Maximum file size: 100MB.
            */
           file: string;
         };
@@ -567,10 +670,10 @@ export interface operations {
     };
     requestBody: components['requestBodies']['ImageUpload'];
     responses: {
-      201: components['responses']['ImageUploadSuccess'];
-      400: components['responses']['ImageBadRequest'];
+      201: components['responses']['ImageBinary'];
+      400: components['responses']['FileBadRequest'];
       401: components['responses']['Unauthorized'];
-      500: components['responses']['ImageInternalServerError'];
+      500: components['responses']['InternalServerError'];
     };
   };
   getImage: {
@@ -585,18 +688,17 @@ export interface operations {
       };
       path: {
         /**
-         * @description The full R2 storage key for the image (e.g., 'posts/images/uuid.png').
+         * @description The full R2 storage key for the file (e.g., 'posts/images/uuid.png' or 'posts/videos/uuid.mp4').
          *     This is a catch-all parameter that captures the entire path including slashes.
-         * @example posts/images/4e9344a8-b642-47fb-8e8b-b0f1343f77df.png
          */
-        path: components['parameters']['ImagePathParam'];
+        path: components['parameters']['FilePathParam'];
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      200: components['responses']['ImageBinaryResponse'];
-      304: components['responses']['ImageNotModified'];
+      200: components['responses']['ImageBinary'];
+      304: components['responses']['FileNotModified'];
       /**
        * @description Image path is missing or invalid.
        *
@@ -610,6 +712,91 @@ export interface operations {
       };
       /**
        * @description Image not found in R2 storage.
+       *
+       *     **Note**: Returns HTML error page, not JSON.
+       */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /**
+       * @description R2 bucket binding not configured.
+       *
+       *     **Note**: Returns HTML error page, not JSON.
+       */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  uploadVideo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Multipart form data for video upload */
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /**
+           * Format: binary
+           * @description Video file to upload. Must be one of: MP4, WebM, or Ogg.
+           *     Maximum file size: 100MB.
+           */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      201: components['responses']['VideoBinary'];
+      400: components['responses']['FileBadRequest'];
+      401: components['responses']['Unauthorized'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  getVideo: {
+    parameters: {
+      query?: never;
+      header?: {
+        /**
+         * @description ETag value from a previous response for conditional requests
+         * @example "abc123etag"
+         */
+        'If-None-Match'?: components['parameters']['IfNoneMatchHeader'];
+      };
+      path: {
+        /**
+         * @description The full R2 storage key for the file (e.g., 'posts/images/uuid.png' or 'posts/videos/uuid.mp4').
+         *     This is a catch-all parameter that captures the entire path including slashes.
+         */
+        path: components['parameters']['FilePathParam'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: components['responses']['VideoBinary'];
+      304: components['responses']['FileNotModified'];
+      /**
+       * @description Video path is missing or invalid.
+       *
+       *     **Note**: Returns HTML error page, not JSON.
+       */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /**
+       * @description Video not found in R2 storage.
        *
        *     **Note**: Returns HTML error page, not JSON.
        */

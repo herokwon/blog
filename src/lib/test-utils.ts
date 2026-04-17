@@ -30,6 +30,7 @@ import { EXPIRES_IN_SECONDS } from '$lib/constants';
 import type { DBUser, UserSession } from '$lib/types/auth';
 import type { PendingImage } from '$lib/types/image';
 import type { DBPost, Post } from '$lib/types/post';
+import type { PendingVideo } from '$lib/types/video';
 
 type MockEventOptions = Partial<Pick<RequestEvent, 'request' | 'params'>> & {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -388,6 +389,25 @@ export const createMockPendingImage = (
   content = 'test content',
 ): PendingImage => {
   const file = new File([content], filename, { type: 'image/png' });
+  const blobUrl = URL.createObjectURL(file);
+  return { file, blobUrl };
+};
+
+/**
+ * Creates a mock PendingVideo for testing purposes.
+ * Generates a File object and a corresponding blob URL.
+ * @param filename - The name of the file (e.g., "video.mp4")
+ * @param content - The file content (default: "test content")
+ * @returns A mock PendingVideo object with file and blobUrl properties
+ * @example
+ * const video = createMockPendingVideo('test.mp4');
+ * expect(video.file.name).toBe('test.mp4');
+ */
+export const createMockPendingVideo = (
+  filename: string,
+  content = 'test content',
+): PendingVideo => {
+  const file = new File([content], filename, { type: 'video/mp4' });
   const blobUrl = URL.createObjectURL(file);
   return { file, blobUrl };
 };

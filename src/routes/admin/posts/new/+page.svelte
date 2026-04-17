@@ -10,12 +10,21 @@
     loadDraftImages,
     saveDraftImages,
   } from '$lib/services';
+  import {
+    cleanupOrphanedVideos,
+    clearDraftVideos,
+    extractBlobUrlsFromContent,
+    loadDraftVideos,
+    saveDraftVideos,
+  } from '$lib/services/draft-storage';
+  import { createVideoManager } from '$lib/services/video-manager';
   import type { CreatePostApiResponse } from '$lib/types/api';
   import type { PostInput } from '$lib/types/post';
 
   const STORAGE_KEY = 'DRAFT_POST';
 
   const imageManager = createImageManager();
+  const videoManager = createVideoManager();
 
   let postData = $state<PostInput>({
     title: '',
@@ -25,6 +34,7 @@
   let isSubmitting = $state(false);
   let isDraftLoaded = $state<boolean>(false);
   let imageError = $state<string | null>(null);
+  let videoError = $state<string | null>(null);
 
   const canSave = $derived(
     postData.title.trim().length > 0 && postData.content.trim().length > 0,
@@ -56,6 +66,17 @@
     } catch (error) {
       console.warn('Failed to save draft images:', error);
     }
+
+    const pendingVideos = videoManager.getPendingVideos();
+    try {
+      if (pendingVideos.length > 0) {
+        await saveDraftVideos(pendingVideos);
+      } else {
+        await clearDraftVideos();
+      }
+    } catch (error) {
+      console.warn('Failed to save draft videos:', error);
+    }
   }
 
   function handleImageAdd(file: File, blobUrl: string) {
@@ -67,6 +88,15 @@
     imageError = error;
   }
 
+  function handleVideoAdd(file: File, blobUrl: string) {
+    videoManager.queueVideo(file, blobUrl);
+    videoError = null;
+  }
+
+  function handleVideoError(error: string) {
+    videoError = error;
+  }
+
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     isSubmitting = true;
@@ -76,6 +106,14 @@
 
       if (imageManager.hasPending) {
         const urlMap = await imageManager.uploadAll();
+
+        for (const [blobUrl, r2Url] of urlMap) {
+          finalContent = finalContent.replaceAll(blobUrl, r2Url);
+        }
+      }
+
+      if (videoManager.hasPending) {
+        const urlMap = await videoManager.uploadAll();
 
         for (const [blobUrl, r2Url] of urlMap) {
           finalContent = finalContent.replaceAll(blobUrl, r2Url);
@@ -95,8 +133,12 @@
 
         try {
           await clearDraftImages();
+          await clearDraftVideos();
         } catch (error) {
-          console.warn('Failed to clear draft images after submit:', error);
+          console.warn(
+            'Failed to clear draft images or videos after submit:',
+            error,
+          );
         }
 
         await goto(resolve(`/posts/${apiResponse.data.id}`));
@@ -133,6 +175,29 @@
       } else {
         await clearDraftImages();
       }
+
+      // Clean up orphaned videos from IndexedDB before loading
+      const usedBlobUrls = extractBlobUrlsFromContent(postData.content);
+      await cleanupOrphanedVideos(usedBlobUrls);
+
+      const savedVideos = await loadDraftVideos();
+      if (savedVideos.length > 0) {
+        for (const { blobUrl, file } of savedVideos) {
+          const newBlobUrl = URL.createObjectURL(file);
+          videoManager.queueVideo(file, newBlobUrl);
+          postData.content = postData.content.replaceAll(blobUrl, newBlobUrl);
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(postData));
+
+        const pendingVideos = videoManager.getPendingVideos();
+        if (pendingVideos.length > 0) {
+          await clearDraftVideos();
+          await saveDraftVideos(pendingVideos);
+        }
+      } else {
+        await clearDraftVideos();
+      }
     } catch (error) {
       console.error(
         'Failed to load draft post from localStorage or IndexedDB:',
@@ -145,6 +210,7 @@
 
   onDestroy(() => {
     imageManager.cleanup();
+    videoManager.cleanup();
   });
 </script>
 
@@ -179,6 +245,11 @@
         {imageError}
       </div>
     {/if}
+    {#if videoError}
+      <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        {videoError}
+      </div>
+    {/if}
     <div class="space-y-2">
       <label for="title" class="block text-sm font-medium">Title</label>
       <input
@@ -197,6 +268,8 @@
           bind:content={postData.content}
           onImageAdd={handleImageAdd}
           onImageError={handleImageError}
+          onVideoAdd={handleVideoAdd}
+          onVideoError={handleVideoError}
           class="flex-1"
         />
       {:else}

@@ -2,20 +2,31 @@
   import { onMount } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
 
-  import { createMilkdownEditor } from './config';
+  import {
+    createVideoBlockNodeView,
+    videoBlockSchema,
+  } from '$lib/milkdown/videoBlock';
+  import {
+    useNodeViewFactory,
+    useProsemirrorAdapterProvider,
+  } from '@prosemirror-adapter/svelte';
 
-  type Props = HTMLAttributes<HTMLDivElement> & {
-    content: string;
-    readOnly?: boolean;
-    onImageAdd?: (file: File, blobUrl: string) => void;
-    onImageError?: (error: string) => void;
-  };
+  import { createMilkdownEditor } from './config';
+  import type { EditorAssetEventHandlers } from './types';
+
+  type Props = HTMLAttributes<HTMLDivElement> &
+    Partial<EditorAssetEventHandlers> & {
+      content: string;
+      readOnly?: boolean;
+    };
 
   let {
     content = $bindable(),
     readOnly = false,
     onImageAdd,
     onImageError,
+    onVideoAdd,
+    onVideoError,
     class: className,
     ...divProps
   }: Props = $props();
@@ -38,15 +49,25 @@
 
   onMount(async () => {
     if (editorElement) {
+      useProsemirrorAdapterProvider();
+
+      const nodeViewFactory = useNodeViewFactory();
+
+      const videoBlockNodeView = createVideoBlockNodeView(nodeViewFactory);
+
       await createMilkdownEditor({
         root: editorElement,
         defaultValue: content,
         readOnly,
+        nodes: [videoBlockSchema],
+        nodeViews: [videoBlockNodeView],
         onChange: (markdown: string) => {
           content = markdown;
         },
         onImageAdd,
         onImageError,
+        onVideoAdd,
+        onVideoError,
       });
 
       if (readOnly) return;

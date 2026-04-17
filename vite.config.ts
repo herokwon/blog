@@ -12,7 +12,10 @@ export default defineConfig({
       '@milkdown/preset-commonmark',
       '@milkdown/prose/commands',
       '@milkdown/prose/inputrules',
+      '@milkdown/prose/state',
       '@milkdown/utils',
+      '@prosemirror-adapter/svelte',
+      'remark-directive',
     ],
   },
   build: {

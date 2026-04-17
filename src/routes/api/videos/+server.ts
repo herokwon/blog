@@ -1,26 +1,16 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 
 import {
-  ALLOWED_IMAGE_TYPES,
-  MAX_IMAGE_SIZE_BYTES,
-  R2_IMAGE_PREFIX,
+  ALLOWED_VIDEO_TYPES,
+  MAX_VIDEO_SIZE_BYTES,
+  R2_VIDEO_PREFIX,
 } from '$lib/constants';
 import type {
   ApiError,
   ApiErrorResponse,
   ApiSuccessResponse,
 } from '$lib/types/api';
-import type { ImageUploadData } from '$lib/types/image';
-
-function getFileExtension(mimeType: string): string {
-  const extensions: Record<string, string> = {
-    'image/png': 'png',
-    'image/jpeg': 'jpg',
-    'image/gif': 'gif',
-    'image/webp': 'webp',
-  };
-  return extensions[mimeType] ?? 'bin';
-}
+import type { VideoUploadData } from '$lib/types/video';
 
 export const POST: RequestHandler = async ({
   platform,
@@ -31,7 +21,7 @@ export const POST: RequestHandler = async ({
     if (!locals.user || locals.user.role !== 'admin') {
       const error: ApiError = {
         code: 'UNAUTHORIZED',
-        message: 'You must be logged in as an admin to upload images',
+        message: 'You must be logged in as an admin to upload videos',
         details: null,
       };
 
@@ -116,11 +106,10 @@ export const POST: RequestHandler = async ({
       );
     }
 
-    const allowedTypes = ALLOWED_IMAGE_TYPES as readonly string[];
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_VIDEO_TYPES.some(type => type === file.type)) {
       const error: ApiError = {
         code: 'INVALID_FILE_TYPE',
-        message: `File type "${file.type}" is not allowed. Allowed types: ${ALLOWED_IMAGE_TYPES.join(', ')}`,
+        message: `File type "${file.type}" is not allowed. Allowed types: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
         details: null,
       };
 
@@ -137,8 +126,8 @@ export const POST: RequestHandler = async ({
       );
     }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      const maxSizeMB = MAX_IMAGE_SIZE_BYTES / 1024 / 1024;
+    if (file.size > MAX_VIDEO_SIZE_BYTES) {
+      const maxSizeMB = MAX_VIDEO_SIZE_BYTES / 1024 / 1024;
       const actualSizeMB = (file.size / 1024 / 1024).toFixed(2);
       const error: ApiError = {
         code: 'FILE_TOO_LARGE',
@@ -159,8 +148,10 @@ export const POST: RequestHandler = async ({
       );
     }
 
-    const extension = getFileExtension(file.type);
-    const key = `${R2_IMAGE_PREFIX}/${crypto.randomUUID()}.${extension}`;
+    const extension = getFileExtension(
+      file.type as (typeof ALLOWED_VIDEO_TYPES)[number],
+    );
+    const key = `${R2_VIDEO_PREFIX}/${crypto.randomUUID()}.${extension}`;
 
     const arrayBuffer = await file.arrayBuffer();
     await bucket.put(key, arrayBuffer, {
@@ -169,14 +160,14 @@ export const POST: RequestHandler = async ({
       },
     });
 
-    const url = `/api/images/${key}`;
+    const url = `/api/videos/${key}`;
 
     return json(
       {
         success: true,
         data: { key, url },
         error: null,
-      } satisfies ApiSuccessResponse<ImageUploadData>,
+      } satisfies ApiSuccessResponse<VideoUploadData>,
       {
         status: 201,
         statusText: 'Created',
@@ -203,3 +194,14 @@ export const POST: RequestHandler = async ({
     );
   }
 };
+
+function getFileExtension(
+  mimeType: (typeof ALLOWED_VIDEO_TYPES)[number],
+): string {
+  const extensions = {
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'video/ogg': 'ogg',
+  };
+  return extensions[mimeType];
+}

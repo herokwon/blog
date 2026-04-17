@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { MAX_IMAGE_SIZE_BYTES } from '$lib/constants';
+import { MAX_IMAGE_SIZE_BYTES, MAX_VIDEO_SIZE_BYTES } from '$lib/constants';
 import type { Editor as MilkdownEditor } from '@milkdown/core';
 
 import { createMilkdownEditor } from './config';
@@ -29,13 +29,26 @@ type ListenerCallback = (
 
 interface MockEditorView {
   state: {
-    schema: { nodes: { image?: { create: (attrs: object) => object } } };
+    schema: {
+      nodes: {
+        image?: { create: (attrs: object) => object };
+        video_block?: { create: (attrs: object) => object };
+      };
+    };
     tr: { replaceSelectionWith: (node: object) => object };
   };
   dispatch: (tr: object) => void;
 }
 
 interface ImagePluginHandlers {
+  handlePaste: (
+    view: MockEditorView,
+    event: Partial<ClipboardEvent>,
+  ) => boolean;
+  handleDrop: (view: MockEditorView, event: Partial<DragEvent>) => boolean;
+}
+
+interface VideoPluginHandlers {
   handlePaste: (
     view: MockEditorView,
     event: Partial<ClipboardEvent>,
@@ -61,6 +74,7 @@ const state = vi.hoisted(() => ({
     return {} as MilkdownEditor;
   }),
   imagePluginHandlers: null as ImagePluginHandlers | null,
+  videoPluginHandlers: null as VideoPluginHandlers | null,
 }));
 
 vi.mock('@milkdown/core', () => ({
@@ -178,13 +192,20 @@ vi.mock('@milkdown/prose/inputrules', () => ({
 
 vi.mock('@milkdown/prose/state', () => ({
   Plugin: class MockPlugin {
-    constructor(options: { props: ImagePluginHandlers }) {
-      state.imagePluginHandlers = options.props;
+    constructor(options: {
+      key?: { name?: string };
+      props: ImagePluginHandlers | VideoPluginHandlers;
+    }) {
+      const keyName = options.key?.name;
+
+      if (keyName?.includes('image')) state.imagePluginHandlers = options.props;
+      else state.videoPluginHandlers = options.props;
     }
   },
   PluginKey: class MockPluginKey {
+    name: string;
     constructor(name: string) {
-      void name;
+      this.name = name;
     }
   },
 }));
@@ -215,6 +236,26 @@ vi.mock('@milkdown/utils', () => ({
     factory(createMockCtx('heading', { level: 1 }));
     return { key: 'inputRule' };
   },
+  $node: (name: string, factory: () => object) => {
+    void name;
+    factory();
+    return { key: `${name}Node` };
+  },
+  $nodeAttr: (name: string, factory: () => object) => {
+    void name;
+    factory();
+    return { key: `${name}Attr` };
+  },
+  $nodeSchema: (name: string, factory: () => object) => {
+    void name;
+    factory();
+    return { key: `${name}Schema` };
+  },
+  $remark: (name: string, factory: () => unknown) => {
+    void name;
+    factory();
+    return { key: `${name}Remark` };
+  },
   $useKeymap: (
     key: string,
     keymap: Record<
@@ -235,17 +276,31 @@ vi.mock('@milkdown/utils', () => ({
 }));
 
 // Helper functions
-const createMockView = (hasImageNode = false): MockEditorView => ({
-  state: {
-    schema: {
-      nodes: hasImageNode
-        ? { image: { create: () => ({ type: 'image' }) } }
-        : {},
+const createMockView = (
+  options: {
+    hasImageNode?: boolean;
+    hasVideoNode?: boolean;
+  } = {},
+): MockEditorView => {
+  const { hasImageNode = false, hasVideoNode = false } = options;
+
+  return {
+    state: {
+      schema: {
+        nodes: {
+          ...(hasImageNode && {
+            image: { create: () => ({ type: 'image' }) },
+          }),
+          ...(hasVideoNode && {
+            video_block: { create: () => ({ type: 'video_block' }) },
+          }),
+        },
+      },
+      tr: { replaceSelectionWith: vi.fn().mockReturnThis() },
     },
-    tr: { replaceSelectionWith: vi.fn().mockReturnThis() },
-  },
-  dispatch: vi.fn(),
-});
+    dispatch: vi.fn(),
+  };
+};
 
 const createMockImageEvent = (
   eventType: EventType,
@@ -264,6 +319,52 @@ const createMockImageEvent = (
   } as unknown as Partial<ClipboardEvent | DragEvent>;
 };
 
+const createMockVideoEvent = (
+  eventType: EventType,
+  options: { file?: File | null; hasData?: boolean; text?: string } = {},
+): Partial<ClipboardEvent> | Partial<DragEvent> => {
+  const { file, hasData = true, text = '' } = options;
+  const mockItem =
+    file !== undefined
+      ? { type: file?.type ?? 'video/mp4', getAsFile: () => file }
+      : null;
+
+  const preventDefault = vi.fn();
+
+  if (eventType === 'paste')
+    return {
+      preventDefault,
+      clipboardData: hasData
+        ? ({
+            items: mockItem
+              ? [mockItem]
+              : text
+                ? [
+                    {
+                      kind: 'string',
+                      getAsString: (callback: (data: string) => void) =>
+                        callback(text),
+                      getAsFile: () => null,
+                      type: 'text/plain',
+                    } as unknown as DataTransferItem,
+                  ]
+                : [],
+            getData: () => text,
+          } as unknown as DataTransfer)
+        : null,
+    };
+
+  return {
+    preventDefault,
+    dataTransfer: hasData
+      ? ({
+          items: mockItem ? [mockItem] : [],
+          getData: () => text,
+        } as unknown as DataTransfer)
+      : null,
+  };
+};
+
 const initImageEditor = async (
   callbacks: {
     onImageAdd?: ReturnType<typeof vi.fn>;
@@ -280,17 +381,39 @@ const initImageEditor = async (
   });
 };
 
+const initVideoEditor = async (
+  callbacks: {
+    onVideoAdd?: ReturnType<typeof vi.fn>;
+    onVideoError?: ReturnType<typeof vi.fn>;
+  } = {},
+) => {
+  await createMilkdownEditor({
+    root: {} as HTMLElement,
+    defaultValue: '',
+    ...(callbacks as Pick<
+      Parameters<typeof createMilkdownEditor>[0],
+      'onVideoAdd' | 'onVideoError'
+    >),
+  });
+};
+
 const invokeHandler = (
   eventType: EventType,
   view: MockEditorView,
   event: Partial<ClipboardEvent | DragEvent>,
-) =>
-  eventType === 'paste'
-    ? state.imagePluginHandlers!.handlePaste(
-        view,
-        event as Partial<ClipboardEvent>,
-      )
-    : state.imagePluginHandlers!.handleDrop(view, event as Partial<DragEvent>);
+  handlerType: 'image' | 'video',
+): boolean => {
+  const handlers =
+    handlerType === 'image'
+      ? state.imagePluginHandlers
+      : state.videoPluginHandlers;
+
+  return (
+    (eventType === 'paste'
+      ? handlers?.handlePaste(view, event as Partial<ClipboardEvent>)
+      : handlers?.handleDrop(view, event as Partial<DragEvent>)) ?? false
+  );
+};
 
 describe('[Components] Editor config', () => {
   afterEach(() => {
@@ -374,12 +497,12 @@ describe('[Components] Editor config', () => {
   });
 
   describe('Image upload plugin', () => {
-    it.each([
-      ['onImageAdd', { onImageAdd: vi.fn() }],
-      ['onImageError', { onImageError: vi.fn() }],
-    ])('should use plugin when %s is provided', async (_, callbacks) => {
+    it('should use plugin when all callbacks are provided', async () => {
       state.imagePluginHandlers = null;
-      await initImageEditor(callbacks);
+      await initImageEditor({
+        onImageAdd: vi.fn(),
+        onImageError: vi.fn(),
+      });
       expect(state.imagePluginHandlers).not.toBeNull();
     });
 
@@ -396,6 +519,18 @@ describe('[Components] Editor config', () => {
   });
 
   describe('Image handling (paste/drop)', () => {
+    let onImageAdd: ReturnType<typeof vi.fn>;
+    let onImageError: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      onImageAdd = vi.fn();
+      onImageError = vi.fn();
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
     it.each<[EventType]>([['paste'], ['drop']])(
       'should handle %s with valid image file',
       async eventType => {
@@ -403,18 +538,18 @@ describe('[Components] Editor config', () => {
           ...URL,
           createObjectURL: () => 'blob:test-url',
         });
-        const onImageAdd = vi.fn();
-        await initImageEditor({ onImageAdd });
+        await initImageEditor({ onImageAdd, onImageError });
 
         const file = new File(['test'], 'test.png', { type: 'image/png' });
         const event = createMockImageEvent(eventType, { file });
-        const view = createMockView(true);
+        const view = createMockView({ hasImageNode: true });
 
-        const result = invokeHandler(eventType, view, event);
+        const result = invokeHandler(eventType, view, event, 'image');
 
         expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalled();
         expect(onImageAdd).toHaveBeenCalledWith(file, 'blob:test-url');
+        expect(onImageError).not.toHaveBeenCalled();
         expect(view.dispatch).toHaveBeenCalled();
       },
     );
@@ -425,17 +560,18 @@ describe('[Components] Editor config', () => {
     ])(
       'should reject %s with invalid type %s',
       async (eventType, type, errorMsg) => {
-        const onImageError = vi.fn();
-        await initImageEditor({ onImageError });
+        await initImageEditor({ onImageAdd, onImageError });
 
         const file = new File(['test'], 'test.file', { type });
         const result = invokeHandler(
           eventType,
           createMockView(),
           createMockImageEvent(eventType, { file }),
+          'image',
         );
 
         expect(result).toBe(true);
+        expect(onImageAdd).not.toHaveBeenCalled();
         expect(onImageError).toHaveBeenCalledWith(
           expect.stringContaining(errorMsg),
         );
@@ -445,8 +581,7 @@ describe('[Components] Editor config', () => {
     it.each<[EventType]>([['paste'], ['drop']])(
       'should reject %s with oversized image',
       async eventType => {
-        const onImageError = vi.fn();
-        await initImageEditor({ onImageError });
+        await initImageEditor({ onImageAdd, onImageError });
 
         const file = new File(
           [new Uint8Array(MAX_IMAGE_SIZE_BYTES + 1)],
@@ -457,9 +592,11 @@ describe('[Components] Editor config', () => {
           eventType,
           createMockView(),
           createMockImageEvent(eventType, { file }),
+          'image',
         );
 
         expect(result).toBe(true);
+        expect(onImageAdd).not.toHaveBeenCalled();
         expect(onImageError).toHaveBeenCalledWith(
           expect.stringContaining('File size exceeds'),
         );
@@ -469,11 +606,12 @@ describe('[Components] Editor config', () => {
     it.each<[EventType]>([['paste'], ['drop']])(
       'should return false when no data on %s',
       async eventType => {
-        await initImageEditor({ onImageAdd: vi.fn() });
+        await initImageEditor({ onImageAdd, onImageError });
         const result = invokeHandler(
           eventType,
           createMockView(),
           createMockImageEvent(eventType, { hasData: false }),
+          'image',
         );
         expect(result).toBe(false);
       },
@@ -482,7 +620,7 @@ describe('[Components] Editor config', () => {
     it.each<[EventType]>([['paste'], ['drop']])(
       'should return false when %s contains no image items',
       async eventType => {
-        await initImageEditor({ onImageAdd: vi.fn() });
+        await initImageEditor({ onImageAdd, onImageError });
 
         const event = {
           [eventType === 'paste' ? 'clipboardData' : 'dataTransfer']: {
@@ -490,7 +628,12 @@ describe('[Components] Editor config', () => {
           },
         } as unknown as Partial<ClipboardEvent | DragEvent>;
 
-        const result = invokeHandler(eventType, createMockView(), event);
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          event,
+          'image',
+        );
         expect(result).toBe(false);
       },
     );
@@ -498,28 +641,212 @@ describe('[Components] Editor config', () => {
     it.each<[EventType]>([['paste'], ['drop']])(
       'should return true but not process %s when getAsFile returns null',
       async eventType => {
-        const onImageAdd = vi.fn();
-        await initImageEditor({ onImageAdd });
+        await initImageEditor({ onImageAdd, onImageError });
 
         const result = invokeHandler(
           eventType,
           createMockView(),
           createMockImageEvent(eventType, { file: null }),
+          'image',
         );
 
         expect(result).toBe(true);
         expect(onImageAdd).not.toHaveBeenCalled();
+        expect(onImageError).not.toHaveBeenCalled();
       },
     );
 
     it('should not insert image when imageNodeType is not available', async () => {
       vi.stubGlobal('URL', { ...URL, createObjectURL: () => 'blob:test' });
-      const onImageAdd = vi.fn();
-      await initImageEditor({ onImageAdd });
+      await initImageEditor({ onImageAdd, onImageError });
 
       const file = new File(['test'], 'test.png', { type: 'image/png' });
-      const view = createMockView(false);
-      invokeHandler('paste', view, createMockImageEvent('paste', { file }));
+      const view = createMockView();
+      invokeHandler(
+        'paste',
+        view,
+        createMockImageEvent('paste', { file }),
+        'image',
+      );
+
+      expect(view.dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Video upload plugin', () => {
+    it('should use plugin when all callbacks are provided', async () => {
+      state.videoPluginHandlers = null;
+      await initVideoEditor({
+        onVideoAdd: vi.fn(),
+        onVideoError: vi.fn(),
+      });
+      expect(state.videoPluginHandlers).not.toBeNull();
+    });
+
+    it('should not use plugin in readOnly mode', async () => {
+      state.videoPluginHandlers = null;
+      await createMilkdownEditor({
+        root: {} as HTMLElement,
+        defaultValue: '',
+        readOnly: true,
+        onVideoAdd: vi.fn(),
+      });
+      expect(state.videoPluginHandlers).toBeNull();
+    });
+  });
+
+  describe('Video handling (paste/drop)', () => {
+    let onVideoAdd: ReturnType<typeof vi.fn>;
+    let onVideoError: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      onVideoAdd = vi.fn();
+      onVideoError = vi.fn();
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should handle %s with valid video file',
+      async eventType => {
+        vi.stubGlobal('URL', {
+          ...URL,
+          createObjectURL: () => 'blob:test-url',
+        });
+        await initVideoEditor({ onVideoAdd, onVideoError });
+
+        const file = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+        const event = createMockVideoEvent(eventType, { file });
+        const view = createMockView({
+          hasVideoNode: true,
+        });
+
+        const result = invokeHandler(eventType, view, event, 'video');
+
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(onVideoAdd).toHaveBeenCalledWith(file, 'blob:test-url');
+        expect(onVideoError).not.toHaveBeenCalled();
+        expect(view.dispatch).toHaveBeenCalled();
+      },
+    );
+
+    it.each<[EventType, string, string]>([
+      ['paste', 'video/mpeg', 'File type "video/mpeg" is not allowed'],
+      ['drop', 'video/avi', 'File type "video/avi" is not allowed'],
+    ])(
+      'should reject %s with invalid type %s',
+      async (eventType, type, errorMsg) => {
+        await initVideoEditor({ onVideoAdd, onVideoError });
+
+        const file = new File(['test'], 'test.file', { type });
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockVideoEvent(eventType, { file }),
+          'video',
+        );
+
+        expect(result).toBe(true);
+        expect(onVideoAdd).not.toHaveBeenCalled();
+        expect(onVideoError).toHaveBeenCalledWith(
+          expect.stringContaining(errorMsg),
+        );
+      },
+    );
+
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should reject %s with oversized video',
+      async eventType => {
+        await initVideoEditor({ onVideoAdd, onVideoError });
+
+        const file = new File(
+          [new Uint8Array(MAX_VIDEO_SIZE_BYTES + 1)],
+          'large.mp4',
+          { type: 'video/mp4' },
+        );
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockVideoEvent(eventType, { file }),
+          'video',
+        );
+
+        expect(result).toBe(true);
+        expect(onVideoAdd).not.toHaveBeenCalled();
+        expect(onVideoError).toHaveBeenCalledWith(
+          expect.stringContaining('File size exceeds'),
+        );
+      },
+    );
+
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should return false when no data on %s',
+      async eventType => {
+        await initVideoEditor({ onVideoAdd, onVideoError });
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockVideoEvent(eventType, { hasData: false }),
+          'video',
+        );
+        expect(result).toBe(false);
+      },
+    );
+
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should return false when %s contains no video items',
+      async eventType => {
+        await initVideoEditor({ onVideoAdd, onVideoError });
+
+        const event = {
+          [eventType === 'paste' ? 'clipboardData' : 'dataTransfer']: {
+            items: [{ type: 'text/plain', getAsFile: () => null }],
+          },
+        } as unknown as Partial<ClipboardEvent | DragEvent>;
+
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          event,
+          'video',
+        );
+        expect(result).toBe(false);
+      },
+    );
+
+    it.each<[EventType]>([['paste'], ['drop']])(
+      'should return true but not process %s when getAsFile returns null',
+      async eventType => {
+        await initVideoEditor({ onVideoAdd, onVideoError });
+
+        const result = invokeHandler(
+          eventType,
+          createMockView(),
+          createMockVideoEvent(eventType, { file: null }),
+          'video',
+        );
+
+        expect(result).toBe(true);
+        expect(onVideoAdd).not.toHaveBeenCalled();
+        expect(onVideoError).not.toHaveBeenCalled();
+      },
+    );
+
+    it('should not insert video when videoNodeType is not available', async () => {
+      vi.stubGlobal('URL', { ...URL, createObjectURL: () => 'blob:test' });
+      await initVideoEditor({ onVideoAdd, onVideoError });
+
+      const file = new File(['test'], 'test.mp4', { type: 'video/mp4' });
+      const view = createMockView();
+      invokeHandler(
+        'paste',
+        view,
+        createMockVideoEvent('paste', { file }),
+        'video',
+      );
 
       expect(view.dispatch).not.toHaveBeenCalled();
     });
