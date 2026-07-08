@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   policy-check:
-    name: Policy check
+    name: Policy Check
     runs-on: ubuntu-latest
     if: |
       github.event.pull_request.user.login == 'dependabot[bot]' &&
@@ -93,7 +93,7 @@ jobs:
           echo "- Reason: ${{ steps.classify.outputs.reason }}" >> $GITHUB_STEP_SUMMARY
 
   auto-merge:
-    name: Auto merge
+    name: Auto Merge
     runs-on: ubuntu-latest
     needs: policy-check
     if: |
