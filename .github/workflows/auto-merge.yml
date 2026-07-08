@@ -1,0 +1,120 @@
+name: 🤖 Auto Merge Dependabot PRs
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  policy-check:
+    name: Policy Check
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      !github.event.pull_request.draft
+    timeout-minutes: 5
+    outputs:
+      should_merge: ${{ steps.classify.outputs.should_merge }}
+    steps:
+      - name: Fetch dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ github.token }}
+
+      - name: Classify update for auto-merge
+        id: classify
+        shell: bash
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+          PREVIOUS_VERSION: ${{ steps.metadata.outputs.previous-version }}
+          NEW_VERSION: ${{ steps.metadata.outputs.new-version }}
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+        run: |
+          set -euo pipefail
+
+          should_merge=false
+          reason="blocked-by-policy"
+
+          case "$DEPENDENCY_TYPE:$UPDATE_TYPE" in
+          direct:development:version-update:semver-minor|direct:development:version-update:semver-patch)
+              should_merge=true; reason="dev-minor-or-patch"
+              ;;
+            direct:production:version-update:semver-patch)
+              should_merge=true; reason="prod-patch-only"
+              ;;
+
+            *:|*:null|*:unknown)
+
+              if [[ "$DEPENDENCY_NAMES" != *","* ]] && \
+                [[ "$PREVIOUS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && \
+                [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                
+                IFS=. read -r oM om op <<< "$PREVIOUS_VERSION"
+                IFS=. read -r nM nm np <<< "$NEW_VERSION"
+
+                if (( nM == oM )); then
+                  if [[ "$DEPENDENCY_TYPE" == "direct:development" ]] && \
+                    (( nm > om || (nm == om && np > op) )); then
+                    should_merge=true
+                    reason="dev-null-semver-fallback"
+                  
+                  elif [[ "$DEPENDENCY_TYPE" == "direct:production" ]] && \
+                      (( nm == om && np > op )); then
+                    should_merge=true
+                    reason="prod-null-patch-fallback"
+                  else
+                    reason="null-not-safe-bump-for-$DEPENDENCY_TYPE"
+                  fi
+                else
+                  reason="null-major-bump-blocked"
+                fi
+              else
+                reason="null-invalid-or-multi-deps"
+              fi
+              ;;
+          esac
+
+          echo "should_merge=$should_merge" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+
+      - name: Log decision
+        run: |
+          echo "### Auto-Merge Decision for #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Decision: ${{ steps.classify.outputs.should_merge }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Reason: ${{ steps.classify.outputs.reason }}" >> $GITHUB_STEP_SUMMARY
+
+  auto-merge:
+    name: Auto Merge
+    runs-on: ubuntu-latest
+    needs: policy-check
+    if: |
+      needs.policy-check.result == 'success' &&
+      needs.policy-check.outputs.should_merge == 'true' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      !github.event.pull_request.draft
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+    steps:
+      - name: Approve PR for auto-merge
+        run: |
+          gh pr review "$PR_URL" \
+            --approve \
+            --body "🚀 Auto-approved by GitHub Actions based on SemVer policy."
+
+      - name: Enable auto-merge
+        run: |
+          gh pr merge \
+            --auto --squash "$PR_URL" \
+            --delete-branch --subject "$PR_TITLE"
