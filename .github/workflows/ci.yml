@@ -44,21 +44,6 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-env
 
-      - name: Wrangler debug
-        run: |
-          pnpm wrangler --version
-
-          echo "===== BEFORE ====="
-          ls -la worker-configuration.d.ts
-
-          pnpm wrangler types
-
-          echo "===== DIFF ====="
-          git diff -- worker-configuration.d.ts
-
-          echo "===== CHECK ====="
-          pnpm wrangler types --check
-
       - name: Check types
         run: pnpm check
 
