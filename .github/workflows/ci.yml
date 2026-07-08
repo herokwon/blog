@@ -44,8 +44,18 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-env
 
-      - name: Check types
-        run: pnpm check
+      - name: Debug Wrangler Types
+        run: |
+          pnpm wrangler types
+
+          echo "===== DIFF ====="
+          git diff worker-configuration.d.ts
+
+          echo "===== STATUS ====="
+          git status --porcelain
+
+            - name: Check types
+              run: pnpm check
 
   tests:
     name: Tests
@@ -58,6 +68,16 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
+
+      - name: Debug Wrangler Types
+        run: |
+          pnpm wrangler types
+
+          echo "===== DIFF ====="
+          git diff worker-configuration.d.ts
+
+          echo "===== STATUS ====="
+          git status --porcelain
 
       - name: Playwright browser caching note
         run: |
@@ -81,6 +101,16 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
+
+      - name: Debug Wrangler Types
+        run: |
+          pnpm wrangler types
+
+          echo "===== DIFF ====="
+          git diff worker-configuration.d.ts
+
+          echo "===== STATUS ====="
+          git status --porcelain
 
       - name: Run build
         run: pnpm build
