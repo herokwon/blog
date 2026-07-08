@@ -41,6 +41,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
       - name: Wrangler debug
         run: |
           pnpm wrangler --version
@@ -55,9 +58,6 @@ jobs:
 
           echo "===== CHECK ====="
           pnpm wrangler types --check
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-env
 
       - name: Check types
         run: pnpm check
