@@ -43,4 +43,7 @@ export default defineConfig(
     // 'svelte/button-has-type': 'error'
     rules: {},
   },
+  {
+    ignores: ['worker-configuration.d.ts'],
+  },
 );
