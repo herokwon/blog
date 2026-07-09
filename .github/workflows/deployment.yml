@@ -197,7 +197,7 @@ jobs:
           | **Environment** | ${DEPLOYMENT_ENV} |"
 
           [ -n "$PR_TITLE" ] && BODY="${BODY}
-          | **Pull Request** | [\`${PR_TITLE}\`](${PR_URL}) |"
+          | **Pull Request** | [${PR_TITLE}](${PR_URL}) |"
 
           [ -n "$PR_COMMIT" ] && BODY="${BODY}
           | **Commit** | [\`${PR_COMMIT_SHORT}\`](https://github.com/${GH_REPO}/commit/${PR_COMMIT}) |"
