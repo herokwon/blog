@@ -21,7 +21,28 @@ export default defineConfig({
     }),
   ],
   test: {
+    globals: true,
     expect: { requireAssertions: true },
+    reporters: [
+      'default',
+      'hanging-process',
+      ...(process.env.GITHUB_ACTIONS === 'true' ? ['github-actions'] : []),
+    ],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,svelte}'],
+      exclude: [
+        'src/**/*.{test,spec}.{js,ts}',
+        'src/**/index.{js,ts}',
+        'src/**/*.d.ts',
+      ],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 70,
+        statements: 80,
+      },
+    },
     projects: [
       {
         extends: './vite.config.ts',
