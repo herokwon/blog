@@ -44,6 +44,14 @@ Architecture documentation should be updated whenever architectural changes are 
 
 Small, incremental updates are preferred over large documentation rewrites.
 
+### Cross-References
+
+Link to other documents only when it improves understanding.
+
+Avoid dedicated "Related Documents" sections at the end of each document, as they introduce unnecessary maintenance overhead and duplicate navigation.
+
+Prefer contextual links within the relevant sections instead.
+
 <br />
 
 ## Documentation Structure
