@@ -102,39 +102,14 @@ Stores structured application data using Cloudflare D1 through Drizzle ORM.
 
 <br />
 
-## Content Lifecycle
+## Domain Overview
 
-Content progresses through the following lifecycle.
+The application is centered around two primary domains:
 
-```
-Draft
-  ├────────► Published ◄────────┐
-  │              │              │
-  │              ▼              │
-  └────────►  Archived  ────────┘
-```
+- Content
+- Media
 
-Allowed transitions:
-
-- Draft → Published
-- Draft → Archived
-- Published → Archived
-- Archived → Published
-
-The following transitions are not permitted:
-
-- Published → Draft
-- Archived → Draft
-
-<br />
-
-## Media Lifecycle
-
-Media assets are owned by content.
-
-When content is permanently deleted, all associated media objects are immediately removed from Cloudflare R2.
-
-No orphaned media should remain in storage.
+Detailed business rules, lifecycle definitions, and ownership are documented in the corresponding domain documentation.
 
 <br />
 
@@ -155,14 +130,3 @@ Detailed architectural decisions are documented as Architecture Decision Records
 This document intentionally avoids explaining the rationale behind decisions.
 
 Refer to the `adr/` directory for decision history and reasoning.
-
-<br />
-
-## Related Documents
-
-- `README.md`
-- `domain/content.md`
-- `domain/media.md`
-- `admin-security.md`
-- `operations/migrations-and-recovery.md`
-- `adr/`
