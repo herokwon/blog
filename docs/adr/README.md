@@ -16,6 +16,7 @@ The ADR process follows these principles.
 
 - Every significant architectural decision is documented.
 - ADRs explain **why** a decision was made, not **how** it is implemented.
+- ADRs record decisions that have been made, not decisions that are still under consideration.
 - ADRs are immutable after acceptance, except for editorial corrections.
 - New decisions supersede previous decisions through new ADRs rather than modifying existing ones.
 
