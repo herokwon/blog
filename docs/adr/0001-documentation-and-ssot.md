@@ -11,13 +11,15 @@ Without an explicit source of truth, implementation details can diverge across s
 
 ## Decision
 
-Document required behavior before implementation. Use the following sources of truth:
+Document required behavior before implementation. Establish the following sources of truth:
 
-- Architecture documents for current system rules and interfaces.
-- ADRs for the rationale behind important architectural choices.
-- Drizzle schema and migrations for database structure.
-- Zod schemas for API request and response contracts.
-- Persisted Markdown for Content body data.
+- Architecture documents define current system behavior, boundaries, and architectural rules.
+- ADRs record the rationale, alternatives, and consequences of important architectural decisions.
+- Drizzle schema and migrations define the persisted database structure and migration history.
+- Zod schemas define the machine-readable API request and response contracts and are used for runtime validation and OpenAPI generation.
+- Persisted Markdown defines the Content body source of truth.
+
+Architecture documents describe the intended current behavior, while implementation artifacts such as the Drizzle schema, migrations, and Zod schemas are the authoritative machine-readable definitions for their respective concerns. Derived values such as summary, rendered output, and editor state are not independent sources of truth.
 
 Derived values such as summary, rendered output, and editor state are not independent sources of truth.
 
