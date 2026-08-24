@@ -44,7 +44,7 @@ The project uses a single Cloudflare Worker and a single Production D1 database.
 
 A Preview URL is the URL provided for a Worker version uploaded with `wrangler versions upload`. It is used to validate the version before it is deployed to Production and does not represent a separate Worker or D1 environment.
 
-Preview versions use the same D1 binding as Production and must not perform operations that modify production data.
+Preview versions use the same D1 binding as Production. Preview versions are validation-only and must not execute mutating operations against Production D1.
 
 D1 migrations are validated locally and applied explicitly to Production D1 as part of the production deployment process. Worker versions do not version or isolate D1 storage state.
 
