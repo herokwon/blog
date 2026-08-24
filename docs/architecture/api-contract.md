@@ -63,7 +63,7 @@ Errors use:
 
 ```json
 {
-	"errors": {
+	"error": {
 		"code": "CONTENT_NOT_FOUND",
 		"message": "Content was not found.",
 		"details": {}
