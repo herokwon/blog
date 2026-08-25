@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "test:unit": "vitest",
     "test:coverage": "vitest --coverage",
-    "test": "npm run test:unit -- --run && npm run test:e2e",
+    "test": "pnpm run test:unit -- --run && pnpm run test:e2e",
     "test:e2e": "playwright install && playwright test",
     "gen": "wrangler types && prettier --write worker-configuration.d.ts",
     "db:push": "drizzle-kit push",
