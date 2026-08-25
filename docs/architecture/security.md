@@ -51,10 +51,10 @@ The initial system has one Admin role represented by the email allowlist. There 
 
 ```json
 {
-	"error": {
-		"code": "FORBIDDEN",
-		"message": "Administrator access is required"
-	}
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Administrator access is required"
+  }
 }
 ```
 
