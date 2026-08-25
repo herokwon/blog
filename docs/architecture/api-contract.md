@@ -43,8 +43,8 @@ All list endpoints use an opaque `cursor` and bounded `limit`.
 
 ```json
 {
-	"items": [],
-	"nextCursor": "opaque-cursor-or-null"
+  "items": [],
+  "nextCursor": "opaque-cursor-or-null"
 }
 ```
 
@@ -63,11 +63,11 @@ Errors use:
 
 ```json
 {
-	"error": {
-		"code": "CONTENT_NOT_FOUND",
-		"message": "Content was not found.",
-		"details": {}
-	}
+  "error": {
+    "code": "CONTENT_NOT_FOUND",
+    "message": "Content was not found.",
+    "details": {}
+  }
 }
 ```
 
