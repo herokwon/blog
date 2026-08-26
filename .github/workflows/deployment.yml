@@ -49,11 +49,13 @@ jobs:
         run: |
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" == release/* ]]; then
             echo "environment=production" >> "$GITHUB_OUTPUT"
-            echo "wrangler-command=deploy" >> "$GITHUB_OUTPUT"
+            echo "operation=deploy" >> "$GITHUB_OUTPUT"
+            echo "options=--version-tag" >> "$GITHUB_OUTPUT"
             echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           elif [[ "$BASE_REF" == release/* ]]; then
             echo "environment=preview" >> "$GITHUB_OUTPUT"
-            echo "wrangler-command=versions upload" >> "$GITHUB_OUTPUT"
+            echo "operation=upload" >> "$GITHUB_OUTPUT"
+            echo "options=--tag" >> "$GITHUB_OUTPUT"
             echo "sha=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
           else
             echo "::error:: Unsupported deployment target"
@@ -64,15 +66,14 @@ jobs:
         id: deploy
         uses: cloudflare/wrangler-action@v4
         env:
-          WRANGLER_COMMAND: ${{ steps.resolve.outputs.wrangler-command }}
+          OPERATION: ${{ steps.resolve.outputs.operation }}
+          OPTIONS: ${{ steps.resolve.outputs.options }}
           SHA: ${{ steps.resolve.outputs.sha }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ env.CF_ACCOUNT_ID }}
           command: >-
-            ${{ env.WRANGLER_COMMAND }}
-              --tag ${{ env.SHA }}
-              ${{ env.WRANGLER_COMMAND == 'deploy' && '-y' || format('--message "{0} @ {1}"', github.event.pull_request.base.ref, env.SHA) }}
+            versions ${{ env.OPERATION }} ${{ env.OPTIONS }} ${{ env.SHA }} ${{ env.OPERATION == 'deploy' && '-y' || format('--message "{0} @ {1}"', github.event.pull_request.base.ref, env.SHA) }}
         continue-on-error: true
 
       - name: Get Worker Name
@@ -84,16 +85,13 @@ jobs:
         env:
           RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
-          raw_url="${RAW_URL:-}"
-          worker_url=""
+          WORKER_URL="${RAW_URL:-}"
 
-          if [[ "$raw_url" =~ ^https:// ]]; then
-            worker_url="$raw_url"
-          else
-            worker_url="https://$raw_url"
+          if [[ -n "$WORKER_URL" && ! "$WORKER_URL" =~ ^https:// ]]; then
+            WORKER_URL="https://$WORKER_URL"
           fi
 
-          echo "result=$worker_url" >> "$GITHUB_OUTPUT"
+          echo "result=$WORKER_URL" >> "$GITHUB_OUTPUT"
 
   deploy-github:
     name: Deploy to GitHub
