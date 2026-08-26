@@ -85,16 +85,13 @@ jobs:
         env:
           RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
-          raw_url="${RAW_URL:-}"
-          worker_url=""
+          WORKER_URL="${RAW_URL:-}"
 
-          if [[ "$raw_url" =~ ^https:// ]]; then
-            worker_url="$raw_url"
-          else
-            worker_url="https://$raw_url"
+          if [[ -n "$WORKER_URL" && ! "$WORKER_URL" =~ ^https:// ]]; then
+            WORKER_URL="https://$WORKER_URL"
           fi
 
-          echo "result=$worker_url" >> "$GITHUB_OUTPUT"
+          echo "result=$WORKER_URL" >> "$GITHUB_OUTPUT"
 
   deploy-github:
     name: Deploy to GitHub
