@@ -12,7 +12,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm run build && pnpm run preview',
+    command: 'pnpm build && pnpm preview',
     port: 4173,
     reuseExistingServer: !process.env.CI,
   },
