@@ -39,7 +39,7 @@ jobs:
 
           if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error:: Invalid release branch: $RELEASE_REF"
-            echo "::error:: Expected format: release/v<major>.<minor>.<patch> "
+            echo "::error:: Expected format: release/v<major>.<minor>.<patch>"
             exit 1
           fi
 
@@ -91,8 +91,8 @@ jobs:
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           APP_USER_ID: ${{ steps.user-id.outputs.id }}
         run: |
-          git config --global user.name '$APP_SLUG[bot]'
-          git config --global user.email '$APP_USER_ID+$APP_SLUG[bot]@users.noreply.github.com'
+          git config --global user.name "$APP_SLUG[bot]"
+          git config --global user.email "$APP_USER_ID+$APP_SLUG[bot]@users.noreply.github.com"
           gh auth setup-git
 
       - name: Prepare Version Bump Branch
