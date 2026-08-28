@@ -1,0 +1,236 @@
+name: 🚀 Deployment
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+      - release/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.base.ref == 'main' && 'production' || 'preview' }}
+  cancel-in-progress: true
+
+env:
+  GH_REPO: ${{ github.repository }}
+  GH_TOKEN: ${{ github.token }}
+  CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy-worker:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && github.actor != 'dependabot[bot]'
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.deploy.outcome }}
+      environment: ${{ steps.resolve.outputs.environment }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      name: ${{ steps.worker-name.outputs.result }}
+      url: ${{ steps.deployment-url.outputs.result }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-env
+
+      - name: Build
+        run: pnpm build
+
+      - name: Resolve Deployment
+        id: resolve
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" == release/* ]]; then
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "operation=deploy" >> "$GITHUB_OUTPUT"
+            echo "options=--version-tag" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [[ "$BASE_REF" == release/* ]]; then
+            echo "environment=preview" >> "$GITHUB_OUTPUT"
+            echo "operation=upload" >> "$GITHUB_OUTPUT"
+            echo "options=--tag" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error:: Unsupported deployment target"
+            exit 1
+          fi
+
+      - name: Deploy with Wrangler
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        env:
+          OPERATION: ${{ steps.resolve.outputs.operation }}
+          OPTIONS: ${{ steps.resolve.outputs.options }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CF_ACCOUNT_ID }}
+          command: >-
+            versions ${{ env.OPERATION }} ${{ env.OPTIONS }} ${{ env.SHA }} ${{ env.OPERATION == 'deploy' && '-y' || format('--message "{0} @ {1}"', github.event.pull_request.base.ref, env.SHA) }}
+        continue-on-error: true
+
+      - name: Get Worker Name
+        id: worker-name
+        run: echo "result=$(jq -r '.name' wrangler.jsonc)" >> "$GITHUB_OUTPUT"
+
+      - name: Get Deployment URL
+        id: deployment-url
+        env:
+          RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          WORKER_URL="${RAW_URL:-}"
+
+          if [[ -n "$WORKER_URL" && ! "$WORKER_URL" =~ ^https:// ]]; then
+            WORKER_URL="https://$WORKER_URL"
+          fi
+
+          echo "result=$WORKER_URL" >> "$GITHUB_OUTPUT"
+
+  deploy-github:
+    name: Deploy to GitHub
+    runs-on: ubuntu-latest
+    needs: deploy-worker
+    timeout-minutes: 10
+    permissions:
+      deployments: write
+    env:
+      DEPLOYMENT_ENV: ${{ needs.deploy-worker.outputs.environment }}
+    steps:
+      - name: Create Deployment
+        id: create-deployment
+        env:
+          REF: ${{ needs.deploy-worker.outputs.sha }}
+        run: |
+          DEPLOYMENT_ID=$(gh api repos/$GH_REPO/deployments \
+            --method POST \
+            --header "Accept: application/vnd.github+json" \
+            --input - \
+            -q '.id' <<EOF
+          {
+            "ref": "$REF",
+            "environment": "$DEPLOYMENT_ENV",
+            "auto_merge": false,
+            "required_contexts": []
+          }
+          EOF
+          )
+
+          echo "id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+
+      - name: Conclude Deployment
+        env:
+          DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.id }}
+          DEPLOYMENT_STATE: ${{ needs.deploy-worker.outputs.result == 'success' && 'success' || 'failure' }}
+          DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
+        run: |
+          gh api repos/$GH_REPO/deployments/$DEPLOYMENT_ID/statuses \
+            -F state="$DEPLOYMENT_STATE" \
+            -F environment=$DEPLOYMENT_ENV \
+            -F environment_url=$DEPLOYMENT_URL
+
+  comment-pr:
+    name: Comment on Pull Request
+    runs-on: ubuntu-latest
+    needs: deploy-worker
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment Deployment Result on PR
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_COMMIT: ${{ needs.deploy-worker.outputs.sha }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_URL: ${{ github.event.pull_request.user.html_url }}
+          AVATAR_URL: ${{ github.event.pull_request.user.avatar_url }}
+          DEPLOYED: ${{ needs.deploy-worker.outputs.result == 'success' }}
+          DEPLOYMENT_ENV: ${{ needs.deploy-worker.outputs.environment }}
+          DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
+          CF_WORKER_NAME: ${{ needs.deploy-worker.outputs.name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          PR_COMMIT_SHORT="${PR_COMMIT:0:7}"
+
+          STATUS_CELL=":x: Failed"
+          [ "$DEPLOYED" = "true" ] && STATUS_CELL=":white_check_mark: Success"
+
+          BODY="### ⚡ Deploying with Cloudflare Workers
+
+          | **Status** | ${STATUS_CELL}! |
+          | :--- | :--- |
+          | **Environment** | ${DEPLOYMENT_ENV} |"
+
+          [ -n "$PR_TITLE" ] && BODY="${BODY}
+          | **Pull Request** | [${PR_TITLE}](${PR_URL}) |"
+
+          [ -n "$PR_COMMIT" ] && BODY="${BODY}
+          | **Commit** | [\`${PR_COMMIT_SHORT}\`](https://github.com/${GH_REPO}/commit/${PR_COMMIT}) |"
+
+          [ -n "$DEPLOYMENT_URL" ] && BODY="${BODY}
+          | **URL** | ${DEPLOYMENT_URL} |"
+
+          [ -n "$AUTHOR" ] && BODY="${BODY}
+          | **Author** | <img src=\"${AVATAR_URL}\" alt=\"avatar\" width=\"16\" height=\"16\" /> [${AUTHOR}](${AUTHOR_URL}) |"
+
+          BODY="${BODY}
+          | **Details** | :arrow_right: [GitHub Actions](https://github.com/${GH_REPO}/actions/runs/${RUN_ID}) <br /> :arrow_right: [Cloudflare Dashboard](https://dash.cloudflare.com/${CF_ACCOUNT_ID}/workers/services/view/${CF_WORKER_NAME}/production/deployments) |"
+
+          gh pr comment "$PR_NUMBER" \
+            --repo "$GH_REPO" \
+            --body "$BODY"
+
+  release-github:
+    name: Release on GitHub
+    runs-on: ubuntu-latest
+    needs: deploy-worker
+    if: |
+      needs.deploy-worker.outputs.result == 'success' &&
+      needs.deploy-worker.outputs.environment == 'production'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+
+      - name: Get Current Version
+        id: package
+        run: echo "version=$(jq -r '.version' package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check Tag Existence
+        id: tag
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          git fetch --tags --force
+
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "⚠️ Tag v$VERSION already exists. Skipping release."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Tag v$VERSION is new. Proceeding..."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: steps.tag.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --target main \
+            --title "v$VERSION" \
+            --generate-notes
