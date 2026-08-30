@@ -15,6 +15,7 @@ concurrency:
 env:
   GH_REPO: ${{ github.repository }}
   GH_TOKEN: ${{ github.token }}
+  CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
 jobs:
@@ -26,20 +27,17 @@ jobs:
     permissions:
       contents: read
     outputs:
-      result: ${{ steps.deploy.outcome }}
+      result: ${{ steps.resolve-result.outputs.result }}
       environment: ${{ steps.resolve.outputs.environment }}
-      sha: ${{ steps.resolve.outputs.sha }}
-      name: ${{ steps.worker-name.outputs.result }}
-      url: ${{ steps.deployment-url.outputs.result }}
+      commit-sha: ${{ steps.resolve.outputs.commit-sha }}
+      worker-name: ${{ steps.deployment-metadata.outputs.worker-name }}
+      url: ${{ steps.deployment-metadata.outputs.url }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
 
       - name: Setup Environment
         uses: ./.github/actions/setup-env
-
-      - name: Build
-        run: pnpm build
 
       - name: Resolve Deployment
         id: resolve
@@ -50,48 +48,80 @@ jobs:
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" == release/* ]]; then
             echo "environment=production" >> "$GITHUB_OUTPUT"
             echo "operation=deploy" >> "$GITHUB_OUTPUT"
-            echo "options=--version-tag" >> "$GITHUB_OUTPUT"
-            echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+            echo "commit-sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           elif [[ "$BASE_REF" == release/* ]]; then
             echo "environment=preview" >> "$GITHUB_OUTPUT"
             echo "operation=upload" >> "$GITHUB_OUTPUT"
-            echo "options=--tag" >> "$GITHUB_OUTPUT"
-            echo "sha=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
+            echo "commit-sha=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
           else
             echo "::error:: Unsupported deployment target"
             exit 1
           fi
 
-      - name: Deploy with Wrangler
-        id: deploy
+      - name: Build
+        if: steps.resolve.outputs.environment == 'preview'
+        run: pnpm build
+
+      - name: Deploy Worker Version
+        id: deploy-version
         uses: cloudflare/wrangler-action@v4
         env:
           OPERATION: ${{ steps.resolve.outputs.operation }}
-          OPTIONS: ${{ steps.resolve.outputs.options }}
-          SHA: ${{ steps.resolve.outputs.sha }}
+          COMMIT_SHA: ${{ steps.resolve.outputs.commit-sha }}
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          apiToken: ${{ env.CF_API_TOKEN }}
           accountId: ${{ env.CF_ACCOUNT_ID }}
           command: >-
-            versions ${{ env.OPERATION }} ${{ env.OPTIONS }} ${{ env.SHA }} ${{ env.OPERATION == 'deploy' && '-y' || format('--message "{0} @ {1}"', github.event.pull_request.base.ref, env.SHA) }}
+            versions ${{ env.OPERATION }} ${{ env.OPERATION == 'deploy' && format('--version-tag {0} -y', env.COMMIT_SHA) || format('--tag {0} --message "{1} @ {0}"', env.COMMIT_SHA, github.event.pull_request.base.ref) }}
         continue-on-error: true
 
-      - name: Get Worker Name
-        id: worker-name
-        run: echo "result=$(jq -r '.name' wrangler.jsonc)" >> "$GITHUB_OUTPUT"
+      - name: Deploy Triggers
+        id: deploy-triggers
+        if: steps.resolve.outputs.environment == 'production'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ env.CF_API_TOKEN }}
+          accountId: ${{ env.CF_ACCOUNT_ID }}
+          command: triggers deploy
+        continue-on-error: true
 
-      - name: Get Deployment URL
-        id: deployment-url
+      - name: Resolve Deployment Result
+        id: resolve-result
         env:
-          RAW_URL: ${{ steps.deploy.outputs.deployment-url }}
+          VERSION_RESULT: ${{ steps.deploy-version.outcome }}
+          TRIGGER_RESULT: ${{ steps.deploy-triggers.outcome }}
+          ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
         run: |
-          WORKER_URL="${RAW_URL:-}"
+          if [[ "$VERSION_RESULT" != "success" || 
+            ( "$ENVIRONMENT" == "production" && "$TRIGGER_RESULT" != "success" ) ]]; then
+            echo "result=failure" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve Deployment Metadata
+        id: deployment-metadata
+        env:
+          ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
+          RAW_URL: ${{ steps.deploy-version.outputs.deployment-url }}
+        run: |
+          WORKER_NAME=$(jq -r '.name' wrangler.jsonc)
+
+          if [[ "$ENVIRONMENT" == "production" ]]; then
+            WORKER_URL=$(
+              jq -r '.routes[] | select(.custom_domain == true) | .pattern' wrangler.jsonc |
+              head -n 1
+            )
+          else
+            WORKER_URL="${RAW_URL:-}"
+          fi
 
           if [[ -n "$WORKER_URL" && ! "$WORKER_URL" =~ ^https:// ]]; then
             WORKER_URL="https://$WORKER_URL"
           fi
 
-          echo "result=$WORKER_URL" >> "$GITHUB_OUTPUT"
+          echo "worker-name=$WORKER_NAME" >> "$GITHUB_OUTPUT"
+          echo "url=$WORKER_URL" >> "$GITHUB_OUTPUT"
 
   deploy-github:
     name: Deploy to GitHub
@@ -106,7 +136,7 @@ jobs:
       - name: Create Deployment
         id: create-deployment
         env:
-          REF: ${{ needs.deploy-worker.outputs.sha }}
+          REF: ${{ needs.deploy-worker.outputs.commit-sha }}
         run: |
           DEPLOYMENT_ID=$(gh api repos/$GH_REPO/deployments \
             --method POST \
@@ -147,7 +177,7 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_COMMIT: ${{ needs.deploy-worker.outputs.sha }}
+          PR_COMMIT: ${{ needs.deploy-worker.outputs.commit-sha }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
           AUTHOR_URL: ${{ github.event.pull_request.user.html_url }}
@@ -155,7 +185,7 @@ jobs:
           DEPLOYED: ${{ needs.deploy-worker.outputs.result == 'success' }}
           DEPLOYMENT_ENV: ${{ needs.deploy-worker.outputs.environment }}
           DEPLOYMENT_URL: ${{ needs.deploy-worker.outputs.url }}
-          CF_WORKER_NAME: ${{ needs.deploy-worker.outputs.name }}
+          CF_WORKER_NAME: ${{ needs.deploy-worker.outputs.worker-name }}
           RUN_ID: ${{ github.run_id }}
         run: |
           PR_COMMIT_SHORT="${PR_COMMIT:0:7}"
