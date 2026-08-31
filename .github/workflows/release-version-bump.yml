@@ -60,13 +60,12 @@ jobs:
       RELEASE_VERSION: ${{ needs.resolve-release.outputs.version }}
       VERSION_BRANCH: ${{ needs.resolve-release.outputs.branch }}
     steps:
-      - name: Generate GitHub App Token
+      - name: Create GitHub App Token
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ vars.APP_CLIENT_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
+          client-id: ${{ vars.RELEASE_VERSION_AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_VERSION_AUTOMATION_APP_PRIVATE_KEY }}
           repositories: ${{ github.repository }}
           permission-contents: write
           permission-pull-requests: write

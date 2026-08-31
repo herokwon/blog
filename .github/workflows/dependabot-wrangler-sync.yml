@@ -1,0 +1,127 @@
+name: 🔄 Dependabot Wrangler Types Synchronization
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate-wrangler-types:
+    name: Generate Wrangler Types
+    runs-on: ubuntu-latest
+    if: |
+      startsWith(github.event.pull_request.head.ref, 'dependabot/') &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      !github.event.pull_request.draft
+    timeout-minutes: 5
+    outputs:
+      should-commit: ${{ steps.check-changes.outputs.should-commit }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-env
+
+      - name: Fetch Dependabot Metadata
+        id: dependabot-metadata
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ github.token }}
+
+      - name: Generate Worker Types
+        if: |
+          contains(steps.dependabot-metadata.outputs.dependency-names, 'wrangler') &&
+          steps.dependabot-metadata.outputs.package-ecosystem == 'npm'
+        run: pnpm gen
+
+      - name: Check for Changes in Worker Types
+        id: check-changes
+        run: |
+          if git diff --quiet -- worker-configuration.d.ts; then
+            echo "should-commit=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-commit=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Artifact
+        if: steps.check-changes.outputs.should-commit == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: worker-types
+          path: worker-configuration.d.ts
+
+  commit-pr:
+    name: Commit Changes to PR
+    runs-on: ubuntu-latest
+    needs: generate-wrangler-types
+    if: needs.generate-wrangler-types.outputs.should-commit == 'true'
+    timeout-minutes: 5
+    env:
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - name: Create GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.DEPENDABOT_WRANGLER_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPENDABOT_WRANGLER_SYNC_APP_PRIVATE_KEY }}
+          repositories: ${{ github.repository }}
+          permission-contents: write
+
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.PR_HEAD_REF }}
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: worker-types
+          path: .
+
+      - name: Check for Changes in Worker Types
+        id: check-changes
+        run: |
+          if git diff --quiet -- worker-configuration.d.ts; then
+            echo "should-commit=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-commit=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Git
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          gh auth setup-git
+
+      - name: Commit generated Worker Types
+        if: steps.check-changes.outputs.should-commit == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git add worker-configuration.d.ts
+          git commit -m "chore(wrangler): Update generated worker types"
+
+      - name: Push Changes to PR
+        if: steps.check-changes.outputs.should-commit == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: git push origin "HEAD:$PR_HEAD_REF"
