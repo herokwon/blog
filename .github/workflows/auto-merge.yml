@@ -6,7 +6,11 @@ on:
       - opened
       - synchronize
       - reopened
-      - ready_for_review
+    branches:
+      - main
+
+env:
+  GH_TOKEN: ${{ github.token }}
 
 permissions:
   contents: write
@@ -20,26 +24,29 @@ jobs:
   policy-check:
     name: Policy Check
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && !github.event.pull_request.draft
+    if: |
+      startsWith(github.event.pull_request.head.ref, 'dependabot/') &&
+      github.event.pull_request.user.login == 'dependabot[bot]' && 
+      !github.event.pull_request.draft
     timeout-minutes: 5
     outputs:
       should_merge: ${{ steps.classify.outputs.should_merge }}
     steps:
       - name: Fetch Dependabot Metadata
-        id: metadata
+        id: dependabot-metadata
         uses: dependabot/fetch-metadata@v3
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ env.GH_TOKEN }}
 
       - name: Classify Update for Auto Merge
         id: classify
         shell: bash
         env:
-          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
-          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
-          PREVIOUS_VERSION: ${{ steps.metadata.outputs.previous-version }}
-          NEW_VERSION: ${{ steps.metadata.outputs.new-version }}
-          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          UPDATE_TYPE: ${{ steps.dependabot-metadata.outputs.update-type }}
+          DEPENDENCY_TYPE: ${{ steps.dependabot-metadata.outputs.dependency-type }}
+          PREVIOUS_VERSION: ${{ steps.dependabot-metadata.outputs.previous-version }}
+          NEW_VERSION: ${{ steps.dependabot-metadata.outputs.new-version }}
+          DEPENDENCY_NAMES: ${{ steps.dependabot-metadata.outputs.dependency-names }}
         run: |
           set -euo pipefail
 
@@ -100,12 +107,9 @@ jobs:
     needs: policy-check
     if: |
       needs.policy-check.result == 'success' &&
-      needs.policy-check.outputs.should_merge == 'true' &&
-      github.event.pull_request.user.login == 'dependabot[bot]' &&
-      !github.event.pull_request.draft
+      needs.policy-check.outputs.should_merge == 'true'
     timeout-minutes: 5
     env:
-      GH_TOKEN: ${{ github.token }}
       PR_TITLE: ${{ github.event.pull_request.title }}
       PR_URL: ${{ github.event.pull_request.html_url }}
     steps:
@@ -118,5 +122,7 @@ jobs:
       - name: Enable Auto Merge
         run: |
           gh pr merge \
-            --auto --squash "$PR_URL" \
-            --delete-branch --subject "$PR_TITLE"
+            --auto \
+            --squash "$PR_URL" \
+            --delete-branch \
+            --subject "$PR_TITLE"
