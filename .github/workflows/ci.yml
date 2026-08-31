@@ -52,6 +52,9 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-env
 
+      - name: Generate Worker Types
+        run: pnpm gen
+
       - name: Check Types
         run: pnpm check
 
@@ -68,6 +71,9 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-env
+
+      - name: Generate Worker Types
+        run: pnpm gen
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install chromium --with-deps
@@ -88,6 +94,9 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-env
+
+      - name: Generate Worker Types
+        run: pnpm gen
 
       - name: Run Build
         run: pnpm build
