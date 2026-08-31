@@ -62,8 +62,8 @@ jobs:
         if: steps.resolve.outputs.environment == 'preview'
         run: pnpm build
 
-      - name: Deploy Worker Version
-        id: deploy-version
+      - name: Publish Worker Version
+        id: publish-version
         uses: cloudflare/wrangler-action@v4
         env:
           OPERATION: ${{ steps.resolve.outputs.operation }}
@@ -88,7 +88,7 @@ jobs:
       - name: Resolve Deployment Result
         id: resolve-result
         env:
-          VERSION_RESULT: ${{ steps.deploy-version.outcome }}
+          VERSION_RESULT: ${{ steps.publish-version.outcome }}
           TRIGGER_RESULT: ${{ steps.deploy-triggers.outcome }}
           ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
         run: |
@@ -103,7 +103,7 @@ jobs:
         id: deployment-metadata
         env:
           ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
-          RAW_URL: ${{ steps.deploy-version.outputs.deployment-url }}
+          RAW_URL: ${{ steps.publish-version.outputs.deployment-url }}
         run: |
           WORKER_NAME=$(jq -r '.name' wrangler.jsonc)
 
