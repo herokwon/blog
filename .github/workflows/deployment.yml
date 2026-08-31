@@ -59,7 +59,6 @@ jobs:
           fi
 
       - name: Build
-        if: steps.resolve.outputs.environment == 'preview'
         run: pnpm build
 
       - name: Publish Worker Version
