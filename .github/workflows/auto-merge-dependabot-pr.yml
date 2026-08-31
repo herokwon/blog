@@ -51,14 +51,14 @@ jobs:
           set -euo pipefail
 
           SHOULD_MERGE=false
-          reason="blocked-by-policy"
+          REASON="blocked-by-policy"
 
           case "$DEPENDENCY_TYPE:$UPDATE_TYPE" in
           direct:development:version-update:semver-minor|direct:development:version-update:semver-patch)
-              SHOULD_MERGE=true; reason="dev-minor-or-patch"
+              SHOULD_MERGE=true; REASON="dev-minor-or-patch"
               ;;
             direct:production:version-update:semver-patch)
-              SHOULD_MERGE=true; reason="prod-patch-only"
+              SHOULD_MERGE=true; REASON="prod-patch-only"
               ;;
 
             *:|*:null|*:unknown)
@@ -74,26 +74,26 @@ jobs:
                   if [[ "$DEPENDENCY_TYPE" == "direct:development" ]] && \
                     (( nm > om || (nm == om && np > op) )); then
                     SHOULD_MERGE=true
-                    reason="dev-null-semver-fallback"
+                    REASON="dev-null-semver-fallback"
                   
                   elif [[ "$DEPENDENCY_TYPE" == "direct:production" ]] && \
                       (( nm == om && np > op )); then
                     SHOULD_MERGE=true
-                    reason="prod-null-patch-fallback"
+                    REASON="prod-null-patch-fallback"
                   else
-                    reason="null-not-safe-bump-for-$DEPENDENCY_TYPE"
+                    REASON="null-not-safe-bump-for-$DEPENDENCY_TYPE"
                   fi
                 else
-                  reason="null-major-bump-blocked"
+                  REASON="null-major-bump-blocked"
                 fi
               else
-                reason="null-invalid-or-multi-deps"
+                REASON="null-invalid-or-multi-deps"
               fi
               ;;
           esac
 
           echo "should-merge=$SHOULD_MERGE" >> "$GITHUB_OUTPUT"
-          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
 
       - name: Log Decision
         run: |
