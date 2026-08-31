@@ -21,8 +21,8 @@ permissions:
   contents: read
 
 jobs:
-  resolve-release:
-    name: Resolve Release
+  resolve-release-version:
+    name: Resolve Release Version
     runs-on: ubuntu-latest
     if: |
       startsWith(github.event.pull_request.head.ref, 'release/') &&
@@ -51,14 +51,14 @@ jobs:
   prepare-version-bump:
     name: Prepare Version Bump
     runs-on: ubuntu-latest
-    needs: resolve-release
+    needs: resolve-release-version
     if: |
       startsWith(github.event.pull_request.head.ref, 'release/') &&
       github.event.pull_request.base.ref == 'main'
     timeout-minutes: 10
     env:
-      RELEASE_VERSION: ${{ needs.resolve-release.outputs.version }}
-      VERSION_BRANCH: ${{ needs.resolve-release.outputs.branch }}
+      RELEASE_VERSION: ${{ needs.resolve-release-version.outputs.version }}
+      VERSION_BRANCH: ${{ needs.resolve-release-version.outputs.branch }}
     steps:
       - name: Create GitHub App Token
         id: app-token
