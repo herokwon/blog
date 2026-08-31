@@ -46,11 +46,13 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
+          PR_PATTERN='^fix(\([^)]*\))?:'
+
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" == release/* ]]; then
             echo "environment=production" >> "$GITHUB_OUTPUT"
             echo "strategy=deploy" >> "$GITHUB_OUTPUT"
             echo "commit-sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
-          elif [[ "$BASE_REF" == "main" && "$HEAD_REF" == fix/* && "$PR_TITLE" =~ ^fix(\([^)]*\))?: ]]; then
+          elif [[ "$BASE_REF" == "main" && "$HEAD_REF" == fix/* && "$PR_TITLE" =~ $PR_PATTERN ]]; then
             echo "environment=production" >> "$GITHUB_OUTPUT"
             echo "strategy=hotfix" >> "$GITHUB_OUTPUT"
             echo "commit-sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
