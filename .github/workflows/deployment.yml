@@ -44,34 +44,84 @@ jobs:
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" == release/* ]]; then
             echo "environment=production" >> "$GITHUB_OUTPUT"
-            echo "operation=deploy" >> "$GITHUB_OUTPUT"
+            echo "strategy=deploy" >> "$GITHUB_OUTPUT"
+            echo "commit-sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [[ "$BASE_REF" == "main" && "$HEAD_REF" == fix/* && "$PR_TITLE" =~ ^fix(\([^)]*\))?: ]]; then
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "strategy=hotfix" >> "$GITHUB_OUTPUT"
             echo "commit-sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           elif [[ "$BASE_REF" == release/* ]]; then
             echo "environment=preview" >> "$GITHUB_OUTPUT"
-            echo "operation=upload" >> "$GITHUB_OUTPUT"
+            echo "strategy=upload" >> "$GITHUB_OUTPUT"
             echo "commit-sha=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
           else
             echo "::error:: Unsupported deployment target"
             exit 1
           fi
 
+      - name: Validate Production Deployment
+        if: steps.resolve.outputs.environment == 'production' && steps.resolve.outputs.strategy == 'hotfix'
+        run: |
+          DEPLOYMENT_ID=$(
+            curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GH_REPO}/deployments?environment=production&per_page=1" |
+            jq -r '.[0].id // empty'
+          )
+
+          [[ -n "$DEPLOYMENT_ID" ]] || {
+            echo "::error::No production deployment found."
+            exit 1
+          }
+
+          STATUS=$(
+            curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GH_REPO}/deployments/${DEPLOYMENT_ID}/statuses?per_page=1" |
+            jq -r '.[0].state // empty'
+          )
+
+          [[ "$STATUS" == "failure" || "$STATUS" == "error" ]] || {
+            echo "::error::Latest production deployment did not fail: ${STATUS:-unknown}"
+            exit 1
+          }
+
       - name: Build
         run: pnpm build
 
-      - name: Publish Worker Version
-        id: publish-version
+      - name: Upload Worker Version
+        id: upload-version
+        if: |
+          steps.resolve.outputs.strategy == 'upload' ||
+          steps.resolve.outputs.strategy == 'hotfix'
         uses: cloudflare/wrangler-action@v4
         env:
-          OPERATION: ${{ steps.resolve.outputs.operation }}
           COMMIT_SHA: ${{ steps.resolve.outputs.commit-sha }}
         with:
           apiToken: ${{ env.CF_API_TOKEN }}
           accountId: ${{ env.CF_ACCOUNT_ID }}
           command: >-
-            versions ${{ env.OPERATION }} ${{ env.OPERATION == 'deploy' && format('--version-tag {0} -y', env.COMMIT_SHA) || format('--tag {0} --message "{1} @ {0}"', env.COMMIT_SHA, github.event.pull_request.base.ref) }}
+            versions upload ${{ format('--tag {0} --message "{1} @ {0}"', env.COMMIT_SHA, github.event.pull_request.base.ref) }}
+
+      - name: Deploy Worker Version
+        id: deploy-version
+        if: |
+          steps.resolve.outputs.strategy == 'deploy' ||
+          steps.resolve.outputs.strategy == 'hotfix'
+        uses: cloudflare/wrangler-action@v4
+        env:
+          COMMIT_SHA: ${{ steps.resolve.outputs.commit-sha }}
+        with:
+          apiToken: ${{ env.CF_API_TOKEN }}
+          accountId: ${{ env.CF_ACCOUNT_ID }}
+          command: >-
+            versions deploy --version-tag ${{ env.COMMIT_SHA }} -y
         continue-on-error: true
 
       - name: Deploy Triggers
@@ -87,11 +137,28 @@ jobs:
       - name: Resolve Deployment Result
         id: resolve-result
         env:
-          VERSION_RESULT: ${{ steps.publish-version.outcome }}
-          TRIGGER_RESULT: ${{ steps.deploy-triggers.outcome }}
+          STRATEGY: ${{ steps.resolve.outputs.strategy }}
           ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
+          UPLOAD_RESULT: ${{ steps.upload-version.outcome }}
+          DEPLOY_RESULT: ${{ steps.deploy-version.outcome }}
+          TRIGGER_RESULT: ${{ steps.deploy-triggers.outcome }}
         run: |
-          if [[ "$VERSION_RESULT" != "success" || 
+          if [[ "$STRATEGY" == "upload" ]]; then
+            VERSION_RESULT="$UPLOAD_RESULT"
+
+          elif [[ "$STRATEGY" == "deploy" ]]; then
+            VERSION_RESULT="$DEPLOY_RESULT"
+
+          elif [[ "$STRATEGY" == "hotfix" ]]; then
+            if [[ "$UPLOAD_RESULT" != "success" || "$DEPLOY_RESULT" != "success" ]]; then
+              echo "result=failure" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            VERSION_RESULT="success"
+          fi
+
+          if [[ "$VERSION_RESULT" != "success" ||
             ( "$ENVIRONMENT" == "production" && "$TRIGGER_RESULT" != "success" ) ]]; then
             echo "result=failure" >> "$GITHUB_OUTPUT"
           else
@@ -102,7 +169,7 @@ jobs:
         id: deployment-metadata
         env:
           ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
-          RAW_URL: ${{ steps.publish-version.outputs.deployment-url }}
+          RAW_URL: ${{ steps.upload-version.outputs.deployment-url || '' }}
         run: |
           WORKER_NAME=$(jq -r '.name' wrangler.jsonc)
 
