@@ -63,6 +63,35 @@ jobs:
             exit 1
           fi
 
+      - name: Validate Production Deployment
+        if: steps.resolve.outputs.environment == 'production' && steps.resolve.outputs.strategy == 'hotfix'
+        run: |
+          DEPLOYMENT_ID=$(
+            curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GH_REPO}/deployments?environment=production&per_page=1" |
+            jq -r '.[0].id // empty'
+          )
+
+          [[ -n "$DEPLOYMENT_ID" ]] || {
+            echo "::error::No production deployment found."
+            exit 1
+          }
+
+          STATUS=$(
+            curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GH_REPO}/deployments/${DEPLOYMENT_ID}/statuses?per_page=1" |
+            jq -r '.[0].state // empty'
+          )
+
+          [[ "$STATUS" == "failure" || "$STATUS" == "error" ]] || {
+            echo "::error::Latest production deployment did not fail: ${STATUS:-unknown}"
+            exit 1
+          }
+
       - name: Build
         run: pnpm build
 
