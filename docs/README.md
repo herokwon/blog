@@ -9,6 +9,11 @@ This directory is the source of truth for Blog project's architecture, domain ru
 - [Database Foundation](architecture/database-foundation.md)
 - [API Contract](architecture/api-contract.md)
 - [Security](architecture/security.md)
+- [Deployment](architecture/deployment.md)
+
+## Development
+
+- [Dependency Management](development/dependency-management.md)
 
 ## Architectural Decision Records
 
