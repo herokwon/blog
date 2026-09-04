@@ -64,9 +64,14 @@ Errors use:
 ```json
 {
   "error": {
-    "code": "CONTENT_NOT_FOUND",
-    "message": "Content was not found.",
-    "details": {}
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed.",
+    "details": [
+      {
+        "path": ["title"],
+        "message": "title is required."
+      }
+    ]
   }
 }
 ```
