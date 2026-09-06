@@ -22,8 +22,7 @@ Content may be created in either `draft` or `published` state and may later be a
 
 ```text
 Create
-├─> Draft ──────> Published ──────> Archived
-└─> Published ─────────────────────> Archived
+└─> Draft ──────> Published ──────> Archived
 ```
 
 Allowed transitions:
@@ -37,18 +36,21 @@ Forbidden transitions:
 - `Published -> Draft`
 - `Archived -> Draft`
 
+Publishing is not part of Content creation. A newly created Content remains Draft until the explicit publish command succeeds.
 Deletion is independent of status. A deleted item retains its status, slug, and `published_at`. Restore clears `deleted_at` and returns the item to the status it had immediately before deletion. This allows deleted Draft, Published, and Archived items to be restored correctly.
 
 ## Timestamps
 
-- `published_at` is set immediately before the first successful publish and is never changed afterward.
+- `published_at` remains `NULL` while Content is Draft and is set immediately before the first successful publish and is never changed afterward.
 - `updated_at` changes when title/body changes or when publish, archive, delete, or restore changes the Content lifecycle.
 - `deleted_at` is set by soft deletion and cleared by restore.
 - All timestamps are stored and returned as UTC ISO 8601 values.
 
 ## Slug
 
-Slug generation occurs immediately before the first publish. Draft title edits do not generate or reserve a final slug.
+Slug generation occurs only when a Draft is being published for the first time.
+
+Draft title edits do not generate or reserve a final slug. Once the first publish succeeds, the slug is immutable regardless of subsequent title edits.
 
 The normalizer:
 

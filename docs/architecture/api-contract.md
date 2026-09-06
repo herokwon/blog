@@ -29,11 +29,50 @@ POST /api/admin/contents/:id/restore
 
 The normal Admin list returns all non-deleted statuses. The trash list returns all deleted Content. `DELETE` performs soft deletion.
 
+## Create Content
+
+`POST /api/admin/contents` accepts only `title` and `body`.
+
+```json
+{
+  "title": "Hello World",
+  "body": "# Hello World"
+}
+```
+
+The request does not accept `status`, `slug`, `published_at`, or `deleted_at`.
+Content is always created as Draft.
+
+```text
+POST /api/admin/contents
+        │
+        ├── title
+        └── body
+              ↓
+           Draft
+              ↓
+POST /api/admin/contents/:id/publish
+              ↓
+         Published
+```
+
+## Update Content
+
+`PATCH /api/admin/contents/:id` accepts one or both of:
+
+- `title`
+- `body`
+
+At least one field must be provided.
+
+Lifecycle fields such as `status`, `slug`, `published_at`, and `deleted_at` cannot be modified through PATCH. Lifecycle changes must use their dedicated endpoints.
+
 ## Commands
 
-- `publish` assigns slug and `published_at` only on the Content's first publication, whether invoked during creation or through a successful transition from draft to published.
+- `POST /api/admin/contents` always creates Content in `draft` state.
+- `publish` transitions Draft to Published and assignes slug and `published_at` on the Content's first publication.
 - `archive` transitions Published to Archived.
-- `restore` clears `deleted_at` and restores the status held before deletion.
+- `restore` clears `deleted_at` and restores the status held before
 
 Invalid transitions return `409 Conflict` with error code `INVALID_CONTENT_STATE`.
 
@@ -54,6 +93,12 @@ Ordering is deterministic:
 - Admin and Trash: `updated_at DESC, id DESC`.
 
 The ID is a tie-breaker. The cursor may encode the ordering values but must remain opaque to clients.
+
+## Success Responses
+
+Single-resource responses return the resource representation directly.
+
+There is no global `data` envelope for successful responses.
 
 ## Contracts and Errors
 
