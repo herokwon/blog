@@ -28,5 +28,13 @@
       "persist": true,
       "head_sampling_rate": 0.05
     }
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blog",
+      "database_id": "a6d03a91-8328-444f-b657-5123963c724d",
+      "migrations_dir": "./drizzle"
+    }
+  ]
 }
