@@ -1,3 +1,4 @@
+import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 import {
   contentIdSchema,
@@ -6,15 +7,17 @@ import {
   timestampSchema,
 } from './common';
 
+extendZodWithOpenApi(z);
+
 const titleSchema = z.string().trim().min(1);
 const bodySchema = z.string().refine(value => value.trim().length > 0);
 
 export const contentSchema = z.object({
   id: contentIdSchema,
-  title: titleSchema,
-  body: bodySchema,
   status: contentStatusSchema,
   slug: slugSchema.nullable(),
+  title: titleSchema,
+  body: bodySchema,
   createdAt: timestampSchema,
   publishedAt: timestampSchema.nullable(),
   updatedAt: timestampSchema,
@@ -33,6 +36,16 @@ export const updateContentRequestSchema = z
   })
   .refine(data => data.title !== undefined || data.body !== undefined, {
     message: 'At least one field is required.',
+  })
+  .openapi({
+    anyOf: [
+      {
+        required: ['title'],
+      },
+      {
+        required: ['body'],
+      },
+    ],
   });
 
 export const contentResponseSchema = contentSchema;

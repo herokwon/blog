@@ -1,4 +1,7 @@
+import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
+
+extendZodWithOpenApi(z);
 
 export const ERROR_CODES = [
   'VALIDATION_ERROR',

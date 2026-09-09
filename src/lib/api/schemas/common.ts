@@ -1,4 +1,7 @@
+import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
+
+extendZodWithOpenApi(z);
 
 export const CONTENT_STATUS = ['draft', 'published', 'archived'] as const;
 export const contentStatusSchema = z.enum(CONTENT_STATUS);

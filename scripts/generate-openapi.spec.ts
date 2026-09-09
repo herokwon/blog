@@ -1,20 +1,57 @@
-import { readFile } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import packageJson from '../package.json';
 import { generateOpenApi } from './generate-openapi';
 
 describe('[Script] OpenAPI Generation', () => {
-  it('OpenAPI generation produces the expected artifact path', async () => {
-    await generateOpenApi();
+  const tmpDirs: string[] = [];
 
-    let openApiSpec: string | undefined;
+  afterEach(() => {
+    for (const dir of tmpDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
 
-    readFile('docs/openapi.json', 'utf-8', (err, data) => {
-      if (err) throw err;
-      openApiSpec = data;
+    tmpDirs.length = 0;
+  });
+
+  it('uses the package version for the OpenAPI document', () => {
+    const outputDir = mkdtempSync(join(tmpdir(), 'openapi-'));
+    tmpDirs.push(outputDir);
+
+    const outputPath = join(outputDir, 'openapi.json');
+    const document = generateOpenApi({ outputPath });
+
+    expect(document.info.version).toBe(packageJson.version);
+  });
+
+  it('generates an OpenAPI document file at the specified path', () => {
+    const outputDir = mkdtempSync(join(tmpdir(), 'openapi-'));
+    tmpDirs.push(outputDir);
+
+    const outputPath = join(outputDir, 'openapi.json');
+
+    generateOpenApi({ outputPath });
+
+    expect(existsSync(outputPath)).toBe(true);
+  });
+
+  it('writes the generated OpenAPI document as JSON', () => {
+    const outputDir = mkdtempSync(join(tmpdir(), 'openapi-'));
+    tmpDirs.push(outputDir);
+
+    const outputPath = join(outputDir, 'openapi.json');
+
+    generateOpenApi({ outputPath });
+
+    const document = JSON.parse(readFileSync(outputPath, 'utf8'));
+
+    expect(document).toMatchObject({
+      openapi: '3.1.0',
+      info: {
+        title: 'Blog API',
+        version: packageJson.version,
+      },
     });
-
-    const document = JSON.parse(openApiSpec ?? '{}');
-
-    expect(document.openapi).toBe(/^3\./);
-    expect(document.paths).toBeDefined();
   });
 });
