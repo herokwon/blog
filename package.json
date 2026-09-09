@@ -20,7 +20,8 @@
     "openapi:generate": "tsx scripts/generate-openapi.ts && prettier --write docs/openapi.json",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "wrangler d1 migrations apply blog --remote",
+    "db:migrate:local": "wrangler d1 migrations apply blog --local",
     "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {
