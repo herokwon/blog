@@ -45,7 +45,7 @@ jobs:
       - name: Generate Worker Types
         if: |
           contains(steps.dependabot-metadata.outputs.dependency-names, 'wrangler') &&
-          steps.dependabot-metadata.outputs.package-ecosystem == 'npm'
+          steps.dependabot-metadata.outputs.package-ecosystem == 'npm_and_yarn'
         run: pnpm gen
 
       - name: Check for Changes in Worker Types
