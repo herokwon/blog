@@ -1,0 +1,119 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "fdeb63b6-970b-41bb-871d-bc48d0ac5d86",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "content": {
+      "name": "content",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "content_slug_unique": {
+          "name": "content_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        },
+        "content_admin_order_idx": {
+          "name": "content_admin_order_idx",
+          "columns": [
+            "deleted_at",
+            "updated_at",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "content_id_uuidv7_check": {
+          "name": "content_id_uuidv7_check",
+          "value": "\n        length(\"content\".\"id\") = 36\n        AND \"content\".\"id\" NOT GLOB '*[^0-9A-Fa-f-]*'\n        AND substr(\"content\".\"id\", 9, 1) = '-'\n        AND substr(\"content\".\"id\", 14, 1) = '-'\n        AND substr(\"content\".\"id\", 19, 1) = '-'\n        AND substr(\"content\".\"id\", 24, 1) = '-'\n        AND substr(\"content\".\"id\", 15, 1) = '7'\n        AND substr(\"content\".\"id\", 20, 1) GLOB '[89ABab]'\n      "
+        },
+        "content_status_check": {
+          "name": "content_status_check",
+          "value": "\"content\".\"status\" IN ('draft', 'published', 'archived')"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
