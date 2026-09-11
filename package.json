@@ -25,6 +25,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.1.5",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@sveltejs/adapter-cloudflare": "^7.2.9",

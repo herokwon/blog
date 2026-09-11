@@ -1,8 +1,10 @@
 import adapter from '@sveltejs/adapter-cloudflare';
 import { sveltekit } from '@sveltejs/kit/vite';
 
+import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import { playwright } from '@vitest/browser-playwright';
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -20,6 +22,8 @@ export default defineConfig({
           config.include.push(
             '../*.config.ts',
             '../scripts/**/*.ts',
+            '../vitest.setup.ts',
+            '../vitest-env.d.ts',
             '../worker-configuration.d.ts',
           );
         },
@@ -65,14 +69,40 @@ export default defineConfig({
       },
       {
         extends: './vite.config.ts',
+        plugins: [
+          cloudflareTest(async () => {
+            const migrationsPath = path.join(import.meta.dirname, 'drizzle');
+            const migrations = await readD1Migrations(migrationsPath);
+
+            return {
+              miniflare: {
+                compatibilityDate: '2026-08-24',
+                compatibilityFlags: ['nodejs_als'],
+                d1Databases: ['DB'],
+                bindings: {
+                  TEST_MIGRATIONS: migrations,
+                },
+              },
+            };
+          }),
+        ],
         test: {
+          setupFiles: ['./vitest.setup.ts'],
           name: 'server',
-          environment: 'node',
-          include: [
-            'src/**/*.{test,spec}.{js,ts}',
-            'scripts/**/*.{test,spec}.{js,ts}',
-          ],
+          include: ['src/**/*.{test,spec}.{js,ts}'],
           exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+        },
+      },
+      {
+        extends: './vite.config.ts',
+        test: {
+          name: 'scripts',
+          environment: 'node',
+          include: ['scripts/**/*.{test,spec}.{js,ts}'],
+          exclude: [
+            'src/**/*.svelte.{test,spec}.{js,ts}',
+            'src/**/*.{test,spec}.{js,ts}',
+          ],
         },
       },
     ],
