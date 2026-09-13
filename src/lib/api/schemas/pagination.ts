@@ -16,5 +16,5 @@ export const paginatedResponseSchema = <T extends z.ZodType>(itemSchema: T) =>
 
 export type Pagination = z.infer<typeof paginationSchema>;
 export type PaginatedResponse<T extends z.ZodType> = z.infer<
-  typeof paginatedResponseSchema<T>
+  ReturnType<typeof paginatedResponseSchema<T>>
 >;
