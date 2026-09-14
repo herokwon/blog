@@ -29,6 +29,7 @@ Allowed transitions:
 
 - `Draft -> Published`
 - `Published -> Archived`
+- `Archived -> Published`
 
 Forbidden transitions:
 
