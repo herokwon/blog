@@ -1,7 +1,7 @@
+import { createTestDocument } from '$lib/test/helpers';
 import { registerSchemas } from './schemas';
-import { createTestDocument } from './test/helpers';
 
-describe('[OpenAPI] Schemas', () => {
+describe('[API/OpenAPI] Schemas', () => {
   const document = createTestDocument(registerSchemas);
 
   describe('content schemas', () => {

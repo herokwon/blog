@@ -1,7 +1,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { createOpenApiRegistry } from './registry';
 
-describe('[OpenAPI] Registry', () => {
+describe('[API/OpenAPI] Registry', () => {
   it('creates a new registry for each call', () => {
     const first = createOpenApiRegistry();
     const second = createOpenApiRegistry();

@@ -1,3 +1,4 @@
+import { createTestContent } from '$lib/test/fixtures';
 import {
   contentResponseSchema,
   contentSchema,
@@ -5,31 +6,28 @@ import {
   updateContentRequestSchema,
 } from './content';
 
-const validContent = {
-  id: '0191c13d-8000-7a2b-8123-456789abcdef',
+const testContentTimestamp = '2026-01-01T00:00:00Z';
+const testContent = createTestContent({
+  id: '0198f7b1-1234-7abc-8def-123456789abc',
   title: 'Hello World',
   body: '# Hello World',
-  status: 'draft',
-  slug: null,
-  createdAt: '2026-09-05T00:00:00Z',
-  publishedAt: null,
-  updatedAt: '2026-09-05T00:00:00Z',
-  deletedAt: null,
-};
+  createdAt: testContentTimestamp,
+  updatedAt: testContentTimestamp,
+});
 
-describe('[Schema] Content', () => {
+describe('[API/Schema] Content', () => {
   describe('contentSchema', () => {
     it('accepts a valid draft content', () => {
-      expect(contentSchema.safeParse(validContent).success).toBe(true);
+      expect(contentSchema.safeParse(testContent).success).toBe(true);
     });
 
     it('accepts a published content', () => {
       expect(
         contentSchema.safeParse({
-          ...validContent,
+          ...testContent,
           status: 'published',
           slug: 'hello-world',
-          publishedAt: '2026-09-05T00:00:00Z',
+          publishedAt: testContentTimestamp,
         }).success,
       ).toBe(true);
     });
@@ -37,10 +35,10 @@ describe('[Schema] Content', () => {
     it('accepts an archived content', () => {
       expect(
         contentSchema.safeParse({
-          ...validContent,
+          ...testContent,
           status: 'archived',
           slug: 'hello-world',
-          publishedAt: '2026-09-05T00:00:00Z',
+          publishedAt: testContentTimestamp,
         }).success,
       ).toBe(true);
     });
@@ -48,7 +46,7 @@ describe('[Schema] Content', () => {
     it('rejects an invalid content id', () => {
       expect(
         contentSchema.safeParse({
-          ...validContent,
+          ...testContent,
           id: 'invalid-id',
         }).success,
       ).toBe(false);
@@ -57,7 +55,7 @@ describe('[Schema] Content', () => {
     it('rejects an invalid content status', () => {
       expect(
         contentSchema.safeParse({
-          ...validContent,
+          ...testContent,
           status: 'invalid',
         }).success,
       ).toBe(false);
@@ -66,7 +64,7 @@ describe('[Schema] Content', () => {
     it('rejects an invalid slug', () => {
       expect(
         contentSchema.safeParse({
-          ...validContent,
+          ...testContent,
           slug: '',
         }).success,
       ).toBe(false);
@@ -75,7 +73,7 @@ describe('[Schema] Content', () => {
     it('rejects an invalid timestamp', () => {
       expect(
         contentSchema.safeParse({
-          ...validContent,
+          ...testContent,
           createdAt: 'invalid-timestamp',
         }).success,
       ).toBe(false);
@@ -86,22 +84,22 @@ describe('[Schema] Content', () => {
     it('accepts a valid create request', () => {
       expect(
         createContentRequestSchema.safeParse({
-          title: validContent.title,
-          body: validContent.body,
+          title: testContent.title,
+          body: testContent.body,
         }).success,
       ).toBe(true);
     });
 
     it('accepts a valid create request with whitespace in the title', () => {
       const result = createContentRequestSchema.safeParse({
-        title: `  ${validContent.title}  `,
-        body: validContent.body,
+        title: `  ${testContent.title}  `,
+        body: testContent.body,
       });
 
       expect(result.success).toBe(true);
 
       if (result.success) {
-        expect(result.data.title).toBe(validContent.title);
+        expect(result.data.title).toBe(testContent.title);
       }
     });
 
@@ -109,7 +107,7 @@ describe('[Schema] Content', () => {
       expect(
         createContentRequestSchema.safeParse({
           title: '',
-          body: validContent.body,
+          body: testContent.body,
         }).success,
       ).toBe(false);
     });
@@ -118,7 +116,7 @@ describe('[Schema] Content', () => {
       expect(
         createContentRequestSchema.safeParse({
           title: '   ',
-          body: validContent.body,
+          body: testContent.body,
         }).success,
       ).toBe(false);
     });
@@ -126,7 +124,7 @@ describe('[Schema] Content', () => {
     it('rejects an empty body', () => {
       expect(
         createContentRequestSchema.safeParse({
-          title: validContent.title,
+          title: testContent.title,
           body: '',
         }).success,
       ).toBe(false);
@@ -135,7 +133,7 @@ describe('[Schema] Content', () => {
     it('rejects a whitespace-only body', () => {
       expect(
         createContentRequestSchema.safeParse({
-          title: validContent.title,
+          title: testContent.title,
           body: '   ',
         }).success,
       ).toBe(false);
@@ -144,8 +142,8 @@ describe('[Schema] Content', () => {
     it('rejects the status field', () => {
       expect(
         createContentRequestSchema.safeParse({
-          title: validContent.title,
-          body: validContent.body,
+          title: testContent.title,
+          body: testContent.body,
           status: 'draft',
         }).success,
       ).toBe(false);
@@ -154,8 +152,8 @@ describe('[Schema] Content', () => {
     it('rejects unknown fields', () => {
       expect(
         createContentRequestSchema.safeParse({
-          title: validContent.title,
-          body: validContent.body,
+          title: testContent.title,
+          body: testContent.body,
           unknown: 'value',
         }).success,
       ).toBe(false);
@@ -256,13 +254,13 @@ describe('[Schema] Content', () => {
 
   describe('contentResponseSchema', () => {
     it('accepts a valid content response', () => {
-      expect(contentResponseSchema.safeParse(validContent).success).toBe(true);
+      expect(contentResponseSchema.safeParse(testContent).success).toBe(true);
     });
 
     it('rejects an invalid content response', () => {
       expect(
         contentResponseSchema.safeParse({
-          ...validContent,
+          ...testContent,
           status: 'invalid',
         }).success,
       ).toBe(false);

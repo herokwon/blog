@@ -3,6 +3,7 @@ import { CONTENT_STATUS } from '$lib/api/schemas';
 import { env } from 'cloudflare:workers';
 import { getTableColumns } from 'drizzle-orm';
 
+import { insertTestContent } from '$lib/test/helpers';
 import { getDb } from '.';
 
 describe('[Server/DB] Content Schema', async () => {
@@ -61,23 +62,9 @@ describe('[Server/DB] Content Schema', async () => {
 
   describe('content database integration', () => {
     const db = getDb(env.DB);
-    const { content } = schema;
 
     it('generates created_at and updated_at automatically', async () => {
-      const [created] = await db
-        .insert(content)
-        .values({
-          id: '0198f7b1-1234-7abc-8def-123456789abc',
-          status: 'draft',
-          slug: null,
-          title: 'Timestamp Test',
-          body: '# Timestamp Test',
-          createdAt: '2025-09-11T00:00:00.000Z',
-          publishedAt: null,
-          updatedAt: '2025-09-11T00:00:00.000Z',
-          deletedAt: null,
-        })
-        .returning();
+      const created = await insertTestContent(db);
 
       expect(created.createdAt).toBeTruthy();
       expect(created.updatedAt).toBeTruthy();
@@ -86,22 +73,11 @@ describe('[Server/DB] Content Schema', async () => {
     });
 
     it('accepts a valid UUIDv7', async () => {
-      const validId = '0191c13d-8000-7a2b-8123-456789abcdef';
+      const validId = '0198f7b1-1234-7abc-8def-123456789abc';
 
-      const [created] = await db
-        .insert(content)
-        .values({
-          id: validId,
-          status: 'draft',
-          slug: null,
-          title: 'Valid UUID',
-          body: '# Valid UUID',
-          createdAt: '2025-09-11T00:00:00.000Z',
-          publishedAt: null,
-          updatedAt: '2025-09-11T00:00:00.000Z',
-          deletedAt: null,
-        })
-        .returning();
+      const created = await insertTestContent(db, {
+        id: validId,
+      });
 
       expect(created.id).toBe(validId);
     });
@@ -110,16 +86,8 @@ describe('[Server/DB] Content Schema', async () => {
       const invalidId = '0191c13d-8000-4a2b-8123-456789abcdef';
 
       await expect(
-        db.insert(content).values({
+        insertTestContent(db, {
           id: invalidId,
-          status: 'draft',
-          slug: null,
-          title: 'Invalid UUID',
-          body: '# Invalid UUID',
-          createdAt: '2025-09-11T00:00:00.000Z',
-          publishedAt: null,
-          updatedAt: '2025-09-11T00:00:00.000Z',
-          deletedAt: null,
         }),
       ).rejects.toThrow();
     });

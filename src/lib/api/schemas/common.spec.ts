@@ -1,4 +1,5 @@
 import {
+  CONTENT_STATUS,
   contentIdParamsSchema,
   contentIdSchema,
   contentStatusSchema,
@@ -6,9 +7,9 @@ import {
   timestampSchema,
 } from './common';
 
-describe('[Schema] Common', () => {
+describe('[API/Schema] Common', () => {
   describe('contentStatusSchema', () => {
-    it.each(['draft', 'published', 'archived'])('accepts %s', status => {
+    it.each(CONTENT_STATUS)('accepts %s', status => {
       expect(contentStatusSchema.safeParse(status).success).toBe(true);
     });
 
@@ -23,15 +24,15 @@ describe('[Schema] Common', () => {
   describe('contentIdSchema', () => {
     it('accepts a valid UUIDv7', () => {
       expect(
-        contentIdSchema.safeParse('0191c13d-8000-7a2b-8123-456789abcdef')
+        contentIdSchema.safeParse('0198f7b1-1234-7abc-8def-123456789abc')
           .success,
       ).toBe(true);
     });
 
     it.each([
       '',
-      '0191c13d-8000-7a2b-8123-456789abcde',
-      '0191c13d-8000-7a2b-8123-456789abcdefg',
+      '0198f7b1-1234-7abc-8def-123456789abcd',
+      '0198f7b1-1234-7abc-8def-123456789abcdefg',
       'not-a-uuid',
       123,
       null,

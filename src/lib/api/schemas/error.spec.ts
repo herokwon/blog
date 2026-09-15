@@ -1,19 +1,14 @@
 import {
+  ERROR_CODES,
   errorCodeSchema,
   errorResponseSchema,
   validationIssueSchema,
   type ValidationIssue,
 } from './error';
 
-describe('[Schema] Error', () => {
+describe('[API/Schema] Error', () => {
   describe('errorCodeSchema', () => {
-    it.each([
-      'VALIDATION_ERROR',
-      'CONTENT_NOT_FOUND',
-      'INVALID_CONTENT_STATE',
-      'SLUG_CONFLICT',
-      'INTERNAL_ERROR',
-    ])('accepts %s', errorCode => {
+    it.each(ERROR_CODES)('accepts %s', errorCode => {
       expect(errorCodeSchema.safeParse(errorCode).success).toBe(true);
     });
 

@@ -1,6 +1,6 @@
 import { generateOpenApiDocument } from './document';
 
-describe('[OpenAPI] Document', () => {
+describe('[API/OpenAPI] Document', () => {
   const document = generateOpenApiDocument({
     version: '1.2.3',
   });

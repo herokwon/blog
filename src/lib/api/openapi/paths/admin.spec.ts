@@ -1,11 +1,11 @@
-import { registerSchemas } from '../schemas';
 import {
   contentResponseSchemaObject,
   errorResponseSchemaObject,
   json,
   paginationSchemaObject,
-} from '../test/fixtures';
-import { createTestDocument } from '../test/helpers';
+} from '$lib/test/fixtures';
+import { createTestDocument } from '$lib/test/helpers';
+import { registerSchemas } from '../schemas';
 import { registerAdminPaths } from './admin';
 
 describe('[OpenAPI] Admin Paths', () => {

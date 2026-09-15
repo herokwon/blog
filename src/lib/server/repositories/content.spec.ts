@@ -1,36 +1,26 @@
-import type { Content } from '$lib/api/schemas';
+import { createTestContent } from '$lib/test/fixtures';
+import { insertTestContent, resetTestDb } from '$lib/test/helpers';
 import { env } from 'cloudflare:workers';
-import { sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { content } from '../db/schema';
 import { ContentRepository } from './content';
 
-async function resetDb(db: ReturnType<typeof getDb>) {
-  await db.run(sql`DELETE FROM content`);
-}
-
 describe('[Server/Repository] Content Repository', () => {
   const db = getDb(env.DB);
   const repository = new ContentRepository(db);
+  const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
+  const createdAt = '2026-01-01T00:00:00.000Z';
 
   describe('findById', async () => {
     beforeEach(async () => {
-      await resetDb(db);
+      await resetTestDb(db, content);
     });
 
     it('returns content when the record exists', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-
-      await db.insert(content).values({
+      await insertTestContent(db, {
         id: contentId,
-        status: 'draft',
-        slug: null,
-        title: 'Test Content',
-        body: '# Test Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: null,
-        updatedAt: '2026-09-11T00:00:00.000Z',
-        deletedAt: null,
+        createdAt,
+        updatedAt: createdAt,
       });
 
       const result = await repository.findById(contentId);
@@ -41,16 +31,14 @@ describe('[Server/Repository] Content Repository', () => {
         slug: null,
         title: 'Test Content',
         body: '# Test Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
+        createdAt: createdAt,
         publishedAt: null,
-        updatedAt: '2026-09-11T00:00:00.000Z',
+        updatedAt: createdAt,
         deletedAt: null,
       });
     });
 
     it('returns null when the record does not exist', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-
       const result = await repository.findById(contentId);
 
       expect(result).toBeNull();
@@ -59,23 +47,19 @@ describe('[Server/Repository] Content Repository', () => {
 
   describe('findBySlug', async () => {
     beforeEach(async () => {
-      await resetDb(db);
+      await resetTestDb(db, content);
     });
 
     it('returns content when the record exists', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
       const slug = 'test-content';
 
-      await db.insert(content).values({
+      await insertTestContent(db, {
         id: contentId,
         status: 'published',
         slug,
-        title: 'Test Content',
-        body: '# Test Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: '2026-09-11T00:00:00.000Z',
-        updatedAt: '2026-09-11T00:00:00.000Z',
-        deletedAt: null,
+        createdAt,
+        publishedAt: createdAt,
+        updatedAt: createdAt,
       });
 
       const result = await repository.findBySlug(slug);
@@ -86,9 +70,9 @@ describe('[Server/Repository] Content Repository', () => {
         slug,
         title: 'Test Content',
         body: '# Test Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: '2026-09-11T00:00:00.000Z',
-        updatedAt: '2026-09-11T00:00:00.000Z',
+        createdAt,
+        publishedAt: createdAt,
+        updatedAt: createdAt,
         deletedAt: null,
       });
     });
@@ -102,21 +86,11 @@ describe('[Server/Repository] Content Repository', () => {
 
   describe('create', async () => {
     beforeEach(async () => {
-      await resetDb(db);
+      await resetTestDb(db, content);
     });
 
     it('creates and returns content', async () => {
-      const input = {
-        id: '0198f7b1-1234-7abc-8def-123456789abc',
-        status: 'draft',
-        slug: null,
-        title: 'Created Content',
-        body: '# Created Content',
-        createdAt: '2026-09-12T00:00:00.000Z',
-        publishedAt: null,
-        updatedAt: '2026-09-12T00:00:00.000Z',
-        deletedAt: null,
-      } satisfies Content;
+      const input = createTestContent();
 
       const result = await repository.create(input);
 
@@ -126,27 +100,22 @@ describe('[Server/Repository] Content Repository', () => {
 
   describe('update', async () => {
     beforeEach(async () => {
-      await resetDb(db);
+      await resetTestDb(db, content);
     });
 
     it('updates and returns content', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-
-      await db.insert(content).values({
+      await insertTestContent(db, {
         id: contentId,
-        status: 'draft',
-        slug: null,
-        title: 'Original Title',
-        body: '# Original Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: null,
-        updatedAt: '2026-09-11T00:00:00.000Z',
-        deletedAt: null,
+        createdAt,
+        updatedAt: createdAt,
       });
+
+      const updatedAt = '2026-01-01T01:00:00.000Z';
 
       const result = await repository.update(contentId, {
         title: 'Updated Title',
         body: '# Updated Content',
+        updatedAt,
       });
 
       expect(result).toEqual({
@@ -155,16 +124,14 @@ describe('[Server/Repository] Content Repository', () => {
         slug: null,
         title: 'Updated Title',
         body: '# Updated Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
+        createdAt,
         publishedAt: null,
-        updatedAt: '2026-09-11T00:00:00.000Z',
+        updatedAt,
         deletedAt: null,
       });
     });
 
     it('returns null when the record does not exist', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-
       const result = await repository.update(contentId, {
         title: 'Updated Title',
       });
@@ -174,24 +141,20 @@ describe('[Server/Repository] Content Repository', () => {
   });
 
   describe('softDelete', async () => {
+    const deletedAt = '2026-01-01T01:00:00.000Z';
+
     beforeEach(async () => {
-      await resetDb(db);
+      await resetTestDb(db, content);
     });
 
     it('soft deletes and returns content', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-      const deletedAt = '2026-09-12T00:00:00.000Z';
-
-      await db.insert(content).values({
+      await insertTestContent(db, {
         id: contentId,
         status: 'published',
         slug: 'soft-delete-test',
-        title: 'Test Content',
-        body: '# Test Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: '2026-09-11T00:00:00.000Z',
-        updatedAt: '2026-09-11T00:00:00.000Z',
-        deletedAt: null,
+        createdAt,
+        publishedAt: createdAt,
+        updatedAt: createdAt,
       });
 
       const result = await repository.softDelete(contentId, deletedAt);
@@ -202,17 +165,14 @@ describe('[Server/Repository] Content Repository', () => {
         slug: 'soft-delete-test',
         title: 'Test Content',
         body: '# Test Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: '2026-09-11T00:00:00.000Z',
+        createdAt,
+        publishedAt: createdAt,
         updatedAt: deletedAt,
         deletedAt,
       });
     });
 
     it('returns null when the record does not exist', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-      const deletedAt = '2026-09-12T00:00:00.000Z';
-
       const result = await repository.softDelete(contentId, deletedAt);
 
       expect(result).toBeNull();
@@ -220,24 +180,22 @@ describe('[Server/Repository] Content Repository', () => {
   });
 
   describe('restore', async () => {
+    const deletedAt = '2026-01-01T00:30:00.000Z';
+    const restoredAt = '2026-01-01T01:00:00.000Z';
+
     beforeEach(async () => {
-      await resetDb(db);
+      await resetTestDb(db, content);
     });
 
     it('restores and returns content', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-      const restoredAt = '2026-09-12T00:00:00.000Z';
-
-      await db.insert(content).values({
+      await insertTestContent(db, {
         id: contentId,
         status: 'published',
         slug: 'restore-test-content',
-        title: 'Deleted Content',
-        body: '# Deleted Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: '2026-09-11T00:00:00.000Z',
-        updatedAt: '2026-09-11T00:00:00.000Z',
-        deletedAt: '2026-09-11T12:00:00.000Z',
+        createdAt,
+        publishedAt: createdAt,
+        updatedAt: createdAt,
+        deletedAt,
       });
 
       const result = await repository.restore(contentId, restoredAt);
@@ -246,19 +204,16 @@ describe('[Server/Repository] Content Repository', () => {
         id: contentId,
         status: 'published',
         slug: 'restore-test-content',
-        title: 'Deleted Content',
-        body: '# Deleted Content',
-        createdAt: '2026-09-11T00:00:00.000Z',
-        publishedAt: '2026-09-11T00:00:00.000Z',
+        title: 'Test Content',
+        body: '# Test Content',
+        createdAt,
+        publishedAt: createdAt,
         updatedAt: restoredAt,
         deletedAt: null,
       });
     });
 
     it('returns null when the record does not exist', async () => {
-      const contentId = '0198f7b1-1234-7abc-8def-123456789abc';
-      const restoredAt = '2026-09-12T00:00:00.000Z';
-
       const result = await repository.restore(contentId, restoredAt);
 
       expect(result).toBeNull();
@@ -266,54 +221,53 @@ describe('[Server/Repository] Content Repository', () => {
   });
 
   describe('findMany', () => {
-    beforeAll(async () => {
-      await resetDb(db);
+    const contentId1 = '0198f7b1-1000-7abc-8def-123456789abc';
+    const contentId2 = '0198f7b1-2000-7abc-8def-123456789abc';
+    const contentId3 = '0198f7b1-3000-7abc-8def-123456789abc';
+    const contentId4 = '0198f7b1-4000-7abc-8def-123456789abc';
 
-      await db.insert(content).values([
-        {
-          id: '0198f7b1-1000-7abc-8def-123456789abc',
-          status: 'draft',
-          slug: null,
-          title: 'First Content',
-          body: '# First Content',
-          createdAt: '2026-09-10T00:00:00.000Z',
-          publishedAt: null,
-          updatedAt: '2026-09-10T00:00:00.000Z',
-          deletedAt: null,
-        },
-        {
-          id: '0198f7b1-2000-7abc-8def-123456789abc',
+    beforeAll(async () => {
+      await resetTestDb(db, content);
+
+      await Promise.all([
+        insertTestContent(db, {
+          id: contentId1,
+          title: 'Draft Content',
+          body: '# Draft Content',
+          createdAt,
+          updatedAt: createdAt,
+        }),
+        insertTestContent(db, {
+          id: contentId2,
           status: 'published',
           slug: 'published-content',
-          title: 'Second Content',
-          body: '# Second Content',
-          createdAt: '2026-09-11T00:00:00.000Z',
-          publishedAt: '2026-09-11T00:00:00.000Z',
-          updatedAt: '2026-09-11T00:00:00.000Z',
-          deletedAt: null,
-        },
-        {
-          id: '0198f7b1-3000-7abc-8def-123456789abc',
+          title: 'Published Content',
+          body: '# Published Content',
+          createdAt,
+          publishedAt: createdAt,
+          updatedAt: createdAt,
+        }),
+        insertTestContent(db, {
+          id: contentId3,
           status: 'archived',
           slug: 'archived-content',
-          title: 'Third Content',
-          body: '# Third Content',
-          createdAt: '2026-09-12T00:00:00.000Z',
-          publishedAt: '2026-09-12T00:00:00.000Z',
-          updatedAt: '2026-09-12T00:00:00.000Z',
-          deletedAt: null,
-        },
-        {
-          id: '0198f7b1-4000-7abc-8def-123456789abc',
+          title: 'Archived Content',
+          body: '# Archived Content',
+          createdAt,
+          publishedAt: createdAt,
+          updatedAt: createdAt,
+        }),
+        insertTestContent(db, {
+          id: contentId4,
           status: 'published',
           slug: 'deleted-content',
-          title: 'Fourth Content',
-          body: '# Fourth Content',
-          createdAt: '2026-09-13T00:00:00.000Z',
-          publishedAt: '2026-09-13T00:00:00.000Z',
-          updatedAt: '2026-09-13T00:00:00.000Z',
-          deletedAt: '2026-09-13T01:00:00.000Z',
-        },
+          title: 'Deleted Content',
+          body: '# Deleted Content',
+          createdAt,
+          publishedAt: createdAt,
+          updatedAt: createdAt,
+          deletedAt: '2026-01-01T01:00:00.000Z',
+        }),
       ]);
     });
 
@@ -322,9 +276,9 @@ describe('[Server/Repository] Content Repository', () => {
 
       expect(result.items).toHaveLength(3);
       expect(result.items.map(item => item.id)).toEqual([
-        '0198f7b1-3000-7abc-8def-123456789abc',
-        '0198f7b1-2000-7abc-8def-123456789abc',
-        '0198f7b1-1000-7abc-8def-123456789abc',
+        contentId3,
+        contentId2,
+        contentId1,
       ]);
       expect(result.nextCursor).toBeNull();
     });
@@ -346,8 +300,8 @@ describe('[Server/Repository] Content Repository', () => {
       const firstPage = await repository.findMany({ limit: 2 });
 
       expect(firstPage.items.map(item => item.id)).toEqual([
-        '0198f7b1-3000-7abc-8def-123456789abc',
-        '0198f7b1-2000-7abc-8def-123456789abc',
+        contentId3,
+        contentId2,
       ]);
       expect(firstPage.nextCursor).not.toBeNull();
 
@@ -356,62 +310,61 @@ describe('[Server/Repository] Content Repository', () => {
         cursor: firstPage.nextCursor!,
       });
 
-      expect(secondPage.items.map(item => item.id)).toEqual([
-        '0198f7b1-1000-7abc-8def-123456789abc',
-      ]);
+      expect(secondPage.items.map(item => item.id)).toEqual([contentId1]);
       expect(secondPage.nextCursor).toBeNull();
     });
   });
 
   describe('findTrash', async () => {
-    beforeAll(async () => {
-      await resetDb(db);
+    const contentId1 = '0198f7b1-1000-7abc-8def-123456789abc';
+    const contentId2 = '0198f7b1-2000-7abc-8def-123456789abc';
+    const contentId3 = '0198f7b1-3000-7abc-8def-123456789abc';
+    const contentId4 = '0198f7b1-4000-7abc-8def-123456789abc';
 
-      await db.insert(content).values([
-        {
-          id: '0198f7b1-1000-7abc-8def-123456789abc',
-          status: 'draft',
-          slug: null,
-          title: 'First Content',
-          body: '# First Content',
-          createdAt: '2026-09-10T00:00:00.000Z',
-          publishedAt: null,
-          updatedAt: '2026-09-10T00:00:00.000Z',
-          deletedAt: null,
-        },
-        {
-          id: '0198f7b1-2000-7abc-8def-123456789abc',
+    beforeAll(async () => {
+      await resetTestDb(db, content);
+
+      await Promise.all([
+        insertTestContent(db, {
+          id: contentId1,
+          title: 'Draft Content',
+          body: '# Draft Content',
+          createdAt,
+          updatedAt: createdAt,
+        }),
+        insertTestContent(db, {
+          id: contentId2,
           status: 'published',
-          slug: 'second-content',
-          title: 'Second Content',
-          body: '# Second Content',
-          createdAt: '2026-09-11T00:00:00.000Z',
-          publishedAt: '2026-09-11T00:00:00.000Z',
-          updatedAt: '2026-09-11T00:00:00.000Z',
-          deletedAt: '2026-09-11T01:00:00.000Z',
-        },
-        {
-          id: '0198f7b1-3000-7abc-8def-123456789abc',
+          slug: 'published-content',
+          title: 'Published Content',
+          body: '# Published Content',
+          createdAt,
+          publishedAt: createdAt,
+          updatedAt: createdAt,
+          deletedAt: '2026-01-01T00:20:00.000Z',
+        }),
+        insertTestContent(db, {
+          id: contentId3,
+          status: 'archived',
+          slug: 'archived-content',
+          title: 'Archived Content',
+          body: '# Archived Content',
+          createdAt,
+          publishedAt: createdAt,
+          updatedAt: createdAt,
+          deletedAt: '2026-01-01T00:40:00.000Z',
+        }),
+        insertTestContent(db, {
+          id: contentId4,
           status: 'published',
-          slug: 'third-content',
-          title: 'Third Content',
-          body: '# Third Content',
-          createdAt: '2026-09-12T00:00:00.000Z',
-          publishedAt: '2026-09-12T00:00:00.000Z',
-          updatedAt: '2026-09-12T00:00:00.000Z',
-          deletedAt: '2026-09-12T01:00:00.000Z',
-        },
-        {
-          id: '0198f7b1-4000-7abc-8def-123456789abc',
-          status: 'published',
-          slug: 'fourth-content',
-          title: 'Fourth Content',
-          body: '# Fourth Content',
-          createdAt: '2026-09-13T00:00:00.000Z',
-          publishedAt: '2026-09-13T00:00:00.000Z',
-          updatedAt: '2026-09-13T00:00:00.000Z',
-          deletedAt: '2026-09-13T01:00:00.000Z',
-        },
+          slug: 'deleted-content',
+          title: 'Deleted Content',
+          body: '# Deleted Content',
+          createdAt,
+          publishedAt: createdAt,
+          updatedAt: createdAt,
+          deletedAt: '2026-01-01T01:00:00.000Z',
+        }),
       ]);
     });
 
@@ -420,9 +373,9 @@ describe('[Server/Repository] Content Repository', () => {
 
       expect(result.items).toHaveLength(3);
       expect(result.items.map(item => item.id)).toEqual([
-        '0198f7b1-4000-7abc-8def-123456789abc',
-        '0198f7b1-3000-7abc-8def-123456789abc',
-        '0198f7b1-2000-7abc-8def-123456789abc',
+        contentId4,
+        contentId3,
+        contentId2,
       ]);
       expect(result.nextCursor).toBeNull();
     });
@@ -432,8 +385,8 @@ describe('[Server/Repository] Content Repository', () => {
 
       expect(result.items).toHaveLength(2);
       expect(result.items.map(item => item.id)).toEqual([
-        '0198f7b1-4000-7abc-8def-123456789abc',
-        '0198f7b1-3000-7abc-8def-123456789abc',
+        contentId4,
+        contentId3,
       ]);
       expect(result.nextCursor).not.toBeNull();
     });
@@ -443,8 +396,8 @@ describe('[Server/Repository] Content Repository', () => {
 
       expect(firstPage.items).toHaveLength(2);
       expect(firstPage.items.map(item => item.id)).toEqual([
-        '0198f7b1-4000-7abc-8def-123456789abc',
-        '0198f7b1-3000-7abc-8def-123456789abc',
+        contentId4,
+        contentId3,
       ]);
       expect(firstPage.nextCursor).not.toBeNull();
 
@@ -454,9 +407,7 @@ describe('[Server/Repository] Content Repository', () => {
       });
 
       expect(secondPage.items).toHaveLength(1);
-      expect(secondPage.items.map(item => item.id)).toEqual([
-        '0198f7b1-2000-7abc-8def-123456789abc',
-      ]);
+      expect(secondPage.items.map(item => item.id)).toEqual([contentId2]);
       expect(secondPage.nextCursor).toBeNull();
     });
   });
