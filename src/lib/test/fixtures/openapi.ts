@@ -76,8 +76,14 @@ export const errorResponseSchemaObject: object = {
         message: {
           type: 'string',
         },
+        details: {
+          type: 'array',
+          items: {
+            type: 'object',
+          },
+        },
       },
-      required: ['code', 'message'],
+      required: ['code', 'message', 'details'],
     },
   },
   required: ['error'],

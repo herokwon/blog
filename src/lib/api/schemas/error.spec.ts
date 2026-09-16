@@ -25,7 +25,7 @@ describe('[API/Schema] Error', () => {
       expect(
         validationIssueSchema.safeParse({
           path: ['title'],
-          message: 'Title is required.',
+          message: 'title is required.',
         } satisfies ValidationIssue).success,
       ).toBe(true);
     });
@@ -34,7 +34,7 @@ describe('[API/Schema] Error', () => {
       expect(
         validationIssueSchema.safeParse({
           path: ['items', 0, 'title'],
-          message: 'Title is required.',
+          message: 'title is required.',
         }).success,
       ).toBe(true);
     });
@@ -58,17 +58,6 @@ describe('[API/Schema] Error', () => {
   });
 
   describe('errorResponseSchema', () => {
-    it('accepts an error without details', () => {
-      expect(
-        errorResponseSchema.safeParse({
-          error: {
-            code: 'CONTENT_NOT_FOUND',
-            message: 'Content not found.',
-          },
-        }).success,
-      ).toBe(true);
-    });
-
     it('accepts an error with validation details', () => {
       expect(
         errorResponseSchema.safeParse({
@@ -78,7 +67,7 @@ describe('[API/Schema] Error', () => {
             details: [
               {
                 path: ['title'],
-                message: 'Title is required.',
+                message: 'title is required.',
               },
             ],
           },

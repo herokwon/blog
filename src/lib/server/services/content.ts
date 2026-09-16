@@ -1,3 +1,4 @@
+import { ApiError } from '$lib/api/errors';
 import type {
   Content,
   contentSchema,
@@ -13,7 +14,11 @@ export class ContentService {
     const content = await this.repository.findById(id);
 
     if (!content) {
-      throw new Error('CONTENT_NOT_FOUND');
+      throw new ApiError({
+        code: 'CONTENT_NOT_FOUND',
+        message: 'Content not found.',
+        details: [],
+      });
     }
 
     return content;

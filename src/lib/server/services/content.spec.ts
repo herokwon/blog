@@ -1,3 +1,4 @@
+import { ApiError } from '$lib/api/errors';
 import { createTestContent } from '$lib/test/fixtures';
 import type { ContentRepository } from '../repositories';
 import { ContentService } from './content';
@@ -14,7 +15,11 @@ describe('[Server/Service] Content Service', () => {
       const service = new ContentService(repository);
 
       await expect(service.getContent(contentId)).rejects.toThrow(
-        'CONTENT_NOT_FOUND',
+        new ApiError({
+          code: 'CONTENT_NOT_FOUND',
+          message: 'Content not found.',
+          details: [],
+        }),
       );
       expect(repository.findById).toHaveBeenCalledWith(contentId);
     });

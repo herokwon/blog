@@ -15,17 +15,10 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "draft",
-              "published",
-              "archived"
-            ]
+            "enum": ["draft", "published", "archived"]
           },
           "slug": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "minLength": 1
           },
           "title": {
@@ -40,10 +33,7 @@
             "format": "date-time"
           },
           "publishedAt": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           },
           "updatedAt": {
@@ -51,10 +41,7 @@
             "format": "date-time"
           },
           "deletedAt": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           }
         },
@@ -81,10 +68,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "title",
-          "body"
-        ],
+        "required": ["title", "body"],
         "additionalProperties": false
       },
       "UpdateContentRequest": {
@@ -101,14 +85,10 @@
         "additionalProperties": false,
         "anyOf": [
           {
-            "required": [
-              "title"
-            ]
+            "required": ["title"]
           },
           {
-            "required": [
-              "body"
-            ]
+            "required": ["body"]
           }
         ]
       },
@@ -121,17 +101,10 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "draft",
-              "published",
-              "archived"
-            ]
+            "enum": ["draft", "published", "archived"]
           },
           "slug": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "minLength": 1
           },
           "title": {
@@ -146,10 +119,7 @@
             "format": "date-time"
           },
           "publishedAt": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           },
           "updatedAt": {
@@ -157,10 +127,7 @@
             "format": "date-time"
           },
           "deletedAt": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           }
         },
@@ -178,11 +145,7 @@
       },
       "ContentStatus": {
         "type": "string",
-        "enum": [
-          "draft",
-          "published",
-          "archived"
-        ]
+        "enum": ["draft", "published", "archived"]
       },
       "ContentId": {
         "type": "string",
@@ -196,9 +159,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "id"
-        ],
+        "required": ["id"],
         "additionalProperties": false
       },
       "Slug": {
@@ -213,6 +174,8 @@
         "type": "string",
         "enum": [
           "VALIDATION_ERROR",
+          "UNAUTHORIZED",
+          "FORBIDDEN",
           "CONTENT_NOT_FOUND",
           "INVALID_CONTENT_STATE",
           "SLUG_CONFLICT",
@@ -240,10 +203,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "path",
-          "message"
-        ]
+        "required": ["path", "message"]
       },
       "ErrorResponse": {
         "type": "object",
@@ -255,6 +215,8 @@
                 "type": "string",
                 "enum": [
                   "VALIDATION_ERROR",
+                  "UNAUTHORIZED",
+                  "FORBIDDEN",
                   "CONTENT_NOT_FOUND",
                   "INVALID_CONTENT_STATE",
                   "SLUG_CONFLICT",
@@ -288,22 +250,14 @@
                       "minLength": 1
                     }
                   },
-                  "required": [
-                    "path",
-                    "message"
-                  ]
+                  "required": ["path", "message"]
                 }
               }
             },
-            "required": [
-              "code",
-              "message"
-            ]
+            "required": ["code", "message", "details"]
           }
         },
-        "required": [
-          "error"
-        ]
+        "required": ["error"]
       },
       "Pagination": {
         "type": "object",
@@ -364,17 +318,10 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": [
-                              "draft",
-                              "published",
-                              "archived"
-                            ]
+                            "enum": ["draft", "published", "archived"]
                           },
                           "slug": {
-                            "type": [
-                              "string",
-                              "null"
-                            ],
+                            "type": ["string", "null"],
                             "minLength": 1
                           },
                           "title": {
@@ -389,10 +336,7 @@
                             "format": "date-time"
                           },
                           "publishedAt": {
-                            "type": [
-                              "string",
-                              "null"
-                            ],
+                            "type": ["string", "null"],
                             "format": "date-time"
                           },
                           "updatedAt": {
@@ -400,10 +344,7 @@
                             "format": "date-time"
                           },
                           "deletedAt": {
-                            "type": [
-                              "string",
-                              "null"
-                            ],
+                            "type": ["string", "null"],
                             "format": "date-time"
                           }
                         },
@@ -421,17 +362,11 @@
                       }
                     },
                     "nextCursor": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     }
                   },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ]
+                  "required": ["items", "nextCursor"]
                 }
               }
             }
@@ -450,6 +385,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -483,22 +420,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -521,10 +450,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "title",
-                  "body"
-                ],
+                "required": ["title", "body"],
                 "additionalProperties": false
               }
             }
@@ -544,17 +470,10 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "draft",
-                        "published",
-                        "archived"
-                      ]
+                      "enum": ["draft", "published", "archived"]
                     },
                     "slug": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     },
                     "title": {
@@ -569,10 +488,7 @@
                       "format": "date-time"
                     },
                     "publishedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     },
                     "updatedAt": {
@@ -580,10 +496,7 @@
                       "format": "date-time"
                     },
                     "deletedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     }
                   },
@@ -616,6 +529,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -649,22 +564,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -713,17 +620,10 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": [
-                              "draft",
-                              "published",
-                              "archived"
-                            ]
+                            "enum": ["draft", "published", "archived"]
                           },
                           "slug": {
-                            "type": [
-                              "string",
-                              "null"
-                            ],
+                            "type": ["string", "null"],
                             "minLength": 1
                           },
                           "title": {
@@ -738,10 +638,7 @@
                             "format": "date-time"
                           },
                           "publishedAt": {
-                            "type": [
-                              "string",
-                              "null"
-                            ],
+                            "type": ["string", "null"],
                             "format": "date-time"
                           },
                           "updatedAt": {
@@ -749,10 +646,7 @@
                             "format": "date-time"
                           },
                           "deletedAt": {
-                            "type": [
-                              "string",
-                              "null"
-                            ],
+                            "type": ["string", "null"],
                             "format": "date-time"
                           }
                         },
@@ -770,17 +664,11 @@
                       }
                     },
                     "nextCursor": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     }
                   },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ]
+                  "required": ["items", "nextCursor"]
                 }
               }
             }
@@ -799,6 +687,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -832,22 +722,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -882,17 +764,10 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "draft",
-                        "published",
-                        "archived"
-                      ]
+                      "enum": ["draft", "published", "archived"]
                     },
                     "slug": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     },
                     "title": {
@@ -907,10 +782,7 @@
                       "format": "date-time"
                     },
                     "publishedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     },
                     "updatedAt": {
@@ -918,10 +790,7 @@
                       "format": "date-time"
                     },
                     "deletedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     }
                   },
@@ -954,6 +823,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -987,22 +858,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1021,6 +884,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1054,22 +919,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1106,14 +963,10 @@
                 "additionalProperties": false,
                 "anyOf": [
                   {
-                    "required": [
-                      "title"
-                    ]
+                    "required": ["title"]
                   },
                   {
-                    "required": [
-                      "body"
-                    ]
+                    "required": ["body"]
                   }
                 ]
               }
@@ -1134,17 +987,10 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "draft",
-                        "published",
-                        "archived"
-                      ]
+                      "enum": ["draft", "published", "archived"]
                     },
                     "slug": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     },
                     "title": {
@@ -1159,10 +1005,7 @@
                       "format": "date-time"
                     },
                     "publishedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     },
                     "updatedAt": {
@@ -1170,10 +1013,7 @@
                       "format": "date-time"
                     },
                     "deletedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     }
                   },
@@ -1206,6 +1046,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1239,22 +1081,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1273,6 +1107,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1306,22 +1142,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1358,6 +1186,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1391,22 +1221,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1425,6 +1247,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1458,22 +1282,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1508,17 +1324,10 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "draft",
-                        "published",
-                        "archived"
-                      ]
+                      "enum": ["draft", "published", "archived"]
                     },
                     "slug": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     },
                     "title": {
@@ -1533,10 +1342,7 @@
                       "format": "date-time"
                     },
                     "publishedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     },
                     "updatedAt": {
@@ -1544,10 +1350,7 @@
                       "format": "date-time"
                     },
                     "deletedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     }
                   },
@@ -1580,6 +1383,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1613,22 +1418,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1647,6 +1444,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1680,22 +1479,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1730,17 +1521,10 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "draft",
-                        "published",
-                        "archived"
-                      ]
+                      "enum": ["draft", "published", "archived"]
                     },
                     "slug": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     },
                     "title": {
@@ -1755,10 +1539,7 @@
                       "format": "date-time"
                     },
                     "publishedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     },
                     "updatedAt": {
@@ -1766,10 +1547,7 @@
                       "format": "date-time"
                     },
                     "deletedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     }
                   },
@@ -1802,6 +1580,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1835,22 +1615,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1869,6 +1641,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -1902,22 +1676,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -1952,17 +1718,10 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "draft",
-                        "published",
-                        "archived"
-                      ]
+                      "enum": ["draft", "published", "archived"]
                     },
                     "slug": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "minLength": 1
                     },
                     "title": {
@@ -1977,10 +1736,7 @@
                       "format": "date-time"
                     },
                     "publishedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     },
                     "updatedAt": {
@@ -1988,10 +1744,7 @@
                       "format": "date-time"
                     },
                     "deletedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "format": "date-time"
                     }
                   },
@@ -2024,6 +1777,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -2057,22 +1812,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }
@@ -2091,6 +1838,8 @@
                           "type": "string",
                           "enum": [
                             "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
                             "CONTENT_NOT_FOUND",
                             "INVALID_CONTENT_STATE",
                             "SLUG_CONFLICT",
@@ -2124,22 +1873,14 @@
                                 "minLength": 1
                               }
                             },
-                            "required": [
-                              "path",
-                              "message"
-                            ]
+                            "required": ["path", "message"]
                           }
                         }
                       },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
+                      "required": ["code", "message", "details"]
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               }
             }

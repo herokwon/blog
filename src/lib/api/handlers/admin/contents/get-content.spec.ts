@@ -1,3 +1,4 @@
+import { ApiError } from '$lib/api/errors';
 import type { ContentService } from '$lib/server/services';
 import { createTestContent } from '$lib/test/fixtures';
 import { createGetContentHandler } from './get-content';
@@ -70,7 +71,12 @@ describe('[API/Handlers/Admin/Contents] GET /api/admin/contents/:id', () => {
 
     it('returns 404 when the content does not exist', async () => {
       const service = {
-        getContent: vi.fn().mockRejectedValue(new Error('CONTENT_NOT_FOUND')),
+        getContent: vi.fn().mockRejectedValue(
+          new ApiError({
+            code: 'CONTENT_NOT_FOUND',
+            message: 'Content not found.',
+          }),
+        ),
       } as unknown as ContentService;
 
       const getContentHandler = createGetContentHandler(service);
