@@ -17,7 +17,7 @@
     "test": "pnpm test:unit -- --run && pnpm test:e2e",
     "test:e2e": "playwright install && playwright test",
     "gen": "wrangler types && prettier --write worker-configuration.d.ts",
-    "openapi:generate": "tsx scripts/generate-openapi.ts && prettier --write docs/openapi.json",
+    "openapi:generate": "tsx scripts/generate-openapi-cli.ts && prettier --write docs/openapi.json",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply blog --remote",
