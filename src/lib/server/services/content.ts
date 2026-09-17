@@ -2,9 +2,11 @@ import { ApiError } from '$lib/api/errors';
 import type {
   Content,
   contentSchema,
+  CreateContentRequest,
   PaginatedResponse,
   Pagination,
 } from '$lib/api/schemas';
+import { generateUuidv7 } from '$lib/utils';
 import type { ContentRepository } from '../repositories';
 
 export class ContentService {
@@ -34,5 +36,19 @@ export class ContentService {
     input: Required<Pick<Pagination, 'limit'>> & Pick<Pagination, 'cursor'>,
   ): Promise<PaginatedResponse<typeof contentSchema>> {
     return await this.repository.findTrash(input);
+  }
+
+  async createContent(input: CreateContentRequest): Promise<Content> {
+    const content: Parameters<typeof this.repository.create>[0] = {
+      id: generateUuidv7(),
+      status: 'draft',
+      slug: null,
+      title: input.title,
+      body: input.body,
+      publishedAt: null,
+      deletedAt: null,
+    };
+
+    return await this.repository.create(content);
   }
 }

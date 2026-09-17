@@ -1,5 +1,6 @@
 import { ApiError } from '$lib/api/errors';
 import { createTestContent } from '$lib/test/fixtures';
+import { isUuidv7 } from '$lib/utils';
 import type { ContentRepository } from '../repositories';
 import { ContentService } from './content';
 
@@ -114,6 +115,52 @@ describe('[Server/Service] Content Service', () => {
 
       await expect(service.listTrash({ limit: 10 })).resolves.toEqual(result);
       expect(repository.findTrash).toHaveBeenCalledWith({ limit: 10 });
+    });
+  });
+
+  describe('createContent', () => {
+    it('creates a draft content', async () => {
+      const input = {
+        status: 'draft',
+        slug: null,
+        title: 'Test Content Creation',
+        body: '# Test Content Creation',
+        publishedAt: null,
+        deletedAt: null,
+      };
+      const testContent = createTestContent({
+        title: input.title,
+        body: input.body,
+      });
+
+      const repository = {
+        create: vi.fn().mockResolvedValue(testContent),
+      } as unknown as ContentRepository;
+
+      const service = new ContentService(repository);
+
+      await expect(service.createContent(input)).resolves.toMatchObject(
+        testContent,
+      );
+      expect(repository.create).toHaveBeenCalledWith({
+        id: expect.any(String),
+        ...input,
+      });
+    });
+
+    it('generates a UUIDv7 for new content ', async () => {
+      const repository = {
+        create: vi.fn().mockImplementation(content => Promise.resolve(content)),
+      } as unknown as ContentRepository;
+
+      const service = new ContentService(repository);
+
+      const result = await service.createContent({
+        title: 'Test Content Creation',
+        body: '# Test Content Creation',
+      });
+
+      expect(isUuidv7(result.id)).toBe(true);
     });
   });
 });

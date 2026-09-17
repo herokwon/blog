@@ -83,7 +83,7 @@ describe('[Server/DB] Content Schema', async () => {
     });
 
     it('rejects an ID that is not a valid UUIDv7', async () => {
-      const invalidId = '0191c13d-8000-4a2b-8123-456789abcdef';
+      const invalidId = '0198f7b1-1234-4abc-8def-123456789abc';
 
       await expect(
         insertTestContent(db, {

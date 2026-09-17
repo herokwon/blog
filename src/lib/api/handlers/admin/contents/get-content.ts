@@ -1,9 +1,9 @@
 import { handleApiError } from '$lib/api/errors/handler';
-import { contentIdSchema } from '$lib/api/schemas';
+import { contentIdSchema, type ErrorResponse } from '$lib/api/schemas';
 import type { ContentService } from '$lib/server/services';
 import { json, type RequestEvent } from '@sveltejs/kit';
 
-export function createGetContentHandler(service: ContentService) {
+export function getContentHandler(service: ContentService) {
   return async (event: RequestEvent): Promise<Response> => {
     const result = contentIdSchema.safeParse(event.params.id);
 
@@ -13,12 +13,14 @@ export function createGetContentHandler(service: ContentService) {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Request validation failed.',
-            details: result.error.issues.map(issue => ({
-              path: ['id', ...issue.path],
-              message: issue.message,
-            })),
+            details: [
+              {
+                path: ['id'],
+                message: 'Invalid content ID format.',
+              },
+            ],
           },
-        },
+        } satisfies ErrorResponse,
         { status: 400 },
       );
     }

@@ -122,7 +122,9 @@ export class ContentRepository {
     };
   }
 
-  async create(input: Content): Promise<Content> {
+  async create(
+    input: Omit<Content, 'createdAt' | 'updatedAt'>,
+  ): Promise<Content> {
     const [result] = await this.db.insert(content).values(input).returning();
     return result;
   }
