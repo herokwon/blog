@@ -13,9 +13,10 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run && npm run test:e2e",
-		"test:e2e": "playwright install && playwright test",
-		"gen": "wrangler types",
+		"test": "pnpm run test:unit --run && pnpm run test:e2e",
+		"test:e2e": "playwright test",
+		"playwright:install": "playwright install chromium",
+		"gen": "wrangler types && prettier --write worker-configuration.d.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate:local": "wrangler d1 migrations apply blog --local",
 		"db:migrate:remote": "wrangler d1 migrations apply blog --remote"
