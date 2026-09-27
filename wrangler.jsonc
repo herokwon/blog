@@ -1,22 +1,22 @@
 {
-	"$schema": "./node_modules/wrangler/config-schema.json",
-	"name": "blog",
-	"compatibility_date": "2026-09-25",
-	"compatibility_flags": ["nodejs_als"],
-	"main": ".svelte-kit/cloudflare/_worker.js",
-	"assets": {
-		"binding": "ASSETS",
-		"directory": ".svelte-kit/cloudflare"
-	},
-	"workers_dev": true,
-	"preview_urls": true,
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "blog",
-			"database_id": "6b1bda44-3ea1-4219-838b-fcf024871b57",
-			"migrations_dir": "./drizzle",
-			"migrations_pattern": "./drizzle/*.sql"
-		}
-	]
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "blog",
+  "compatibility_date": "2026-09-25",
+  "compatibility_flags": ["nodejs_als"],
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".svelte-kit/cloudflare"
+  },
+  "workers_dev": true,
+  "preview_urls": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blog",
+      "database_id": "6b1bda44-3ea1-4219-838b-fcf024871b57",
+      "migrations_dir": "./drizzle",
+      "migrations_pattern": "./drizzle/*.sql"
+    }
+  ]
 }
