@@ -6,7 +6,7 @@ const autoMergeTypes = new Set([
   'version-update:semver-patch',
   'version-update:semver-minor',
 ]);
-const ecosystems = new Set(['npm', 'github-actions']);
+const ecosystems = new Set(['npm_and_yarn', 'github_actions']);
 
 export function shouldAutoMerge({
   author,

@@ -5,13 +5,13 @@ import { shouldAutoMerge } from './dependabot-policy.mjs';
 const eligible = {
   author: 'dependabot[bot]',
   baseRef: 'release/v0.1.0',
-  ecosystem: 'npm',
+  ecosystem: 'npm_and_yarn',
   updateType: 'version-update:semver-patch',
   securityUpdate: false,
 };
 
 test('allows npm and Actions patch/minor version updates', () => {
-  for (const ecosystem of ['npm', 'github-actions']) {
+  for (const ecosystem of ['npm_and_yarn', 'github_actions']) {
     for (const updateType of [
       'version-update:semver-patch',
       'version-update:semver-minor',
