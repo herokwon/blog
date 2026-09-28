@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { shouldAutoMerge } from './dependabot-policy.mjs';
+import { shouldAutoMerge } from './dependabot-policy.ts';
 
 const eligible = {
   author: 'dependabot[bot]',

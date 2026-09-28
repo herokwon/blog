@@ -41,7 +41,7 @@ jobs:
           DEPENDABOT_ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
           DEPENDABOT_UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
           DEPENDABOT_TARGET_BRANCH: ${{ steps.metadata.outputs.target-branch }}
-        run: node .github/scripts/dependabot-policy.mjs
+        run: node .github/scripts/dependabot-policy.ts
 
       - name: Create automation token
         id: app-token
