@@ -5,9 +5,9 @@ import { shouldAutoMerge } from './dependabot-policy.mjs';
 const eligible = {
   author: 'dependabot[bot]',
   baseRef: 'release/v0.1.0',
+  targetBranch: 'release/v0.1.0',
   ecosystem: 'npm_and_yarn',
   updateType: 'version-update:semver-patch',
-  securityUpdate: false,
 };
 
 test('allows npm and Actions patch/minor version updates', () => {
@@ -31,13 +31,30 @@ test('keeps a grouped PR with a major update for manual review', () => {
   );
 });
 
+test('accepts future release branches when the metadata target matches the PR base', () => {
+  for (const baseRef of ['release/v0.2.0', 'release/2027/q1']) {
+    assert.equal(
+      shouldAutoMerge({ ...eligible, baseRef, targetBranch: baseRef }),
+      true,
+    );
+  }
+});
+
 test('rejects wrong author, target branch, ecosystem, or missing metadata', () => {
   assert.equal(shouldAutoMerge({ ...eligible, author: 'alice' }), false);
   assert.equal(shouldAutoMerge({ ...eligible, baseRef: 'main' }), false);
+  assert.equal(shouldAutoMerge({ ...eligible, baseRef: 'release/' }), false);
+  assert.equal(
+    shouldAutoMerge({ ...eligible, baseRef: 'release-candidate' }),
+    false,
+  );
   assert.equal(shouldAutoMerge({ ...eligible, ecosystem: 'docker' }), false);
   assert.equal(shouldAutoMerge({ ...eligible, updateType: '' }), false);
 });
 
-test('never auto-merges a security update', () => {
-  assert.equal(shouldAutoMerge({ ...eligible, securityUpdate: true }), false);
+test('rejects metadata targeting a different release branch', () => {
+  assert.equal(
+    shouldAutoMerge({ ...eligible, targetBranch: 'release/v0.2.0' }),
+    false,
+  );
 });
