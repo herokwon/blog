@@ -2,6 +2,7 @@ import type { Config } from 'prettier';
 
 const config: Config = {
   tabWidth: 2,
+  endOfLine: 'auto',
   singleQuote: true,
   arrowParens: 'avoid',
   trailingComma: 'all',
