@@ -31,6 +31,22 @@ jobs:
         with:
           enable-cache: 'true'
       - run: pnpm check
+      - name: Checkout release PR head
+        if: >-
+          github.event.pull_request.base.ref == 'main' &&
+          startsWith(github.event.pull_request.head.ref, 'release/')
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: release-head
+          persist-credentials: false
+      - name: Check release package version
+        if: >-
+          github.event.pull_request.base.ref == 'main' &&
+          startsWith(github.event.pull_request.head.ref, 'release/')
+        env:
+          RELEASE_REF: ${{ github.event.pull_request.head.ref }}
+        run: node .github/scripts/release-version.ts check "$RELEASE_REF" release-head/package.json
 
   test:
     name: test
