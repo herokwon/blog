@@ -1,0 +1,348 @@
+name: 🚀 Deployment
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, 'release/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.base.ref == 'main' && 'production' || 'preview' }}
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: Resolve deployment
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      ((github.event.pull_request.base.ref == 'main' &&
+        (startsWith(github.event.pull_request.head.ref, 'release/') ||
+         startsWith(github.event.pull_request.head.ref, 'fix/'))) ||
+       startsWith(github.event.pull_request.base.ref, 'release/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      strategy: ${{ steps.target.outputs.strategy }}
+      environment: ${{ steps.target.outputs.environment }}
+      commit-sha: ${{ steps.target.outputs.commit-sha }}
+      release-ref: ${{ steps.target.outputs.release-ref }}
+    steps:
+      - name: Resolve target
+        id: target
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          PR_TITLE_PATTERN='^fix(\([^)]*\))?:'
+          [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo '::error::A merged commit SHA is required'
+            exit 1
+          }
+
+          if [[ "$BASE_REF" == main && "$HEAD_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            strategy=promote
+            environment=production
+            release_ref="$HEAD_REF"
+          elif [[ "$BASE_REF" == main && "$HEAD_REF" == fix/* &&
+                  "$PR_TITLE" =~ $PR_TITLE_PATTERN ]]; then
+            strategy=hotfix
+            environment=production
+            release_ref=''
+          elif [[ "$BASE_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            strategy=upload
+            environment=preview
+            release_ref="$BASE_REF"
+          else
+            echo '::error::Unsupported deployment target'
+            exit 1
+          fi
+
+          echo "strategy=$strategy" >> "$GITHUB_OUTPUT"
+          echo "environment=$environment" >> "$GITHUB_OUTPUT"
+          echo "commit-sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+          echo "release-ref=$release_ref" >> "$GITHUB_OUTPUT"
+
+  select-release-version:
+    name: Select latest release Worker version
+    needs: resolve
+    if: needs.resolve.outputs.strategy == 'promote'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.latest.outputs.tag }}
+    steps:
+      - name: Checkout merged main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.commit-sha }}
+          persist-credentials: false
+
+      - name: Select version
+        id: latest
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_REF: ${{ needs.resolve.outputs.release-ref }}
+        run: |
+          worker_name=$(jq -r '.name' wrangler.jsonc)
+          versions=$(curl -fsSL --retry 3 \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/$worker_name/versions?deployable=true")
+          jq -e '.success == true and (.result.items | type == "array")' <<< "$versions" > /dev/null
+
+          while IFS=$'\t' read -r tag message; do
+            [[ "$tag" =~ ^[0-9a-f]{40}$ && "$message" == "$RELEASE_REF @ $tag" ]] || continue
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "Promoting release candidate $tag." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          done < <(jq -r '.result.items | sort_by(.metadata.created_on) | reverse[] |
+            [.annotations["workers/tag"] // "", .annotations["workers/message"] // ""] | @tsv' <<< "$versions")
+
+          echo '::error::No deployable Worker version belongs to this release branch'
+          exit 1
+
+  migrate-d1:
+    name: Apply production D1 migrations
+    needs: [resolve, select-release-version]
+    if: >-
+      needs.resolve.outputs.strategy == 'promote' &&
+      needs.select-release-version.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout merged main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.commit-sha }}
+          persist-credentials: false
+
+      - name: Check for SQL migrations
+        id: sql
+        run: |
+          if [[ -d drizzle ]] && find drizzle -maxdepth 1 -type f -name '*.sql' -print -quit | grep -q .; then
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'No D1 migration SQL files; continuing to Worker deployment.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Setup environment
+        if: steps.sql.outputs.present == 'true'
+        uses: ./.github/actions/setup-env
+
+      - name: Apply remote D1 migrations
+        if: steps.sql.outputs.present == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm db:migrate:remote
+
+  deploy-worker:
+    name: Deploy to Cloudflare Workers
+    needs: [resolve, select-release-version, migrate-d1]
+    if: >-
+      always() && needs.resolve.result == 'success' &&
+      (needs.resolve.outputs.strategy != 'promote' ||
+       (needs.select-release-version.result == 'success' && needs.migrate-d1.result == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      worker-name: ${{ steps.worker.outputs.name }}
+      version-tag: ${{ steps.version.outputs.tag }}
+      url: ${{ steps.url.outputs.url }}
+    steps:
+      - name: Checkout merged target commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.commit-sha }}
+          fetch-depth: 0
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Resolve Worker name
+        id: worker
+        run: echo "name=$(jq -r '.name' wrangler.jsonc)" >> "$GITHUB_OUTPUT"
+
+      - name: Build Worker
+        if: needs.resolve.outputs.strategy != 'promote'
+        run: pnpm build
+
+      - name: Upload candidate Worker version
+        id: upload-candidate
+        if: needs.resolve.outputs.strategy == 'upload'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            versions upload --tag ${{ needs.resolve.outputs.commit-sha }}
+            --message "${{ needs.resolve.outputs.release-ref }} @ ${{ needs.resolve.outputs.commit-sha }}"
+
+      - name: Upload hotfix Worker version
+        if: needs.resolve.outputs.strategy == 'hotfix'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            versions upload --tag ${{ needs.resolve.outputs.commit-sha }}
+            --message "hotfix @ ${{ needs.resolve.outputs.commit-sha }}"
+
+      - name: Resolve version tag
+        id: version
+        env:
+          STRATEGY: ${{ needs.resolve.outputs.strategy }}
+          MERGE_SHA: ${{ needs.resolve.outputs.commit-sha }}
+          RELEASE_TAG: ${{ needs.select-release-version.outputs.tag }}
+        run: |
+          if [[ "$STRATEGY" == promote ]]; then
+            echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy Worker version
+        id: deploy-version
+        if: needs.resolve.outputs.environment == 'production'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions deploy --version-tag ${{ steps.version.outputs.tag }} -y
+
+      - name: Deploy Worker triggers
+        if: needs.resolve.outputs.environment == 'production'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: triggers deploy
+
+      - name: Resolve Worker URL
+        id: url
+        env:
+          ENVIRONMENT: ${{ needs.resolve.outputs.environment }}
+          PREVIEW_URL: ${{ steps.upload-candidate.outputs.deployment-url }}
+          DEPLOYMENT_URL: ${{ steps.deploy-version.outputs.deployment-url }}
+        run: |
+          if [[ "$ENVIRONMENT" == production ]]; then
+            domain=$(jq -r '(.routes // [])[] | select(.custom_domain == true) | .pattern' wrangler.jsonc | head -n 1)
+            if [[ -n "$domain" ]]; then
+              echo "url=https://$domain" >> "$GITHUB_OUTPUT"
+            elif [[ -n "$DEPLOYMENT_URL" ]]; then
+              echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+            fi
+          elif [[ -n "$PREVIEW_URL" ]]; then
+            echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          fi
+
+  github-deployment:
+    name: Record GitHub Deployment
+    needs: [resolve, migrate-d1, deploy-worker]
+    if: always() && needs.resolve.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      deployments: write
+    steps:
+      - name: Create deployment and status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ENVIRONMENT: ${{ needs.resolve.outputs.environment }}
+          COMMIT_SHA: ${{ needs.resolve.outputs.commit-sha }}
+          WORKER_RESULT: ${{ needs.deploy-worker.result }}
+          WORKER_URL: ${{ needs.deploy-worker.outputs.url }}
+        run: |
+          deployment_id=$(jq -n --arg ref "$COMMIT_SHA" --arg environment "$ENVIRONMENT" \
+            '{ref: $ref, environment: $environment, auto_merge: false, required_contexts: []}' |
+            gh api "repos/$GH_REPO/deployments" --method POST --input - --jq '.id')
+
+          state=failure
+          if [[ "$WORKER_RESULT" == success ]]; then
+            state=success
+          fi
+          args=(-f "state=$state" -f "environment=$ENVIRONMENT")
+          [[ -n "$WORKER_URL" ]] && args+=(-f "environment_url=$WORKER_URL")
+          gh api "repos/$GH_REPO/deployments/$deployment_id/statuses" \
+            --method POST "${args[@]}" > /dev/null
+
+  comment-pr:
+    name: Comment deployment result on PR
+    needs: [resolve, migrate-d1, deploy-worker]
+    if: always() && needs.resolve.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ENVIRONMENT: ${{ needs.resolve.outputs.environment }}
+          WORKER_RESULT: ${{ needs.deploy-worker.result }}
+          MIGRATION_RESULT: ${{ needs.migrate-d1.result }}
+          VERSION_TAG: ${{ needs.deploy-worker.outputs.version-tag }}
+          WORKER_URL: ${{ needs.deploy-worker.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          status='❌ Failed'
+          [[ "$WORKER_RESULT" == success ]] && status='✅ Success'
+          {
+            echo '### Cloudflare Workers deployment'
+            echo
+            echo "| Status | $status |"
+            echo '| :--- | :--- |'
+            echo "| Environment | $ENVIRONMENT |"
+            if [[ "$ENVIRONMENT" == production ]]; then
+              echo "| D1 migration | $MIGRATION_RESULT |"
+            fi
+            [[ -n "$VERSION_TAG" ]] && echo "| Worker version tag | \`$VERSION_TAG\` |"
+            [[ -n "$WORKER_URL" ]] && echo "| URL | $WORKER_URL |"
+            echo "| Details | [GitHub Actions]($RUN_URL) |"
+          } > "$RUNNER_TEMP/deployment-comment.md"
+          gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body-file "$RUNNER_TEMP/deployment-comment.md"
+
+  github-release:
+    name: Create GitHub Release
+    needs: [resolve, deploy-worker]
+    if: >-
+      needs.deploy-worker.result == 'success' &&
+      needs.resolve.outputs.environment == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout merged main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.commit-sha }}
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+
+      - name: Create release if version is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=$(jq -r '.version' package.json)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo '::error::Invalid package version'
+            exit 1
+          }
+          if gh release view "v$version" --repo "$GH_REPO" > /dev/null 2>&1; then
+            echo "GitHub Release v$version already exists." >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh release create "v$version" --repo "$GH_REPO" \
+              --target main --title "v$version" --generate-notes
+          fi
