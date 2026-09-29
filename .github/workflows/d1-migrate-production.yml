@@ -1,0 +1,119 @@
+name: Production D1 Migration
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  inspect-migrations:
+    name: Inspect production D1 migrations
+    if: >-
+      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      has-sql: ${{ steps.inspect.outputs.has-sql }}
+    steps:
+      - name: Checkout release PR head for inspection
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: release-head
+          persist-credentials: false
+
+      - name: Check for SQL migrations
+        id: inspect
+        run: |
+          if [[ -d release-head/drizzle ]] &&
+             find release-head/drizzle -maxdepth 1 -type f -name '*.sql' -print -quit | grep -q .; then
+            echo 'has-sql=true' >> "$GITHUB_OUTPUT"
+            echo 'Release PR contains D1 migration SQL files.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'has-sql=false' >> "$GITHUB_OUTPUT"
+            echo 'No D1 migration SQL files found; remote migration is skipped.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  apply-migrations:
+    name: Apply production D1 migrations
+    needs: inspect-migrations
+    if: needs.inspect-migrations.outputs.has-sql == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production-migration
+      deployment: false
+    concurrency:
+      group: production-d1-migration
+      cancel-in-progress: false
+    env:
+      GH_REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout trusted main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Setup trusted dependencies
+        uses: ./.github/actions/setup-env
+
+      - name: Checkout release PR SQL files
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: release-head
+          persist-credentials: false
+
+      - name: Copy SQL migrations
+        run: |
+          mkdir -p drizzle
+          while IFS= read -r -d '' path; do
+            relative_path=${path#release-head/}
+            [[ "$relative_path" =~ ^drizzle/[A-Za-z0-9._-]+\.sql$ &&
+               -f "$path" && ! -L "$path" ]] || {
+              echo "::error::Invalid migration file: $path"
+              exit 1
+            }
+            cp -- "$path" "$relative_path"
+          done < <(find release-head/drizzle -maxdepth 1 -name '*.sql' -print0)
+
+      - name: Confirm release PR before migration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr=$(gh api "repos/$GH_REPO/pulls/$PR_NUMBER")
+          [[ "$(jq -r '.head.sha' <<< "$pr")" == "$HEAD_SHA" &&
+             "$(jq -r '.base.sha' <<< "$pr")" == "$BASE_SHA" &&
+             "$(jq -r '.head.repo.full_name' <<< "$pr")" == "$GH_REPO" &&
+             "$(jq -r '.head.ref' <<< "$pr")" == release/* &&
+             "$(jq -r '.base.ref' <<< "$pr")" == 'main' &&
+             "$(jq -r '.state' <<< "$pr")" == 'open' ]] || {
+            echo '::error::Release PR changed or closed while awaiting approval'
+            exit 1
+          }
+
+      - name: Apply remote D1 migrations
+        id: migrate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm db:migrate:remote
+
+      - name: Report migration result
+        if: always()
+        env:
+          MIGRATION_OUTCOME: ${{ steps.migrate.outcome }}
+        run: |
+          if [[ "$MIGRATION_OUTCOME" == 'success' ]]; then
+            echo "Production D1 migration command completed for PR #$PR_NUMBER." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Production D1 migration did not complete for PR #$PR_NUMBER." >> "$GITHUB_STEP_SUMMARY"
+          fi
