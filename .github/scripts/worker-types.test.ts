@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   mkdtempSync,
   readdirSync,
@@ -9,9 +10,49 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { runWorkerTypes } from './worker-types.ts';
 
-test('types remain stable when the built entrypoint appears and reject stale bindings', async () => {
+function runTypes(
+  command: 'generate' | 'check',
+  configPath: string,
+  outputPath: string,
+  expectedCode = 0,
+): void {
+  const result = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `const { runWorkerTypes } = await import(process.argv[1]);
+       process.exitCode = await runWorkerTypes(process.argv[2], process.argv[3], process.argv[4]);`,
+      new URL('./worker-types.ts', import.meta.url).href,
+      command,
+      configPath,
+      outputPath,
+    ],
+    {
+      encoding: 'utf8',
+      timeout: 60_000,
+      env: { ...process.env, WRANGLER_SEND_METRICS: 'false' },
+    },
+  );
+  const diagnostics = [
+    `Wrangler ${command}: expected exit ${expectedCode}, received ${result.status} (signal: ${result.signal})`,
+    result.error?.message,
+    result.stdout,
+    result.stderr,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  assert.equal(result.error, undefined, diagnostics);
+  assert.equal(result.signal, null, diagnostics);
+  assert.equal(result.status, expectedCode, diagnostics);
+  assert.doesNotMatch(result.stderr, /Assertion failed:/, diagnostics);
+  if (expectedCode === 1) {
+    assert.match(result.stderr, /Types at .+ are out of date\./, diagnostics);
+  }
+}
+
+test('types remain stable when the built entrypoint appears and reject stale bindings', () => {
   const directory = mkdtempSync(join(tmpdir(), 'worker-types-test-'));
   const configPath = join(directory, 'wrangler.jsonc');
   const outputPath = join(directory, 'worker.d.ts');
@@ -24,7 +65,7 @@ test('types remain stable when the built entrypoint appears and reject stale bin
   }`;
   try {
     writeFileSync(configPath, config);
-    assert.equal(await runWorkerTypes('generate', configPath, outputPath), 0);
+    runTypes('generate', configPath, outputPath);
     const before = readFileSync(outputPath, 'utf8');
     assert.match(before, /GREETING/);
     assert.doesNotMatch(
@@ -35,14 +76,14 @@ test('types remain stable when the built entrypoint appears and reject stale bin
       join(directory, 'worker.js'),
       'export default { fetch() { return new Response("ok"); } };',
     );
-    assert.equal(await runWorkerTypes('check', configPath, outputPath), 0);
-    assert.equal(await runWorkerTypes('generate', configPath, outputPath), 0);
+    runTypes('check', configPath, outputPath);
+    runTypes('generate', configPath, outputPath);
     assert.equal(readFileSync(outputPath, 'utf8'), before);
     writeFileSync(configPath, config.replace('GREETING', 'CHANGED_BINDING'));
-    assert.notEqual(await runWorkerTypes('check', configPath, outputPath), 0);
+    runTypes('check', configPath, outputPath, 1);
     assert.equal(readFileSync(outputPath, 'utf8'), before);
-    assert.equal(await runWorkerTypes('generate', configPath, outputPath), 0);
-    assert.equal(await runWorkerTypes('check', configPath, outputPath), 0);
+    runTypes('generate', configPath, outputPath);
+    runTypes('check', configPath, outputPath);
     assert.equal(
       readdirSync(directory).some(name => name.startsWith('.worker-types-')),
       false,
