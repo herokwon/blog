@@ -1,5 +1,13 @@
 # CI/CD operations
 
+## Worker type generation and validation
+
+`wrangler.jsonc` is the source of truth for Worker bindings and runtime compatibility. Run `pnpm gen` after changing bindings, compatibility settings, or Wrangler, and commit `worker-configuration.d.ts`. `pnpm types:check` checks the committed types without regenerating them. Both `pnpm check` and `pnpm build` run this check first; Dependabot synchronization continues to use `pnpm gen`.
+
+The shared `.github/scripts/worker-types.ts` script parses JSONC with TypeScript, creates a temporary configuration beside `wrangler.jsonc`, and omits `main` for type generation and validation. This keeps relative configuration paths intact and makes generated Env/runtime types independent of `.svelte-kit/cloudflare/_worker.js`. The temporary file is removed after Wrangler exits, including on failure, and generated headers use the stable `pnpm gen` command. Deployment still uses the original configuration and entrypoint.
+
+This flow intentionally generates Env/runtime types without entrypoint-derived `Cloudflare.GlobalProps.mainModule`. Revisit it if the project adds exported RPC or Durable Object classes that need entrypoint-derived types. Avoid running bare `wrangler types` for repository type synchronization because it uses the build-dependent entrypoint.
+
 ## Production D1 migrations and Worker deployment
 
 Apply and test migrations locally during development. Merging a same-repository `release/** → main` pull request authorizes production D1 migration and Worker deployment. The `deployment.yml` workflow uses the merged main commit and first confirms that a release Worker version is available. Its `Apply production D1 migrations` job runs `pnpm db:migrate:remote` when `drizzle/*.sql` files exist; otherwise the job succeeds without contacting D1. A failed migration prevents the Worker deployment. Wrangler applies only migrations not yet recorded in production D1.
