@@ -16,12 +16,17 @@ export default defineConfig({
       adapter: adapter(),
       typescript: {
         config: config => {
-          config.include.push('../*.config.ts');
+          config.include.push('../*.config.ts', '../.github/scripts/**/*.ts');
         },
       },
     }),
   ],
   test: {
+    globals: true,
+    reporters: [
+      'default',
+      ...(process.env.GITHUB_ACTIONS === 'true' ? ['github-actions'] : []),
+    ],
     expect: { requireAssertions: true },
     coverage: {
       provider: 'v8',
