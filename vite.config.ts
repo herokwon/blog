@@ -22,6 +22,11 @@ export default defineConfig({
     }),
   ],
   test: {
+    globals: true,
+    reporters: [
+      'default',
+      ...(process.env.GITHUB_ACTIONS === 'true' ? ['github-actions'] : []),
+    ],
     expect: { requireAssertions: true },
     coverage: {
       provider: 'v8',
