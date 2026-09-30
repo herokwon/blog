@@ -16,7 +16,7 @@ export default defineConfig({
       adapter: adapter(),
       typescript: {
         config: config => {
-          config.include.push('../*.config.ts');
+          config.include.push('../*.config.ts', '../.github/scripts/**/*.ts');
         },
       },
     }),
