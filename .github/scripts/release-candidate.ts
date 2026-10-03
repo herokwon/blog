@@ -11,6 +11,7 @@ if (
 }
 
 type Version = {
+  id?: string;
   annotations?: { 'workers/tag'?: string; 'workers/message'?: string };
 };
 
@@ -27,9 +28,20 @@ const candidate = versions.find(
 if (!candidate) {
   throw new Error(`No deployable candidate matches ${releaseRef} @ ${headSha}`);
 }
+if (
+  !candidate.id ||
+  !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    candidate.id,
+  )
+) {
+  throw new Error('Selected candidate has no valid Worker Version ID');
+}
 const tag = headSha;
 if (process.env.GITHUB_OUTPUT)
-  appendFileSync(process.env.GITHUB_OUTPUT, `tag=${tag}\n`);
+  appendFileSync(
+    process.env.GITHUB_OUTPUT,
+    `tag=${tag}\nversion-id=${candidate.id}\n`,
+  );
 if (process.env.GITHUB_STEP_SUMMARY)
   appendFileSync(
     process.env.GITHUB_STEP_SUMMARY,

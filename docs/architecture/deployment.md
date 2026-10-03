@@ -108,13 +108,15 @@ comments only. Workflow correction is outside this documentation task.
 
 ## Reporting and Recovery
 
-After target resolution succeeds, the workflow records a GitHub Deployment
-with the target merge commit, environment, and final status. It comments on
-the originating PR with the outcome, workflow link, and available Worker
-version tag and URL.
+The workflow records each resolved attempt through GitHub Deployment and
+the originating PR. Reports distinguish the target merge commit from the
+Worker source, and selected or uploaded versions from confirmed deployment.
+Partial Worker deployment success remains an overall failure when later
+steps fail. Deployment recording failure does not prevent PR reporting.
 
-During promotion, the merge commit and selected candidate tag may differ;
-the PR report identifies the selected tag.
+[Deployment identification and results](../operations/ci-cd.md#deployment-identification-and-results)
+defines the recorded fields, Version ID capture, exact-ID deployment,
+comment layout, and interpretation of failed or partial results.
 
 Failures require manual investigation. If a hotfix leaves the incident
 unresolved, an operator restores a previous working Worker version through
@@ -131,5 +133,5 @@ compatibility before restoring earlier code.
 - [Release version workflow](../../.github/workflows/release-version-bump.yml)
 - [Database foundation](database-foundation.md)
 
-Procedures for carrying hotfix changes into regular releases and improving
-deployment identification records will be discussed in a subsequent issue.
+Procedures for carrying hotfix changes into regular releases remain follow-up
+work in [Issue #7](https://github.com/herokwon/blog/issues/7).

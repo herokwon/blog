@@ -59,7 +59,10 @@ test('selects the final PR head even when an older commit was uploaded later', (
   ]) {
     const result = runCandidate({ success: true, result: { items } });
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.output, `tag=${headSha}\n`);
+    assert.equal(
+      result.output,
+      `tag=${headSha}\nversion-id=18f97339-c287-4872-9bdd-e2135c07ec12\n`,
+    );
     assert.match(result.summary, new RegExp(headSha));
   }
 });
@@ -90,7 +93,10 @@ test('ignores versions without the required annotations', () => {
     result: { items: [{ id: 'unannotated' }, version(headSha)] },
   });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.output, `tag=${headSha}\n`);
+  assert.equal(
+    result.output,
+    `tag=${headSha}\nversion-id=18f97339-c287-4872-9bdd-e2135c07ec12\n`,
+  );
 });
 
 test('rejects failed or malformed API responses before publishing outputs', () => {
