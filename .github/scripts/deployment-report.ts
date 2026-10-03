@@ -57,41 +57,69 @@ export function createDeploymentReport(input: ReportInput) {
   };
   const commits: [string, string][] =
     input.mergeSha === input.sourceSha
-      ? [['Target merge SHA / source SHA / version tag', input.mergeSha]]
+      ? [['Source SHA / version tag', input.sourceSha]]
       : [
           ['Target merge SHA', input.mergeSha],
           ['Source SHA / version tag', input.sourceSha],
         ];
   const rows: [string, string][] = [
-    ['Status', outcome],
-    ['Environment', input.environment],
-    ['Strategy', input.strategy],
+    [
+      'Result',
+      `${outcome} · ${input.strategy === 'promote' ? 'Production promotion' : input.strategy === 'hotfix' ? 'Hotfix · production' : 'Candidate upload · preview'}`,
+    ],
     ['Package version', input.packageVersion || 'Unavailable'],
     ...commits,
-    ['Candidate selection', payload.candidate_selection_result],
-    ['D1 migration', payload.migration_result],
-    ['Version upload', payload.upload_result],
-    ['Worker deployment', payload.worker_deployment_result],
-    ['Triggers', payload.triggers_result],
   ];
   if (versionId) {
-    const stages = [
-      'selected',
-      ...(uploadedId ? ['uploaded'] : []),
-      ...(deployedId ? ['deployed'] : []),
-    ];
-    rows.push([`Worker Version ID (${stages.join(', ')})`, versionId]);
-  }
-  if (!deployedId && production)
     rows.push([
-      'Production deployment',
-      'Not confirmed; inspect production state before recovery or retry.',
+      deployedId
+        ? 'Deployed Worker Version ID'
+        : uploadedId
+          ? 'Uploaded Worker Version ID'
+          : 'Selected Worker Version ID (deployment unconfirmed)',
+      versionId,
     ]);
-  if (input.url) rows.push(['URL', input.url]);
-  rows.push(
-    ['PR', `[Originating PR](${input.prUrl})`],
-    ['Details', `[GitHub Actions](${input.runUrl})`],
-  );
+  }
+  if (!success) {
+    const stopped = (label: string, result: string) =>
+      result === 'failure'
+        ? `${label} failed`
+        : result === 'cancelled'
+          ? `${label} cancelled`
+          : null;
+    const failure =
+      (input.strategy === 'promote'
+        ? (stopped('Exact candidate selection', input.selectionResult) ??
+          stopped('D1 migration', input.migrationResult))
+        : null) ??
+      stopped('Worker deployment', input.deployResult) ??
+      (input.deployResult === 'success' && !versionId
+        ? 'Worker Version ID unavailable; deployment identity cannot be confirmed'
+        : null) ??
+      (deployedId ? stopped('Triggers update', input.triggersResult) : null) ??
+      (input.workerResult === 'cancelled' && !input.deployResult
+        ? 'Worker job cancelled; inspect Actions'
+        : null) ??
+      (deployedId
+        ? 'Subsequent Worker job step failed or was cancelled; inspect Actions'
+        : 'Preparation or upload failed, was blocked, or was cancelled; inspect Actions');
+    rows.push(['Failure summary', failure]);
+    if (production) {
+      const state = deployedId
+        ? 'Worker deployment confirmed'
+        : ['failure', 'cancelled', 'success'].includes(input.deployResult) ||
+            (input.workerResult === 'cancelled' && !input.deployResult)
+          ? 'Worker deployment not confirmed; inspect actual production state'
+          : 'Worker deployment not attempted';
+      rows.push([
+        'Production state',
+        `D1 step: ${payload.migration_result}; ${state}${stopped('D1 migration', input.migrationResult) ? '; partial D1 changes may remain' : ''}${input.migrationResult === 'success' ? '; D1 step success does not imply schema changes' : ''}.`,
+      ]);
+    }
+  }
+  if (input.url)
+    rows.push([production ? 'Production URL' : 'Version URL', input.url]);
+  rows.push(['Details', `[GitHub Actions](${input.runUrl})`]);
   const cell = (value: string) =>
     value.replaceAll('|', '\\|').replaceAll(/\r?\n/g, ' ');
   return {
