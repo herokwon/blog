@@ -96,15 +96,13 @@ A dedicated GitHub App authors these changes and enables auto-merge after
 required checks pass, separating automation attribution and permissions
 from ordinary user identities.
 
-The agreed policy creates `v<package.json version>` GitHub Releases after
+The workflow creates `v<package.json version>` GitHub Releases after
 successful regular production promotion, skipping existing releases.
 Release creation follows Worker and trigger deployment; its failure does
 not undo the deployed Worker.
 
-**Implementation gap:** the current workflow also permits Release creation
-after successful hotfix deployment, skipping an existing release for that
-version. The agreed hotfix policy automates Deployment records and PR
-comments only. Workflow correction is outside this documentation task.
+Hotfix deployments do not create GitHub Releases; they record GitHub
+Deployments and PR comments.
 
 ## Reporting and Recovery
 

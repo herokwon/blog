@@ -337,6 +337,7 @@ jobs:
     needs: [resolve, deploy-worker]
     if: >-
       needs.deploy-worker.result == 'success' &&
+      needs.resolve.outputs.strategy == 'promote' &&
       needs.resolve.outputs.environment == 'production'
     runs-on: ubuntu-latest
     timeout-minutes: 5
