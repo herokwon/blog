@@ -51,35 +51,48 @@ without applying production migrations or deploying production triggers.
 
 ### Production Promotion
 
-1. Select the newest deployable candidate annotated for the release branch.
+1. Select a deployable candidate tagged with the merged release PR's final
+   head SHA and annotated for that release branch.
 2. Apply pending D1 migrations from the merged main commit.
 3. Deploy the selected Worker version.
 4. Deploy Worker triggers separately.
 
-Promotion does not rebuild the Worker. Selection uses branch annotations
-and upload time, not an exact match to the release PR's final head SHA.
-Review the selected candidate and its migration compatibility before
-promotion.
+Promotion does not rebuild the Worker. Selection requires an exact match
+to the release PR's final head SHA and release-branch annotation, regardless
+of upload order. The head SHA identifies the candidate source; it is distinct
+from the main merge commit used for migrations and deployment reporting.
+Verify the final candidate and its migration compatibility before promotion.
 
-Missing candidates or failed migrations prevent Worker deployment.
+If the exact candidate is missing, selection fails before D1 migrations or
+Worker deployment; an older candidate is never substituted. Resolve a failed
+candidate upload or wait for it to finish, then rerun promotion. Failed
+migrations also prevent Worker deployment.
 Worker or trigger deployment failure marks the deployment job as failed.
 The sequence is not atomic; earlier successful changes may remain after
 a later failure.
 
 ### Hotfix
 
-A hotfix is authorized by merging its PR into main after CI and manual
-review. A preceding production deployment failure is not required.
-
-CI and review are merge prerequisites; deployment automation checks
-the same-repository merge, branch, and title conditions listed above.
+Start `fix/**` branches from the latest main and merge after CI and manual
+review. A preceding deployment failure is not required. Automation checks
+the same-repository merge, branch, and title conditions listed above;
+CI and review remain merge prerequisites.
 
 Hotfixes do not automatically increase the package version or apply D1
 migrations. They must remain compatible with the production schema;
 schema changes use regular release promotion.
 
-Deployment success confirms completion of deployment steps,
-not resolution of the operational incident.
+### Hotfix Synchronization
+
+Continue development on one active release branch. After verifying the
+hotfix in production, synchronize `main → the active release/v… branch`
+through a manually reviewed PR merged with a merge commit. Upload and
+verify a new candidate containing the hotfix before regular promotion.
+
+[Hotfix delivery and synchronization](../operations/ci-cd.md#hotfix-delivery-and-synchronization)
+defines the review and verification procedure. Synchronization and release
+resumption remain operator decisions; no automatic synchronization workflow
+is planned.
 
 ## Versions and GitHub Releases
 
@@ -91,40 +104,42 @@ A dedicated GitHub App authors these changes and enables auto-merge after
 required checks pass, separating automation attribution and permissions
 from ordinary user identities.
 
-The agreed policy creates `v<package.json version>` GitHub Releases after
+The workflow creates `v<package.json version>` GitHub Releases after
 successful regular production promotion, skipping existing releases.
 Release creation follows Worker and trigger deployment; its failure does
 not undo the deployed Worker.
 
-**Implementation gap:** the current workflow also permits Release creation
-after successful hotfix deployment, skipping an existing release for that
-version. The agreed hotfix policy automates Deployment records and PR
-comments only. Workflow correction is outside this documentation task.
+Hotfix deployments do not create GitHub Releases.
 
 ## Reporting and Recovery
 
-After target resolution succeeds, the workflow records a GitHub Deployment
-with the target merge commit, environment, and final status. It comments on
-the originating PR with the outcome, workflow link, and available Worker
-version tag and URL.
+The workflow records each resolved attempt through GitHub Deployment and
+the originating PR. Deployment success confirms completed steps, not
+incident resolution.
 
-During promotion, the merge commit and selected candidate tag may differ;
-the PR report identifies the selected tag.
+[Deployment identification and results](../operations/ci-cd.md#deployment-identification-and-results)
+defines the recorded fields, Version ID capture, exact-ID deployment,
+comment layout, independent PR reporting, and interpretation of failed or
+partial results.
 
-Failures require manual investigation. If a hotfix leaves the incident
-unresolved, an operator restores a previous working Worker version through
-the Cloudflare dashboard. No separate rollback workflow is planned.
+Deployment failures or unresolved incidents pause synchronization and
+promotion until production and intended Git code are reconciled and
+verified. Recovery requires investigation and may use a deployment rerun
+or dashboard restoration, followed by a fix/revert PR when Git changes
+are required.
+Worker restoration must be compatible with the current D1 schema and does
+not reverse migrations. No rollback workflow is planned.
 
-Dashboard recovery does not automatically update GitHub Deployment records.
-Worker rollback does not reverse D1 migrations; verify current-schema
-compatibility before restoring earlier code.
+[Failure recovery and release resumption](../operations/ci-cd.md#failure-recovery-and-release-resumption)
+defines recovery actions, verification gates, and records, including the
+manual record needed after dashboard restoration.
 
-## Sources and Follow-Up
+## Sources
 
 - [Worker configuration](../../wrangler.jsonc)
 - [Deployment workflow](../../.github/workflows/deployment.yml)
 - [Release version workflow](../../.github/workflows/release-version-bump.yml)
 - [Database foundation](database-foundation.md)
 
-Procedures for carrying hotfix changes into regular releases and improving
-deployment identification records will be discussed in a subsequent issue.
+Release promotion and hotfix hardening are tracked in
+[Issue #7](https://github.com/herokwon/blog/issues/7).
