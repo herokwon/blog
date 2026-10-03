@@ -1,0 +1,239 @@
+name: 🔖 Release Version Bump
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GH_REPO: ${{ github.repository }}
+  RELEASE_REF: ${{ github.event.pull_request.head.ref }}
+  RELEASE_PR_NUMBER: ${{ github.event.pull_request.number }}
+  RELEASE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  prepare-version:
+    name: Prepare release version
+    if: >-
+      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.sync.outputs.version }}
+      branch: ${{ steps.sync.outputs.branch }}
+      changed: ${{ steps.sync.outputs.changed }}
+    steps:
+      - name: Checkout release PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Synchronize package version
+        id: sync
+        run: node source/.github/scripts/release-version.ts sync "$RELEASE_REF" source/package.json
+
+      - name: Check prepared file
+        if: steps.sync.outputs.changed == 'true'
+        working-directory: source
+        run: |
+          changed_files=$(git diff --name-only)
+          [[ "$changed_files" == 'package.json' ]] || {
+            echo '::error::Unexpected files changed while preparing the version bump'
+            exit 1
+          }
+
+      - name: Upload changed package
+        if: steps.sync.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-package
+          path: source/package.json
+          if-no-files-found: error
+
+  update-version-pr:
+    name: Update release version PR
+    needs: prepare-version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RELEASE_VERSION: ${{ needs.prepare-version.outputs.version }}
+      VERSION_BRANCH: ${{ needs.prepare-version.outputs.branch }}
+      PACKAGE_CHANGED: ${{ needs.prepare-version.outputs.changed }}
+    steps:
+      - name: Confirm release PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr=$(gh api "repos/$GH_REPO/pulls/$RELEASE_PR_NUMBER")
+          actual_sha=$(jq -r '.head.sha' <<< "$pr")
+          actual_repo=$(jq -r '.head.repo.full_name' <<< "$pr")
+          actual_base=$(jq -r '.base.ref' <<< "$pr")
+          [[ "$actual_sha" == "$RELEASE_HEAD_SHA" &&
+             "$actual_repo" == "$GH_REPO" &&
+             "$actual_base" == 'main' ]] || {
+            echo '::error::The release PR changed after this run started'
+            exit 1
+          }
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_VERSION_AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_VERSION_AUTOMATION_APP_PRIVATE_KEY }}
+          repositories: ${{ github.repository }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Find existing automation PR
+        id: existing-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          prs=$(gh pr list --repo "$GH_REPO" --head "$VERSION_BRANCH" \
+            --base "$RELEASE_REF" --state open --json number,author)
+          number=$(jq -r '.[0].number // empty' <<< "$prs")
+          author=$(jq -r '.[0].author.login // empty' <<< "$prs")
+          if [[ -n "$number" && "$author" != "${APP_SLUG}[bot]" ]]; then
+            echo '::error::The automation branch belongs to another PR author'
+            exit 1
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Close obsolete version PR
+        if: env.PACKAGE_CHANGED == 'false' && steps.existing-pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.existing-pr.outputs.number }}
+        run: |
+          current_sha=$(gh api "repos/$GH_REPO/pulls/$RELEASE_PR_NUMBER" --jq '.head.sha')
+          [[ "$current_sha" == "$RELEASE_HEAD_SHA" ]] || {
+            echo '::error::The release PR head changed before closing the version PR'
+            exit 1
+          }
+          gh pr close "$PR_NUMBER" --repo "$GH_REPO" --delete-branch
+
+      - name: Checkout release PR head
+        if: env.PACKAGE_CHANGED == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Download changed package
+        if: env.PACKAGE_CHANGED == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: release-package
+          path: .
+
+      - name: Get GitHub App user ID
+        if: env.PACKAGE_CHANGED == 'true'
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        if: env.PACKAGE_CHANGED == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          APP_USER_ID: ${{ steps.app-user.outputs.id }}
+        run: |
+          changed_files=$(git diff --name-only)
+          [[ "$changed_files" == 'package.json' ]] || {
+            echo '::error::Unexpected artifact content'
+            exit 1
+          }
+          jq -e --arg version "$RELEASE_VERSION" '.version == $version' package.json > /dev/null
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          gh auth setup-git
+          git switch -c "$VERSION_BRANCH"
+          git add -- package.json
+          git commit -m "chore(release): Bump version to $RELEASE_VERSION"
+
+      - name: Push version bump branch
+        if: env.PACKAGE_CHANGED == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          EXISTING_PR_NUMBER: ${{ steps.existing-pr.outputs.number }}
+        run: |
+          current_sha=$(gh api "repos/$GH_REPO/pulls/$RELEASE_PR_NUMBER" --jq '.head.sha')
+          [[ "$current_sha" == "$RELEASE_HEAD_SHA" ]] || {
+            echo '::error::The release PR head changed before push'
+            exit 1
+          }
+          remote_sha=$(git ls-remote --heads origin "refs/heads/$VERSION_BRANCH" | cut -f1)
+          if [[ -n "$remote_sha" && -z "$EXISTING_PR_NUMBER" ]]; then
+            echo '::error::The automation branch exists without an open automation PR'
+            exit 1
+          fi
+          git push --force-with-lease="refs/heads/$VERSION_BRANCH:$remote_sha" \
+            origin "HEAD:refs/heads/$VERSION_BRANCH"
+
+      - name: Find or create version bump PR
+        if: env.PACKAGE_CHANGED == 'true'
+        id: version-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          EXISTING_PR_NUMBER: ${{ steps.existing-pr.outputs.number }}
+          RELEASE_PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          current_sha=$(gh api "repos/$GH_REPO/pulls/$RELEASE_PR_NUMBER" --jq '.head.sha')
+          [[ "$current_sha" == "$RELEASE_HEAD_SHA" ]] || {
+            echo '::error::The release PR head changed before enabling auto-merge'
+            exit 1
+          }
+          if [[ -n "$EXISTING_PR_NUMBER" ]]; then
+            number="$EXISTING_PR_NUMBER"
+          else
+            cat > "$RUNNER_TEMP/release-pr-body.md" <<EOF
+          ## Release Version
+
+          Set \`package.json\` to \`$RELEASE_VERSION\` for $RELEASE_PR_URL.
+
+          This PR merges automatically after the required checks pass.
+          EOF
+            url=$(gh pr create --repo "$GH_REPO" --base "$RELEASE_REF" \
+              --head "$VERSION_BRANCH" \
+              --title "chore(release): Bump version to $RELEASE_VERSION" \
+              --body-file "$RUNNER_TEMP/release-pr-body.md")
+            number="${url##*/}"
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge
+        if: env.PACKAGE_CHANGED == 'true' && steps.version-pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.version-pr.outputs.number }}
+        run: |
+          enabled=$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" \
+            --json autoMergeRequest --jq '.autoMergeRequest != null')
+          if [[ "$enabled" != 'true' ]]; then
+            head_sha=$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json headRefOid \
+              --jq .headRefOid)
+            gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --squash \
+              --delete-branch --match-head-commit "$head_sha" \
+              --subject "chore(release): Bump version to $RELEASE_VERSION"
+          fi
