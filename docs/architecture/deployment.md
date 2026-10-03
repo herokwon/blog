@@ -51,17 +51,22 @@ without applying production migrations or deploying production triggers.
 
 ### Production Promotion
 
-1. Select the newest deployable candidate annotated for the release branch.
+1. Select a deployable candidate tagged with the merged release PR's final
+   head SHA and annotated for that release branch.
 2. Apply pending D1 migrations from the merged main commit.
 3. Deploy the selected Worker version.
 4. Deploy Worker triggers separately.
 
-Promotion does not rebuild the Worker. Selection uses branch annotations
-and upload time, not an exact match to the release PR's final head SHA.
-Review the selected candidate and its migration compatibility before
-promotion.
+Promotion does not rebuild the Worker. Selection requires an exact match
+to the release PR's final head SHA and release-branch annotation, regardless
+of upload order. The head SHA identifies the candidate source; it is distinct
+from the main merge commit used for migrations and deployment reporting.
+Verify the final candidate and its migration compatibility before promotion.
 
-Missing candidates or failed migrations prevent Worker deployment.
+If the exact candidate is missing, selection fails before D1 migrations or
+Worker deployment; an older candidate is never substituted. Resolve a failed
+candidate upload or wait for it to finish, then rerun promotion. Failed
+migrations also prevent Worker deployment.
 Worker or trigger deployment failure marks the deployment job as failed.
 The sequence is not atomic; earlier successful changes may remain after
 a later failure.

@@ -30,6 +30,7 @@ jobs:
       environment: ${{ steps.target.outputs.environment }}
       commit-sha: ${{ steps.target.outputs.commit-sha }}
       release-ref: ${{ steps.target.outputs.release-ref }}
+      release-head-sha: ${{ steps.target.outputs.release-head-sha }}
     steps:
       - name: Resolve target
         id: target
@@ -38,6 +39,7 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           PR_TITLE_PATTERN='^fix(\([^)]*\))?:'
           [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
@@ -45,10 +47,16 @@ jobs:
             exit 1
           }
 
+          release_head_sha=''
           if [[ "$BASE_REF" == main && "$HEAD_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+              echo '::error::A release PR head SHA is required'
+              exit 1
+            }
             strategy=promote
             environment=production
             release_ref="$HEAD_REF"
+            release_head_sha="$HEAD_SHA"
           elif [[ "$BASE_REF" == main && "$HEAD_REF" == fix/* &&
                   "$PR_TITLE" =~ $PR_TITLE_PATTERN ]]; then
             strategy=hotfix
@@ -67,15 +75,16 @@ jobs:
           echo "environment=$environment" >> "$GITHUB_OUTPUT"
           echo "commit-sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
           echo "release-ref=$release_ref" >> "$GITHUB_OUTPUT"
+          echo "release-head-sha=$release_head_sha" >> "$GITHUB_OUTPUT"
 
   select-release-version:
-    name: Select latest release Worker version
+    name: Select exact release Worker version
     needs: resolve
     if: needs.resolve.outputs.strategy == 'promote'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      tag: ${{ steps.latest.outputs.tag }}
+      tag: ${{ steps.candidate.outputs.tag }}
     steps:
       - name: Checkout merged main commit
         uses: actions/checkout@v7
@@ -83,29 +92,26 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit-sha }}
           persist-credentials: false
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
       - name: Select version
-        id: latest
+        id: candidate
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RELEASE_REF: ${{ needs.resolve.outputs.release-ref }}
+          RELEASE_HEAD_SHA: ${{ needs.resolve.outputs.release-head-sha }}
         run: |
           worker_name=$(jq -r '.name' wrangler.jsonc)
-          versions=$(curl -fsSL --retry 3 \
+          curl -fsSL --retry 3 \
             -H "Authorization: Bearer $CF_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/$worker_name/versions?deployable=true")
-          jq -e '.success == true and (.result.items | type == "array")' <<< "$versions" > /dev/null
-
-          while IFS=$'\t' read -r tag message; do
-            [[ "$tag" =~ ^[0-9a-f]{40}$ && "$message" == "$RELEASE_REF @ $tag" ]] || continue
-            echo "tag=$tag" >> "$GITHUB_OUTPUT"
-            echo "Promoting release candidate $tag." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          done < <(jq -r '.result.items | sort_by(.metadata.created_on) | reverse[] |
-            [.annotations["workers/tag"] // "", .annotations["workers/message"] // ""] | @tsv' <<< "$versions")
-
-          echo '::error::No deployable Worker version belongs to this release branch'
-          exit 1
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/$worker_name/versions?deployable=true" \
+            -o "$RUNNER_TEMP/release-versions.json"
+          node .github/scripts/release-candidate.ts "$RELEASE_REF" "$RELEASE_HEAD_SHA" \
+            < "$RUNNER_TEMP/release-versions.json"
 
   migrate-d1:
     name: Apply production D1 migrations
