@@ -14,6 +14,7 @@ export type ReportInput = {
   deployResult: string;
   triggersResult: string;
   selectionResult: string;
+  tagValidationResult?: string;
   migrationResult: string;
   url: string;
   prUrl: string;
@@ -51,6 +52,7 @@ export function createDeploymentReport(input: ReportInput) {
     worker_deployment_result: input.deployResult || 'skipped',
     triggers_result: input.triggersResult || 'skipped',
     candidate_selection_result: input.selectionResult || 'skipped',
+    release_tag_validation_result: input.tagValidationResult || 'skipped',
     migration_result: input.migrationResult || 'skipped',
     pr_url: input.prUrl,
     run_url: input.runUrl,
@@ -89,7 +91,8 @@ export function createDeploymentReport(input: ReportInput) {
           : null;
     const failure =
       (input.strategy === 'promote'
-        ? (stopped('Exact candidate selection', input.selectionResult) ??
+        ? (stopped('Release tag validation', input.tagValidationResult ?? '') ??
+          stopped('Exact candidate selection', input.selectionResult) ??
           stopped('D1 migration', input.migrationResult))
         : null) ??
       stopped('Worker deployment', input.deployResult) ??
@@ -164,6 +167,7 @@ if (
     deployResult: value('DEPLOY_RESULT'),
     triggersResult: value('TRIGGERS_RESULT'),
     selectionResult: value('SELECTION_RESULT'),
+    tagValidationResult: value('TAG_VALIDATION_RESULT'),
     migrationResult: value('MIGRATION_RESULT'),
     url: value('WORKER_URL'),
     prUrl: value('PR_URL'),
