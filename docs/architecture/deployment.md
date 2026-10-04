@@ -51,17 +51,22 @@ without applying production migrations or deploying production triggers.
 
 ### Production Promotion
 
-1. Select a deployable candidate tagged with the merged release PR's final
-   head SHA and annotated for that release branch.
+1. Independently validate the release tag and select the exact candidate.
 2. Apply pending D1 migrations from the merged main commit.
 3. Deploy the selected Worker version.
-4. Deploy Worker triggers separately.
+4. Deploy Worker triggers separately using a generated configuration that
+   excludes `assets` from the checked-out `wrangler.jsonc`.
 
 Promotion does not rebuild the Worker. Selection requires an exact match
 to the release PR's final head SHA and release-branch annotation, regardless
 of upload order. The head SHA identifies the candidate source; it is distinct
 from the main merge commit used for migrations and deployment reporting.
 Verify the final candidate and its migration compatibility before promotion.
+
+Both preflight gates must succeed before D1 migrations or Worker deployment.
+A missing release tag is allowed; an existing tag, including an annotated
+tag, must resolve to the expected main merge commit. A mismatch or lookup
+failure blocks promotion.
 
 If the exact candidate is missing, selection fails before D1 migrations or
 Worker deployment; an older candidate is never substituted. Resolve a failed
@@ -104,10 +109,17 @@ A dedicated GitHub App authors these changes and enables auto-merge after
 required checks pass, separating automation attribution and permissions
 from ordinary user identities.
 
-The workflow creates `v<package.json version>` GitHub Releases after
-successful regular production promotion, skipping existing releases.
-Release creation follows Worker and trigger deployment; its failure does
-not undo the deployed Worker.
+After successful regular Worker and trigger deployment, the workflow
+revalidates the tag and creates or reuses `v<package.json version>`:
+
+- A missing tag is created at the resolved main merge SHA.
+- A matching tag is reused to create a missing Release or skip an existing one.
+- A mismatched tag or lookup failure stops publication; tags are never moved
+  automatically.
+
+A different release merge requires a new package version. Publication failure
+does not undo Worker deployment. [Release tag validation and retries](../operations/ci-cd.md#release-tag-validation-and-retries)
+covers API behavior, conflicts, and recovery.
 
 Hotfix deployments do not create GitHub Releases.
 
@@ -142,4 +154,6 @@ manual record needed after dashboard restoration.
 - [Database foundation](database-foundation.md)
 
 Release promotion and hotfix hardening are tracked in
-[Issue #7](https://github.com/herokwon/blog/issues/7).
+[Issue #7](https://github.com/herokwon/blog/issues/7). Trigger configuration
+and release tag validation fixes are tracked in
+[Issue #13](https://github.com/herokwon/blog/issues/13).

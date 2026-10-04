@@ -13,7 +13,7 @@ This flow intentionally generates Env/runtime types without entrypoint-derived `
 
 ## Production D1 migrations and Worker deployment
 
-Apply and test migrations locally during development. Merging a same-repository `release/v<major>.<minor>.<patch> → main` pull request authorizes production D1 migration and Worker deployment. The `deployment.yml` workflow uses the merged main commit and first confirms that a release Worker version is available. Its `Apply production D1 migrations` job runs `pnpm db:migrate:remote` when `drizzle/*.sql` files exist; otherwise the job succeeds without contacting D1. A failed migration prevents the Worker deployment. Wrangler applies only migrations not yet recorded in production D1.
+Apply and test migrations locally during development. Merging a same-repository `release/v<major>.<minor>.<patch> → main` pull request authorizes production D1 migration and Worker deployment. The `deployment.yml` workflow uses the merged main commit and first validates any existing release tag and confirms that a release Worker version is available. Its `Apply production D1 migrations` job runs `pnpm db:migrate:remote` when `drizzle/*.sql` files exist; otherwise the job succeeds without contacting D1. A failed migration prevents the Worker deployment. Wrangler applies only migrations not yet recorded in production D1.
 
 Store `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository Actions secrets. The token needs permissions for D1 migration and Workers version upload, deployment, and trigger changes. No GitHub Environment or Required reviewers are used. Review release migration SQL and compatibility with the running Worker before merging.
 
@@ -23,7 +23,21 @@ Merged PRs into `release/v<major>.<minor>.<patch>`, including Dependabot PRs, up
 
 Verify the final release candidate before merging the release PR. A missing exact candidate blocks production D1 migrations and Worker deployment rather than falling back to an older upload. Resolve or finish the final candidate upload, then rerun the production workflow for the original release PR event. The candidate source SHA and main merge SHA are separate identifiers; do not compare the candidate tag with the main merge SHA.
 
-Hotfix deployment follows the [delivery procedure](#hotfix-delivery-and-synchronization) below. GitHub Release creation runs only after successful regular promotion, including Worker and trigger deployment, and skips an existing release for the merged `package.json` version.
+Hotfix deployment follows the [delivery procedure](#hotfix-delivery-and-synchronization) below. GitHub Releases follow the [release policy](../architecture/deployment.md#versions-and-github-releases) and run only after successful regular Worker and trigger deployment.
+
+### Release tag validation and retries
+
+The read-only `Validate release tag` job resolves lightweight and annotated tags to their final commit and compares it with the main merge SHA. A mismatch reports both SHAs and blocks D1 work and Worker promotion. Only a successful lookup without an exact matching reference counts as absence; authentication, permission, network, malformed-response, and other lookup errors fail the gate.
+
+Before publication, the script revalidates the tag and uses the GitHub REST API with the resolved merge SHA for both the tag reference and `target_commitish`. Explicit tag creation prevents a competing creation from silently changing the target: conflicts are rechecked, and only a matching tag can proceed. Investigate mismatches before resolving them manually; automation never moves existing tags.
+
+Rerun the original PR event to preserve its merge SHA. A matching tag left by failed publication can create the missing Release; an existing matching Release is skipped. A different regular release merge requires a new package version. Publication failure does not undo Worker deployment.
+
+### Trigger configuration without a build
+
+Before production Worker deployment, `.github/scripts/trigger-config.ts` reads `wrangler.jsonc` with JSONC comments/trailing commas and generates the ignored `wrangler.trigger.json` beside it, preserving relative paths and every setting except the entire `assets` property. The original file remains unchanged and is the source of truth; do not commit or maintain a second copy.
+
+The workflow runs `wrangler triggers deploy --config wrangler.trigger.json --dry-run` before Worker deployment and applies the same configuration afterward. This retains workers.dev, preview URLs, routes, custom domains, and cron without validating local assets; the uploaded Worker still contains its assets and bindings. Promotion skips build/upload, while hotfixes build/upload. A later trigger API failure can leave the Worker deployed and is reported as partial success.
 
 ## Deployment identification and results
 

@@ -25,11 +25,27 @@ const input: ReportInput = {
   deployResult: 'success',
   triggersResult: 'success',
   selectionResult: 'success',
+  tagValidationResult: 'success',
   migrationResult: 'success',
   url: 'https://blog.example.com',
   prUrl: 'https://github.com/herokwon/blog/pull/8',
   runUrl: 'https://github.com/herokwon/blog/actions/runs/123',
 };
+
+test('release tag preflight failure reports blocked production without claiming changes', () => {
+  const report = createDeploymentReport({
+    ...input,
+    tagValidationResult: 'failure',
+    workerResult: 'skipped',
+    deployResult: '',
+    triggersResult: '',
+    migrationResult: 'skipped',
+  });
+  assert.equal(report.status.state, 'failure');
+  assert.equal(report.deployment.payload.deployed_worker_version_id, null);
+  assert.match(report.comment, /Release tag validation failed/);
+  assert.match(report.comment, /Worker deployment not attempted/);
+});
 
 test('records the exact deployed candidate separately from the main merge', () => {
   const report = createDeploymentReport(input);
@@ -411,6 +427,7 @@ test('comment simplification preserves the complete Deployment payload and statu
       worker_deployment_result: 'success',
       triggers_result: 'success',
       candidate_selection_result: 'success',
+      release_tag_validation_result: 'success',
       migration_result: 'success',
       pr_url: input.prUrl,
       run_url: input.runUrl,
