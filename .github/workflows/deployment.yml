@@ -93,6 +93,33 @@ jobs:
           version=$(jq -er '.version | select(type == "string")' package.json)
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+  validate-release-tag:
+    name: Validate release tag
+    needs: resolve
+    if: needs.resolve.outputs.strategy == 'promote'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout merged main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.commit-sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Validate existing tag against the merge SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_API_URL: ${{ github.api_url }}
+          PACKAGE_VERSION: ${{ needs.resolve.outputs.package-version }}
+          MERGE_SHA: ${{ needs.resolve.outputs.commit-sha }}
+        run: node .github/scripts/github-release.ts check
+
   select-release-version:
     name: Select exact release Worker version
     needs: resolve
@@ -132,9 +159,10 @@ jobs:
 
   migrate-d1:
     name: Apply production D1 migrations
-    needs: [resolve, select-release-version]
+    needs: [resolve, validate-release-tag, select-release-version]
     if: >-
       needs.resolve.outputs.strategy == 'promote' &&
+      needs.validate-release-tag.result == 'success' &&
       needs.select-release-version.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -167,11 +195,12 @@ jobs:
 
   deploy-worker:
     name: Deploy to Cloudflare Workers
-    needs: [resolve, select-release-version, migrate-d1]
+    needs: [resolve, validate-release-tag, select-release-version, migrate-d1]
     if: >-
       always() && needs.resolve.result == 'success' &&
       (needs.resolve.outputs.strategy != 'promote' ||
-       (needs.select-release-version.result == 'success' && needs.migrate-d1.result == 'success'))
+       (needs.validate-release-tag.result == 'success' &&
+        needs.select-release-version.result == 'success' && needs.migrate-d1.result == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -235,6 +264,12 @@ jobs:
             echo "id=$UPLOADED_ID" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Prepare and validate trigger configuration
+        if: needs.resolve.outputs.environment == 'production'
+        run: |
+          node .github/scripts/trigger-config.ts
+          pnpm exec wrangler triggers deploy --config wrangler.trigger.json --dry-run
+
       - name: Deploy Worker version
         id: deploy-version
         if: needs.resolve.outputs.environment == 'production'
@@ -251,7 +286,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: triggers deploy
+          command: triggers deploy --config wrangler.trigger.json
 
       - name: Resolve Worker URL
         id: url
@@ -274,7 +309,14 @@ jobs:
 
   report-deployment:
     name: Report deployment result
-    needs: [resolve, select-release-version, migrate-d1, deploy-worker]
+    needs:
+      [
+        resolve,
+        validate-release-tag,
+        select-release-version,
+        migrate-d1,
+        deploy-worker,
+      ]
     if: always() && needs.resolve.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -294,6 +336,7 @@ jobs:
       DEPLOY_RESULT: ${{ needs.deploy-worker.outputs.deploy-result }}
       TRIGGERS_RESULT: ${{ needs.deploy-worker.outputs.triggers-result }}
       SELECTION_RESULT: ${{ needs.select-release-version.result }}
+      TAG_VALIDATION_RESULT: ${{ needs.validate-release-tag.result }}
       MIGRATION_RESULT: ${{ needs.migrate-d1.result }}
       WORKER_URL: ${{ needs.deploy-worker.outputs.url }}
       PR_URL: ${{ github.event.pull_request.html_url }}
@@ -348,22 +391,19 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.commit-sha }}
-          sparse-checkout: package.json
+          sparse-checkout: .github/scripts/github-release.ts
           sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
 
       - name: Create release if version is new
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          version=$(jq -r '.version' package.json)
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-            echo '::error::Invalid package version'
-            exit 1
-          }
-          if gh release view "v$version" --repo "$GH_REPO" > /dev/null 2>&1; then
-            echo "GitHub Release v$version already exists." >> "$GITHUB_STEP_SUMMARY"
-          else
-            gh release create "v$version" --repo "$GH_REPO" \
-              --target main --title "v$version" --generate-notes
-          fi
+          GH_API_URL: ${{ github.api_url }}
+          PACKAGE_VERSION: ${{ needs.resolve.outputs.package-version }}
+          MERGE_SHA: ${{ needs.resolve.outputs.commit-sha }}
+        run: node .github/scripts/github-release.ts create
