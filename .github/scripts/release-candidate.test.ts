@@ -150,6 +150,7 @@ test('production jobs stay blocked after missing candidate selection', () => {
       always: () => true,
       needs: {
         resolve: { result: 'success', outputs: { strategy: 'promote' } },
+        'validate-release-tag': { result: 'success' },
         'select-release-version': { result },
         'migrate-d1': { result: 'skipped' },
       },
@@ -161,6 +162,7 @@ test('production jobs stay blocked after missing candidate selection', () => {
     always: () => true,
     needs: {
       resolve: { result: 'success', outputs: { strategy: 'promote' } },
+      'validate-release-tag': { result: 'success' },
       'select-release-version': { result: 'success' },
       'migrate-d1': { result: 'success' },
     },
