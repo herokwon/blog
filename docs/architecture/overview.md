@@ -15,6 +15,22 @@ and Admin authentication are `Planned`. The current schema contains an
 example `task` table, not the content schema. Repository configuration alone
 does not confirm verified production resources or security policies.
 
+## v0.2.0 Delivery Scope
+
+v0.2.0 targets Admin authentication, Admin APIs and UI, post persistence,
+and the full management lifecycle: creation, explicit saving, editing,
+publication, archiving, soft deletion, trash listing, and restoration.
+Admin also includes a persisted-content detail page for reading saved posts
+and receiving successful save/publication navigation; see
+[Content Domain](content-domain.md#admin-detail).
+Public APIs and UI are deferred to a later version. Publication state,
+slug generation, and publication timestamps are included in this scope;
+validation through Public interfaces follows when those interfaces exist.
+Tags, series, and media uploads remain outside this release.
+
+All content features in this scope remain `Planned` until implemented
+and verified.
+
 ## Technology Stack
 
 | Area                 | Technology                                         | Status      |
@@ -31,8 +47,8 @@ does not confirm verified production resources or security policies.
 | API documentation    | OpenAPI generation from contracts                  | Planned     |
 | Admin authoring      | Milkdown                                           | Planned     |
 
-Milkdown will turn Markdown input into formatted content; Crepe usage will
-be decided during Admin editor implementation. OpenAPI automation is future
+Milkdown Crepe provides formatted Admin editing with the authoring features
+defined in Content Domain. OpenAPI automation is future
 work, with no generated `docs/openapi.json` yet.
 
 ## Runtime Boundaries

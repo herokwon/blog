@@ -27,6 +27,8 @@ Follow ADRs for rationale and operating documents for procedures.
 - [ADR 0002: Use a single Post entity](adr/0002-use-a-single-content-entity.md)
 - [ADR 0003: Use explicit save and publication](adr/0003-use-explicit-save-and-publication.md)
 - [CI/CD operations](operations/ci-cd.md)
+- [Admin validation](operations/admin-validation.md)
+- [v0.2.0 implementation sequence](operations/v0.2.0-implementation.md)
 
 Create additional documents and directories as their contents are agreed.
 
@@ -47,6 +49,8 @@ Label implementation status as `Planned`, `Partially implemented`, or
 If implementation requires a design change, resolve and document it before
 proceeding. Use issues and pull requests for tasks and progress; do not add
 separate `superpowers/` specifications or plans for the same design.
+An operating implementation sequence may reference the authoritative design and
+define task dependencies and verification gates; Issues and PRs track execution.
 
 When OpenAPI automation is introduced, document its authoritative inputs
 and regeneration process. Update those inputs and regenerate the artifact

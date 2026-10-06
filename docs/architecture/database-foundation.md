@@ -39,6 +39,7 @@ The `Post` model is stored in the `posts` table:
 | `published_at` | Nullable `TEXT`; first successful publication                                    |
 | `updated_at`   | `TEXT NOT NULL`; insertion default below                                         |
 | `deleted_at`   | Nullable `TEXT`; soft-deletion timestamp                                         |
+| `revision`     | `INTEGER NOT NULL DEFAULT 1`; CHECK requiring a positive integer                 |
 
 Summary is derived and not stored.
 
@@ -77,6 +78,16 @@ These checks apply regardless of `deleted_at` and validate the resulting
 row, not its transition history. Deletion preserves status and publication
 history; restoration clears the deletion marker.
 
+## Creation Persistence
+
+v0.2.0 creates a Post without a dedicated creation-request table, request
+hash, or replay window. A creation insert is atomic; subsequent publication
+is a separate mutation. An unknown creation outcome is resolved by manual
+Admin list inspection under the [API retry contract](api-design.md#automatic-retries).
+Revision preconditions protect existing-post mutations, not duplicate
+creation requests. Database atomicity remains required independently of
+revision checks.
+
 ## Timestamps
 
 Store all timestamps as UTC ISO 8601 `TEXT`, consistently formatted as
@@ -111,17 +122,21 @@ indexes against actual queries and D1 query plans during implementation.
 
 ## Mutation Consistency
 
+All existing-post mutations use `revision` as an optimistic concurrency
+precondition. Each changing UPDATE must match the submitted revision,
+permitted status, and `deleted_at` conditions, incrementing revision and
+setting `updated_at` in the same statement. Prior reads cannot authorize
+a later mutation. The [API precondition contract](api-design.md#revision-preconditions)
+defines stale-version errors and no-op exceptions; no-op operations must
+not rewrite data, timestamps, or revision.
+
 First publication atomically establishes `published` status, slug, and
 `published_at`; failure leaves no partially published state.
 Database uniqueness is authoritative, including competing publications.
 
-Check status and `deleted_at` conditions at mutation time; prior reads
-alone do not establish validity. If no change occurs, distinguish identical
-saves or already-satisfied success, missing content, and invalid state
-according to the API contract.
-
-Retries of the same logical creation request return its existing creation
-result without creating another entity.
+When an UPDATE changes no rows, distinguish an identical save or
+already-satisfied command, missing content, invalid state, and revision
+conflict according to the API contract.
 
 ## Migrations and Environments
 
@@ -160,13 +175,11 @@ rollback does not reverse migrations.
 
 ## Deferred Decisions
 
-| Item                                                              | Decision process                                                             |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| UUIDv7 generation                                                 | Select and verify during implementation                                      |
-| Exact indexes                                                     | Validate against actual queries and D1 query plans                           |
-| Publication concurrency                                           | Verify against agreed atomicity, state, and uniqueness requirements          |
-| Creation-request identification and deduplication validity period | Discuss and document before implementation; these affect the client contract |
-| Deduplication storage                                             | Select after the request contract is agreed                                  |
+| Item                    | Decision process                                                    |
+| ----------------------- | ------------------------------------------------------------------- |
+| UUIDv7 generation       | Select and verify during implementation                             |
+| Exact indexes           | Validate against actual queries and D1 query plans                  |
+| Publication concurrency | Verify against agreed atomicity, state, and uniqueness requirements |
 
 Internal choices may be made during implementation if they preserve
 agreed behavior; document the resulting design where relevant.
