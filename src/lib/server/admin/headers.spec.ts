@@ -40,6 +40,9 @@ describe('Admin headers', () => {
     });
     const response = applyAdminHeaders(original, 'freshNonce');
     expect(response.headers.get('Content-Security-Policy')).toContain(
+      "default-src 'self'",
+    );
+    expect(response.headers.get('Content-Security-Policy')).toContain(
       "script-src 'self' 'sha256-framework'",
     );
     expect(response.headers.get('Content-Security-Policy')).toContain(

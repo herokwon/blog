@@ -42,6 +42,7 @@ export function applyAdminHeaders(response: Response, nonce: string): Response {
         return [name, values.join(' ')] as const;
       }),
   );
+  directives.set('default-src', "'self'");
   const styles = (directives.get('style-src') ?? "'self'")
     .split(/\s+/)
     .filter(value => !["'unsafe-inline'", "'none'"].includes(value));
