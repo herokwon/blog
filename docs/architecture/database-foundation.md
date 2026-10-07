@@ -3,15 +3,17 @@
 ## Status and Sources
 
 D1 integration and migration tooling are `Implemented`.
-The `posts` table and post persistence are `Planned`.
+The `posts` schema and initial migration are `Implemented` and validated on local D1.
+Post repository operations, UUIDv7 generation, and API persistence are `Planned`.
 
-| Concern              | Current source                                                                    |
-| -------------------- | --------------------------------------------------------------------------------- |
-| Database binding     | `DB` in [wrangler.jsonc](../../wrangler.jsonc)                                    |
-| Connection           | [getDb](../../src/lib/server/db/index.ts), using `drizzle-orm/d1`                 |
-| Schema               | [schema.ts](../../src/lib/server/db/schema.ts), currently an example `task` table |
-| Migration generation | [drizzle.config.ts](../../drizzle.config.ts): SQLite dialect, `./drizzle` output  |
-| Migration scripts    | [package.json](../../package.json)                                                |
+| Concern              | Current source                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| Database binding     | `DB` in [wrangler.jsonc](../../wrangler.jsonc)                                                |
+| Connection           | [getDb](../../src/lib/server/db/index.ts), using `drizzle-orm/d1`                             |
+| Schema               | [schema.ts](../../src/lib/server/db/schema.ts): `posts` and the retained example `task` table |
+| Initial migration    | [0000_wealthy_kinsey_walden.sql](../../drizzle/0000_wealthy_kinsey_walden.sql)                |
+| Migration generation | [drizzle.config.ts](../../drizzle.config.ts): SQLite dialect, `./drizzle` output              |
+| Migration scripts    | [package.json](../../package.json)                                                            |
 
 The example uses `crypto.randomUUID()`, not the planned UUIDv7 identifier.
 
@@ -120,6 +122,16 @@ Posts in `archived` status and soft-deleted content reserve their slugs.
 Multiple drafts may have NULL slugs. Validate exact composite or partial
 indexes against actual queries and D1 query plans during implementation.
 
+The initial migration provides `posts_slug_unique` across all rows and three
+Admin indexes: `posts_admin_updated_idx` on `(updated_at DESC, id DESC)` for
+non-deleted rows, `posts_admin_status_updated_idx` on
+`(status, updated_at DESC, id DESC)` for non-deleted rows, and
+`posts_trash_updated_idx` on `(updated_at DESC, id DESC)` for deleted rows.
+Local D1 `EXPLAIN QUERY PLAN` confirmed index-backed ordering for normal,
+status-filtered, and trash queries without a temporary sorting tree. Recheck
+the final repository queries in Task 3. Public-list indexing is deferred with
+Public implementation.
+
 ## Mutation Consistency
 
 All existing-post mutations use `revision` as an optimistic concurrency
@@ -178,7 +190,7 @@ rollback does not reverse migrations.
 | Item                    | Decision process                                                    |
 | ----------------------- | ------------------------------------------------------------------- |
 | UUIDv7 generation       | Select and verify during implementation                             |
-| Exact indexes           | Validate against actual queries and D1 query plans                  |
+| Repository query plans  | Recheck the initial Admin indexes against final repository queries  |
 | Publication concurrency | Verify against agreed atomicity, state, and uniqueness requirements |
 
 Internal choices may be made during implementation if they preserve
