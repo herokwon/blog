@@ -10,7 +10,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'pnpm run build && pnpm run preview',
+    command:
+      'pnpm run build && pnpm exec wrangler deploy --dry-run --outdir .wrangler/admin-api-build && pnpm run preview',
     url: baseURL,
     reuseExistingServer: false,
   },
