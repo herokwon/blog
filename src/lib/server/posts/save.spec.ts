@@ -1,5 +1,4 @@
 import { type PostStatus } from '$lib/admin/contracts';
-import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSqliteD1 } from '../../../../tests/admin/sqlite-d1';
 import { getDb, type BlogDb } from '../db';

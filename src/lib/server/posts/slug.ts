@@ -4,7 +4,7 @@ export function normalizeSlug(title: string): string {
     .normalize('NFC')
     .replace(/[A-Z]/g, letter => letter.toLowerCase())
     .replace(/[\s_]/gu, '-')
-    .replace(/[^\p{L}\p{N}+\-]/gu, '')
+    .replace(/[^\p{L}\p{N}+-]/gu, '')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }
