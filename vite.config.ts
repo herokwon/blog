@@ -8,6 +8,9 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     sveltekit({
+      // The handle hook owns Origin checks so Admin authentication always runs
+      // first. It also retains same-origin protection for Public form writes.
+      csrf: { trustedOrigins: ['*'] },
       compilerOptions: {
         // Force runes mode for the project, except for libraries. Can be removed in svelte 6.
         runes: ({ filename }) =>

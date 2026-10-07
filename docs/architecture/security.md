@@ -2,12 +2,14 @@
 
 ## Status and Scope
 
-Admin authentication and the security enforcement policies below are
-`Planned`. Runtime bindings and CI/CD credential references are configured
+Admin JWT authentication, authorization, request-origin enforcement, candidate
+write rejection, and `no-store` responses are implemented locally by Task 2.
+Rendering safety and the remaining Admin security headers are still `Planned`
+for Task 7. Runtime bindings and CI/CD credential references are configured
 in the repository; this does not verify deployed resources, registered
-secrets, permissions, or production behavior. Admin authentication and
-`src/hooks.server.ts` are not implemented, and deployed Cloudflare
-Access policies have not been verified.
+secrets, permissions, or production behavior. Deployed Cloudflare Access
+policies have not been verified. See the
+[local configuration and verification scope](../operations/admin-validation.md#local-authentication-configuration).
 
 This document defines security boundaries.
 [Content Domain](content-domain.md) defines Post rules,
@@ -38,8 +40,8 @@ repository, client bundles, API responses, or logs.
 
 See [CI/CD operations](../operations/ci-cd.md#production-d1-migrations-and-worker-deployment)
 for deployment credential registration and permission requirements.
-Future Access configuration names and storage choices will be decided
-before authentication implementation.
+Access configuration uses server-side `ACCESS_ISSUER`, `ACCESS_AUDIENCE`,
+`ADMIN_EMAILS`, and `ADMIN_ORIGIN` bindings. Local `.dev.vars*` files are ignored.
 
 ## Admin Authentication and Authorization
 
@@ -65,7 +67,7 @@ Protect these paths on production and Version URL hostnames:
 Parent and descendant paths are explicit because Access wildcards
 do not cover their parent path. Use `*`, not `**`.
 
-The shared `requiresAdminAccess()` predicate matches `/admin` and
+The shared `isAdminPath()` predicate matches `/admin` and
 `/api/admin`, including descendants such as the Admin trash page.
 It must not match unrelated prefixes such as `/administrator` or
 `/api/admin-tools`.
