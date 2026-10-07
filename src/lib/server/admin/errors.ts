@@ -1,6 +1,6 @@
-import type { ApiErrorCode } from '$lib/admin/error-codes';
+import type { ApiErrorCode, ValidationDetail } from '$lib/admin/contracts';
 
-export type ValidationDetail = { path: (string | number)[]; message: string };
+export type { ValidationDetail } from '$lib/admin/contracts';
 
 export class AdminApiError extends Error {
   constructor(
