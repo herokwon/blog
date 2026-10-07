@@ -4,10 +4,25 @@ import {
   assertAdminMutationAllowed,
   isAdminPath,
 } from '$lib/server/admin/environment';
+import {
+  applyAdminHeaders,
+  applyDocumentStyleNonce,
+  createStyleNonce,
+} from '$lib/server/admin/headers';
 import { adminErrorResponse } from '$lib/server/admin/http';
 import { dev } from '$app/environment';
 
 export const handle: Handle = async ({ event, resolve }) => {
+  const styleNonce = createStyleNonce();
+  const resolveDocument = async () => {
+    const response = await resolve(event, {
+      transformPageChunk: ({ html }) =>
+        html.replace('%admin.styleNonce%', styleNonce),
+    });
+    return response.headers.get('content-type')?.startsWith('text/html')
+      ? applyDocumentStyleNonce(response, styleNonce)
+      : response;
+  };
   if (!isAdminPath(event.url.pathname)) {
     // Retain Kit's production form CSRF policy after moving enforcement here.
     const contentType = event.request.headers
@@ -31,7 +46,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         ? json({ message }, { status: 403 })
         : text(message, { status: 403 });
     }
-    return resolve(event);
+    return resolveDocument();
   }
 
   let response: Response;
@@ -52,18 +67,12 @@ export const handle: Handle = async ({ event, resolve }) => {
                 event.url.pathname.replace(/\/+$/, '') + event.url.search,
             },
           })
-        : await resolve(event);
+        : await resolveDocument();
   } catch (error) {
     response = adminErrorResponse(error);
   }
 
   // Redirect/fetch responses can have immutable headers. Copy the response
   // without buffering its body so every Admin result is uncached.
-  const headers = new Headers(response.headers);
-  headers.set('Cache-Control', 'no-store');
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  return applyAdminHeaders(response, styleNonce);
 };
