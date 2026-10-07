@@ -1,2 +1,23 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+@import '@milkdown/crepe/theme/common/style.css';
+@import '@milkdown/crepe/theme/frame.css';
+
+.app-root {
+  display: contents;
+}
+.milkdown {
+  --crepe-font-default: system-ui, sans-serif;
+  --crepe-font-title: system-ui, sans-serif;
+  --crepe-font-code: ui-monospace, monospace;
+}
+.editor-source {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.editor-locked {
+  pointer-events: none;
+}
+.admin-reading .milkdown {
+  padding: 0;
+}
