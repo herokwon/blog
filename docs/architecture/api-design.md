@@ -2,7 +2,10 @@
 
 ## Status and Contracts
 
-The APIs described here are `Planned`. Zod is the source of truth for
+The HTTP APIs described here are `Planned`. Admin runtime contracts and repository
+reads are implemented in `src/lib/admin/contracts.ts` and
+`src/lib/server/posts/read.ts`; HTTP handlers and mutations remain pending.
+Zod is the source of truth for
 path parameters, query parameters, request bodies, responses, and errors.
 Future OpenAPI generation will derive `docs/openapi.json` from these
 contracts; the artifact will not be maintained by hand.

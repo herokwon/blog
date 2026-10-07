@@ -4,7 +4,9 @@
 
 D1 integration and migration tooling are `Implemented`.
 The `posts` schema and initial migration are `Implemented` and validated on local D1.
-Post repository operations, UUIDv7 generation, and API persistence are `Planned`.
+Post repository reads are `Implemented`, tested through Drizzle with a disposable
+migrated SQLite-backed D1 binding. Actual local D1 API integration belongs to Task 5.
+Post mutations, UUIDv7 generation, and API persistence are `Planned`.
 
 | Concern              | Current source                                                                                |
 | -------------------- | --------------------------------------------------------------------------------------------- |
@@ -129,7 +131,9 @@ non-deleted rows, `posts_admin_status_updated_idx` on
 `posts_trash_updated_idx` on `(updated_at DESC, id DESC)` for deleted rows.
 Local D1 `EXPLAIN QUERY PLAN` confirmed index-backed ordering for normal,
 status-filtered, and trash queries without a temporary sorting tree. Recheck
-the final repository queries in Task 3. Public-list indexing is deferred with
+the final repository queries in Task 3. On 2026-10-07, the explicit list-field
+projections and normal/status/trash predicates were checked again on local D1;
+all three use their intended indexes without temporary sorting. Public-list indexing is deferred with
 Public implementation.
 
 ## Mutation Consistency
