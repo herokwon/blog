@@ -4,7 +4,7 @@ import {
   assertAdminMutationAllowed,
   isAdminPath,
 } from '$lib/server/admin/environment';
-import { AdminApiError } from '$lib/server/admin/errors';
+import { adminErrorResponse } from '$lib/server/admin/http';
 import { dev } from '$app/environment';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -40,26 +40,21 @@ export const handle: Handle = async ({ event, resolve }) => {
     if (!['GET', 'HEAD', 'OPTIONS'].includes(event.request.method)) {
       assertAdminMutationAllowed(event);
     }
-    response = await resolve(event);
+    // Endpoints opt out of Kit's pre-hook redirect. Authenticate and protect
+    // writes first, then canonicalize without losing query strings or methods.
+    response =
+      event.url.pathname.startsWith('/api/admin/') &&
+      event.url.pathname.endsWith('/')
+        ? new Response(null, {
+            status: 308,
+            headers: {
+              Location:
+                event.url.pathname.replace(/\/+$/, '') + event.url.search,
+            },
+          })
+        : await resolve(event);
   } catch (error) {
-    const failure =
-      error instanceof AdminApiError
-        ? error
-        : new AdminApiError(
-            500,
-            'INTERNAL_ERROR',
-            'The Admin request could not be completed.',
-          );
-    response = json(
-      {
-        error: {
-          code: failure.code,
-          message: failure.message,
-          ...(failure.details ? { details: failure.details } : {}),
-        },
-      },
-      { status: failure.status },
-    );
+    response = adminErrorResponse(error);
   }
 
   // Redirect/fetch responses can have immutable headers. Copy the response
