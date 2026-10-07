@@ -6,6 +6,19 @@
 .app-root {
   display: contents;
 }
+/* Kit adds a style attribute here; Admin CSP blocks it. Keep the live region
+   visually hidden through the stylesheet without allowing inline styles. */
+#svelte-announcer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+  width: 1px;
+  height: 1px;
+}
 .milkdown {
   --crepe-font-default: system-ui, sans-serif;
   --crepe-font-title: system-ui, sans-serif;
@@ -20,4 +33,224 @@
 }
 .admin-reading .milkdown {
   padding: 0;
+}
+
+.admin-shell {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  color: #20242c;
+}
+.admin-shell a {
+  text-decoration: none;
+}
+.admin-shell h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.admin-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #d8dce2;
+}
+.heading-actions,
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-shell button,
+.heading-actions a,
+.admin-heading > a,
+.post-actions > a {
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid #d8dce2;
+  border-radius: 6px;
+  background: white;
+}
+.admin-shell button:disabled,
+.admin-shell [aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+.admin-shell :focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+.trash-link svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.admin-content {
+  padding-top: 24px;
+}
+.post-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.post-filters a {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.post-filters a[aria-current] {
+  font-weight: 700;
+  border-color: #555f70;
+}
+.post-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+.post-table th,
+.post-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #e8ebef;
+}
+.post-table td:first-child {
+  width: 30%;
+  overflow-wrap: anywhere;
+}
+.post-table time {
+  font-size: 0.75rem;
+}
+.post-actions {
+  position: relative;
+}
+.post-menu-container {
+  position: relative;
+}
+.admin-shell .post-menu-trigger {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 8px;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.post-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  min-width: 120px;
+  z-index: 10;
+  display: grid;
+  padding: 6px;
+  border: 1px solid #d8dce2;
+  border-radius: 6px;
+  background: white;
+  box-shadow: 0 4px 12px #0002;
+}
+.post-menu a,
+.post-menu button {
+  padding: 8px 12px;
+  text-align: left;
+  border: 0;
+}
+.post-menu a:hover,
+.post-menu button:hover {
+  background: #f3f4f6;
+}
+.post-actions [role='status'] {
+  font-size: 0.875rem;
+  flex-basis: 100%;
+  max-width: 34rem;
+}
+.post-cards {
+  display: none;
+}
+.admin-empty {
+  padding: 48px 0;
+  text-align: center;
+  color: #596170;
+}
+.admin-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.admin-pagination a,
+.admin-pagination button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+}
+.page-numbers {
+  display: flex;
+  width: 180px;
+}
+.admin-pagination [aria-current] {
+  font-weight: 700;
+  background: #edf1f7;
+}
+.post-metadata,
+.post-cards dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  font-size: 0.875rem;
+  color: #596170;
+  margin: 16px 0 32px;
+}
+.post-metadata dd,
+.post-cards dd {
+  overflow-wrap: anywhere;
+}
+.post-detail .admin-reading {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .admin-shell {
+    padding: 20px 16px 48px;
+  }
+  .admin-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .post-table {
+    display: none;
+  }
+  .post-cards {
+    display: grid;
+    gap: 16px;
+  }
+  .post-cards article {
+    padding: 16px;
+    border: 1px solid #e0e4ea;
+    border-radius: 8px;
+    min-width: 0;
+  }
+  .card-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+  }
+  .card-heading > a {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .post-cards dl {
+    margin-bottom: 0;
+    font-size: 0.75rem;
+  }
 }
