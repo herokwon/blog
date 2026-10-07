@@ -58,6 +58,33 @@ all three possible requests. This is controller evidence; actual UI locking,
 notifications, manual retries and preservation of newer unsaved input remain
 Tasks 9–10. No external API writes are part of these tests.
 
+## Task 7 Isolated Editor and Header Verification
+
+`pnpm run test:unit --run src/lib/editor src/lib/server/admin/headers.spec.ts`
+checks the real Crepe/CodeMirror runtime in Chromium with the application styles,
+alongside Markdown policy and header tests. The 50 cases cover supported syntax,
+mixed unsupported source, safe/unsafe transfers, first-definition reference
+resolution (including nested definitions), unsafe stored marks/transactions,
+unchanged-source retention, selection-only changes, accessible fixed menus,
+table insertion, code language selection/highlighting and plain-text fallback,
+and outer/nested/lazily initialized editor locks.
+
+Reading tests use persisted source in read-only Crepe with authoring controls
+removed; a display-only AST projection removes unsafe/excluded constructs without
+rewriting persisted source. Components are mount-scoped: consumers must key/remount
+them when explicitly replacing a loaded document, rather than reusing a stale
+controller. No HTML renderer or sanitizer dependency is introduced.
+
+`src/routes/admin/headers.e2e.ts` verifies initial production HTML carries a fresh
+style nonce permitted by its response CSP, and that anonymous Admin API failures
+receive the complete security headers. This does not test an actual Admin detail
+or authoring page. Those routes, navigation/hydration, floating UI and enforced-CSP
+compatibility remain incomplete until Tasks 9–10; storage, save blocking and
+title-only payload behavior remain the corresponding later-task gates.
+
+See [selected configuration](../architecture/security.md#csp-configuration-and-verification).
+All verification uses the existing local Worker/D1 setup and does not deploy.
+
 ## Required Application Checks
 
 | Area             | Required evidence                                                                                                                                                                                      |
@@ -250,7 +277,7 @@ after actually performing them against the migrated schema.
 
 ## Remaining Technical Decisions
 
-Rendering configuration and exact CSP directives under the accepted
+Actual-page compatibility of the selected rendering configuration and CSP under the accepted
 [Admin header baseline](../architecture/security.md#admin-security-headers)
-require technical review and documentation before the corresponding implementation,
+requires integration verification in Tasks 9–10,
 as defined in [Security](../architecture/security.md#implementation-decisions).

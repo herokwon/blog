@@ -303,6 +303,41 @@ browser persistence of new-post input follows the
 
 ### CSP Configuration and Verification
 
+Task 7 selects Crepe/Kit `7.22.2`, CodeMirror view `6.43.13` and state
+`6.7.6`. Admin reading uses read-only Crepe, with authoring controls disabled;
+no separate HTML renderer or sanitizer is required. A Markdown AST display
+projection removes source HTML, images and footnotes and unwraps disallowed
+links before Crepe parses it. This projection never replaces persisted source.
+Authoring preflight rejects those constructs and preserves the complete source.
+Capture-phase paste/drop checks run before library parsing/upload, followed by
+a document/stored-mark transaction guard using the same URL policy.
+
+SvelteKit CSP auto mode owns framework script hashes/nonces. Each response
+gets a fresh 128-bit random style nonce; the hook inserts it into the initial
+HTML's `meta[name="admin-style-nonce"]` and permits it in `style-src`.
+The client freezes that document value in `src/lib/editor/nonce.ts` and passes
+it to CodeMirror's `cspNonce` facet for every remount. Public HTML also carries
+the matching style permission so client navigation into Admin retains a usable
+initial document nonce. Framework script permissions are preserved, with no
+`unsafe-inline` or `unsafe-eval` script exception. Admin adds `font-src 'self'`,
+`img-src 'none'`, `object-src 'none'`, `frame-src 'none'`,
+`frame-ancestors 'none'`, `base-uri 'none'` and `style-src-attr 'none'`.
+The app root uses a stylesheet class and Vite asset inlining is disabled.
+Crepe uses system fonts and the bundled frame theme without remote font loading.
+
+The editor removes Crepe's trailing-paragraph normalization plugin to avoid
+marking a selection-only action as an edit. It uses document-change observation,
+not serialization callbacks, and returns the original Markdown until an actual
+edit. CodeMirror lock state and editable DOM are explicitly reconfigured,
+including code blocks initialized lazily while locked. Fixed TopBar controls
+carry text names and keyboard activation; BlockEdit is disabled because fixed
+controls cover the supported actions and avoid its deferred teardown callback.
+
+These are isolated component/header selections. Actual Admin page hydration,
+client navigation, floating menus, table interactions and dynamic styles under
+enforced CSP remain acceptance gates in Tasks 9–10. No style exception is
+introduced to make those untested behaviors pass.
+
 A production-bundle Chromium probe with Crepe 7.22.2 demonstrated that
 `style-src 'self'` blocks CodeMirror's generated style element. Passing
 the response's permitted style nonce through CodeMirror's
