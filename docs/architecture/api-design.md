@@ -4,7 +4,8 @@
 
 The HTTP APIs described here are `Planned`. Admin runtime contracts and repository
 reads are implemented in `src/lib/admin/contracts.ts` and
-`src/lib/server/posts/read.ts`; HTTP handlers and mutations remain pending.
+`src/lib/server/posts/read.ts`. Atomic mutations are implemented in
+`src/lib/server/posts/mutate.ts`; HTTP handlers remain pending.
 Zod is the source of truth for
 path parameters, query parameters, request bodies, responses, and errors.
 Future OpenAPI generation will derive `docs/openapi.json` from these
