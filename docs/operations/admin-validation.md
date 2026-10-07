@@ -41,6 +41,23 @@ Admin API endpoints use `trailingSlash = 'ignore'` so the hook can authenticate
 and reject untrusted writes before emitting an uncached `308` canonical redirect.
 UI routes, CSP, deployed Access policies and remote migration remain later work.
 
+## Task 6 Client Mutation Verification
+
+`pnpm run test:unit --run src/lib/admin/mutations.spec.ts` runs the real
+controller against controlled fetch responses and deterministic timers. It covers
+confirmed creation and lifecycle methods, empty DELETE, strict response/error
+classification, immutable original input/revision, one jittered existing-post
+retry on network/timeout/502/503/504, and no retry or automatic inspection for
+creation, ordinary revision conflicts or 500.
+
+Lost-response tests compare a deleted-inclusive detail read with submitted save
+fields or lifecycle targets. Matches return `observed`, never `confirmed`;
+different/invalid/failed reads retain an unresolved result, request and known ID.
+The 30-second deadline covers response headers and body consumption and bounds
+all three possible requests. This is controller evidence; actual UI locking,
+notifications, manual retries and preservation of newer unsaved input remain
+Tasks 9–10. No external API writes are part of these tests.
+
 ## Required Application Checks
 
 | Area             | Required evidence                                                                                                                                                                                      |

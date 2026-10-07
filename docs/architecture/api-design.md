@@ -9,6 +9,8 @@ reads are implemented in `src/lib/admin/contracts.ts` and
 `src/lib/server/posts/mutate.ts`; the nine Admin method/path pairs use thin
 handlers in `src/routes/api/admin/posts` and the shared HTTP boundary in
 `src/lib/server/admin/http.ts`.
+The client mutation controller in `src/lib/admin/mutations.ts` implements
+the retry and outcome-recovery contract below. Its UI consumers remain planned.
 Zod is the source of truth for
 path parameters, query parameters, request bodies, responses, and errors.
 Future OpenAPI generation will derive `docs/openapi.json` from these
@@ -350,6 +352,11 @@ after a randomized delay of approximately one second. Validation,
 authentication, authorization, state conflicts, and ordinary `500`
 responses do not trigger automatic retries.
 
+The controller uses an `800–1200` ms randomized retry delay and a `30` second
+deadline for each mutation attempt and recovery read, including response body
+consumption. It aborts a timed-out request locally; this does not prove that the
+server cancelled or rolled back the mutation. These are internal timing choices.
+
 Creation is not automatically retried: without creation deduplication,
 resubmitting a request can create another post. If creation's outcome is
 unknown, preserve input and offer inspection of the Admin post list.
@@ -399,6 +406,20 @@ outcome, its known cause or symptom, and the available next action.
 Do not describe an unconfirmed outcome as a definite mutation failure.
 Do not replace the expected revision and automatically resend
 the mutation or repeat a completed creation/publication stage.
+
+`runMutation(request, fetcher)` returns a frozen copy of the original request,
+including its original input and expected revision. The caller supplies validated
+inputs and keeps editor/actions locked until this promise settles. `confirmed`
+carries a validated detail row, except for DELETE's empty `204`; the known ID is
+retained. `observed` carries a matching current row and permits reflecting that
+state without a success notification. `conflict` represents a definite revision
+conflict with no earlier uncertain attempt, and `rejected` carries a validated
+application rejection. `unresolved` preserves the known ID, cause, any differing
+current row, and any recovery-read failure without claiming the mutation failed.
+Ordinary `500`, malformed/unexpected responses, and mismatched detail IDs cannot
+be treated as confirmed success. Neither uncertain creation nor an ordinary
+conflict triggers automatic inspection. UI notification/input preservation and
+manual retry integration are verified separately in Tasks 9–10.
 
 Recovery uses existing API data; it adds no mutation response type or
 recovery endpoint.
