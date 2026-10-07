@@ -5,9 +5,34 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  define: {
+    __VUE_OPTIONS_API__: true,
+    __VUE_PROD_DEVTOOLS__: false,
+    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+  },
+  optimizeDeps: {
+    include: [
+      '@codemirror/state',
+      '@codemirror/view',
+      '@milkdown/crepe',
+      '@milkdown/kit/core',
+      '@milkdown/kit/prose/state',
+      '@milkdown/kit/utils',
+      'remark-gfm',
+      'remark-parse',
+      'remark-stringify',
+      'unified',
+    ],
+  },
+  resolve: { dedupe: ['@codemirror/state', '@codemirror/view'] },
+  build: { assetsInlineLimit: 0 },
   plugins: [
     tailwindcss(),
     sveltekit({
+      csp: {
+        mode: 'auto',
+        directives: { 'script-src': ['self'], 'style-src': ['self'] },
+      },
       // The handle hook owns Origin checks so Admin authentication always runs
       // first. It also retains same-origin protection for Public form writes.
       csrf: { trustedOrigins: ['*'] },
