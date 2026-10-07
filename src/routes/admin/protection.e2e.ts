@@ -35,6 +35,8 @@ test('production runtime protects exact Admin paths including encoded routes', a
     '/admin/posts',
     '/api/admin',
     '/api/admin/posts',
+    '/api/admin/posts/',
+    '/api/admin/posts/trash/',
     '/%61dmin/posts',
     '/api/%61dmin/posts',
   ]) {
