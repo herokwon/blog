@@ -6,7 +6,8 @@ D1 integration and migration tooling are `Implemented`.
 The `posts` schema and initial migration are `Implemented` and validated on local D1.
 Post repository reads are `Implemented`, tested through Drizzle with a disposable
 migrated SQLite-backed D1 binding. Actual local D1 API integration belongs to Task 5.
-Post mutations, UUIDv7 generation, and API persistence are `Planned`.
+Post mutations and UUIDv7 generation are `Implemented` in
+`src/lib/server/posts/mutate.ts`; HTTP API persistence remains `Planned`.
 
 | Concern              | Current source                                                                                |
 | -------------------- | --------------------------------------------------------------------------------------------- |
@@ -17,7 +18,12 @@ Post mutations, UUIDv7 generation, and API persistence are `Planned`.
 | Migration generation | [drizzle.config.ts](../../drizzle.config.ts): SQLite dialect, `./drizzle` output              |
 | Migration scripts    | [package.json](../../package.json)                                                            |
 
-The example uses `crypto.randomUUID()`, not the planned UUIDv7 identifier.
+The retained example uses `crypto.randomUUID()`. Post creation uses `uuid`
+`14.0.2`'s `v7()` with its default cryptographic randomness. The library's
+default Worker-compatible export uses `crypto.getRandomValues()`; no custom
+UUID generator or creation retry is introduced. Draft creation tests verify
+UUIDv7 representations, distinct IDs, raw content, and database timestamps.
+See the [UUID library](https://github.com/uuidjs/uuid) for the RFC9562 API.
 
 [Content Domain](content-domain.md) defines behavior and validation.
 [API Design](api-design.md) defines query ordering, errors, and retries.
@@ -154,6 +160,28 @@ When an UPDATE changes no rows, distinguish an identical save or
 already-satisfied command, missing content, invalid state, and revision
 conflict according to the API contract.
 
+The implemented repository uses conditional `UPDATE ... RETURNING` statements.
+Save updates additionally require a submitted field to differ; matching no-op
+saves retain all metadata but still require the current revision. Commands check
+the current state for already-satisfied outcomes, then guard changing writes
+with ID, submitted revision, permitted status, and deletion state. Prior reads
+determine command outcomes and publication input; changing writes remain
+authorized by the conditional UPDATE.
+
+First publication sets status, slug, publication time, revision, and update time
+in one statement. Slug generation applies NFC, English ASCII lowercasing, and
+the agreed character rules. Candidates retain at most 100 Unicode code points,
+including the complete numeric suffix. Only a `posts.slug` unique constraint
+failure triggers the next candidate; other database errors propagate. No
+preflight availability read can reserve a slug. Existing publication identity
+is omitted from later updates, including republication.
+
+Task 4 tests run against the migrated SQLite-backed D1 binding and cover all
+lifecycle/deletion combinations, stale and no-op rules, competing saves and
+publications, delete/restore races, reserved archived/deleted slugs, and atomic
+publication failure. This establishes SQL invariants; actual local D1 HTTP
+concurrency and runtime error handling remain Task 5 verification.
+
 ## Migrations and Environments
 
 The Drizzle schema and generated SQL migrations define database structure.
@@ -191,11 +219,11 @@ rollback does not reverse migrations.
 
 ## Deferred Decisions
 
-| Item                    | Decision process                                                    |
-| ----------------------- | ------------------------------------------------------------------- |
-| UUIDv7 generation       | Select and verify during implementation                             |
-| Repository query plans  | Recheck the initial Admin indexes against final repository queries  |
-| Publication concurrency | Verify against agreed atomicity, state, and uniqueness requirements |
+| Item                    | Decision process                                                   |
+| ----------------------- | ------------------------------------------------------------------ |
+| UUIDv7 runtime          | Verify the selected library through the Task 5 local Worker API    |
+| Repository query plans  | Recheck the initial Admin indexes against final repository queries |
+| Publication concurrency | SQLite invariants verified; repeat through the Task 5 local D1 API |
 
 Internal choices may be made during implementation if they preserve
 agreed behavior; document the resulting design where relevant.
