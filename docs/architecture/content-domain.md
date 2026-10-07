@@ -2,8 +2,10 @@
 
 ## Status and Entity
 
-This domain is `Planned`. The database currently contains an example
-`task` table; post persistence and lifecycle operations are not implemented.
+This domain is `In progress`. Post persistence, lifecycle operations, and
+protected Admin list/trash/detail pages are implemented. New/edit authoring
+remains Task 10; complete acceptance remains Task 11. The example `task`
+table remains alongside the post schema.
 
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
@@ -47,7 +49,8 @@ archiving, deletion, and restoration. Public articles use `slug`.
 | Public article | `/posts/[slug]`          | Read publicly visible content by slug               |
 
 All Admin pages require the authentication and authorization defined in
-[Security](security.md). These page routes are `Planned`, not implemented.
+[Security](security.md). List, trash, and detail routes are implemented;
+creation and editing routes remain planned.
 
 Admin targets desktop and mobile use, including listing, detail reading,
 creation, editing, publication, archiving, trash, deletion, and restoration.
@@ -65,7 +68,8 @@ Posts in `draft` status need no slug. Later title changes affect neither ID nor 
 ### Admin Layout
 
 The agreed mockup establishes the v0.2.0 Admin layout, not a finalized
-visual theme. This layout is `Planned` and applies to all Admin pages.
+visual theme. List, trash, and detail use this layout; authoring layouts
+remain Task 10. The organization applies to all Admin pages.
 
 - Desktop content has a maximum width of 1024px. Mobile adapts the same
   management flow rather than removing actions.

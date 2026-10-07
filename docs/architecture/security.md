@@ -338,6 +338,17 @@ client navigation, floating menus, table interactions and dynamic styles under
 enforced CSP remain acceptance gates in Tasks 9–10. No style exception is
 introduced to make those untested behaviors pass.
 
+Task 9 exercises protected list/detail HTML, read-only code blocks, client
+navigation/remounts, and lifecycle controls with the actual local production
+Worker at desktop and mobile sizes. Admin omits the favicon link because
+`img-src 'none'` rejects it. SvelteKit's generated `#svelte-announcer` still
+attempts its fixed inline hiding style, which `style-src-attr 'none'` blocks;
+the shared stylesheet supplies the equivalent visually hidden presentation.
+The browser check distinguishes this known framework violation by its exact
+style hash and rejects other console errors. No CSP permission is added.
+Authoring controls, floating editor UI, and deployed Access verification remain
+Task 10/release acceptance work.
+
 A production-bundle Chromium probe with Crepe 7.22.2 demonstrated that
 `style-src 'self'` blocks CodeMirror's generated style element. Passing
 the response's permitted style nonce through CodeMirror's
