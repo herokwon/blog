@@ -1,18 +1,22 @@
 import {
   createPostSchema,
   patchPostSchema,
+  revisionSchema,
   validationDetails,
   type AdminPost,
   type CreatePostInput,
   type PatchPostInput,
+  type PostCommand,
+  type RevisionInput,
 } from '$lib/admin/contracts';
-import { and, eq, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import type { z } from 'zod';
 import { AdminApiError } from '../admin/errors';
 import type { BlogDb } from '../db';
 import { posts } from '../db/schema';
 import { getPost } from './read';
+import { normalizeSlug, slugCandidate } from './slug';
 
 function validated<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
@@ -106,4 +110,102 @@ export async function savePost(
   if (post.deleted_at !== null) invalidState();
   requireRevision(post, expected_revision);
   return post;
+}
+
+function alreadySatisfied(post: AdminPost, command: PostCommand): boolean {
+  if (command === 'delete') return post.deleted_at !== null;
+  if (command === 'restore') return post.deleted_at === null;
+  if (post.deleted_at !== null) invalidState();
+  if (command === 'archive' && post.status === 'draft') invalidState();
+  return post.status === (command === 'publish' ? 'published' : 'archived');
+}
+
+/** Drizzle wraps binding errors in cause; retry only the posts.slug constraint. */
+function isSlugCollision(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  while (error instanceof Error && !seen.has(error)) {
+    seen.add(error);
+    if (/UNIQUE constraint failed: posts\.slug(?:$|:)/.test(error.message))
+      return true;
+    error = error.cause;
+  }
+  return false;
+}
+
+export async function commandPost(
+  db: BlogDb,
+  id: string,
+  command: PostCommand,
+  input: RevisionInput,
+): Promise<AdminPost> {
+  const { expected_revision } = validated(revisionSchema, input);
+  const post = await currentPost(db, id);
+  if (alreadySatisfied(post, command)) return post;
+  requireRevision(post, expected_revision);
+  const firstPublication = command === 'publish' && post.status === 'draft';
+  const base = firstPublication ? normalizeSlug(post.title) : '';
+  if (firstPublication && !base)
+    throw new AdminApiError(
+      400,
+      'VALIDATION_ERROR',
+      'Title cannot produce a publication slug.',
+      [
+        {
+          path: ['title'],
+          message:
+            'Title must contain a letter, number or plus sign for publication.',
+        },
+      ],
+    );
+
+  for (let attempt = 1; ; attempt++) {
+    const timestamp = new Date().toISOString();
+    let changed: AdminPost | undefined;
+    try {
+      [changed] = await db
+        .update(posts)
+        .set({
+          status:
+            command === 'publish'
+              ? 'published'
+              : command === 'archive'
+                ? 'archived'
+                : post.status,
+          slug: firstPublication ? slugCandidate(base, attempt) : undefined,
+          published_at: firstPublication ? timestamp : undefined,
+          deleted_at:
+            command === 'delete'
+              ? timestamp
+              : command === 'restore'
+                ? null
+                : undefined,
+          revision: sql`${posts.revision} + 1`,
+          updated_at: timestamp,
+        })
+        .where(
+          and(
+            eq(posts.id, id),
+            eq(posts.revision, expected_revision),
+            eq(posts.status, post.status),
+            command === 'restore'
+              ? isNotNull(posts.deleted_at)
+              : isNull(posts.deleted_at),
+          ),
+        )
+        .returning();
+    } catch (error) {
+      if (firstPublication && isSlugCollision(error)) continue;
+      throw error;
+    }
+    if (changed) return changed;
+    const current = await currentPost(db, id);
+    if (alreadySatisfied(current, command)) return current;
+    requireRevision(current, expected_revision);
+    // A permitted unchanged-revision row cannot miss the guarded UPDATE.
+    throw new AdminApiError(
+      409,
+      'POST_VERSION_CONFLICT',
+      'Post changed during the operation.',
+    );
+  }
 }
