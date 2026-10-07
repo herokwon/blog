@@ -2,8 +2,9 @@
 
 ## Status and Scope
 
-These required v0.2.0 checks are `Planned`; this document records acceptance
-criteria, not completed test or deployment results. The release scope is
+The full v0.2.0 acceptance suite remains `Planned`. Task 2's local authentication
+and request-boundary verification is recorded below; deployment checks remain
+incomplete. The release scope is
 defined in [Architecture Overview](../architecture/overview.md#v020-delivery-scope).
 Public APIs and UI are deferred and are not part of this verification.
 
@@ -123,6 +124,62 @@ before adding them; the fallback pipeline probe does not mandate dependencies.
 Run the relevant repository checks (`pnpm check`, `pnpm lint`, unit tests,
 E2E tests, and the production build) as required by the implementation scope
 and existing CI. Document test setup and evidence on the corresponding PR.
+
+## Local Authentication Configuration
+
+Task 2 uses `jose` to verify RS256 Access JWTs against the team's HTTPS
+`/cdn-cgi/access/certs` endpoint. Signature, issuer, audience, expiry, and
+required identity claims are verified before checking the email allowlist.
+The email header is never trusted. Only public verification keys are cached;
+identity is assigned to `event.locals.admin` per request.
+See [Cloudflare JWT validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/)
+and [jose runtime support](https://github.com/panva/jose).
+
+For deployed Workers, configure these server-side bindings through the existing
+deployment configuration/secrets process:
+
+| Binding           | Value                                                          |
+| ----------------- | -------------------------------------------------------------- |
+| `ACCESS_ISSUER`   | Team origin, e.g. `https://your-team.cloudflareaccess.com`     |
+| `ACCESS_AUDIENCE` | Access application's audience                                  |
+| `ADMIN_EMAILS`    | Comma-separated allowed emails; comparison is case-insensitive |
+| `ADMIN_ORIGIN`    | Exact production origin, including scheme and non-default port |
+
+The issuer must be a Cloudflare Access HTTPS origin without a trailing slash.
+Missing or unsafe authentication configuration fails closed. Set the production
+origin on candidates as well: only requests on that origin may mutate data;
+all other deployed hosts, including Version URLs, remain read-only. Authentication
+and authorization happen before mutation rejection. Every mutation also requires
+an exact matching `Origin` header, including direct API requests.
+
+For local development, create an ignored `.dev.vars` containing only:
+
+```dotenv
+ADMIN_LOCAL_AUTH=true
+```
+
+Run `pnpm dev` on `localhost`, `127.0.0.1`, or `[::1]`. The bypass additionally
+requires SvelteKit's development runtime, and returns the fixed identity
+`local-admin@example.invalid`. It cannot activate in a production bundle,
+including `pnpm preview`, even if the flag or a loopback host is present.
+Development must use the local D1 binding; do not configure a remote development
+binding. Local mutation clients must supply their exact development origin.
+`.env*` and `.dev.vars*` are ignored before local files are created; never put
+real credentials or identities in trackable examples/test files.
+
+Task 2 verification covers actual asymmetric JWT verification, request path
+matching, request-scoped identity, Origin enforcement, candidate write rejection,
+JSON errors, and `no-store` on successful/error/redirect responses. CSP and other
+Admin security headers are integrated and validated in Task 7. Deployed Access
+policies and exact-candidate behavior still require the deployment checks below.
+
+SvelteKit's built-in form CSRF check runs before `handle` in production. To keep
+authentication before mutation rejection for every content type, the configuration
+delegates Origin enforcement to the hook (`csrf.trustedOrigins: ['*']`). This does
+not authorize cross-origin Admin writes: the hook enforces the exact trusted origin
+after authentication. For Public form requests, the hook retains SvelteKit's
+production same-origin policy, including its binary form content type. Local
+production HTTP tests cover both boundaries and encoded Admin paths.
 
 ## Deployment Checks
 
