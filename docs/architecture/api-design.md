@@ -2,10 +2,13 @@
 
 ## Status and Contracts
 
-The HTTP APIs described here are `Planned`. Admin runtime contracts and repository
+The Admin HTTP APIs are implemented for v0.2.0; Public HTTP APIs remain `Planned`.
+Admin runtime contracts and repository
 reads are implemented in `src/lib/admin/contracts.ts` and
 `src/lib/server/posts/read.ts`. Atomic mutations are implemented in
-`src/lib/server/posts/mutate.ts`; HTTP handlers remain pending.
+`src/lib/server/posts/mutate.ts`; the nine Admin method/path pairs use thin
+handlers in `src/routes/api/admin/posts` and the shared HTTP boundary in
+`src/lib/server/admin/http.ts`.
 Zod is the source of truth for
 path parameters, query parameters, request bodies, responses, and errors.
 Future OpenAPI generation will derive `docs/openapi.json` from these

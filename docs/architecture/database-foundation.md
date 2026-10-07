@@ -5,9 +5,11 @@
 D1 integration and migration tooling are `Implemented`.
 The `posts` schema and initial migration are `Implemented` and validated on local D1.
 Post repository reads are `Implemented`, tested through Drizzle with a disposable
-migrated SQLite-backed D1 binding. Actual local D1 API integration belongs to Task 5.
+migrated SQLite-backed D1 binding and the Task 5 isolated local D1 HTTP fixture.
 Post mutations and UUIDv7 generation are `Implemented` in
-`src/lib/server/posts/mutate.ts`; HTTP API persistence remains `Planned`.
+`src/lib/server/posts/mutate.ts`; the Admin HTTP API persists through these
+repositories. The production Worker fixture verifies UUIDv7 execution, D1
+uniqueness-error classification and concurrent mutations without remote writes.
 
 | Concern              | Current source                                                                                |
 | -------------------- | --------------------------------------------------------------------------------------------- |
@@ -219,11 +221,9 @@ rollback does not reverse migrations.
 
 ## Deferred Decisions
 
-| Item                    | Decision process                                                   |
-| ----------------------- | ------------------------------------------------------------------ |
-| UUIDv7 runtime          | Verify the selected library through the Task 5 local Worker API    |
-| Repository query plans  | Recheck the initial Admin indexes against final repository queries |
-| Publication concurrency | SQLite invariants verified; repeat through the Task 5 local D1 API |
+| Item                   | Decision process                                                   |
+| ---------------------- | ------------------------------------------------------------------ |
+| Repository query plans | Recheck the initial Admin indexes against final repository queries |
 
 Internal choices may be made during implementation if they preserve
 agreed behavior; document the resulting design where relevant.

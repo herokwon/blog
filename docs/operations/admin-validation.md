@@ -14,6 +14,33 @@ Use the authoritative [Content Domain](../architecture/content-domain.md),
 [Security](../architecture/security.md) contracts when selecting cases.
 Track implementation and verification evidence in Issues and PRs.
 
+## Task 5 Local HTTP Verification
+
+`pnpm exec playwright test src/routes/admin/admin-api.e2e.ts` builds the
+production Worker and creates a Wrangler `--dry-run` bundle without deploying.
+The fixture in `tests/admin/local-d1.ts` runs that bundle in Miniflare using
+the same version already selected by Wrangler, an isolated test-only D1 ID,
+and a fresh persistence directory under `.wrangler/admin-api-tests` per worker.
+It applies the checked-in local migrations, resets only its own `posts` table
+between tests, and removes its scoped directory after disposal or setup failure.
+It never configures remote bindings or uses the production database ID.
+
+Requests use an exact loopback HTTP origin and freshly signed RS256 JWTs.
+Only the external Access JWKS fetch is substituted; the production signature,
+claims and email authorization code executes unchanged. Other outbound requests
+are refused. Candidate mutation rejection is simulated inside this local Worker
+with a candidate URL; no network request or database write reaches a real candidate.
+The separate production preview tests retain anonymous authentication coverage.
+
+Evidence covers all nine operations, direct response shapes and empty `204`,
+strict body/ID/query validation, raw omitted-field preservation, no-op and stale
+revision rules, normal/trash scopes and shrinking pages, tied ordering, atomic
+failed publication, real D1 slug collision errors, and competing save/delete/
+restore/publication requests. Rejected writes retain the persisted row.
+Admin API endpoints use `trailingSlash = 'ignore'` so the hook can authenticate
+and reject untrusted writes before emitting an uncached `308` canonical redirect.
+UI routes, CSP, deployed Access policies and remote migration remain later work.
+
 ## Required Application Checks
 
 | Area             | Required evidence                                                                                                                                                                                      |
