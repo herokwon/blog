@@ -1,5 +1,5 @@
-import type { AdminPost } from '$lib/admin/contracts';
 import { expect } from '@playwright/test';
+import type { AdminPost } from '#lib/admin/contracts.ts';
 import { test } from '../../../tests/admin/local-d1';
 
 test.beforeEach(async ({ localD1, page }) => {

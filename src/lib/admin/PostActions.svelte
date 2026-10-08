@@ -66,7 +66,7 @@
 {#snippet controls()}
   {#if post.deleted_at === null}
     <a
-      href={resolve(`/admin/posts/${post.id}/edit`)}
+      href={resolve('/admin/posts/[id]/edit', { id: post.id })}
       aria-disabled={action.busy}
       onclick={event => {
         if (action.busy) event.preventDefault();

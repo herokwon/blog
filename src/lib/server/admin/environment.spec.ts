@@ -1,5 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AdminEnvironment } from './environment';
 import {
   assertAdminMutationAllowed,
   isAdminPath,
@@ -7,18 +8,23 @@ import {
 } from './environment';
 
 const runtime = vi.hoisted(() => ({ dev: false }));
-vi.mock('$app/environment', () => runtime);
+const worker = vi.hoisted(() => ({ env: {} as AdminEnvironment }));
+vi.mock('cloudflare:workers', () => worker);
+vi.mock('$app/env', () => runtime);
 
 function event(url = 'https://blog.example/api/admin/posts', origin?: string) {
+  for (const key of Object.keys(worker.env))
+    delete worker.env[key as keyof AdminEnvironment];
+  Object.assign(worker.env, {
+    ADMIN_ORIGIN: 'https://blog.example',
+    ADMIN_LOCAL_AUTH: 'true',
+  });
   return {
     url: new URL(url),
     request: new Request(url, {
       method: 'POST',
       headers: origin ? { Origin: origin } : {},
     }),
-    platform: {
-      env: { ADMIN_ORIGIN: 'https://blog.example', ADMIN_LOCAL_AUTH: 'true' },
-    },
     locals: {},
   } as unknown as RequestEvent;
 }
@@ -77,8 +83,7 @@ describe('Admin request boundaries', () => {
 
   it('fails closed when write origin is missing', () => {
     const request = event(undefined, 'https://blog.example');
-    delete (request.platform!.env as unknown as Record<string, string>)
-      .ADMIN_ORIGIN;
+    delete worker.env.ADMIN_ORIGIN;
     expect(() => assertAdminMutationAllowed(request)).toThrow(
       expect.objectContaining({ status: 403 }),
     );
@@ -98,9 +103,7 @@ describe('Admin request boundaries', () => {
     );
     expect(isLocalAdminEnabled(request)).toBe(true);
     expect(() => assertAdminMutationAllowed(request)).not.toThrow();
-    (
-      request.platform!.env as unknown as Record<string, string>
-    ).ADMIN_LOCAL_AUTH = 'false';
+    worker.env.ADMIN_LOCAL_AUTH = 'false';
     expect(isLocalAdminEnabled(request)).toBe(false);
   });
 

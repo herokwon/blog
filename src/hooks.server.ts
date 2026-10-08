@@ -1,16 +1,16 @@
-import { json, text, type Handle } from '@sveltejs/kit';
-import { authenticateAdmin } from '$lib/server/admin/access';
+import type { Handle } from '@sveltejs/kit/hooks';
+import { authenticateAdmin } from '#lib/server/admin/access.ts';
 import {
   assertAdminMutationAllowed,
   isAdminPath,
-} from '$lib/server/admin/environment';
+} from '#lib/server/admin/environment.ts';
 import {
   applyAdminHeaders,
   applyDocumentStyleNonce,
   createStyleNonce,
-} from '$lib/server/admin/headers';
-import { adminErrorResponse } from '$lib/server/admin/http';
-import { dev } from '$app/environment';
+} from '#lib/server/admin/headers.ts';
+import { adminErrorResponse } from '#lib/server/admin/http.ts';
+import { dev } from '$app/env';
 
 export const handle: Handle = async ({ event, resolve }) => {
   const styleNonce = createStyleNonce();
@@ -43,8 +43,8 @@ export const handle: Handle = async ({ event, resolve }) => {
     ) {
       const message = `Cross-site ${event.request.method} form submissions are forbidden`;
       return event.request.headers.get('accept') === 'application/json'
-        ? json({ message }, { status: 403 })
-        : text(message, { status: 403 });
+        ? Response.json({ message }, { status: 403 })
+        : new Response(message, { status: 403 });
     }
     return resolveDocument();
   }

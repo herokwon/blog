@@ -1,6 +1,6 @@
-import type { ApiErrorCode, ValidationDetail } from '$lib/admin/contracts';
+import type { ApiErrorCode, ValidationDetail } from '#lib/admin/contracts.ts';
 
-export type { ValidationDetail } from '$lib/admin/contracts';
+export type { ValidationDetail } from '#lib/admin/contracts.ts';
 
 export class AdminApiError extends Error {
   constructor(

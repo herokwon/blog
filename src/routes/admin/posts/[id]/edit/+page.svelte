@@ -1,5 +1,5 @@
 <script lang="ts">
-  import PostForm from '$lib/admin/PostForm.svelte';
+  import PostForm from '#lib/admin/PostForm.svelte';
 
   let { data } = $props();
 </script>

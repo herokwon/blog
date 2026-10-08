@@ -1,4 +1,4 @@
-import { postCommandHandler } from '$lib/server/admin/http';
+import { postCommandHandler } from '#lib/server/admin/http.ts';
 import type { RequestHandler } from './$types';
 
 export const trailingSlash = 'ignore';

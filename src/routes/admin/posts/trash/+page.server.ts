@@ -1,10 +1,10 @@
 import {
   adminPostPageSchema,
   trashListQuerySchema,
-} from '$lib/admin/contracts';
-import { adminQuery, parseAdminInput } from '$lib/server/admin/http';
-import { adminPage } from '$lib/server/admin/pages';
-import { listPosts } from '$lib/server/posts/read';
+} from '#lib/admin/contracts.ts';
+import { adminQuery, parseAdminInput } from '#lib/server/admin/http.ts';
+import { adminPage } from '#lib/server/admin/pages.ts';
+import { listPosts } from '#lib/server/posts/read.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = event =>

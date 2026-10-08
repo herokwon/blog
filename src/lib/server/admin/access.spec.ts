@@ -2,12 +2,15 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { authenticateAdmin } from './access';
+import type { AdminEnvironment } from './environment';
 
 const fixture = vi.hoisted(() => ({
   dev: false,
   jwks: { keys: [] as Record<string, unknown>[] },
 }));
-vi.mock('$app/environment', () => fixture);
+const worker = vi.hoisted(() => ({ env: {} as AdminEnvironment }));
+vi.mock('cloudflare:workers', () => worker);
+vi.mock('$app/env', () => fixture);
 // Only the external certificate fetch is substituted. Signature and claims
 // validation still execute in jose against freshly generated asymmetric keys.
 vi.mock('jose', async importOriginal => {
@@ -38,19 +41,20 @@ function event(token?: string, emailHeader = 'admin@example.test') {
     'Cf-Access-Authenticated-User-Email': emailHeader,
   });
   if (token) headers.set('Cf-Access-Jwt-Assertion', token);
+  for (const key of Object.keys(worker.env))
+    delete worker.env[key as keyof AdminEnvironment];
+  Object.assign(worker.env, {
+    ACCESS_ISSUER: issuer,
+    ACCESS_AUDIENCE: 'admin-app',
+    ADMIN_EMAILS: 'admin@example.test',
+    ADMIN_LOCAL_AUTH: 'true',
+  });
   const url = new URL('https://blog.example/admin/posts');
   return {
     url,
     request: new Request(url, { headers }),
     locals: {},
-    platform: {
-      env: {
-        ACCESS_ISSUER: issuer,
-        ACCESS_AUDIENCE: 'admin-app',
-        ADMIN_EMAILS: 'admin@example.test',
-        ADMIN_LOCAL_AUTH: 'true',
-      },
-    },
+    platform: {},
   } as unknown as RequestEvent;
 }
 async function token(
@@ -143,21 +147,21 @@ describe('verified Access identity', () => {
   it('uses a fixed test identity only on an explicitly enabled dev loopback', async () => {
     fixture.dev = true;
     const local = event();
-    local.url = new URL('http://localhost:5173/admin');
+    Object.assign(local, { url: new URL('http://localhost:5173/admin') });
     await expect(authenticateAdmin(local)).resolves.toEqual({
       email: 'local-admin@example.invalid',
     });
   });
   it('does not trust the local flag in deployed bundles on loopback', async () => {
     const local = event();
-    local.url = new URL('http://localhost:5173/admin');
+    Object.assign(local, { url: new URL('http://localhost:5173/admin') });
     await expect(authenticateAdmin(local)).rejects.toMatchObject({
       status: 401,
     });
   });
   it('fails closed for an unsafe issuer configuration', async () => {
     const request = event(await token());
-    request.platform!.env.ACCESS_ISSUER = 'http://localhost:9999';
+    worker.env.ACCESS_ISSUER = 'http://localhost:9999';
     await expect(authenticateAdmin(request)).rejects.toMatchObject({
       status: 500,
       code: 'INTERNAL_ERROR',

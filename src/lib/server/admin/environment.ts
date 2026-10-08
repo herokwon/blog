@@ -1,5 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
+import { env } from 'cloudflare:workers';
 import { AdminApiError } from './errors';
 
 export interface AdminEnvironment {
@@ -10,8 +11,8 @@ export interface AdminEnvironment {
   ADMIN_LOCAL_AUTH?: string;
 }
 
-export function adminEnvironment(event: RequestEvent): AdminEnvironment {
-  return event.platform?.env ?? {};
+export function adminEnvironment(): AdminEnvironment {
+  return env;
 }
 
 export function isAdminPath(path: string): boolean {
@@ -33,14 +34,14 @@ export function isLocalAdminEnabled(event: RequestEvent): boolean {
   return (
     dev &&
     ['localhost', '127.0.0.1', '[::1]'].includes(event.url.hostname) &&
-    adminEnvironment(event).ADMIN_LOCAL_AUTH === 'true'
+    adminEnvironment().ADMIN_LOCAL_AUTH === 'true'
   );
 }
 
 export function assertAdminMutationAllowed(event: RequestEvent): void {
   const expected = isLocalAdminEnabled(event)
     ? event.url.origin
-    : adminEnvironment(event).ADMIN_ORIGIN;
+    : adminEnvironment().ADMIN_ORIGIN;
   const origin = event.request.headers.get('origin');
   let validOrigin = false;
   try {

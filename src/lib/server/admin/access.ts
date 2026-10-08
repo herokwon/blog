@@ -25,7 +25,7 @@ export async function authenticateAdmin(
     ACCESS_ISSUER: issuer,
     ACCESS_AUDIENCE: audience,
     ADMIN_EMAILS: emails,
-  } = adminEnvironment(event);
+  } = adminEnvironment();
   let validIssuer = false;
   try {
     const url = new URL(issuer ?? '');

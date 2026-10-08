@@ -1,14 +1,21 @@
-import type { RequestEvent, ResolveOptions } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
+import type { ResolveOptions } from '@sveltejs/kit/hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handle } from '../../../hooks.server';
+import type { AdminEnvironment } from './environment';
 import { AdminApiError } from './errors';
 
 const authentication = vi.hoisted(() => vi.fn());
 vi.mock('./access', () => ({ authenticateAdmin: authentication }));
-vi.mock('$app/environment', () => ({ dev: false }));
+const worker = vi.hoisted(() => ({ env: {} as AdminEnvironment }));
+vi.mock('cloudflare:workers', () => worker);
+vi.mock('$app/env', () => ({ dev: false }));
 
 function event(path = '/api/admin/posts', method = 'GET', origin?: string) {
   const url = new URL(path, 'https://blog.example');
+  for (const key of Object.keys(worker.env))
+    delete worker.env[key as keyof AdminEnvironment];
+  Object.assign(worker.env, { ADMIN_ORIGIN: 'https://blog.example' });
   return {
     url,
     request: new Request(url, {
@@ -16,7 +23,6 @@ function event(path = '/api/admin/posts', method = 'GET', origin?: string) {
       headers: origin ? { Origin: origin } : {},
     }),
     locals: {},
-    platform: { env: { ADMIN_ORIGIN: 'https://blog.example' } },
   } as unknown as RequestEvent;
 }
 const resolve =
