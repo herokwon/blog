@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminPost } from './contracts';
-import { runMutation, type MutationRequest } from './mutations';
+import { readAdminPost, runMutation, type MutationRequest } from './mutations';
 
 const id = '019a1234-5678-7000-8000-000000000001';
 const post: AdminPost = {
@@ -41,6 +41,39 @@ afterEach(() => {
 });
 
 describe('bounded retry and uncertain outcome inspection', () => {
+  it.each(['headers', 'body'])(
+    'bounds explicit latest-post reload stalled %s without replacing input',
+    async phase => {
+      vi.useFakeTimers();
+      let signal: AbortSignal | undefined;
+      const fetcher: typeof fetch = async (_url, init) => {
+        signal = init?.signal ?? undefined;
+        if (phase === 'headers') return new Promise<Response>(() => {});
+        return new Response(
+          new ReadableStream({
+            start(stream) {
+              stream.enqueue(new TextEncoder().encode('{'));
+            },
+          }),
+          { headers: { 'content-type': 'application/json' } },
+        );
+      };
+      const pending = readAdminPost(id, fetcher).then(
+        () => 'success',
+        error => error.name,
+      );
+      await vi.advanceTimersByTimeAsync(30000);
+      expect(await pending).toBe('TimeoutError');
+      expect(signal?.aborted).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+  it('rejects a malformed or mismatched reload rather than replacing the loaded document', async () => {
+    const { fetcher } = transport(
+      Response.json({ ...post, id: '019a1234-5678-7000-8000-000000000002' }),
+    );
+    await expect(readAdminPost(id, fetcher)).rejects.toThrow();
+  });
   const edited = { ...post, title: 'Edited', revision: 2 };
 
   it('bounds a stalled request, retry and recovery read with timeouts', async () => {
