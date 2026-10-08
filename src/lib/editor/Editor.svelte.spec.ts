@@ -311,15 +311,15 @@ describe('real Crepe integration', () => {
     expect(view().editable).toBe(false);
   });
   it('shows the original unsupported source in the authoring component', async () => {
-    render(Editor, { source: 'paragraph ![image](/x)', locked: false });
-    await expect.element(page.getByRole('alert')).toHaveTextContent(/images/);
+    await render(Editor, { source: 'paragraph ![image](/x)', locked: false });
+    await expect.element(page.getByRole('alert')).toMatchTextContent(/images/);
     await expect
       .element(page.getByText('paragraph ![image](/x)', { exact: true }))
       .toBeInTheDocument();
     expect(document.querySelector('.ProseMirror')).toBeNull();
   });
   it('mounts a reading component with no editable surface', async () => {
-    render(PostBody, { source: '# Read only' });
+    await render(PostBody, { source: '# Read only' });
     await expect
       .element(page.getByRole('heading', { name: 'Read only' }))
       .toBeInTheDocument();
