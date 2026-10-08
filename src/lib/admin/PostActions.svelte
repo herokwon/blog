@@ -12,7 +12,7 @@
   }: {
     post: AdminPostListItem;
     overflow?: boolean;
-    refresh: () => Promise<void>;
+    refresh: (publishedId?: string) => Promise<void>;
     state?: { busy: boolean; message: string };
   } = $props();
   const localState = $state({ busy: false, message: '' });
@@ -52,7 +52,9 @@
                 ? `변경하지 못했습니다. ${result.error.message}`
                 : '변경 결과를 확인할 수 없습니다. 최신 상태를 확인한 뒤 다시 선택하세요.';
       action.message = message ? `${title}: ${message}` : '';
-      await refresh();
+      await refresh(
+        result.kind === 'confirmed' && kind === 'publish' ? post.id : undefined,
+      );
     } catch {
       action.message = `${title}: 최신 상태를 불러오지 못했습니다. 페이지를 새로고침해 확인하세요.`;
     } finally {

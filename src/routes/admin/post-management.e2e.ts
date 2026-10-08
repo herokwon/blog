@@ -2,6 +2,29 @@ import type { AdminPost } from '$lib/admin/contracts';
 import { expect, type APIRequestContext } from '@playwright/test';
 import { test } from '../../../tests/admin/local-d1';
 
+test('Admin page redirects authenticate first and remain uncached', async ({
+  api,
+}) => {
+  for (const path of [
+    '/admin/posts/?page=1&limit=2',
+    '/admin/posts/trash/',
+    '/admin/posts/00000000-0000-4000-8000-000000000001/',
+  ]) {
+    const denied = await api.get(path, {
+      headers: { 'Cf-Access-Jwt-Assertion': '' },
+      maxRedirects: 0,
+    });
+    expect(denied.status()).toBe(401);
+    expect(denied.headers()['cache-control']).toBe('no-store');
+    const redirect = await api.get(path, { maxRedirects: 0 });
+    expect(redirect.status()).toBe(308);
+    expect(redirect.headers()['cache-control']).toBe('no-store');
+    expect(redirect.headers().location).toBe(
+      path.replace('/?', '?').replace(/\/$/, ''),
+    );
+  }
+});
+
 async function create(
   api: APIRequestContext,
   title: string,
@@ -330,10 +353,11 @@ for (const viewport of [
       await page.getByRole('link', { name: '휴지통', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
       release();
-      await expect(page.getByRole('status')).toContainText('변경했습니다');
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
       expect(
         await (await api.get(`/api/admin/posts/${post.id}`)).json(),
       ).toMatchObject({ status: 'published', revision: 2 });
+      await page.getByRole('link', { name: '목록', exact: true }).click();
       await page.getByRole('link', { name: '휴지통', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/trash`);
     });

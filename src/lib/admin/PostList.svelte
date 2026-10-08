@@ -37,11 +37,13 @@
     query.set('limit', String(posts.limit));
     return `?${query}`;
   }
-  async function refresh() {
+  async function refresh(publishedId?: string) {
     await invalidateAll();
     const number = pageAfterMutation(posts.page, posts.totalPages);
-    if (number !== posts.page) {
-      const destination = `${path}${queryString(status, number)}` as const;
+    if (publishedId || number !== posts.page) {
+      const destination = publishedId
+        ? (`/admin/posts/${publishedId}` as const)
+        : (`${path}${queryString(status, number)}` as const);
       correction = resolve(destination);
       try {
         await goto(resolve(destination));
