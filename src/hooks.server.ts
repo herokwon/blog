@@ -55,19 +55,16 @@ export const handle: Handle = async ({ event, resolve }) => {
     if (!['GET', 'HEAD', 'OPTIONS'].includes(event.request.method)) {
       assertAdminMutationAllowed(event);
     }
-    // Endpoints opt out of Kit's pre-hook redirect. Authenticate and protect
+    // Admin routes opt out of Kit's pre-hook redirect. Authenticate and protect
     // writes first, then canonicalize without losing query strings or methods.
-    response =
-      event.url.pathname.startsWith('/api/admin/') &&
-      event.url.pathname.endsWith('/')
-        ? new Response(null, {
-            status: 308,
-            headers: {
-              Location:
-                event.url.pathname.replace(/\/+$/, '') + event.url.search,
-            },
-          })
-        : await resolveDocument();
+    response = event.url.pathname.endsWith('/')
+      ? new Response(null, {
+          status: 308,
+          headers: {
+            Location: event.url.pathname.replace(/\/+$/, '') + event.url.search,
+          },
+        })
+      : await resolveDocument();
   } catch (error) {
     response = adminErrorResponse(error);
   }
