@@ -20,6 +20,8 @@ pnpm dlx sv@0.17.1 create --template minimal --types ts --add prettier eslint vi
 
 ## Developing
 
+Use Node.js 26 (see `.node-version`) and pnpm 12 for local development and CI.
+
 Once you've created the project and installed dependencies with `pnpm install`, start a development server:
 
 ```sh

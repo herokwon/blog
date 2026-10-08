@@ -108,7 +108,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           package-manager-cache: false
 
       - name: Validate existing tag against the merge SHA
@@ -138,7 +138,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           package-manager-cache: false
 
       - name: Select version
@@ -350,7 +350,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           package-manager-cache: false
 
       - name: Prepare deployment report
@@ -396,7 +396,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           package-manager-cache: false
 
       - name: Create release if version is new

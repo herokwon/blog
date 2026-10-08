@@ -9,7 +9,7 @@ inputs:
   node-version:
     description: Node.js major version
     required: false
-    default: '24'
+    default: '26'
   enable-cache:
     description: Enable the pnpm store cache for read-only jobs
     required: false
