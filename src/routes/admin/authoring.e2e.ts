@@ -184,7 +184,7 @@ for (const width of [1280, 390]) {
       await page.getByLabel('제목', { exact: true }).fill('New published');
       await page.locator('.admin-editor .ProseMirror').fill('Publish body');
       await page.getByRole('button', { name: '발행', exact: true }).click();
-      await expect(page).toHaveURL(/\/admin\/posts\/[^/]+$/);
+      await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
       const list = await (await api.get('/api/admin/posts')).json();
       expect(list.items).toHaveLength(1);
       expect(list.items[0].status).toBe('published');
