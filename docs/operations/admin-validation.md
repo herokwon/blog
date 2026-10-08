@@ -2,9 +2,10 @@
 
 ## Status and Scope
 
-The full v0.2.0 acceptance suite remains `Planned`. Task 2's local authentication
-and request-boundary verification is recorded below; deployment checks remain
-incomplete. The release scope is
+Task 11 local acceptance verification is complete. The criterion-to-test map,
+current environment and unresolved device/deployment checks are recorded in
+[v0.2.0 acceptance](v0.2.0-acceptance.md). Task evidence is recorded below.
+The release scope is
 defined in [Architecture Overview](../architecture/overview.md#v020-delivery-scope).
 Public APIs and UI are deferred and are not part of this verification.
 
@@ -78,9 +79,9 @@ controller. No HTML renderer or sanitizer dependency is introduced.
 `src/routes/admin/headers.e2e.ts` verifies initial production HTML carries a fresh
 style nonce permitted by its response CSP, and that anonymous Admin API failures
 receive the complete security headers. This does not test an actual Admin detail
-or authoring page. Those routes, navigation/hydration, floating UI and enforced-CSP
-compatibility remain incomplete until Tasks 9–10; storage, save blocking and
-title-only payload behavior remain the corresponding later-task gates.
+or authoring page. Actual-route navigation/hydration, floating UI, enforced CSP,
+storage, save blocking and title-only payload evidence was added in Tasks 9–10
+and is described below.
 
 See [selected configuration](../architecture/security.md#csp-configuration-and-verification).
 All verification uses the existing local Worker/D1 setup and does not deploy.
@@ -332,7 +333,6 @@ after actually performing them against the migrated schema.
 
 ## Remaining Technical Decisions
 
-Actual-page compatibility of the selected rendering configuration and CSP under the accepted
-[Admin header baseline](../architecture/security.md#admin-security-headers)
-requires integration verification in Tasks 9–10,
-as defined in [Security](../architecture/security.md#implementation-decisions).
+Actual-page rendering/CSP integration has local evidence from Tasks 9–10.
+Physical mobile, deployed Access, exact-candidate and production checks remain
+incomplete; see [the release evidence table](v0.2.0-acceptance.md#outstanding-release-evidence).

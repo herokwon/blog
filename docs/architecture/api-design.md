@@ -10,7 +10,9 @@ reads are implemented in `src/lib/admin/contracts.ts` and
 handlers in `src/routes/api/admin/posts` and the shared HTTP boundary in
 `src/lib/server/admin/http.ts`.
 The client mutation controller in `src/lib/admin/mutations.ts` implements
-the retry and outcome-recovery contract below. Its UI consumers remain planned.
+the retry and outcome-recovery contract below. Protected Admin lifecycle and
+authoring pages consume it; their local acceptance evidence is recorded in
+[v0.2.0 acceptance](../operations/v0.2.0-acceptance.md).
 Zod is the source of truth for
 path parameters, query parameters, request bodies, responses, and errors.
 Future OpenAPI generation will derive `docs/openapi.json` from these
