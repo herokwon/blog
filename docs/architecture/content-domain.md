@@ -2,9 +2,10 @@
 
 ## Status and Entity
 
-This domain is `In progress`. Post persistence, lifecycle operations, and
+The v0.2.0 Admin domain is implemented and locally verified. Post persistence, lifecycle operations, and
 protected Admin list/trash/detail pages and new/edit authoring are implemented.
-Complete acceptance remains Task 11. The example `task`
+Task 11 [acceptance evidence](../operations/v0.2.0-acceptance.md) separates local
+verification from incomplete physical-device and deployed checks. The example `task`
 table remains alongside the post schema.
 
 The `Post` model represents a blog article. All states use one entity with no

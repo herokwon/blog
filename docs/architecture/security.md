@@ -4,8 +4,11 @@
 
 Admin JWT authentication, authorization, request-origin enforcement, candidate
 write rejection, and `no-store` responses are implemented locally by Task 2.
-Rendering safety and the remaining Admin security headers are still `Planned`
-for Task 7. Runtime bindings and CI/CD credential references are configured
+Rendering safety and Admin security headers were implemented in Task 7;
+Tasks 9–10 exercise actual browsing/authoring routes under enforced CSP.
+Current local evidence and outstanding deployed checks are tracked in
+[v0.2.0 acceptance](../operations/v0.2.0-acceptance.md).
+Runtime bindings and CI/CD credential references are configured
 in the repository; this does not verify deployed resources, registered
 secrets, permissions, or production behavior. Deployed Cloudflare Access
 policies have not been verified. See the
@@ -284,7 +287,7 @@ values, or stack traces.
 
 ## Admin Security Headers
 
-The following baseline is accepted and remains `Planned` for implementation.
+The following baseline is implemented and verified against the local Worker.
 It adapts the [OWASP HTTP Security Response Headers Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html)
 to the Admin scope; it does not imply that deployed responses have been verified.
 
@@ -303,7 +306,7 @@ browser persistence of new-post input follows the
 
 ### CSP Configuration and Verification
 
-Task 7 selects Crepe/Kit `7.22.2`, CodeMirror view `6.43.13` and state
+Task 7 selected Crepe/Kit `7.22.2`; the current dependency stack uses CodeMirror view `6.43.14` and state
 `6.7.6`. Admin reading uses read-only Crepe, with authoring controls disabled;
 no separate HTML renderer or sanitizer is required. A Markdown AST display
 projection removes source HTML, images and footnotes and unwraps disallowed
@@ -333,10 +336,9 @@ including code blocks initialized lazily while locked. Fixed TopBar controls
 carry text names and keyboard activation; BlockEdit is disabled because fixed
 controls cover the supported actions and avoid its deferred teardown callback.
 
-These are isolated component/header selections. Actual Admin page hydration,
-client navigation, floating menus, table interactions and dynamic styles under
-enforced CSP remain acceptance gates in Tasks 9–10. No style exception is
-introduced to make those untested behaviors pass.
+These component/header selections also have actual-route local verification
+from Tasks 9–10, including hydration, client navigation, floating menus, table
+interactions and dynamic styles. No style exception is introduced.
 
 Task 9 exercises protected list/detail HTML, read-only code blocks, client
 navigation/remounts, and lifecycle controls with the actual local production
@@ -346,8 +348,8 @@ attempts its fixed inline hiding style, which `style-src-attr 'none'` blocks;
 the shared stylesheet supplies the equivalent visually hidden presentation.
 The browser check distinguishes this known framework violation by its exact
 style hash and rejects other console errors. No CSP permission is added.
-Authoring controls, floating editor UI, and deployed Access verification remain
-Task 10/release acceptance work.
+Task 10 adds authoring controls and floating editor UI coverage. Deployed Access
+verification remains release acceptance work.
 
 A production-bundle Chromium probe with Crepe 7.22.2 demonstrated that
 `style-src 'self'` blocks CodeMirror's generated style element. Passing
@@ -361,7 +363,7 @@ disabled so bundled fonts were same-origin files rather than data URLs.
 The fixed nonce was solely a disposable-probe value; production must use
 an unpredictable per-response nonce and no inline-script/eval exemption.
 
-Installed SvelteKit 2.70.3 supports CSP auto mode and framework-generated
+The disposable probe used SvelteKit 2.70.3, which supports CSP auto mode and framework-generated
 nonces/hashes. Product integration must ensure that the initial HTML nonce,
 the style permission in its response header, and every mounted CodeMirror
 instance agree, including client navigation and remounts. Framework-generated

@@ -10,9 +10,10 @@ Both share one SvelteKit application on Cloudflare Workers, with relational
 data stored in Cloudflare D1 through Drizzle ORM.
 
 The application foundation, D1 integration, testing, and CI/CD are
-`Implemented`. Post persistence, publishing, Public and Admin interfaces,
-and Admin authentication are `Planned`. The current schema contains an
-example `task` table, not the content schema. Repository configuration alone
+`Implemented`. Post persistence, publication lifecycle, Admin APIs/pages,
+authoring, and server authentication are implemented and locally tested.
+Public interfaces remain `Planned`. The schema contains `posts` and the retained
+example `task` table. Repository configuration alone
 does not confirm verified production resources or security policies.
 
 ## v0.2.0 Delivery Scope
@@ -28,24 +29,24 @@ slug generation, and publication timestamps are included in this scope;
 validation through Public interfaces follows when those interfaces exist.
 Tags, series, and media uploads remain outside this release.
 
-All content features in this scope remain `Planned` until implemented
-and verified.
+Local acceptance and remaining release evidence are tracked in
+[v0.2.0 acceptance](../operations/v0.2.0-acceptance.md).
 
 ## Technology Stack
 
-| Area                 | Technology                                         | Status      |
-| -------------------- | -------------------------------------------------- | ----------- |
-| Application          | SvelteKit 2, Svelte 5, TypeScript                  | Implemented |
-| Runtime              | Cloudflare Workers and Cloudflare adapter          | Implemented |
-| Static assets        | Workers Static Assets                              | Implemented |
-| Database integration | Cloudflare D1 and Drizzle ORM                      | Implemented |
-| Schema tooling       | Drizzle Kit and Wrangler migrations                | Implemented |
-| Styling              | Tailwind CSS and Typography                        | Implemented |
-| Testing              | Vitest and Playwright                              | Implemented |
-| Admin protection     | Cloudflare Access and server identity verification | Planned     |
-| API contracts        | Zod request/response schemas                       | Planned     |
-| API documentation    | OpenAPI generation from contracts                  | Planned     |
-| Admin authoring      | Milkdown                                           | Planned     |
+| Area                 | Technology                                            | Status              |
+| -------------------- | ----------------------------------------------------- | ------------------- |
+| Application          | SvelteKit 3, Svelte 5, TypeScript                     | Implemented         |
+| Runtime              | Cloudflare Workers and Cloudflare adapter             | Implemented         |
+| Static assets        | Workers Static Assets                                 | Implemented         |
+| Database integration | Cloudflare D1 and Drizzle ORM                         | Implemented         |
+| Schema tooling       | Drizzle Kit and Wrangler migrations                   | Implemented         |
+| Styling              | Tailwind CSS and Typography                           | Implemented         |
+| Testing              | Vitest and Playwright                                 | Implemented         |
+| Admin protection     | Server identity verification; deployed Access pending | Implemented locally |
+| API contracts        | Zod request/response schemas                          | Implemented         |
+| API documentation    | OpenAPI generation from contracts                     | Planned             |
+| Admin authoring      | Milkdown                                              | Implemented         |
 
 Milkdown Crepe provides formatted Admin editing with the authoring features
 defined in Content Domain. OpenAPI automation is future
@@ -103,7 +104,7 @@ publish, withdrawal, and migration behavior are validated locally.
 Production migrations run before Worker deployment in the release promotion
 workflow. See [CI/CD operations](../operations/ci-cd.md) for procedures.
 
-## Planned Request Flow
+## Admin Request Flow
 
 1. A dynamic request reaches the SvelteKit Worker.
 2. Admin requests use Access JWT verification and the email allowlist on
@@ -123,8 +124,8 @@ the public article without autosave or a separate working copy.
 
 | Subject            | Authoritative source                                                         |
 | ------------------ | ---------------------------------------------------------------------------- |
-| Post body          | Persisted Markdown source, Planned                                           |
-| API contract       | Zod schemas, Planned; OpenAPI is generated from them                         |
+| Post body          | Persisted Markdown source in `posts.body`                                    |
+| API contract       | Implemented Zod schemas; OpenAPI generation remains deferred                 |
 | Database structure | [Drizzle schema](../../src/lib/server/db/schema.ts) and generated migrations |
 | Runtime bindings   | [wrangler.jsonc](../../wrangler.jsonc)                                       |
 | CI/CD procedures   | [CI/CD operations](../operations/ci-cd.md)                                   |
