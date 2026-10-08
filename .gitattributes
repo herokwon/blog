@@ -1,0 +1,2 @@
+# Wrangler compares generated runtime headers byte-for-byte.
+worker-configuration.d.ts text eol=lf
