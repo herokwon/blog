@@ -3,8 +3,8 @@
 ## Status and Entity
 
 This domain is `In progress`. Post persistence, lifecycle operations, and
-protected Admin list/trash/detail pages are implemented. New/edit authoring
-remains Task 10; complete acceptance remains Task 11. The example `task`
+protected Admin list/trash/detail pages and new/edit authoring are implemented.
+Complete acceptance remains Task 11. The example `task`
 table remains alongside the post schema.
 
 The `Post` model represents a blog article. All states use one entity with no
@@ -49,8 +49,8 @@ archiving, deletion, and restoration. Public articles use `slug`.
 | Public article | `/posts/[slug]`          | Read publicly visible content by slug               |
 
 All Admin pages require the authentication and authorization defined in
-[Security](security.md). List, trash, and detail routes are implemented;
-creation and editing routes remain planned.
+[Security](security.md). List, trash, detail, creation, and editing routes are
+implemented.
 
 Admin targets desktop and mobile use, including listing, detail reading,
 creation, editing, publication, archiving, trash, deletion, and restoration.
@@ -69,7 +69,7 @@ Posts in `draft` status need no slug. Later title changes affect neither ID nor 
 
 The agreed mockup establishes the v0.2.0 Admin layout, not a finalized
 visual theme. List, trash, and detail use this layout; authoring layouts
-remain Task 10. The organization applies to all Admin pages.
+now use the same shell. The organization applies to all Admin pages.
 
 - Desktop content has a maximum width of 1024px. Mobile adapts the same
   management flow rather than removing actions.
@@ -224,6 +224,15 @@ Only write changed input. Select the recording intervals after checking
 Markdown serialization and localStorage write costs with representative
 long posts and mobile devices. Recovery is best effort: abrupt termination
 can lose input not yet durably recorded.
+
+Task 10 records after `500` ms without input and at least every `2000` ms
+during continuous input; it serializes only after document-change signals.
+Local Chromium measurements of a changed approximately 93 KB Markdown document
+at 1024/350 px content widths took 2.6/2.1 ms for real Crepe serialization,
+0.3/0.7 ms for JSON encoding, and 0.7/0.9 ms for a recovery write. Actual
+1280/390 px authoring pages recorded the long input within about 1.0/1.1 seconds,
+including debounce and browser test interaction. These are desktop-host
+responsive Chromium measurements, not physical mobile-device benchmarks.
 
 If localStorage cannot be accessed or a recovery write fails, keep authoring
 and explicit server saving available. Show one concise notice that browser

@@ -105,6 +105,26 @@ async function readResponse(
   }
 }
 
+/** Explicit conflict reload shares the same bounded headers/body read as mutation recovery. */
+export async function readAdminPost(
+  id: string,
+  fetcher: typeof fetch,
+): Promise<AdminPost> {
+  const { response, body } = await readResponse(
+    fetcher,
+    `/api/admin/posts/${id}`,
+    {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+    },
+  );
+  if (response.status !== 200) throw new Error('Post could not be loaded.');
+  const post = adminPostSchema.parse(body);
+  if (post.id !== id) throw new Error('Post identity does not match.');
+  return post;
+}
+
 async function attempt(
   request: MutationRequest,
   fetcher: typeof fetch,

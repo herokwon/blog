@@ -199,7 +199,10 @@ export async function mountEditor(options: {
     $prose(
       () =>
         new Plugin({
-          filterTransaction(transaction) {
+          filterTransaction(transaction, state) {
+            // Table pointer handlers may defer selection until after newer input.
+            // Reject their stale snapshot rather than applying it to another document.
+            if (!transaction.before.eq(state.doc)) return false;
             if (ready && locked && transaction.docChanged) return false;
             if (
               !supportedDocument(transaction.doc) ||
