@@ -49,8 +49,8 @@ archiving, deletion, and restoration. Public articles use `slug`.
 | Public article | `/posts/[slug]`          | Read publicly visible content by slug               |
 
 All Admin pages require the authentication and authorization defined in
-[Security](security.md). List, trash, and detail routes are implemented;
-creation and editing routes remain planned.
+[Security](security.md). List, trash, detail, creation, and editing routes are
+implemented.
 
 Admin targets desktop and mobile use, including listing, detail reading,
 creation, editing, publication, archiving, trash, deletion, and restoration.
