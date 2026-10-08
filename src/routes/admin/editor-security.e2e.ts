@@ -252,7 +252,7 @@ for (const width of [1280, 390]) {
         contentType: 'application/json',
       });
       await writeFile(
-        `.superpowers/sdd/v0.2.0-implementation/task10-measure-${width}.json`,
+        testInfo.outputPath(`task10-measure-${width}.json`),
         JSON.stringify({ width, recordingMs, ...timings }, null, 2) + '\n',
       );
       expect(timings.bytes).toBeGreaterThan(90000);
