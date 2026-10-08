@@ -85,6 +85,37 @@ title-only payload behavior remain the corresponding later-task gates.
 See [selected configuration](../architecture/security.md#csp-configuration-and-verification).
 All verification uses the existing local Worker/D1 setup and does not deploy.
 
+## Task 10 Local Authoring Verification
+
+`authoring.spec.ts`, `authoring.e2e.ts`, and `editor-security.e2e.ts` exercise
+new/edit workflows against the production Worker and isolated local D1.
+Desktop/mobile-width Chromium cases cover explicit draft save and separate
+publication, confirmed-ID retention, title-only source preservation, manual
+inspection for unknown creation, original-request retry with newer-input
+preservation, and ordinary conflict inspection/reload with discard confirmation.
+Latest-content reads reuse the mutation controller's 30-second headers/body
+deadline; timeout and failed-read cases retain input and base revision and unlock.
+
+Recovery is new-post-only, requires `복구` or `버리기`, preserves the original
+expiry when restored, clears submitted input after confirmed creation even when
+publication fails, and reports unavailable storage once without blocking saves.
+The Admin logout route clears browser recovery before redirecting to Access;
+local evidence proves the browser cleanup and requested redirect, not deployed
+Access logout. The local Access path has no Cloudflare service and returns 404.
+
+Actual-page CSP tests exercise initial load and client remount, heading/code
+language/link menus, table editing, rejected unsafe paste, and nested editor
+locks throughout retry/recovery. The fixed Kit announcer style remains blocked
+under the previously documented exact-hash console allowance; all other page
+errors/CSP violations fail the suite. A delayed table selection based on an older
+document is rejected by the transaction guard, preserving newer typing.
+
+Long-post measurements include the real changed-document Crepe serialization
+path plus JSON/storage work and the actual page's recording latency. See the
+selected [recording intervals](../architecture/content-domain.md#browser-input-recovery).
+Responsive Chromium on the local Windows host is covered; physical mobile
+browsers and deployed Access/candidate validation remain release evidence.
+
 ## Required Application Checks
 
 | Area             | Required evidence                                                                                                                                                                                      |

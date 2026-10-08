@@ -3,6 +3,17 @@
 See [Deployment](../architecture/deployment.md) for release and hotfix
 policies and environment boundaries.
 
+## Pull request merge methods
+
+Feature PRs into `release/` may use Squash after independent review and required
+checks pass. Keep work in focused commits until integration, verify that the
+squashed target tree matches the reviewed head, then synchronize the local target
+and remove the authorized local work branch. GitHub's repository settings and
+Main + Release rules already permit both Squash and Merge.
+
+Release-to-main promotion and main-to-release synchronization require a merge
+commit to preserve ancestry; the feature-PR option does not change those flows.
+
 ## Worker type generation and validation
 
 `wrangler.jsonc` is the source of truth for Worker bindings and runtime compatibility. Run `pnpm gen` after changing bindings, compatibility settings, or Wrangler, and commit `worker-configuration.d.ts`. `pnpm types:check` checks the committed types without regenerating them. Both `pnpm check` and `pnpm build` run this check first; Dependabot synchronization continues to use `pnpm gen`.
