@@ -31,6 +31,49 @@ function responses(...values: Response[]) {
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
 describe('authoring requests and stage outcomes', () => {
+  it.each([false, true])(
+    'keeps the original base when title-only recovery observes a changed body (newer input: %s)',
+    async newer => {
+      const state = createAuthoringState(post);
+      state.input.title = 'Submitted';
+      if (newer) {
+        await submitAuthoring(
+          state,
+          'save',
+          responses(
+            new Response(null, { status: 500 }),
+            new Response(null, { status: 500 }),
+            new Response(null, { status: 500 }),
+          ).fetcher,
+        );
+        state.input = { title: 'Newer title', body: 'Newer local body' };
+        state.bodyDirty = true;
+      }
+      const recovery = responses(
+        new Response(null, { status: 503 }),
+        json(
+          { error: { code: 'POST_VERSION_CONFLICT', message: 'Changed' } },
+          409,
+        ),
+        json({
+          ...post,
+          title: 'Submitted',
+          body: 'Concurrent body',
+          revision: 5,
+        }),
+      );
+      await submitAuthoring(state, newer ? 'retry' : 'save', recovery.fetcher);
+      expect(state.result?.kind).toBe('conflict');
+      expect(state.base).toEqual(post);
+      expect(state.input.body).toBe(newer ? 'Newer local body' : post.body);
+      expect(buildSaveInput(state)).toEqual({
+        title: newer ? 'Newer title' : 'Submitted',
+        expected_revision: 3,
+        ...(newer ? { body: 'Newer local body' } : {}),
+      });
+      expect(state.destination).toBeNull();
+    },
+  );
   it('reflects observed publication without a failure or success notice, retaining the created ID', async () => {
     const state = createAuthoringState();
     state.input = { title: post.title, body: post.body };

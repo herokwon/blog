@@ -12,6 +12,52 @@ test.beforeEach(async ({ localD1, page }) => {
 for (const width of [1280, 390]) {
   test.describe(`${width}px authoring`, () => {
     test.use({ viewport: { width, height: 900 } });
+    test('title-only lost response with concurrent body requires explicit whole-post reload', async ({
+      page,
+      api,
+      localD1,
+    }) => {
+      const post = (await (
+        await api.post('/api/admin/posts', {
+          data: { title: 'Base', body: 'Original body' },
+        })
+      ).json()) as AdminPost;
+      await page.goto(`${localD1.origin}/admin/posts/${post.id}/edit`);
+      await page.getByLabel('제목', { exact: true }).fill('Submitted');
+      let loseFirst = true;
+      await page.route(`**/api/admin/posts/${post.id}`, async route => {
+        if (loseFirst && route.request().method() === 'PATCH') {
+          loseFirst = false;
+          await api.patch(`/api/admin/posts/${post.id}`, {
+            data: route.request().postDataJSON(),
+          });
+          await api.patch(`/api/admin/posts/${post.id}`, {
+            data: { body: 'Concurrent body', expected_revision: 2 },
+          });
+          await route.fulfill({ status: 503 });
+        } else await route.continue();
+      });
+      await page.getByRole('button', { name: '저장', exact: true }).click();
+      await expect(
+        page.getByText('다른 화면에서 글이 변경되었습니다.'),
+      ).toBeVisible();
+      await expect(page.locator('.ProseMirror')).toContainText('Original body');
+      await page.getByRole('button', { name: '저장', exact: true }).click();
+      expect(
+        (await (await api.get(`/api/admin/posts/${post.id}`)).json()).body,
+      ).toBe('Concurrent body');
+      page.once('dialog', dialog => dialog.accept());
+      await page.getByRole('button', { name: '최신 내용 불러오기' }).click();
+      await expect(page.locator('.ProseMirror')).toContainText(
+        'Concurrent body',
+      );
+      await page.getByLabel('제목', { exact: true }).fill('After reload');
+      await page.getByRole('button', { name: '저장', exact: true }).click();
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
+      expect(
+        (await (await api.get(`/api/admin/posts/${post.id}`)).json()).body,
+      ).toBe('Concurrent body');
+    });
     test('stalled latest-content reload times out, unlocks and retains local input and revision', async ({
       page,
       api,

@@ -87,6 +87,11 @@ All verification uses the existing local Worker/D1 setup and does not deploy.
 
 ## Task 10 Local Authoring Verification
 
+When lost-response recovery observes a changed body after a title-only save,
+authoring keeps the complete original base and local input and reports a revision
+conflict. Only a confirmed whole-post reload replaces the editor source and revision;
+the next title-only save cannot overwrite the concurrently edited body.
+
 `authoring.spec.ts`, `authoring.e2e.ts`, and `editor-security.e2e.ts` exercise
 new/edit workflows against the production Worker and isolated local D1.
 Desktop/mobile-width Chromium cases cover explicit draft save and separate

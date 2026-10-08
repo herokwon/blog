@@ -70,6 +70,26 @@ export async function submitAuthoring(
     state.input.body === submitted.body;
   try {
     let result = await runMutation(request, fetcher);
+    // A title-only recovery cannot accept a new revision while the editor still
+    // contains an older body. Keep the entire base until explicit conflict reload.
+    if (
+      result.kind === 'observed' &&
+      request.kind === 'save' &&
+      request.input.body === undefined &&
+      state.base &&
+      result.post.body !== state.base.body
+    ) {
+      result = {
+        kind: 'conflict',
+        request: result.request,
+        id: result.id,
+        status: 409,
+        error: {
+          code: 'POST_VERSION_CONFLICT',
+          message: 'Post content changed.',
+        },
+      };
+    }
     if (
       result.kind === 'confirmed' &&
       result.post &&
