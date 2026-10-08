@@ -80,7 +80,31 @@ async function startLocalD1() {
         ADMIN_EMAILS: 'admin@example.test',
       },
       serviceBindings: {
-        ASSETS: () => new LocalResponse('Not found', { status: 404 }),
+        ASSETS: async request => {
+          const assetRoot = resolve('.svelte-kit/cloudflare');
+          const filename = resolve(
+            assetRoot,
+            '.' + new URL(request.url).pathname,
+          );
+          const child = relative(assetRoot, filename);
+          if (!child || child.startsWith('..') || isAbsolute(child))
+            return new LocalResponse('Not found', { status: 404 });
+          try {
+            const body = await readFile(filename);
+            const type = filename.endsWith('.js')
+              ? 'text/javascript'
+              : filename.endsWith('.css')
+                ? 'text/css'
+                : filename.endsWith('.svg')
+                  ? 'image/svg+xml'
+                  : 'application/octet-stream';
+            return new LocalResponse(body, {
+              headers: { 'Content-Type': type },
+            });
+          } catch {
+            return new LocalResponse('Not found', { status: 404 });
+          }
+        },
       },
       outboundService: request => {
         if (request.url !== `${issuer}/cdn-cgi/access/certs`)

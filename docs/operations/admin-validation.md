@@ -252,6 +252,25 @@ after authentication. For Public form requests, the hook retains SvelteKit's
 production same-origin policy, including its binary form content type. Local
 production HTTP tests cover both boundaries and encoded Admin paths.
 
+## Task 9 Local Page Verification
+
+`src/routes/admin/post-management.e2e.ts` uses the compiled production Worker,
+an isolated local D1 database, real signed Access JWTs, and local static assets.
+The suite runs management flows at 1280px and 390px: filtering, list/trash/detail
+navigation, read-only Markdown and CodeMirror under CSP, lifecycle confirmations,
+revision conflicts, uncertain/observed outcomes, pending locks across responsive
+changes, and shrinking/empty-page correction with filter and limit retention.
+Result feedback belongs to the page so row removal/reordering cannot erase it.
+Client navigation remains blocked during pending lifecycle operations, except
+the originating page correction after refetch. Browser unload may still proceed
+if the user explicitly confirms its native warning.
+
+The known SvelteKit announcer style attempt remains blocked; the shared stylesheet
+keeps its live region visually hidden. No inline-style permission is added.
+This evidence covers local browsing/lifecycle pages. Authoring, recovery UI,
+deployed Access, candidate identity, and production behavior require their later
+task/release gates.
+
 ## Deployment Checks
 
 Follow [CI/CD operations](ci-cd.md) for candidate identity, promotion,
