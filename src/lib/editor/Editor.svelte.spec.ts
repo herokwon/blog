@@ -70,6 +70,48 @@ function view(): EditorView {
   return captured.editors.at(-1)!.editor.action(ctx => ctx.get(editorViewCtx));
 }
 describe('real Crepe integration', () => {
+  it('ignores a delayed selection transaction after newer typing without losing input', async () => {
+    const editor = await mount('original');
+    const stale = view().state.tr.setSelection(view().state.selection);
+    view().dispatch(view().state.tr.insertText('newer ', 1));
+    expect(() => view().dispatch(stale)).not.toThrow();
+    expect(editor.getMarkdown()).toBe('newer original\n');
+  });
+  it.each([1024, 350])(
+    'measures real changed-Markdown serialization for a long post at %spx content width',
+    async width => {
+      const source =
+        'Representative paragraph with Unicode 한글 and long-post input. '.repeat(
+          1500,
+        );
+      const editor = await mount(source);
+      root.style.width = `${width}px`;
+      view().dispatch(view().state.tr.insertText('Edited ', 1));
+      const start = performance.now();
+      const markdown = editor.getMarkdown();
+      const markdownMs = performance.now() - start;
+      const copy = { title: 'Benchmark', body: markdown, editedAt: Date.now() };
+      const encoding = performance.now();
+      const raw = JSON.stringify(copy);
+      const jsonMs = performance.now() - encoding;
+      const writing = performance.now();
+      localStorage.setItem('task10-benchmark', raw);
+      const storageMs = performance.now() - writing;
+      localStorage.removeItem('task10-benchmark');
+      console.info(
+        'Task10 real serialization measurement',
+        JSON.stringify({
+          width,
+          bytes: raw.length,
+          markdownMs,
+          jsonMs,
+          storageMs,
+        }),
+      );
+      expect(markdown).toContain('Edited Representative paragraph');
+      expect(raw.length).toBeGreaterThan(90000);
+    },
+  );
   it('selects a code language and highlights it without changing code text', async () => {
     const code = 'const answer = 42;';
     const editor = await mount(`\`\`\`unknown-code\n${code}\n\`\`\``);
