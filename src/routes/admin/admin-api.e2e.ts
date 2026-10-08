@@ -1,6 +1,6 @@
-import type { AdminPost } from '$lib/admin/contracts';
 import { expect } from '@playwright/test';
 import type { APIRequestContext, APIResponse } from '@playwright/test';
+import type { AdminPost } from '#lib/admin/contracts.ts';
 import { assertLocalOrigin, test } from '../../../tests/admin/local-d1';
 
 const collection = '/api/admin/posts';

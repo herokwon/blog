@@ -1,14 +1,14 @@
 import {
   adminPostPageSchema,
   trashListQuerySchema,
-} from '$lib/admin/contracts';
+} from '#lib/admin/contracts.ts';
 import {
   adminJson,
   adminQuery,
   adminRequest,
   parseAdminInput,
-} from '$lib/server/admin/http';
-import { listPosts } from '$lib/server/posts/read';
+} from '#lib/server/admin/http.ts';
+import { listPosts } from '#lib/server/posts/read.ts';
 import type { RequestHandler } from './$types';
 
 export const trailingSlash = 'ignore';

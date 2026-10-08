@@ -1,4 +1,4 @@
-import { type PostCommand, type PostStatus } from '$lib/admin/contracts';
+import { type PostCommand, type PostStatus } from '#lib/admin/contracts.ts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSqliteD1 } from '../../../../tests/admin/sqlite-d1';

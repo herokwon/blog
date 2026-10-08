@@ -13,7 +13,7 @@
     trash ? ('/admin/posts/trash' as const) : ('/admin/posts' as const),
   );
   function queryString(number: number): `?${string}` {
-    const query = new SvelteURLSearchParams(page.url.searchParams);
+    const query = new SvelteURLSearchParams(page.url.searchParams.toString());
     query.set('page', String(number));
     return `?${query}`;
   }

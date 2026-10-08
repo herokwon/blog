@@ -1,4 +1,4 @@
-import { adminPostSchema } from '$lib/admin/contracts';
+import { adminPostSchema } from '#lib/admin/contracts.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createSqliteD1 } from '../../../../tests/admin/sqlite-d1';
 import { getDb, type BlogDb } from '../db';

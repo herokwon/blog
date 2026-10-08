@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Editor from '$lib/editor/Editor.svelte';
-  import { inspectMarkdown } from '$lib/editor/policy';
-  import type { EditorController } from '$lib/editor/runtime';
+  import Editor from '#lib/editor/Editor.svelte';
+  import { inspectMarkdown } from '#lib/editor/policy.ts';
+  import type { EditorController } from '#lib/editor/runtime.ts';
   import { beforeNavigate, goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
@@ -172,7 +172,10 @@
     if (form.destination) {
       permittedDestination = form.destination;
       try {
-        await goto(resolve(form.destination as `/admin/posts/${string}`));
+        await goto(
+          resolve('/admin/posts') +
+            form.destination.slice('/admin/posts'.length),
+        );
       } catch {
         message = '화면을 이동하지 못했습니다. 저장된 글을 확인하세요.';
       } finally {

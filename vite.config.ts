@@ -41,12 +41,9 @@ export default defineConfig({
         runes: ({ filename }) =>
           filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
       },
-      adapter: adapter(),
-      typescript: {
-        config: config => {
-          config.include.push('../*.config.ts', '../.github/scripts/**/*.ts');
-        },
-      },
+      // Unit tests mock cloudflare:workers; the adapter rewrites that import
+      // to a development proxy, which would bypass Vitest's module mocks.
+      adapter: process.env.VITEST ? undefined : adapter(),
     }),
   ],
   test: {

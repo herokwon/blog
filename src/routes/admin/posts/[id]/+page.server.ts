@@ -1,8 +1,8 @@
-import { adminPostSchema, postIdSchema } from '$lib/admin/contracts';
-import { AdminApiError } from '$lib/server/admin/errors';
-import { parseAdminInput } from '$lib/server/admin/http';
-import { adminPage } from '$lib/server/admin/pages';
-import { getPost } from '$lib/server/posts/read';
+import { adminPostSchema, postIdSchema } from '#lib/admin/contracts.ts';
+import { AdminApiError } from '#lib/server/admin/errors.ts';
+import { parseAdminInput } from '#lib/server/admin/http.ts';
+import { adminPage } from '#lib/server/admin/pages.ts';
+import { getPost } from '#lib/server/posts/read.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = event =>

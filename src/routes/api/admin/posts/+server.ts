@@ -3,16 +3,16 @@ import {
   adminPostPageSchema,
   adminPostSchema,
   createPostSchema,
-} from '$lib/admin/contracts';
+} from '#lib/admin/contracts.ts';
 import {
   adminJson,
   adminQuery,
   adminRequest,
   parseAdminInput,
   readAdminJson,
-} from '$lib/server/admin/http';
-import { createPost } from '$lib/server/posts/mutate';
-import { listPosts } from '$lib/server/posts/read';
+} from '#lib/server/admin/http.ts';
+import { createPost } from '#lib/server/posts/mutate.ts';
+import { listPosts } from '#lib/server/posts/read.ts';
 import type { RequestHandler } from './$types';
 
 export const trailingSlash = 'ignore';

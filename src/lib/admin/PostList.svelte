@@ -1,6 +1,6 @@
 <script lang="ts">
   import { SvelteURLSearchParams } from 'svelte/reactivity';
-  import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
+  import { beforeNavigate, goto, refreshAll } from '$app/navigation';
   import { resolve } from '$app/paths';
   import type { AdminPostPage, PostStatus } from './contracts';
   import { pageAfterMutation } from './pagination';
@@ -38,15 +38,15 @@
     return `?${query}`;
   }
   async function refresh(publishedId?: string) {
-    await invalidateAll();
+    await refreshAll();
     const number = pageAfterMutation(posts.page, posts.totalPages);
     if (publishedId || number !== posts.page) {
       const destination = publishedId
-        ? (`/admin/posts/${publishedId}` as const)
-        : (`${path}${queryString(status, number)}` as const);
-      correction = resolve(destination);
+        ? resolve('/admin/posts/[id]', { id: publishedId })
+        : `${resolve(path)}${queryString(status, number)}`;
+      correction = destination;
       try {
-        await goto(resolve(destination));
+        await goto(destination);
       } finally {
         correction = undefined;
       }

@@ -1,5 +1,5 @@
-import type { ApiErrorResponse } from '$lib/admin/contracts';
-import { describe, expect, it } from 'vitest';
+import type { ApiErrorResponse } from '#lib/admin/contracts.ts';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { AdminApiError } from './errors';
 import {
@@ -8,6 +8,8 @@ import {
   parseAdminInput,
   readAdminJson,
 } from './http';
+
+vi.mock('cloudflare:workers', () => ({ env: {} }));
 
 describe('Admin HTTP boundary', () => {
   it('preserves direct JSON status and no-store', async () => {

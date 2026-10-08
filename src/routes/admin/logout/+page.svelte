@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { clearRecovery } from '$lib/admin/recovery';
+  import { clearRecovery } from '#lib/admin/recovery.ts';
 
   let failed = $state(false);
   onMount(() => {

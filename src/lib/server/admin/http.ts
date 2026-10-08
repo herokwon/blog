@@ -1,4 +1,4 @@
-import { json, type RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import {
   adminPostSchema,
   apiErrorResponseSchema,
@@ -6,14 +6,18 @@ import {
   revisionSchema,
   validationDetails,
   type PostCommand,
-} from '$lib/admin/contracts';
-import { getDb, type BlogDb } from '$lib/server/db';
-import { commandPost } from '$lib/server/posts/mutate';
+} from '#lib/admin/contracts.ts';
+import { getDb, type BlogDb } from '#lib/server/db/index.ts';
+import { commandPost } from '#lib/server/posts/mutate.ts';
+import { env } from 'cloudflare:workers';
 import type { z } from 'zod';
 import { AdminApiError } from './errors';
 
 export function adminJson<T>(value: T, status = 200): Response {
-  return json(value, { status, headers: { 'Cache-Control': 'no-store' } });
+  return Response.json(value, {
+    status,
+    headers: { 'Cache-Control': 'no-store' },
+  });
 }
 
 export function adminErrorResponse(error: unknown): Response {
@@ -86,8 +90,8 @@ export async function adminRequest(
         'UNAUTHORIZED',
         'Admin authentication is required.',
       );
-    if (!event.platform?.env.DB) throw new Error('Missing database binding');
-    return await operation(getDb(event.platform.env.DB));
+    if (!env.DB) throw new Error('Missing database binding');
+    return await operation(getDb(env.DB));
   } catch (error) {
     return adminErrorResponse(error);
   }

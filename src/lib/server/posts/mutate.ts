@@ -8,7 +8,7 @@ import {
   type PatchPostInput,
   type PostCommand,
   type RevisionInput,
-} from '$lib/admin/contracts';
+} from '#lib/admin/contracts.ts';
 import { and, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import type { z } from 'zod';

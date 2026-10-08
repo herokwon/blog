@@ -3,7 +3,7 @@ import type {
   AdminListScope,
   AdminPost,
   AdminPostPage,
-} from '$lib/admin/contracts';
+} from '#lib/admin/contracts.ts';
 import { and, count, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { BlogDb } from '../db';
 import { posts } from '../db/schema';

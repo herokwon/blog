@@ -2,17 +2,17 @@ import {
   adminPostSchema,
   patchPostSchema,
   postIdSchema,
-} from '$lib/admin/contracts';
-import { AdminApiError } from '$lib/server/admin/errors';
+} from '#lib/admin/contracts.ts';
+import { AdminApiError } from '#lib/server/admin/errors.ts';
 import {
   adminJson,
   adminRequest,
   parseAdminInput,
   postCommandHandler,
   readAdminJson,
-} from '$lib/server/admin/http';
-import { savePost } from '$lib/server/posts/mutate';
-import { getPost } from '$lib/server/posts/read';
+} from '#lib/server/admin/http.ts';
+import { savePost } from '#lib/server/posts/mutate.ts';
+import { getPost } from '#lib/server/posts/read.ts';
 import type { RequestHandler } from './$types';
 
 export const trailingSlash = 'ignore';

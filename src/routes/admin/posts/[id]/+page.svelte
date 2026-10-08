@@ -1,8 +1,8 @@
 <script lang="ts">
-  import PostActions from '$lib/admin/PostActions.svelte';
-  import { displayTime, statusLabels } from '$lib/admin/presentation';
-  import PostBody from '$lib/editor/PostBody.svelte';
-  import { invalidateAll } from '$app/navigation';
+  import PostActions from '#lib/admin/PostActions.svelte';
+  import { displayTime, statusLabels } from '#lib/admin/presentation.ts';
+  import PostBody from '#lib/editor/PostBody.svelte';
+  import { refreshAll } from '$app/navigation';
   import { resolve } from '$app/paths';
   import type { PageData } from './$types';
 
@@ -15,10 +15,7 @@
     href={resolve(data.post.deleted_at ? '/admin/posts/trash' : '/admin/posts')}
     >목록</a
   >
-  {#key data.post.id}<PostActions
-      post={data.post}
-      refresh={invalidateAll}
-    />{/key}
+  {#key data.post.id}<PostActions post={data.post} refresh={refreshAll} />{/key}
 </div>
 <article class="admin-content post-detail">
   <h1>{data.post.title}</h1>
