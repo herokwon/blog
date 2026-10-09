@@ -10,6 +10,11 @@
   },
   "workers_dev": false,
   "preview_urls": true,
+  "vars": {
+    "ADMIN_ORIGIN": "https://blog.herokwon.dev",
+    "ACCESS_ISSUER": "https://herokwon.cloudflareaccess.com",
+    "ACCESS_AUDIENCE": "f6c677cfe2456b0113c8c7367c28a498ba757893c80773c0ae9a1e99387f6bc5"
+  },
   "routes": [
     {
       "pattern": "blog.herokwon.dev",
