@@ -3,6 +3,18 @@ import { validatedTransferHtml } from './transfer-html';
 
 describe('clipboard HTML validation', () => {
   it.each([
+    ['list_item', { listType: ['bullet'] }],
+    ['list_item', { listType: {} }],
+    ['blockquote', { onload: 'alert(1)' }],
+    ['bullet_list', { spread: 'false' }],
+    ['ordered_list', { order: -1 }],
+  ])('rejects invalid context values: %j', (type, attrs) => {
+    const context = JSON.stringify([type, attrs]);
+    expect(
+      validatedTransferHtml(`<p data-pm-slice='1 1 ${context}'>safe</p>`),
+    ).toBeNull();
+  });
+  it.each([
     '<p>safe<frame src="https://evil.test"></p>',
     '<p>safe<frame src="https://evil.test">tail</p>',
     '<p>safe</frame>tail</p>',
@@ -48,6 +60,6 @@ describe('clipboard HTML validation', () => {
       validatedTransferHtml(
         '<p data-pm-slice=\'1 1 ["html",{"value":"unsafe"}]\'>safe</p>',
       ),
-    ).toBe('<p>safe</p>');
+    ).toBeNull();
   });
 });

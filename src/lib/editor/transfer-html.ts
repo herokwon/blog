@@ -42,6 +42,72 @@ const tags = new Set([
   'span',
 ]);
 
+function allowedSlice(value: string): boolean {
+  const match = /^(\d{1,2}) (\d{1,2})(?: -(\d))? (\[.*\])$/.exec(value);
+  if (
+    !match ||
+    Number(match[1]) > 32 ||
+    Number(match[2]) > 32 ||
+    Number(match[3] ?? 0) > 3
+  )
+    return false;
+  try {
+    const context: unknown = JSON.parse(match[4]);
+    if (!Array.isArray(context) || context.length % 2 || context.length > 64)
+      return false;
+    for (let i = 0; i < context.length; i += 2) {
+      const type = context[i];
+      const attrs = context[i + 1];
+      if (
+        !['blockquote', 'bullet_list', 'ordered_list', 'list_item'].includes(
+          type,
+        )
+      )
+        return false;
+      if (attrs === null) continue;
+      if (typeof attrs !== 'object' || Array.isArray(attrs)) return false;
+      for (const [name, attr] of Object.entries(attrs)) {
+        if (
+          name === 'spread' &&
+          type !== 'blockquote' &&
+          typeof attr === 'boolean'
+        )
+          continue;
+        if (
+          name === 'order' &&
+          type === 'ordered_list' &&
+          Number.isSafeInteger(attr) &&
+          Number(attr) >= 1
+        )
+          continue;
+        if (type === 'list_item') {
+          if (
+            name === 'label' &&
+            typeof attr === 'string' &&
+            /^(?:[•*+-]|\d{1,9}[.)])$/.test(attr)
+          )
+            continue;
+          if (
+            name === 'listType' &&
+            typeof attr === 'string' &&
+            ['bullet', 'ordered'].includes(attr)
+          )
+            continue;
+          if (
+            name === 'checked' &&
+            (attr === null || typeof attr === 'boolean')
+          )
+            continue;
+        }
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function allowedAttribute(tag: string, name: string, value: string): boolean {
   if (tag === 'a' && name === 'href') return isAllowedLink(value);
   if (tag === 'a' && name === 'title') return true;
@@ -54,21 +120,23 @@ function allowedAttribute(tag: string, name: string, value: string): boolean {
   if (tag === 'code' && name === 'class')
     return /^language-[\w+-]+$/.test(value);
   if (tag === 'ol' && name === 'start') return /^\d{1,9}$/.test(value);
+  if (['ul', 'ol', 'li'].includes(tag) && name === 'data-spread')
+    return ['true', 'false'].includes(value);
+  if (tag === 'li' && name === 'data-label')
+    return /^(?:[•*+-]|\d{1,9}[.)])$/.test(value);
+  if (tag === 'li' && name === 'data-list-type')
+    return ['bullet', 'ordered'].includes(value);
+  if (tag === 'li' && name === 'data-item-type') return value === 'task';
+  if (tag === 'li' && name === 'data-checked')
+    return ['true', 'false'].includes(value);
   if (['th', 'td'].includes(tag) && ['colspan', 'rowspan'].includes(name))
     return /^[1-9]\d{0,2}$/.test(value);
   if (['th', 'td'].includes(tag) && name === 'align')
     return ['left', 'center', 'right'].includes(value);
-  // Slice metadata is checked, then omitted from the canonical HTML. The
-  // editor derives a fresh slice from validated content, without trusting
-  // clipboard-supplied schema node names or attributes.
+  // Preserve nested list/quote context only after validating its schema
+  // node names and attributes; arbitrary node construction is not allowed.
   if (name === 'data-pm-slice' && !['html', 'head', 'body'].includes(tag)) {
-    const match = /^\d{1,3} \d{1,3}(?: -\d{1,3})? (\[.*\])$/.exec(value);
-    if (!match) return false;
-    try {
-      return Array.isArray(JSON.parse(match[1]));
-    } catch {
-      return false;
-    }
+    return allowedSlice(value);
   }
   return false;
 }
@@ -149,9 +217,7 @@ function parseTransferHtml(html: string): string | null {
         )
           return null;
       }
-      node.attrs = node.attrs.filter(
-        attr => !['data-pm-slice', 'id'].includes(attr.name),
-      );
+      node.attrs = node.attrs.filter(attr => attr.name !== 'id');
       if (node.tagName === 'body') body = node;
       const loc = node.sourceCodeLocation;
       for (const tag of [loc?.startTag, loc?.endTag])

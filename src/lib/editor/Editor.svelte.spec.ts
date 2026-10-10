@@ -239,6 +239,49 @@ describe('real Crepe integration', () => {
     expect(editor.getMarkdown()).toBe('original');
     expect(root.querySelector('[role="alert"]')?.textContent).toContain('지원');
   });
+  it.each([
+    ['- nested item', '* neste'],
+    ['> quoted paragraph', '> uoted'],
+  ])('preserves nested clipboard context for %s', async (source, expected) => {
+    await mount(source);
+    const pm = view();
+    const { dom } = pm.serializeForClipboard(pm.state.doc.slice(3, 8, true));
+    const raw = dom.innerHTML;
+    await controller!.destroy();
+    root.remove();
+    const target = await mount('');
+    const transfer = new DataTransfer();
+    transfer.setData('text/html', raw);
+    view().dom.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(target.getMarkdown().trim()).toBe(expected);
+  });
+  it.each(['- one\n- two', '3. one\n4. two'])(
+    'pastes a complete editor-generated list: %s',
+    async source => {
+      const editor = await mount(source);
+      const pm = view();
+      const { dom } = pm.serializeForClipboard(
+        pm.state.doc.slice(0, pm.state.doc.content.size),
+      );
+      const transfer = new DataTransfer();
+      transfer.setData('text/html', dom.innerHTML);
+      pm.dom.dispatchEvent(
+        new ClipboardEvent('paste', {
+          clipboardData: transfer,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      expect(editor.getMarkdown().match(/two/g)).toHaveLength(2);
+      expect(root.querySelector('[role="alert"]')?.textContent).toBe('');
+    },
+  );
   it('retains unedited source byte-for-byte and only signals document changes', async () => {
     const source =
       '* item\n\n***\n\n```made-up\n<script>literal</script>\n```\n';
