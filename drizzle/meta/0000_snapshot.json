@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3ca46ba0-5975-4b09-8a43-1aaedce0e23d",
+  "id": "307de349-574c-4d14-a21a-279ec747433b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "posts": {
@@ -144,38 +144,6 @@
           "value": "(\"posts\".\"status\" = 'draft' AND \"posts\".\"slug\" IS NULL AND \"posts\".\"published_at\" IS NULL)\n        OR (\"posts\".\"status\" IN ('published', 'archived') AND \"posts\".\"slug\" IS NOT NULL AND \"posts\".\"published_at\" IS NOT NULL)"
         }
       }
-    },
-    "task": {
-      "name": "task",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "priority": {
-          "name": "priority",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
     }
   },
   "views": {},

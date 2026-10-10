@@ -20,9 +20,4 @@ CREATE TABLE `posts` (
 CREATE UNIQUE INDEX `posts_slug_unique` ON `posts` (`slug`);--> statement-breakpoint
 CREATE INDEX `posts_admin_updated_idx` ON `posts` ("updated_at" desc,"id" desc) WHERE "posts"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX `posts_admin_status_updated_idx` ON `posts` (`status`,"updated_at" desc,"id" desc) WHERE "posts"."deleted_at" IS NULL;--> statement-breakpoint
-CREATE INDEX `posts_trash_updated_idx` ON `posts` ("updated_at" desc,"id" desc) WHERE "posts"."deleted_at" IS NOT NULL;--> statement-breakpoint
-CREATE TABLE `task` (
-	`id` text PRIMARY KEY NOT NULL,
-	`title` text NOT NULL,
-	`priority` integer DEFAULT 1 NOT NULL
-);
+CREATE INDEX `posts_trash_updated_idx` ON `posts` ("updated_at" desc,"id" desc) WHERE "posts"."deleted_at" IS NOT NULL;

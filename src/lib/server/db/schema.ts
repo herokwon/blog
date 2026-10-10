@@ -7,14 +7,6 @@ import {
   text,
 } from 'drizzle-orm/sqlite-core';
 
-export const task = sqliteTable('task', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  title: text('title').notNull(),
-  priority: integer('priority').notNull().default(1),
-});
-
 const insertionTimestamp = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 
 export const posts = sqliteTable(

@@ -11,16 +11,16 @@ Post mutations and UUIDv7 generation are `Implemented` in
 repositories. The production Worker fixture verifies UUIDv7 execution, D1
 uniqueness-error classification and concurrent mutations without remote writes.
 
-| Concern              | Current source                                                                                |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| Database binding     | `DB` in [wrangler.jsonc](../../wrangler.jsonc)                                                |
-| Connection           | [getDb](../../src/lib/server/db/index.ts), using `drizzle-orm/d1`                             |
-| Schema               | [schema.ts](../../src/lib/server/db/schema.ts): `posts` and the retained example `task` table |
-| Initial migration    | [0000_wealthy_kinsey_walden.sql](../../drizzle/0000_wealthy_kinsey_walden.sql)                |
-| Migration generation | [drizzle.config.ts](../../drizzle.config.ts): SQLite dialect, `./drizzle` output              |
-| Migration scripts    | [package.json](../../package.json)                                                            |
+| Concern              | Current source                                                                   |
+| -------------------- | -------------------------------------------------------------------------------- |
+| Database binding     | `DB` in [wrangler.jsonc](../../wrangler.jsonc)                                   |
+| Connection           | [getDb](../../src/lib/server/db/index.ts), using `drizzle-orm/d1`                |
+| Schema               | [schema.ts](../../src/lib/server/db/schema.ts): `posts`                          |
+| Initial migration    | [0000_create_posts.sql](../../drizzle/0000_create_posts.sql)                     |
+| Migration generation | [drizzle.config.ts](../../drizzle.config.ts): SQLite dialect, `./drizzle` output |
+| Migration scripts    | [package.json](../../package.json)                                               |
 
-The retained example uses `crypto.randomUUID()`. Post creation uses `uuid`
+Post creation uses `uuid`
 `14.0.2`'s `v7()` with its default cryptographic randomness. The library's
 default Worker-compatible export uses `crypto.getRandomValues()`; no custom
 UUID generator or creation retry is introduced. Draft creation tests verify
@@ -189,7 +189,9 @@ concurrency and runtime error handling remain Task 5 verification.
 The Drizzle schema and generated SQL migrations define database structure.
 
 1. Update the schema for an agreed change.
-2. Generate SQL with `pnpm db:generate`.
+2. Generate SQL with an explicit descriptive name, such as
+   `pnpm db:generate --name=create_posts`. Always name migrations after their
+   schema change; preserve names and contents after production application.
 3. Review SQL, compatibility with the running Worker, existing data against
    new constraints, and any required data transformation.
 4. Apply locally with `pnpm db:migrate:local`.
@@ -203,6 +205,24 @@ transform.
 
 Maintain the same ordered migration history locally and in production.
 Generate migrations for real changes, not an empty tooling initialization.
+
+### Initial migration regeneration before production
+
+Release preparation replaced `0000_wealthy_kinsey_walden.sql` with
+`0000_create_posts.sql` and removed the starter `task` table. This is a fresh
+database baseline, not an upgrade for a database that applied the old file.
+Wrangler tracks complete migration filenames, so applying the renamed baseline
+to that database would attempt to create `posts` again.
+
+Before production promotion, verify that production contains neither `posts`
+nor the old migration record. If either exists, stop promotion and preserve the
+applied history with a forward migration instead of resetting production.
+
+For disposable local Wrangler state that applied the old migration, stop local
+servers, preserve any needed data, and remove only `.wrangler/state/v3/d1` before
+running `pnpm db:migrate:local` again. This deletes local D1 data and history;
+never use it for a database whose data must be retained. The automated test
+fixtures use isolated fresh databases and do not require this reset.
 
 Wrangler reads flat `drizzle/*.sql` files. Release promotion uses
 `pnpm db:migrate:remote` before Worker deployment; authorization,
