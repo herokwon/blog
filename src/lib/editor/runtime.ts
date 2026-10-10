@@ -7,6 +7,7 @@ import type { Node as ProseNode } from '@milkdown/kit/prose/model';
 import { Plugin } from '@milkdown/kit/prose/state';
 import { $prose } from '@milkdown/kit/utils';
 import { inspectMarkdown, isAllowedLink, readingMarkdown } from './policy';
+import { validatedTransferHtml } from './transfer-html';
 
 export type EditorController = {
   getMarkdown(): string;
@@ -51,56 +52,7 @@ function supportedDocument(doc: ProseNode): boolean {
 function safeTransfer(transfer: DataTransfer, inCode: boolean): boolean {
   if (transfer.files.length) return false;
   const html = transfer.getData('text/html');
-  if (html) {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const allowed = new Set([
-      'P',
-      'BR',
-      'STRONG',
-      'B',
-      'EM',
-      'I',
-      'DEL',
-      'S',
-      'UL',
-      'OL',
-      'LI',
-      'BLOCKQUOTE',
-      'HR',
-      'A',
-      'PRE',
-      'CODE',
-      'TABLE',
-      'THEAD',
-      'TBODY',
-      'TR',
-      'TH',
-      'TD',
-      'H1',
-      'H2',
-      'H3',
-      'H4',
-      'H5',
-      'H6',
-      'SPAN',
-    ]);
-    for (const element of doc.body.querySelectorAll('*')) {
-      if (!allowed.has(element.tagName)) return false;
-      for (const attribute of element.attributes) {
-        if (
-          attribute.name.startsWith('on') ||
-          ['style', 'src', 'srcset'].includes(attribute.name)
-        )
-          return false;
-      }
-      if (
-        element.hasAttribute('href') &&
-        !isAllowedLink(element.getAttribute('href')!)
-      )
-        return false;
-    }
-    return true;
-  }
+  if (html) return validatedTransferHtml(html) !== null;
   return inCode || inspectMarkdown(transfer.getData('text/plain')).supported;
 }
 
@@ -217,6 +169,9 @@ export async function mountEditor(options: {
             return true;
           },
           props: {
+            transformPastedHTML(html) {
+              return validatedTransferHtml(html) ?? '';
+            },
             handlePaste(view, event) {
               if (
                 locked ||

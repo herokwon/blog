@@ -196,6 +196,92 @@ describe('real Crepe integration', () => {
     ).not.toBeNull();
     expect(controller.getMarkdown()).toBe(source);
   });
+  it('pastes actual editor clipboard HTML containing supported headings, tables and code', async () => {
+    const editor = await mount(
+      '# Heading\n\n| A | B |\n| --- | --- |\n| a | b |\n\n```typescript\nconst answer = 42;\n```',
+    );
+    const pm = view();
+    const { dom } = pm.serializeForClipboard(
+      pm.state.doc.slice(0, pm.state.doc.content.size),
+    );
+    const transfer = new DataTransfer();
+    transfer.setData('text/html', dom.innerHTML);
+    pm.dom.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(editor.getMarkdown().match(/Heading/g)).toHaveLength(2);
+    let tables = 0;
+    view().state.doc.descendants(node => {
+      if (node.type.name === 'table') tables++;
+    });
+    expect(tables).toBe(2);
+    expect(editor.getMarkdown().match(/const answer = 42;/g)).toHaveLength(2);
+    expect(root.querySelector('[role="alert"]')?.textContent).toBe('');
+  });
+  it('rejects unsafe HTML drops without applying the safe remainder', async () => {
+    const editor = await mount();
+    const transfer = new DataTransfer();
+    transfer.setData(
+      'text/html',
+      '<meta http-equiv="refresh" content="0;url=https://evil.test"><p>safe</p>',
+    );
+    const event = new DragEvent('drop', {
+      dataTransfer: transfer,
+      bubbles: true,
+      cancelable: true,
+    });
+    view().dom.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(editor.getMarkdown()).toBe('original');
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('지원');
+  });
+  it.each([
+    ['- nested item', '* neste'],
+    ['> quoted paragraph', '> uoted'],
+  ])('preserves nested clipboard context for %s', async (source, expected) => {
+    await mount(source);
+    const pm = view();
+    const { dom } = pm.serializeForClipboard(pm.state.doc.slice(3, 8, true));
+    const raw = dom.innerHTML;
+    await controller!.destroy();
+    root.remove();
+    const target = await mount('');
+    const transfer = new DataTransfer();
+    transfer.setData('text/html', raw);
+    view().dom.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(target.getMarkdown().trim()).toBe(expected);
+  });
+  it.each(['- one\n- two', '3. one\n4. two'])(
+    'pastes a complete editor-generated list: %s',
+    async source => {
+      const editor = await mount(source);
+      const pm = view();
+      const { dom } = pm.serializeForClipboard(
+        pm.state.doc.slice(0, pm.state.doc.content.size),
+      );
+      const transfer = new DataTransfer();
+      transfer.setData('text/html', dom.innerHTML);
+      pm.dom.dispatchEvent(
+        new ClipboardEvent('paste', {
+          clipboardData: transfer,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      expect(editor.getMarkdown().match(/two/g)).toHaveLength(2);
+      expect(root.querySelector('[role="alert"]')?.textContent).toBe('');
+    },
+  );
   it('retains unedited source byte-for-byte and only signals document changes', async () => {
     const source =
       '* item\n\n***\n\n```made-up\n<script>literal</script>\n```\n';
@@ -248,6 +334,16 @@ describe('real Crepe integration', () => {
     ['text/html', '<p>good<img src=x></p>'],
     ['text/html', '<p><a href="//evil.test">bad</a></p>'],
     ['text/html', '<p onclick="alert(1)">bad</p>'],
+    ['text/html', '<script>alert(1)</script><p>safe</p>'],
+    ['text/html', '<style>body{display:none}</style><p>safe</p>'],
+    ['text/html', '<base href="https://evil.test"><p>safe</p>'],
+    [
+      'text/html',
+      '<meta http-equiv="refresh" content="0;url=https://evil.test"><p>safe</p>',
+    ],
+    ['text/html', '<html onclick="alert(1)"><body><p>safe</p></body></html>'],
+    ['text/html', '<body onload="alert(1)"><p>safe</p></body>'],
+    ['text/html', '<p id="location">safe</p>'],
   ])('rejects unsafe paste %s', async (format, content) => {
     const editor = await mount();
     const transfer = new DataTransfer();
