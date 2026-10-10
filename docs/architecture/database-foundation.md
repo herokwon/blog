@@ -11,16 +11,16 @@ Post mutations and UUIDv7 generation are `Implemented` in
 repositories. The production Worker fixture verifies UUIDv7 execution, D1
 uniqueness-error classification and concurrent mutations without remote writes.
 
-| Concern              | Current source                                                                                |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| Database binding     | `DB` in [wrangler.jsonc](../../wrangler.jsonc)                                                |
-| Connection           | [getDb](../../src/lib/server/db/index.ts), using `drizzle-orm/d1`                             |
-| Schema               | [schema.ts](../../src/lib/server/db/schema.ts): `posts` and the retained example `task` table |
-| Initial migration    | [0000_wealthy_kinsey_walden.sql](../../drizzle/0000_wealthy_kinsey_walden.sql)                |
-| Migration generation | [drizzle.config.ts](../../drizzle.config.ts): SQLite dialect, `./drizzle` output              |
-| Migration scripts    | [package.json](../../package.json)                                                            |
+| Concern              | Current source                                                                   |
+| -------------------- | -------------------------------------------------------------------------------- |
+| Database binding     | `DB` in [wrangler.jsonc](../../wrangler.jsonc)                                   |
+| Connection           | [getDb](../../src/lib/server/db/index.ts), using `drizzle-orm/d1`                |
+| Schema               | [schema.ts](../../src/lib/server/db/schema.ts): `posts`                          |
+| Initial migration    | [0000_create_posts.sql](../../drizzle/0000_create_posts.sql)                     |
+| Migration generation | [drizzle.config.ts](../../drizzle.config.ts): SQLite dialect, `./drizzle` output |
+| Migration scripts    | [package.json](../../package.json)                                               |
 
-The retained example uses `crypto.randomUUID()`. Post creation uses `uuid`
+Post creation uses `uuid`
 `14.0.2`'s `v7()` with its default cryptographic randomness. The library's
 default Worker-compatible export uses `crypto.getRandomValues()`; no custom
 UUID generator or creation retry is introduced. Draft creation tests verify
@@ -189,7 +189,9 @@ concurrency and runtime error handling remain Task 5 verification.
 The Drizzle schema and generated SQL migrations define database structure.
 
 1. Update the schema for an agreed change.
-2. Generate SQL with `pnpm db:generate`.
+2. Generate SQL with an explicit descriptive name, such as
+   `pnpm db:generate --name=create_posts`. Always name migrations after their
+   schema change; preserve names and contents after production application.
 3. Review SQL, compatibility with the running Worker, existing data against
    new constraints, and any required data transformation.
 4. Apply locally with `pnpm db:migrate:local`.

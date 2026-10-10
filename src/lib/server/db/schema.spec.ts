@@ -36,7 +36,7 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe('generated post migration', () => {
-  it('creates the agreed post columns and retains the example task table', () => {
+  it('creates the agreed post columns without the starter task table', () => {
     const columns = db
       .prepare('PRAGMA table_info(posts)')
       .all()
@@ -53,13 +53,13 @@ describe('generated post migration', () => {
       'deleted_at',
       'revision',
     ]);
-    db.prepare('INSERT INTO task (id, title) VALUES (?, ?)').run(
-      'task-1',
-      'Example',
-    );
-    expect(db.prepare('SELECT priority FROM task').get()).toMatchObject({
-      priority: 1,
-    });
+    expect(
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'task'",
+        )
+        .get(),
+    ).toBeUndefined();
   });
 
   it('defaults to revision one and draft with fixed-format UTC timestamps', () => {

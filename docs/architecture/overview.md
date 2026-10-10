@@ -12,8 +12,7 @@ data stored in Cloudflare D1 through Drizzle ORM.
 The application foundation, D1 integration, testing, and CI/CD are
 `Implemented`. Post persistence, publication lifecycle, Admin APIs/pages,
 authoring, and server authentication are implemented and locally tested.
-Public interfaces remain `Planned`. The schema contains `posts` and the retained
-example `task` table. Repository configuration alone
+Public interfaces remain `Planned`. The schema contains only `posts`. Repository configuration alone
 does not confirm verified production resources or security policies.
 
 ## v0.2.0 Delivery Scope

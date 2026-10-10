@@ -5,8 +5,7 @@
 The v0.2.0 Admin domain is implemented and locally verified. Post persistence, lifecycle operations, and
 protected Admin list/trash/detail pages and new/edit authoring are implemented.
 Task 11 [acceptance evidence](../operations/v0.2.0-acceptance.md) separates local
-verification from incomplete physical-device and deployed checks. The example `task`
-table remains alongside the post schema.
+verification from incomplete physical-device and deployed checks. The schema contains only `posts`.
 
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
