@@ -68,6 +68,7 @@
     "@milkdown/crepe": "7.22.2",
     "@milkdown/kit": "7.22.2",
     "jose": "^6.2.12",
+    "parse5": "^8.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
