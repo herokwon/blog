@@ -206,6 +206,24 @@ transform.
 Maintain the same ordered migration history locally and in production.
 Generate migrations for real changes, not an empty tooling initialization.
 
+### Initial migration regeneration before production
+
+Release preparation replaced `0000_wealthy_kinsey_walden.sql` with
+`0000_create_posts.sql` and removed the starter `task` table. This is a fresh
+database baseline, not an upgrade for a database that applied the old file.
+Wrangler tracks complete migration filenames, so applying the renamed baseline
+to that database would attempt to create `posts` again.
+
+Before production promotion, verify that production contains neither `posts`
+nor the old migration record. If either exists, stop promotion and preserve the
+applied history with a forward migration instead of resetting production.
+
+For disposable local Wrangler state that applied the old migration, stop local
+servers, preserve any needed data, and remove only `.wrangler/state/v3/d1` before
+running `pnpm db:migrate:local` again. This deletes local D1 data and history;
+never use it for a database whose data must be retained. The automated test
+fixtures use isolated fresh databases and do not require this reset.
+
 Wrangler reads flat `drizzle/*.sql` files. Release promotion uses
 `pnpm db:migrate:remote` before Worker deployment; authorization,
 sequencing, and failure handling are defined in
