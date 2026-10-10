@@ -33,6 +33,7 @@ const config: Config = {
     {
       files: 'worker-configuration.d.ts',
       options: {
+        endOfLine: 'lf',
         useTabs: true,
         printWidth: 100,
         arrowParens: 'always',

@@ -5,20 +5,45 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  define: {
+    __VUE_OPTIONS_API__: true,
+    __VUE_PROD_DEVTOOLS__: false,
+    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+  },
+  optimizeDeps: {
+    include: [
+      '@codemirror/state',
+      '@codemirror/view',
+      '@milkdown/crepe',
+      '@milkdown/kit/core',
+      '@milkdown/kit/prose/state',
+      '@milkdown/kit/utils',
+      'remark-gfm',
+      'remark-parse',
+      'remark-stringify',
+      'unified',
+    ],
+  },
+  resolve: { dedupe: ['@codemirror/state', '@codemirror/view'] },
+  build: { assetsInlineLimit: 0 },
   plugins: [
     tailwindcss(),
     sveltekit({
+      csp: {
+        mode: 'auto',
+        directives: { 'script-src': ['self'], 'style-src': ['self'] },
+      },
+      // The handle hook owns Origin checks so Admin authentication always runs
+      // first. It also retains same-origin protection for Public form writes.
+      csrf: { trustedOrigins: ['*'] },
       compilerOptions: {
         // Force runes mode for the project, except for libraries. Can be removed in svelte 6.
         runes: ({ filename }) =>
           filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
       },
-      adapter: adapter(),
-      typescript: {
-        config: config => {
-          config.include.push('../*.config.ts', '../.github/scripts/**/*.ts');
-        },
-      },
+      // Unit tests mock cloudflare:workers; the adapter rewrites that import
+      // to a development proxy, which would bypass Vitest's module mocks.
+      adapter: process.env.VITEST ? undefined : adapter(),
     }),
   ],
   test: {

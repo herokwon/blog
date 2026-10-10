@@ -1,0 +1,190 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "307de349-574c-4d14-a21a-279ec747433b",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "posts": {
+      "name": "posts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "posts_slug_unique": {
+          "name": "posts_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        },
+        "posts_admin_updated_idx": {
+          "name": "posts_admin_updated_idx",
+          "columns": [
+            "\"updated_at\" desc",
+            "\"id\" desc"
+          ],
+          "isUnique": false,
+          "where": "\"posts\".\"deleted_at\" IS NULL"
+        },
+        "posts_admin_status_updated_idx": {
+          "name": "posts_admin_status_updated_idx",
+          "columns": [
+            "status",
+            "\"updated_at\" desc",
+            "\"id\" desc"
+          ],
+          "isUnique": false,
+          "where": "\"posts\".\"deleted_at\" IS NULL"
+        },
+        "posts_trash_updated_idx": {
+          "name": "posts_trash_updated_idx",
+          "columns": [
+            "\"updated_at\" desc",
+            "\"id\" desc"
+          ],
+          "isUnique": false,
+          "where": "\"posts\".\"deleted_at\" IS NOT NULL"
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "posts_title_nonempty": {
+          "name": "posts_title_nonempty",
+          "value": "\"posts\".\"title\" <> ''"
+        },
+        "posts_body_nonempty": {
+          "name": "posts_body_nonempty",
+          "value": "\"posts\".\"body\" <> ''"
+        },
+        "posts_status_valid": {
+          "name": "posts_status_valid",
+          "value": "\"posts\".\"status\" IN ('draft', 'published', 'archived')"
+        },
+        "posts_revision_valid": {
+          "name": "posts_revision_valid",
+          "value": "typeof(\"posts\".\"revision\") = 'integer' AND \"posts\".\"revision\" > 0"
+        },
+        "posts_publication_history_valid": {
+          "name": "posts_publication_history_valid",
+          "value": "(\"posts\".\"status\" = 'draft' AND \"posts\".\"slug\" IS NULL AND \"posts\".\"published_at\" IS NULL)\n        OR (\"posts\".\"status\" IN ('published', 'archived') AND \"posts\".\"slug\" IS NOT NULL AND \"posts\".\"published_at\" IS NOT NULL)"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {
+      "posts_admin_updated_idx": {
+        "columns": {
+          "\"updated_at\" desc": {
+            "isExpression": true
+          },
+          "\"id\" desc": {
+            "isExpression": true
+          }
+        }
+      },
+      "posts_admin_status_updated_idx": {
+        "columns": {
+          "\"updated_at\" desc": {
+            "isExpression": true
+          },
+          "\"id\" desc": {
+            "isExpression": true
+          }
+        }
+      },
+      "posts_trash_updated_idx": {
+        "columns": {
+          "\"updated_at\" desc": {
+            "isExpression": true
+          },
+          "\"id\" desc": {
+            "isExpression": true
+          }
+        }
+      }
+    }
+  }
+}
