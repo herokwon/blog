@@ -4,7 +4,7 @@
   let { children } = $props();
 </script>
 
-<main class="admin-shell">
+<main class="admin-shell" lang="ko">
   <nav class="admin-session">
     <a href={resolve('/admin/logout')}>로그아웃</a>
   </nav>
