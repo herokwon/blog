@@ -6,8 +6,8 @@
 .app-root {
   display: contents;
 }
-/* Kit adds a style attribute here; Admin CSP blocks it. Keep the live region
-   visually hidden through the stylesheet without allowing inline styles. */
+/* The version-scoped Kit patch removes the announcer's inline style. Keep its
+   live region visually hidden here without allowing inline styles. */
 #svelte-announcer {
   position: absolute;
   left: 0;
