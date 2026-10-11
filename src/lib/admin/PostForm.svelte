@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import Editor from '#lib/editor/Editor.svelte';
   import { inspectMarkdown } from '#lib/editor/policy.ts';
   import type { EditorController } from '#lib/editor/runtime.ts';
@@ -15,6 +15,7 @@
     writeRecovery,
     type RecoveryCopy,
   } from './recovery';
+  import RecoveryDialog from './RecoveryDialog.svelte';
 
   let { post }: { post?: AdminPost } = $props();
   // svelte-ignore state_referenced_locally
@@ -29,11 +30,13 @@
   let loading = $state(false);
   let client = false;
   let recordingDisabled = false;
+  let discarded = false;
   let debounce: ReturnType<typeof setTimeout> | undefined;
   let maximum: ReturnType<typeof setTimeout> | undefined;
   let editedAt = 0;
   let bodyChanged = $state(false);
   let permittedDestination: string | null = null;
+  let titleInput: HTMLInputElement;
   const supported = $derived(inspectMarkdown(editorSource).supported);
   const locked = $derived(form.pending || loading || recovery !== null);
   const dirty = $derived(
@@ -67,18 +70,25 @@
   }
   function record() {
     cancelTimers();
+    if (discarded) return;
     serialize();
     if (!form.base && !form.created && !recovery && editedAt)
       storage(store => writeRecovery(store, { ...form.input, editedAt }));
   }
   function changed(body = false) {
+    discarded = false;
     if (body) bodyChanged = true;
     editedAt = Date.now();
     clearTimeout(debounce);
     debounce = setTimeout(record, 500);
     maximum ??= setTimeout(record, 2000);
   }
-  function chooseRecovery(restore: boolean) {
+  function discardRecovery() {
+    cancelTimers();
+    discarded = true;
+    if (!form.base && !form.created) storage(clearRecovery);
+  }
+  async function chooseRecovery(restore: boolean) {
     const copy = recovery;
     if (!copy) return;
     if (restore) {
@@ -87,10 +97,15 @@
       controller = undefined;
       editorKey++;
       editedAt = copy.editedAt;
-    } else storage(clearRecovery);
+    } else discardRecovery();
     recovery = null;
+    await tick();
+    titleInput.focus();
   }
   beforeNavigate(navigation => {
+    // Browser reload/closure is not an application discard. beforeunload owns
+    // best-effort recording and its native departure warning.
+    if (navigation.type === 'leave') return;
     if (
       navigation.to &&
       navigation.to.url.pathname + navigation.to.url.search ===
@@ -101,11 +116,12 @@
       navigation.cancel();
       return;
     }
-    if (
-      dirty &&
-      !window.confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')
-    ) {
-      navigation.cancel();
+    if (dirty) {
+      if (!window.confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')) {
+        navigation.cancel();
+        return;
+      }
+      discardRecovery();
       return;
     }
     record();
@@ -118,7 +134,7 @@
       });
     const unload = (event: BeforeUnloadEvent) => {
       record();
-      if (form.pending || loading || dirty) {
+      if (!discarded && (form.pending || loading || dirty)) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -239,14 +255,6 @@
       >
     </div>
   </header>
-  {#if recovery}
-    <aside class="authoring-feedback">
-      <p>미저장 작성 내용이 있습니다</p>
-      <button type="button" onclick={() => chooseRecovery(true)}>복구</button>
-      <button type="button" onclick={() => chooseRecovery(false)}>버리기</button
-      >
-    </aside>
-  {/if}
   {#if storageNotice}<p role="status">
       브라우저 입력 복구를 사용할 수 없습니다.
     </p>{/if}
@@ -286,6 +294,7 @@
   <label class="post-title" for="post-title"
     >제목<input
       id="post-title"
+      bind:this={titleInput}
       bind:value={form.input.title}
       disabled={locked}
       oninput={() => changed()}
@@ -300,3 +309,13 @@
       }}
     />{/key}
 </form>
+
+{#if recovery}
+  <RecoveryDialog
+    title={recovery.title}
+    editedAt={recovery.editedAt}
+    onDecision={decision => {
+      void chooseRecovery(decision === 'restore');
+    }}
+  />
+{/if}
