@@ -7,9 +7,10 @@ protected Admin list/trash/detail pages and new/edit authoring are implemented.
 Task 11 [acceptance evidence](../operations/v0.2.0-acceptance.md) separates local
 verification from incomplete physical-device and deployed checks. The schema contains only `posts`.
 
-The v0.2.1 authoring layout, recovery modal, explicit-discard handling, and
-logout completion below are `Planned`. Their acceptance does not establish
-implementation or deployed verification.
+The v0.2.1 recovery modal and explicit-discard handling are implemented and
+locally verified; [Tasks 1–2 evidence](../operations/v0.2.1-authoring.md#tasks-12-local-evidence-2026-10-11)
+records the checks. Authoring layout and logout completion remain `Planned`.
+Deployed v0.2.1 acceptance remains outstanding.
 
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
@@ -299,7 +300,7 @@ succeeded. Do not persist creation-request keys or payload snapshots, and
 do not automatically submit recovered input. If creation was uncertain,
 the author checks the post list before submitting again.
 
-For v0.2.1 (`Planned`), an unexpired recovery copy opens a modal before
+For v0.2.1 (locally implemented; deployed acceptance pending), an unexpired recovery copy opens a modal before
 new-post editing begins. Show `미저장 작성 내용이 있습니다`, the previous
 title and last-edit time, and the explanation
 `확인하면 이전 내용을 복구합니다. 취소하거나 창을 닫으면 이전 내용이 삭제됩니다.`
