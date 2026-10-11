@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { API_ERROR_CODES } from './error-codes';
 
+// The Admin browser and Worker enforce CSP without unsafe-eval. Select Zod's
+// interpreter before constructing schemas instead of probing dynamic compilation.
+z.config({ jitless: true });
+
 export { API_ERROR_CODES, type ApiErrorCode } from './error-codes';
 export const postStatusSchema = z.enum(['draft', 'published', 'archived']);
 export const postIdSchema = z.uuidv7();

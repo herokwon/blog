@@ -147,13 +147,7 @@ for (const viewport of [
         .boundingBox();
       const metadata = await page.locator('.post-metadata').boundingBox();
       expect(metadata!.y).toBeGreaterThan(title!.y);
-      // Kit's generated live region still attempts its fixed inline hiding style.
-      // It must remain blocked; our stylesheet supplies the equivalent presentation.
-      const announcerViolation =
-        'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo=';
-      expect(
-        errors.filter(message => !message.includes(announcerViolation)),
-      ).toEqual([]);
+      expect(errors).toEqual([]);
       expect(
         await page
           .locator('#svelte-announcer')

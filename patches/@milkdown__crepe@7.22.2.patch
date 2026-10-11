@@ -1,0 +1,60 @@
+diff --git a/lib/cjs/feature/top-bar/index.js b/lib/cjs/feature/top-bar/index.js
+index 9f9623b7a7338976203d38aca92163d2eb0d4b89..96eb9827f676fdf4cdf00850bbf874d693f4fc70 100644
+--- a/lib/cjs/feature/top-bar/index.js
++++ b/lib/cjs/feature/top-bar/index.js
+@@ -688,6 +688,7 @@ const TopBar = vue.defineComponent({
+       );
+     }
+     return () => {
++      subscribeState();
+       const view = isReady() ? ctx.get(core.editorViewCtx) : null;
+       const isReadonly = view ? !view.editable : false;
+       if (isReadonly) return null;
+diff --git a/lib/cjs/index.js b/lib/cjs/index.js
+index 40e23cfda9624c524591047fb5112e7b47a1b8ee..aa76ed1f8d3af0a4347887904be6f519cf4affa5 100644
+--- a/lib/cjs/index.js
++++ b/lib/cjs/index.js
+@@ -4215,6 +4215,7 @@ const TopBar = vue.defineComponent({
+       );
+     }
+     return () => {
++      subscribeState();
+       const view = isReady() ? ctx.get(core.editorViewCtx) : null;
+       const isReadonly = view ? !view.editable : false;
+       if (isReadonly) return null;
+diff --git a/lib/esm/feature/top-bar/index.js b/lib/esm/feature/top-bar/index.js
+index 82fd0fd68e17dec4394169ffb0d26d03366b3d56..76993d1ab699bfe6624c32f27852aaeca10dd0cd 100644
+--- a/lib/esm/feature/top-bar/index.js
++++ b/lib/esm/feature/top-bar/index.js
+@@ -686,6 +686,7 @@ const TopBar = defineComponent({
+       );
+     }
+     return () => {
++      subscribeState();
+       const view = isReady() ? ctx.get(editorViewCtx) : null;
+       const isReadonly = view ? !view.editable : false;
+       if (isReadonly) return null;
+diff --git a/lib/esm/index.js b/lib/esm/index.js
+index adae4fac966f7f2fa0d105ff7abbca27243aea5b..f90dd1ef6de78815a2a16249a3c7a27367eabbbf 100644
+--- a/lib/esm/index.js
++++ b/lib/esm/index.js
+@@ -4213,6 +4213,7 @@ const TopBar = defineComponent({
+       );
+     }
+     return () => {
++      subscribeState();
+       const view = isReady() ? ctx.get(editorViewCtx) : null;
+       const isReadonly = view ? !view.editable : false;
+       if (isReadonly) return null;
+diff --git a/src/feature/top-bar/component.tsx b/src/feature/top-bar/component.tsx
+index 3bfd29702f2b80e1cb7cc9b7945d314306968202..b9e5eae736dcd3880fb74af66430f15ff83ad7e1 100644
+--- a/src/feature/top-bar/component.tsx
++++ b/src/feature/top-bar/component.tsx
+@@ -157,6 +157,7 @@ export const TopBar = defineComponent<TopBarProps>({
+     }
+ 
+     return () => {
++      subscribeState()
+       const view = isReady() ? ctx.get(editorViewCtx) : null
+       const isReadonly = view ? !view.editable : false
+ 
