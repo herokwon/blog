@@ -49,6 +49,9 @@ experience and isolates remote write-flow testing from Production data.
 - [Environment awareness](content-domain.md#v021-environment-awareness) labels
   Local/Preview and explains read-only candidate controls.
 
+The [authoring implementation sequence](../operations/v0.2.1-authoring.md)
+defines release priorities and its dependencies on environment separation.
+
 Keep the single `posts` entity, explicit saves, revision conflict behavior,
 and existing API payloads. Public article UI/APIs, search, media, autosave,
 and a Markdown source toggle remain outside this release.
@@ -107,7 +110,9 @@ the local-only test identity policy.
 The current single-Worker configuration and planned Local/Preview/Production
 separation are defined in [Deployment](deployment.md#runtime-and-environments).
 Its [v0.2.1 matrix](deployment.md#v021-isolated-preview) is authoritative for
-storage and writable entry points.
+storage and writable entry points; the
+[implementation sequence](../operations/v0.2.1-environments.md) maps them to
+repository changes and verification gates.
 
 Production migrations run before Worker deployment in the release promotion
 workflow. See [CI/CD operations](../operations/ci-cd.md) for procedures.

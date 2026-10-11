@@ -142,6 +142,10 @@ a Preview shortcut. Reads and navigation remain available; server enforcement
 still rejects direct mutation requests. Share the server's exact-Origin
 decision rather than maintaining a separate client permission rule.
 
+See [environment implementation](../operations/v0.2.1-environments.md#task-5-preview-authentication-and-mutation-boundaries)
+and [authoring implementation](../operations/v0.2.1-authoring.md) for sequencing
+and acceptance tests.
+
 ### Admin Detail
 
 The Admin detail page displays persisted title and rendered Markdown body

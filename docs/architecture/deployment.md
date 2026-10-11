@@ -77,6 +77,9 @@ databases and deny remote requests. Local state, Preview data, and Production
 data are independent; a Version URL is an entry point to a Worker version,
 not another storage environment.
 
+The [environment separation implementation sequence](../operations/v0.2.1-environments.md)
+maps these boundaries to repository files and verification gates.
+
 Worker versions contain neither D1 data nor migration state.
 
 ## Deployment Paths

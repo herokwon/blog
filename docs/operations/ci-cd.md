@@ -24,11 +24,22 @@ This flow intentionally generates Env/runtime types without entrypoint-derived `
 
 ## v0.2.1 Preview Preparation
 
+The [implementation sequence](v0.2.1-environments.md) specifies affected files,
+task dependencies, failure cases, and local/remote acceptance gates.
+
 Status: `Planned`. Implement the
 [paired-candidate flow](../architecture/deployment.md#v021-paired-candidates)
 and [isolated Preview policy](../architecture/deployment.md#v021-isolated-preview).
 Current commands below describe the existing single-Worker workflow until
 that implementation is verified.
+
+Follow Tasks 1–2 for configuration, commands, and type generation; Tasks 3–4
+for paired upload, exact Production selection, and separate structured outcomes;
+and Tasks 5–6 for authentication and remote acceptance. The latter records
+both candidate identities and migration state, revalidates moved aliases,
+and verifies real Access login, writes, and logout/home return. Local test
+identities do not establish remote authentication evidence. Documentation
+preparation does not provision resources or change Production.
 
 ## Production D1 migrations and Worker deployment
 

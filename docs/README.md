@@ -30,6 +30,8 @@ Follow ADRs for rationale and operating documents for procedures.
 - [CI/CD operations](operations/ci-cd.md)
 - [Admin validation](operations/admin-validation.md)
 - [v0.2.0 implementation sequence](operations/v0.2.0-implementation.md)
+- [v0.2.1 environment separation implementation sequence](operations/v0.2.1-environments.md)
+- [v0.2.1 authoring implementation sequence and priorities](operations/v0.2.1-authoring.md)
 
 Create additional documents and directories as their contents are agreed.
 

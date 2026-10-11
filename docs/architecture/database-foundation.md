@@ -207,7 +207,9 @@ Maintain the same ordered migration history locally and in production.
 Generate migrations for real changes, not an empty tooling initialization.
 
 For v0.2.1, apply the same ordered history independently to each database in
-the [environment policy](deployment.md#v021-isolated-preview).
+the [environment policy](deployment.md#v021-isolated-preview). The
+[implementation sequence](../operations/v0.2.1-environments.md) defines local,
+Preview, and Production migration commands and their verification.
 
 ### Initial migration regeneration before production
 
