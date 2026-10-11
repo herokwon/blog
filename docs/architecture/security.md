@@ -137,17 +137,17 @@ actions. Browsers never access D1 directly.
 
 Current candidates share Production D1 and reject Admin mutations. The
 v0.2.1 environment policy is `Planned`: only the separate Preview Worker's
-fixed alias permits remote testing writes, with Preview D1 as its sole DB.
+default Worker URL permits remote testing writes, with Preview D1 as its sole DB.
 See the [environment matrix](deployment.md#v021-isolated-preview).
 
 Configure a separate Preview Access audience and the authorized Admin email
 allowlist. Reuse the verified issuer/JWKS/JWT policy, not the local identity
-bypass. Protect the same Admin page/API paths on fixed and individual Preview
+bypass. Protect the same Admin page/API paths on the default Preview Worker URL and individual Preview
 Version URLs; home/public paths remain outside the Admin Access application.
 Verify actual Access hostname/path coverage before enabling remote testing.
 
 For Preview mutations, both request URL origin and `Origin` must exactly
-equal the configured HTTPS fixed-alias origin. No suffix matching, wildcard
+equal the configured HTTPS default Worker origin. No suffix matching, wildcard
 origin permission, forwarded-host trust, or Production-origin substitution.
 Missing, malformed, mismatched, and individual-version origins return
 `403 FORBIDDEN` after normal identity checks. Production retains its exact

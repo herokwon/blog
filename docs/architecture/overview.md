@@ -37,7 +37,7 @@ Status: `Planned`. This patch release improves the existing Admin authoring
 experience and isolates remote write-flow testing from Production data.
 
 - [Isolated Preview and paired candidates](deployment.md#v021-isolated-preview)
-  introduce a separate Worker/D1 and a fixed alias for authenticated write tests.
+  introduce a separate Worker/D1 and a default Worker URL for authenticated write tests.
 - [Authoring layout](content-domain.md#v021-authoring-layout) unifies Toolbar
   and body, improves keyboard traversal, and constrains body scrolling.
 - [Input recovery](content-domain.md#browser-input-recovery) uses an explicit
@@ -125,7 +125,7 @@ workflow. See [CI/CD operations](../operations/ci-cd.md) for procedures.
    with local D1.
 3. After authentication and authorization, Admin mutation requests enforce
    the configured writable-origin policy and server-side request-origin checks;
-   the v0.2.1 target also permits the isolated Preview fixed alias.
+   the v0.2.1 target also permits the isolated Preview default Worker URL.
 4. Zod validates parameters and payloads; Post rules determine visibility
    and permitted actions.
 5. Server storage reads or writes D1 through Drizzle.

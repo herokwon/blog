@@ -44,22 +44,23 @@ the same `DB` binding name. Production retains its existing database ID and
 domain. Use explicit environment-specific bindings, variables,
 and Access configuration; do not rely on inheriting non-inheritable settings.
 
-| Context                          | Storage           | Authorized Admin writes         |
-| -------------------------------- | ----------------- | ------------------------------- |
-| Local                            | Isolated local D1 | Explicitly enabled local origin |
-| Preview fixed alias Version URL  | Preview D1        | Matching trusted alias origin   |
-| Preview individual Version URL   | Preview D1        | None                            |
-| Production candidate Version URL | Production D1     | None                            |
-| Production domain                | Production D1     | Matching Production origin      |
+| Context                          | Storage           | Authorized Admin writes                |
+| -------------------------------- | ----------------- | -------------------------------------- |
+| Local                            | Isolated local D1 | Explicitly enabled local origin        |
+| Preview default Worker URL       | Preview D1        | Matching trusted default Worker origin |
+| Preview individual Version URL   | Preview D1        | None                                   |
+| Production candidate Version URL | Production D1     | None                                   |
+| Production domain                | Production D1     | Matching Production origin             |
 
-Use one fixed alias on the Preview Worker as the primary test entry point;
-each successful candidate upload updates it. Resolve its exact HTTPS origin
-from the actual Worker name, account subdomain, and configured alias. Resource
-names are fixed above; choose the alias during configuration and record its
-resolved origin before enabling writes. No new custom domain is required.
+Use `https://blog-preview.<account-subdomain>.workers.dev` as the primary
+Preview test entry point. Explicitly enable Preview `workers_dev: true` and
+`preview_urls: true`. Resolve the exact HTTPS origin from the Worker name and
+actual account subdomain before enabling writes. No alias or new custom domain
+is required. Each successful candidate flow deploys the uploaded Preview Version
+ID at 100% traffic and applies Preview triggers.
 Protect Admin pages/APIs with Preview-specific Access configuration, leaving
 home/public paths accessible. Preview permits the entire management lifecycle
-through its fixed alias, including creation, update, publish, archive, delete,
+through its default Worker URL, including creation, update, publish, archive, delete,
 and restore. Individual Version URLs remain read-only for reinspection.
 
 Keep Preview data across uploads. Apply only unrecorded migrations from the
@@ -106,17 +107,19 @@ the following candidate flow, including dependency PRs:
 1. Build the release merge SHA once using the normal verified build.
 2. Apply pending Preview D1 migrations with an explicit Preview target.
    Failure stops both candidate uploads; Production D1 is never migrated here.
-3. Upload that build output to the Preview Worker and update its fixed alias.
+3. Upload that build output to the Preview Worker, deploy its returned Version
+   ID at 100% traffic, and apply Preview triggers. Do not select by upload order.
 4. Upload the same build output to the Production Worker as an undeployed
    candidate. Do not rebuild between uploads or deploy Production triggers.
 5. Report the source SHA, release annotation, each Worker identity/Version ID,
-   the immutable Preview Version URL, and the current fixed-alias URL.
+   the immutable Preview Version URL, and the current default Worker URL.
 
-Both uploads must succeed to report candidate preparation success. These
-operations are not atomic: a later failure can leave a new Preview alias or
+Both uploads, Preview deployment, and Preview trigger application must succeed
+to report candidate preparation success. These
+operations are not atomic: a later failure can leave a changed Preview deployment or
 an already-uploaded version. Report confirmed partial outcomes; do not
 silently fall back to another SHA. A retry must retain the intended source
-identity and recheck the alias before acceptance.
+identity and recheck the deployed Preview Version ID before acceptance.
 
 Preview and Production Version IDs are different. Validate the Preview
 version for the final release head, and promote its corresponding Production
@@ -125,9 +128,9 @@ The main merge does not rebuild. Production migrations and triggers keep
 their existing release gates. Hotfix deployment remains Production-only;
 subsequent release synchronization prepares a new pair.
 
-The mutable alias is a convenience URL, not acceptance evidence. Record the
+The default Worker URL is a mutable entry point, not acceptance evidence. Record the
 tested Preview Version ID, corresponding Production Version ID, source SHA,
-and Preview migration state. If the alias moves during testing, verify the
+and Preview migration state. If the Preview deployment changes during testing, verify the
 final-head Preview candidate again before release. An old Version URL still
 uses the current shared Preview data/schema.
 

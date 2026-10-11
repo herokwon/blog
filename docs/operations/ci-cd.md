@@ -36,7 +36,7 @@ that implementation is verified.
 Follow Tasks 1–2 for configuration, commands, and type generation; Tasks 3–4
 for paired upload, exact Production selection, and separate structured outcomes;
 and Tasks 5–6 for authentication and remote acceptance. The latter records
-both candidate identities and migration state, revalidates moved aliases,
+both candidate identities and migration state, revalidates changed Preview deployments,
 and verifies real Access login, writes, and logout/home return. Local test
 identities do not establish remote authentication evidence. Documentation
 preparation does not provision resources or change Production.
@@ -87,7 +87,7 @@ Candidate upload success confirms upload only. Failed or skipped deployment does
 2. Open a same-repository PR targeting main with a `fix:` or `fix(scope):` title. Merge after CI passes and manual review approves it; this triggers Worker upload and production deployment. A preceding deployment failure is not required.
 3. Check the deployment result and actual production Worker Version ID. Verify the affected behavior and relevant production paths, and record the results on the PR. Workflow success alone does not confirm incident resolution. If deployment fails or the incident remains unresolved, follow the recovery procedure below before synchronizing.
 4. Open a synchronization PR from main into the active `release/v…` branch. Review its complete diff, resolve conflicts while preserving the verified fix and intended release work, and pass CI. Merge with a **merge commit** so the main history is included in the release branch; select this method even though squash merge is also enabled in the repository.
-5. Confirm the synchronization merge triggers successful candidate preparation. Verify source SHA, release annotation, and hotfix inclusion. Current candidates use shared Production D1 and remain read-only; once v0.2.1 is implemented, validate writes on the isolated Preview fixed alias and record both candidate identities.
+5. Confirm the synchronization merge triggers successful candidate preparation. Verify source SHA, release annotation, and hotfix inclusion. Current candidates use shared Production D1 and remain read-only; once v0.2.1 is implemented, validate writes on the isolated Preview default Worker URL and record both candidate identities.
 6. Before regular promotion, verify the candidate matching the release PR's final head SHA, including after any later release-branch change. The final candidate must contain the hotfix and satisfy the exact-candidate gate.
 
 PR creation, review, operational verification, synchronization, and release-resumption decisions are manual responsibilities. No automatic synchronization or rollback workflow is added.

@@ -136,8 +136,8 @@ substring guesses. Do not expose database IDs, Access settings, or secrets.
 
 On read-only Version URLs, show `읽기 전용 환경입니다.` and disable all
 mutation controls, including save, publish, archive, delete, and restore.
-For Preview, provide `Preview에서 작성하기` linking to the configured fixed
-alias's `/admin/posts` page. Production candidates show the explanation without
+For Preview, provide `Preview에서 작성하기` linking to the configured
+default Worker URL's `/admin/posts` page. Production candidates show the explanation without
 a Preview shortcut. Reads and navigation remain available; server enforcement
 still rejects direct mutation requests. Share the server's exact-Origin
 decision rather than maintaining a separate client permission rule.
@@ -574,5 +574,5 @@ defines creation persistence without a request-record table. Resolve
 remaining client-visible contracts before API/Admin implementation.
 
 Validate writes locally with local D1 and, after v0.2.1 implementation,
-through the isolated Preview fixed alias. Other candidate Version URLs
+through the isolated Preview default Worker URL. Other candidate Version URLs
 remain read-only; see [Deployment](deployment.md#v021-isolated-preview).

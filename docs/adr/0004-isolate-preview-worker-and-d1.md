@@ -19,7 +19,7 @@ Local development uses Preview-oriented configuration with persistent local
 D1; automated tests use disposable isolated local D1. Neither uses remote D1.
 
 Give Preview its own database and Access configuration, with writes through
-a fixed alias Version URL. Prepare a pair from one build and promote the
+its default workers.dev URL. Prepare a pair from one build and promote the
 corresponding Production candidate by exact source identity. This preserves
 the existing no-rebuild promotion flow while isolating remote write tests.
 
@@ -41,7 +41,7 @@ Preview cannot access Production D1 through its bindings. Remote write tests
 are possible, while Production candidate URLs remain read-only. Two Worker
 identities require explicit configuration, migration targets, Access settings,
 and reports. Preview and Production Version IDs differ; acceptance must link
-them by source identity rather than by the mutable alias. Preview data/schema
+them by source identity rather than by the mutable Preview deployment. Preview data/schema
 is shared across its versions and is not rolled back with Worker selection.
 
 ## References
