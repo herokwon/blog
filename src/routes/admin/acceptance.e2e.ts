@@ -135,10 +135,13 @@ test('new-post recovery survives a real browser restart without applying or subm
     context = await launch();
     page = await context.newPage();
     await page.goto(`${localD1.origin}/admin/posts/new`);
-    await expect(page.getByText('미저장 작성 내용이 있습니다')).toBeVisible();
+    const dialog = page.getByRole('dialog', {
+      name: '미저장 작성 내용이 있습니다',
+    });
+    await expect(dialog).toBeVisible();
     await expect(page.getByLabel('제목', { exact: true })).toHaveValue('');
     await expect(page.locator('.ProseMirror')).toHaveText('');
-    await page.getByRole('button', { name: '복구', exact: true }).click();
+    await dialog.getByRole('button', { name: '확인', exact: true }).click();
     await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
       'Restarted input',
     );
