@@ -9,7 +9,10 @@ verification from incomplete physical-device and deployed checks. The schema con
 
 The v0.2.1 recovery modal and explicit-discard handling are implemented and
 locally verified; [Tasks 1–2 evidence](../operations/v0.2.1-authoring.md#tasks-12-local-evidence-2026-10-11)
-records the checks. Authoring layout and logout completion remain `Planned`.
+records the checks. Authoring layout and CSP fixes are locally implemented;
+[Tasks 3–4 evidence](../operations/v0.2.1-authoring.md#tasks-34-local-evidence-2026-10-11)
+records their checks. Real-device mobile-keyboard acceptance remains outstanding,
+and logout completion remains `Planned`.
 Deployed v0.2.1 acceptance remains outstanding.
 
 The `Post` model represents a blog article. All states use one entity with no
