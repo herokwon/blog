@@ -4,7 +4,9 @@
 
 Worker upload, production promotion, version automation, and deployment
 reporting are `Implemented` in repository workflows. Application-enforced
-read-only behavior on Version URLs is `Planned`.
+read-only behavior on candidate Version URLs is implemented in the current
+request-origin guard. v0.2.1 Preview isolation and paired candidate upload
+are `Planned`; existing configuration still defines only the Production Worker.
 
 This document records deployment boundaries and release policies.
 [CI/CD operations](../operations/ci-cd.md) covers commands, credentials,
@@ -31,6 +33,54 @@ Candidates are read-only: the application must reject mutations, including
 direct API requests. Validate writes and migrations locally, following
 [Architecture Overview](overview.md) and [API Design](api-design.md).
 
+### v0.2.1 Isolated Preview
+
+Status: `Planned`. Replace the single shared candidate test environment with
+a separate Preview Worker and Preview D1. Both Workers run the same application
+and expose one `DB` binding, but each binding targets only its own remote D1.
+Preview has no Production D1 binding. Keep the existing Production Worker and
+D1 named `blog`; name the new Preview Worker and D1 `blog-preview`. Both expose
+the same `DB` binding name. Production retains its existing database ID and
+domain. Use explicit environment-specific bindings, variables,
+and Access configuration; do not rely on inheriting non-inheritable settings.
+
+| Context                          | Storage           | Authorized Admin writes                |
+| -------------------------------- | ----------------- | -------------------------------------- |
+| Local                            | Isolated local D1 | Explicitly enabled local origin        |
+| Preview default Worker URL       | Preview D1        | Matching trusted default Worker origin |
+| Preview individual Version URL   | Preview D1        | None                                   |
+| Production candidate Version URL | Production D1     | None                                   |
+| Production domain                | Production D1     | Matching Production origin             |
+
+Use `https://blog-preview.<account-subdomain>.workers.dev` as the primary
+Preview test entry point. Explicitly enable Preview `workers_dev: true` and
+`preview_urls: true`. Resolve the exact HTTPS origin from the Worker name and
+actual account subdomain before enabling writes. No alias or new custom domain
+is required. Each successful candidate flow deploys the uploaded Preview Version
+ID at 100% traffic and applies Preview triggers.
+Protect Admin pages/APIs with Preview-specific Access configuration, leaving
+home/public paths accessible. Preview permits the entire management lifecycle
+through its default Worker URL, including creation, update, publish, archive, delete,
+and restore. Individual Version URLs remain read-only for reinspection.
+
+Keep Preview data across uploads. Apply only unrecorded migrations from the
+same migration directory used by Production. Never reset, reseed, or copy
+Production data automatically. Different Preview versions share the latest
+Preview database state; switching versions does not roll back migrations.
+Review compatibility with previously uploaded versions before schema changes.
+
+See [ADR 0004](../adr/0004-isolate-preview-worker-and-d1.md) for rationale.
+
+Local development uses Preview-oriented configuration with a persistent local
+D1, never the remote Preview or Production database. Use explicit local mode
+and the same ordered migrations. Automated tests retain fresh isolated local
+databases and deny remote requests. Local state, Preview data, and Production
+data are independent; a Version URL is an entry point to a Worker version,
+not another storage environment.
+
+The [environment separation implementation sequence](../operations/v0.2.1-environments.md)
+maps these boundaries to repository files and verification gates.
+
 Worker versions contain neither D1 data nor migration state.
 
 ## Deployment Paths
@@ -48,6 +98,41 @@ Deployment follows merged, same-repository PRs rather than arbitrary pushes.
 Candidates are tagged with the release-branch merge commit SHA and
 annotated with the release branch name. Upload exposes a Version URL
 without applying production migrations or deploying production triggers.
+
+### v0.2.1 Paired Candidates
+
+Status: `Planned`. A merged PR into the active versioned release branch runs
+the following candidate flow, including dependency PRs:
+
+1. Build the release merge SHA once using the normal verified build.
+2. Apply pending Preview D1 migrations with an explicit Preview target.
+   Failure stops both candidate uploads; Production D1 is never migrated here.
+3. Upload that build output to the Preview Worker, deploy its returned Version
+   ID at 100% traffic, and apply Preview triggers. Do not select by upload order.
+4. Upload the same build output to the Production Worker as an undeployed
+   candidate. Do not rebuild between uploads or deploy Production triggers.
+5. Report the source SHA, release annotation, each Worker identity/Version ID,
+   the immutable Preview Version URL, and the current default Worker URL.
+
+Both uploads, Preview deployment, and Preview trigger application must succeed
+to report candidate preparation success. These
+operations are not atomic: a later failure can leave a changed Preview deployment or
+an already-uploaded version. Report confirmed partial outcomes; do not
+silently fall back to another SHA. A retry must retain the intended source
+identity and recheck the deployed Preview Version ID before acceptance.
+
+Preview and Production Version IDs are different. Validate the Preview
+version for the final release head, and promote its corresponding Production
+candidate using the existing exact source-SHA/release-annotation selection.
+The main merge does not rebuild. Production migrations and triggers keep
+their existing release gates. Hotfix deployment remains Production-only;
+subsequent release synchronization prepares a new pair.
+
+The default Worker URL is a mutable entry point, not acceptance evidence. Record the
+tested Preview Version ID, corresponding Production Version ID, source SHA,
+and Preview migration state. If the Preview deployment changes during testing, verify the
+final-head Preview candidate again before release. An old Version URL still
+uses the current shared Preview data/schema.
 
 ### Production Promotion
 

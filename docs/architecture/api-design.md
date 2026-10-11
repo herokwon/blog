@@ -307,15 +307,15 @@ export const API_ERROR_CODES = [
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
 ```
 
-| Code                    | HTTP status | Meaning                                                                      |
-| ----------------------- | ----------- | ---------------------------------------------------------------------------- |
-| `VALIDATION_ERROR`      | `400`       | Invalid input, unknown body fields, or invalid pagination                    |
-| `UNAUTHORIZED`          | `401`       | Missing or invalid authentication                                            |
-| `FORBIDDEN`             | `403`       | Insufficient authorization, Version URL mutation, or rejected request origin |
-| `POST_NOT_FOUND`        | `404`       | Missing content or content unavailable through the requested boundary        |
-| `INVALID_POST_STATE`    | `409`       | Operation incompatible with the current state                                |
-| `POST_VERSION_CONFLICT` | `409`       | Stale revision for a mutation requiring the current version                  |
-| `INTERNAL_ERROR`        | `500`       | Unexpected server failure                                                    |
+| Code                    | HTTP status | Meaning                                                                                |
+| ----------------------- | ----------- | -------------------------------------------------------------------------------------- |
+| `VALIDATION_ERROR`      | `400`       | Invalid input, unknown body fields, or invalid pagination                              |
+| `UNAUTHORIZED`          | `401`       | Missing or invalid authentication                                                      |
+| `FORBIDDEN`             | `403`       | Insufficient authorization, read-only Version URL mutation, or rejected request origin |
+| `POST_NOT_FOUND`        | `404`       | Missing content or content unavailable through the requested boundary                  |
+| `INVALID_POST_STATE`    | `409`       | Operation incompatible with the current state                                          |
+| `POST_VERSION_CONFLICT` | `409`       | Stale revision for a mutation requiring the current version                            |
+| `INTERNAL_ERROR`        | `500`       | Unexpected server failure                                                              |
 
 Normal slug collisions use suffix generation, not a separate error code.
 
@@ -435,11 +435,11 @@ Admin mutations enforce the [request-origin policy](security.md#request-origin).
 After authentication and authorization, missing, unusable, or different
 origins return `403 FORBIDDEN` without changing data.
 
-Version URLs share production D1. After authentication and authorization,
-Admin mutation requests on those URLs return `403 FORBIDDEN`; direct API
-requests are restricted as well as UI actions. Missing or invalid identity
-still follows the authentication error contract. Write flows are validated
-locally with local D1 state.
+Permitted entry points and Version URL restrictions follow
+[Deployment's environment matrix](deployment.md#v021-isolated-preview) and
+[Security's enforcement policy](security.md#version-urls).
+Missing or invalid identity still follows the authentication error contract.
+No endpoint, request payload, revision precondition, or response shape changes.
 
 ## Deferred Implementation Decisions
 

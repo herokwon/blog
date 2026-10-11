@@ -22,6 +22,25 @@ The shared `.github/scripts/worker-types.ts` script parses JSONC with TypeScript
 
 This flow intentionally generates Env/runtime types without entrypoint-derived `Cloudflare.GlobalProps.mainModule`. Revisit it if the project adds exported RPC or Durable Object classes that need entrypoint-derived types. Avoid running bare `wrangler types` for repository type synchronization because it uses the build-dependent entrypoint.
 
+## v0.2.1 Preview Preparation
+
+The [implementation sequence](v0.2.1-environments.md) specifies affected files,
+task dependencies, failure cases, and local/remote acceptance gates.
+
+Status: `Planned`. Implement the
+[paired-candidate flow](../architecture/deployment.md#v021-paired-candidates)
+and [isolated Preview policy](../architecture/deployment.md#v021-isolated-preview).
+Current commands below describe the existing single-Worker workflow until
+that implementation is verified.
+
+Follow Tasks 1–2 for configuration, commands, and type generation; Tasks 3–4
+for paired upload, exact Production selection, and separate structured outcomes;
+and Tasks 5–6 for authentication and remote acceptance. The latter records
+both candidate identities and migration state, revalidates changed Preview deployments,
+and verifies real Access login, writes, and logout/home return. Local test
+identities do not establish remote authentication evidence. Documentation
+preparation does not provision resources or change Production.
+
 ## Production D1 migrations and Worker deployment
 
 Apply and test migrations locally during development. Merging a same-repository `release/v<major>.<minor>.<patch> → main` pull request authorizes production D1 migration and Worker deployment. The `deployment.yml` workflow uses the merged main commit and first validates any existing release tag and confirms that a release Worker version is available. Its `Apply production D1 migrations` job runs `pnpm db:migrate:remote` when `drizzle/*.sql` files exist; otherwise the job succeeds without contacting D1. A failed migration prevents the Worker deployment. Wrangler applies only migrations not yet recorded in production D1.
@@ -68,7 +87,7 @@ Candidate upload success confirms upload only. Failed or skipped deployment does
 2. Open a same-repository PR targeting main with a `fix:` or `fix(scope):` title. Merge after CI passes and manual review approves it; this triggers Worker upload and production deployment. A preceding deployment failure is not required.
 3. Check the deployment result and actual production Worker Version ID. Verify the affected behavior and relevant production paths, and record the results on the PR. Workflow success alone does not confirm incident resolution. If deployment fails or the incident remains unresolved, follow the recovery procedure below before synchronizing.
 4. Open a synchronization PR from main into the active `release/v…` branch. Review its complete diff, resolve conflicts while preserving the verified fix and intended release work, and pass CI. Merge with a **merge commit** so the main history is included in the release branch; select this method even though squash merge is also enabled in the repository.
-5. Confirm the synchronization merge triggers a successful candidate upload. Verify the new candidate's Version URL, source SHA tag, release-branch annotation, and inclusion of the hotfix. Candidate checks use shared production D1 and must remain read-only; validate writes locally.
+5. Confirm the synchronization merge triggers successful candidate preparation. Verify source SHA, release annotation, and hotfix inclusion. Current candidates use shared Production D1 and remain read-only; once v0.2.1 is implemented, validate writes on the isolated Preview default Worker URL and record both candidate identities.
 6. Before regular promotion, verify the candidate matching the release PR's final head SHA, including after any later release-branch change. The final candidate must contain the hotfix and satisfy the exact-candidate gate.
 
 PR creation, review, operational verification, synchronization, and release-resumption decisions are manual responsibilities. No automatic synchronization or rollback workflow is added.

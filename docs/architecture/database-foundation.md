@@ -206,6 +206,11 @@ transform.
 Maintain the same ordered migration history locally and in production.
 Generate migrations for real changes, not an empty tooling initialization.
 
+For v0.2.1, apply the same ordered history independently to each database in
+the [environment policy](deployment.md#v021-isolated-preview). The
+[implementation sequence](../operations/v0.2.1-environments.md) defines local,
+Preview, and Production migration commands and their verification.
+
 ### Initial migration regeneration before production
 
 Release preparation replaced `0000_wealthy_kinsey_walden.sql` with
@@ -229,15 +234,9 @@ Wrangler reads flat `drizzle/*.sql` files. Release promotion uses
 sequencing, and failure handling are defined in
 [CI/CD operations](../operations/ci-cd.md).
 
-| Environment | Storage                              |
-| ----------- | ------------------------------------ |
-| Local       | Wrangler local D1 state              |
-| Production  | Single configured remote D1 database |
-
-Validate writes and migrations locally. Candidate Version URLs share
-production D1 and follow the [overview's read-only policy](overview.md).
-Worker versions carry neither D1 data nor migration state, and Worker
-rollback does not reverse migrations.
+Validate migrations locally before remote application. Database persistence,
+pending-only Preview migrations, and Worker rollback boundaries follow the
+[environment and migration policy](deployment.md#v021-isolated-preview).
 
 ## Deferred Decisions
 

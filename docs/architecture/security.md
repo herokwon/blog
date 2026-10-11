@@ -135,16 +135,27 @@ actions. Browsers never access D1 directly.
 
 ### Version URLs
 
-Version URLs share production D1 and permit read-only validation.
-Admin authentication does not authorize mutations through those URLs.
+Current candidates share Production D1 and reject Admin mutations. The
+v0.2.1 environment policy is `Planned`: only the separate Preview Worker's
+default Worker URL permits remote testing writes, with Preview D1 as its sole DB.
+See the [environment matrix](deployment.md#v021-isolated-preview).
 
-After authentication and authorization, all Admin mutation requests through
-Version URLs return `403 FORBIDDEN`, including
-creation, editing, publishing, archiving, deletion, and restoration.
-Disabling UI actions alone is insufficient.
+Configure a separate Preview Access audience and the authorized Admin email
+allowlist. Reuse the verified issuer/JWKS/JWT policy, not the local identity
+bypass. Protect the same Admin page/API paths on the default Preview Worker URL and individual Preview
+Version URLs; home/public paths remain outside the Admin Access application.
+Verify actual Access hostname/path coverage before enabling remote testing.
 
-Validate write flows and migrations locally. Worker versions do not
-isolate or version database state.
+For Preview mutations, both request URL origin and `Origin` must exactly
+equal the configured HTTPS default Worker origin. No suffix matching, wildcard
+origin permission, forwarded-host trust, or Production-origin substitution.
+Missing, malformed, mismatched, and individual-version origins return
+`403 FORBIDDEN` after normal identity checks. Production retains its exact
+configured domain and read-only candidate URLs. Enforce these checks for
+direct API requests as well as UI actions. Local bypass retains its existing
+compile-time development, loopback, and explicit-flag requirements.
+
+Worker versions do not isolate or version database state.
 
 ## Public Post Boundary
 
@@ -278,7 +289,7 @@ rather than HTML login redirects:
 | --------------------------------------------------------------- | ----------- | ------------ |
 | Missing or invalid authentication                               | 401         | UNAUTHORIZED |
 | Authenticated identity not allowed                              | 403         | FORBIDDEN    |
-| Authorized mutation through a Version URL                       | 403         | FORBIDDEN    |
+| Authorized mutation through a read-only Version URL             | 403         | FORBIDDEN    |
 | Authorized mutation with missing, unusable, or different origin | 403         | FORBIDDEN    |
 
 Use the common error shape and predefined codes in API Design.
@@ -303,6 +314,31 @@ Application response headers do not configure Cloudflare Access login or
 denial responses handled before the Worker. `no-store` governs HTTP caching;
 browser persistence of new-post input follows the
 [input recovery contract](content-domain.md#browser-input-recovery).
+
+### v0.2.1 CSP Investigation
+
+Status: `Planned`. A reported browser console error identifies a blocked
+inline style under `style-src-attr 'none'`. The installed Crepe TopBar changes
+`container.style.display` when editability changes; this is a candidate,
+not a confirmed cause of that report or the disappearing editor. The known
+SvelteKit announcer style attempt is another separately documented source.
+
+Before choosing a fix, reproduce recovery/pending locks and editor remounts
+under the built Worker's enforced policy. Capture `securitypolicyviolation`
+details, the offending element/action, console errors, and visibility/focus
+state. Distinguish TopBar, framework announcer, and other editor/menu writes.
+Verify title-to-Toolbar-to-body traversal and short/long scroll behavior in
+the same actual-page tests, rather than treating a hidden editor as solved
+by the modal alone.
+
+Prefer supported integration and stylesheet/class behavior for the proven
+source. Do not remove `style-src-attr 'none'`, broadly permit inline styles,
+or add a general console-error ignore to hide the report. Preserve nonce
+propagation, Markdown/URL/transfer guards, and existing script restrictions.
+Any necessary policy exception or dependency/integration change must be
+specified and reviewed before implementation. Recheck initial load, client
+remount, locks, menus, and nested CodeMirror editors. Existing exact-hash
+announcer handling is historical evidence, not permission to ignore new errors.
 
 ### CSP Configuration and Verification
 
