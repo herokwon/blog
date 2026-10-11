@@ -281,3 +281,46 @@
   align-items: center;
   margin: 1rem 0;
 }
+.recovery-dialog {
+  margin: auto;
+  padding: 0;
+  width: min(32rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+  border: 1px solid #d8dce2;
+  border-radius: 8px;
+  color: #20242c;
+  background: white;
+}
+.recovery-dialog::backdrop {
+  background: #0006;
+}
+.recovery-panel {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  overflow-wrap: anywhere;
+}
+.recovery-panel h2 {
+  padding-right: 2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.recovery-title {
+  font-weight: 600;
+  white-space: pre-wrap;
+}
+.recovery-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.admin-shell .recovery-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+}

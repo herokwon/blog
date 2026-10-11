@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import Editor from '#lib/editor/Editor.svelte';
   import { inspectMarkdown } from '#lib/editor/policy.ts';
   import type { EditorController } from '#lib/editor/runtime.ts';
@@ -15,6 +15,7 @@
     writeRecovery,
     type RecoveryCopy,
   } from './recovery';
+  import RecoveryDialog from './RecoveryDialog.svelte';
 
   let { post }: { post?: AdminPost } = $props();
   // svelte-ignore state_referenced_locally
@@ -34,6 +35,7 @@
   let editedAt = 0;
   let bodyChanged = $state(false);
   let permittedDestination: string | null = null;
+  let titleInput: HTMLInputElement;
   const supported = $derived(inspectMarkdown(editorSource).supported);
   const locked = $derived(form.pending || loading || recovery !== null);
   const dirty = $derived(
@@ -78,7 +80,7 @@
     debounce = setTimeout(record, 500);
     maximum ??= setTimeout(record, 2000);
   }
-  function chooseRecovery(restore: boolean) {
+  async function chooseRecovery(restore: boolean) {
     const copy = recovery;
     if (!copy) return;
     if (restore) {
@@ -89,8 +91,13 @@
       editedAt = copy.editedAt;
     } else storage(clearRecovery);
     recovery = null;
+    await tick();
+    titleInput.focus();
   }
   beforeNavigate(navigation => {
+    // Browser reload/closure is not an application discard. beforeunload owns
+    // best-effort recording and its native departure warning.
+    if (navigation.type === 'leave') return;
     if (
       navigation.to &&
       navigation.to.url.pathname + navigation.to.url.search ===
@@ -239,14 +246,6 @@
       >
     </div>
   </header>
-  {#if recovery}
-    <aside class="authoring-feedback">
-      <p>미저장 작성 내용이 있습니다</p>
-      <button type="button" onclick={() => chooseRecovery(true)}>복구</button>
-      <button type="button" onclick={() => chooseRecovery(false)}>버리기</button
-      >
-    </aside>
-  {/if}
   {#if storageNotice}<p role="status">
       브라우저 입력 복구를 사용할 수 없습니다.
     </p>{/if}
@@ -286,6 +285,7 @@
   <label class="post-title" for="post-title"
     >제목<input
       id="post-title"
+      bind:this={titleInput}
       bind:value={form.input.title}
       disabled={locked}
       oninput={() => changed()}
@@ -300,3 +300,13 @@
       }}
     />{/key}
 </form>
+
+{#if recovery}
+  <RecoveryDialog
+    title={recovery.title}
+    editedAt={recovery.editedAt}
+    onDecision={decision => {
+      void chooseRecovery(decision === 'restore');
+    }}
+  />
+{/if}
