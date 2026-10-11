@@ -30,6 +30,7 @@
   let loading = $state(false);
   let client = false;
   let recordingDisabled = false;
+  let discarded = false;
   let debounce: ReturnType<typeof setTimeout> | undefined;
   let maximum: ReturnType<typeof setTimeout> | undefined;
   let editedAt = 0;
@@ -69,16 +70,23 @@
   }
   function record() {
     cancelTimers();
+    if (discarded) return;
     serialize();
     if (!form.base && !form.created && !recovery && editedAt)
       storage(store => writeRecovery(store, { ...form.input, editedAt }));
   }
   function changed(body = false) {
+    discarded = false;
     if (body) bodyChanged = true;
     editedAt = Date.now();
     clearTimeout(debounce);
     debounce = setTimeout(record, 500);
     maximum ??= setTimeout(record, 2000);
+  }
+  function discardRecovery() {
+    cancelTimers();
+    discarded = true;
+    if (!form.base && !form.created) storage(clearRecovery);
   }
   async function chooseRecovery(restore: boolean) {
     const copy = recovery;
@@ -89,7 +97,7 @@
       controller = undefined;
       editorKey++;
       editedAt = copy.editedAt;
-    } else storage(clearRecovery);
+    } else discardRecovery();
     recovery = null;
     await tick();
     titleInput.focus();
@@ -108,11 +116,12 @@
       navigation.cancel();
       return;
     }
-    if (
-      dirty &&
-      !window.confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')
-    ) {
-      navigation.cancel();
+    if (dirty) {
+      if (!window.confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')) {
+        navigation.cancel();
+        return;
+      }
+      discardRecovery();
       return;
     }
     record();
@@ -125,7 +134,7 @@
       });
     const unload = (event: BeforeUnloadEvent) => {
       record();
-      if (form.pending || loading || dirty) {
+      if (!discarded && (form.pending || loading || dirty)) {
         event.preventDefault();
         event.returnValue = '';
       }

@@ -441,6 +441,176 @@ for (const width of [1280, 390]) {
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(/\/edit$/);
     });
+    for (const recorded of [false, true]) {
+      test(`confirmed application discard cannot return after timers or immediate revisit (recorded: ${recorded})`, async ({
+        page,
+        localD1,
+      }) => {
+        await page.goto(`${localD1.origin}/admin/posts/new`);
+        const editor = page.locator('.admin-editor .ProseMirror');
+        await expect(editor).toHaveAttribute('contenteditable', 'true');
+        await page.clock.install();
+        await page.clock.pauseAt(new Date());
+        await page.getByLabel('제목', { exact: true }).fill('Discard this');
+        await editor.fill('Discarded body');
+        if (recorded) {
+          await page.clock.runFor(600);
+          expect(
+            await page.evaluate(key => localStorage.getItem(key), recoveryKey),
+          ).toContain('Discarded body');
+        } else {
+          expect(
+            await page.evaluate(key => localStorage.getItem(key), recoveryKey),
+          ).toBeNull();
+        }
+        page.once('dialog', dialog => dialog.accept());
+        // The clock is paused to keep departure deterministically ahead of the debounce.
+        await page
+          .getByRole('link', { name: '목록', exact: true })
+          .evaluate(element => (element as HTMLElement).click());
+        await expect
+          .poll(async () => {
+            await page.clock.runFor(50);
+            return page.url();
+          })
+          .toBe(`${localD1.origin}/admin/posts`);
+        await page.clock.fastForward(2500);
+        expect(
+          await page.evaluate(key => localStorage.getItem(key), recoveryKey),
+        ).toBeNull();
+        await page
+          .getByRole('link', { name: '글쓰기', exact: true })
+          .evaluate(element => (element as HTMLElement).click());
+        await expect
+          .poll(async () => {
+            await page.clock.runFor(50);
+            return page.url();
+          })
+          .toBe(`${localD1.origin}/admin/posts/new`);
+        await expect(page.getByLabel('제목', { exact: true })).toBeEnabled();
+        await expect(page.getByLabel('제목', { exact: true })).toHaveValue('');
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+      });
+    }
+    test('cancelled application departure preserves input and the existing recovery copy', async ({
+      page,
+      localD1,
+    }) => {
+      await page.goto(`${localD1.origin}/admin/posts/new`);
+      await page.getByLabel('제목', { exact: true }).fill('Keep this');
+      await page.locator('.admin-editor .ProseMirror').fill('Keep body');
+      await expect
+        .poll(() =>
+          page.evaluate(key => localStorage.getItem(key), recoveryKey),
+        )
+        .toContain('Keep body');
+      const stored = await page.evaluate(
+        key => localStorage.getItem(key),
+        recoveryKey,
+      );
+      page.once('dialog', dialog => dialog.dismiss());
+      await page.getByRole('link', { name: '목록', exact: true }).click();
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts/new`);
+      await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
+        'Keep this',
+      );
+      await expect(page.locator('.admin-editor .ProseMirror')).toContainText(
+        'Keep body',
+      );
+      expect(
+        await page.evaluate(key => localStorage.getItem(key), recoveryKey),
+      ).toBe(stored);
+    });
+    test('refresh before the debounce preserves edited input for an explicit recovery choice', async ({
+      page,
+      localD1,
+    }) => {
+      await page.goto(`${localD1.origin}/admin/posts/new`);
+      await expect(page.locator('.admin-editor .ProseMirror')).toHaveAttribute(
+        'contenteditable',
+        'true',
+      );
+      await page.clock.install();
+      await page.clock.pauseAt(new Date());
+      await page.getByLabel('제목', { exact: true }).fill('Reload this');
+      await page.locator('.admin-editor .ProseMirror').fill('Reload body');
+      expect(
+        await page.evaluate(key => localStorage.getItem(key), recoveryKey),
+      ).toBeNull();
+      page.once('dialog', dialog => dialog.accept());
+      await page.reload();
+      const dialog = page.getByRole('dialog', {
+        name: '미저장 작성 내용이 있습니다',
+      });
+      await expect(dialog).toBeVisible();
+      await dialog
+        .getByRole('button', { name: '확인', exact: true })
+        .evaluate(element => (element as HTMLElement).click());
+      await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
+        'Reload this',
+      );
+      await expect(page.locator('.admin-editor .ProseMirror')).toContainText(
+        'Reload body',
+      );
+    });
+    test('confirmed creation leaves no new-post recovery on revisit', async ({
+      page,
+      localD1,
+      api,
+    }) => {
+      await page.goto(`${localD1.origin}/admin/posts/new`);
+      await page.getByLabel('제목', { exact: true }).fill('Created once');
+      await page.locator('.admin-editor .ProseMirror').fill('Saved body');
+      await page.getByRole('button', { name: '저장', exact: true }).click();
+      await expect(page).toHaveURL(/\/edit$/);
+      await page.getByRole('link', { name: '목록', exact: true }).click();
+      await page.getByRole('link', { name: '글쓰기', exact: true }).click();
+      await expect(page.getByLabel('제목', { exact: true })).toBeEnabled();
+      await expect(page.getByLabel('제목', { exact: true })).toHaveValue('');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      expect(
+        await page.evaluate(key => localStorage.getItem(key), recoveryKey),
+      ).toBeNull();
+      expect(
+        (await (await api.get('/api/admin/posts')).json()).items,
+      ).toHaveLength(1);
+    });
+    test('rejected creation retains input and recorded copy without creating a post', async ({
+      page,
+      localD1,
+      api,
+    }) => {
+      await page.goto(`${localD1.origin}/admin/posts/new`);
+      await page.getByLabel('제목', { exact: true }).fill('Rejected');
+      await page
+        .locator('.admin-editor .ProseMirror')
+        .fill('Retained rejected body');
+      await page.route('**/api/admin/posts', route =>
+        route.request().method() === 'POST'
+          ? route.fulfill({
+              status: 403,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                error: { code: 'FORBIDDEN', message: 'Denied' },
+              }),
+            })
+          : route.continue(),
+      );
+      await page.getByRole('button', { name: '저장', exact: true }).click();
+      await expect(page.getByText('저장하지 못했습니다: Denied')).toBeVisible();
+      await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
+        'Rejected',
+      );
+      await expect(page.locator('.admin-editor .ProseMirror')).toContainText(
+        'Retained rejected body',
+      );
+      expect(
+        await page.evaluate(key => localStorage.getItem(key), recoveryKey),
+      ).toContain('Retained rejected body');
+      expect(
+        (await (await api.get('/api/admin/posts')).json()).items,
+      ).toHaveLength(0);
+    });
     test('unknown creation retains input and recorded copy, requires manual inspection, and unlocks controls', async ({
       page,
       localD1,

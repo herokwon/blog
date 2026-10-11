@@ -104,6 +104,7 @@ describe('new-post browser recovery', () => {
     JSON.stringify({ ...copy, editedAt: '1000000' }),
     JSON.stringify({ ...copy, editedAt: -1 }),
     JSON.stringify({ ...copy, editedAt: 1.5 }),
+    JSON.stringify({ ...copy, editedAt: 8_640_000_000_000_001 }),
     '{"title":"t","body":"b","editedAt":1e309}',
   ])('removes malformed persisted data: %s', raw => {
     const storage = stored(raw);
