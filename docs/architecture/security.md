@@ -317,11 +317,21 @@ browser persistence of new-post input follows the
 
 ### v0.2.1 CSP Investigation
 
-Status: `Planned`. A reported browser console error identifies a blocked
-inline style under `style-src-attr 'none'`. The installed Crepe TopBar changes
-`container.style.display` when editability changes; this is a candidate,
-not a confirmed cause of that report or the disappearing editor. The known
-SvelteKit announcer style attempt is another separately documented source.
+Status: `Locally implemented; deployed acceptance pending`. Built-Worker
+Chromium probes identified SvelteKit's announcer inline style as the
+`style-src-attr` source. Crepe's `container.style.display` updates produced no
+violation; its disappearing controls were a separate reactive-render bug:
+the readonly branch stopped observing the version used to rerender on unlock.
+Zod's caught dynamic-compilation probe also produced a `script-src` eval event.
+
+Version-scoped pnpm patches remove only SvelteKit 3.0.1's announcer inline
+style (the existing `#svelte-announcer` stylesheet retains its hidden live
+region) and keep Crepe 7.22.2's TopBar subscribed across readonly transitions.
+Source and shipped ESM/CJS Crepe entries are patched. Zod uses its supported
+`jitless` setting before constructing shared Admin schemas. No dependency
+upgrade or CSP permission change is involved. Revalidate both package patches
+against upstream changes on dependency upgrades; remove them when upstream
+provides equivalent behavior. See [Tasks 3–4 evidence](../operations/v0.2.1-authoring.md#tasks-34-local-evidence-2026-10-11).
 
 Before choosing a fix, reproduce recovery/pending locks and editor remounts
 under the built Worker's enforced policy. Capture `securitypolicyviolation`
@@ -379,11 +389,11 @@ interactions and dynamic styles. No style exception is introduced.
 Task 9 exercises protected list/detail HTML, read-only code blocks, client
 navigation/remounts, and lifecycle controls with the actual local production
 Worker at desktop and mobile sizes. Admin omits the favicon link because
-`img-src 'none'` rejects it. SvelteKit's generated `#svelte-announcer` still
-attempts its fixed inline hiding style, which `style-src-attr 'none'` blocks;
-the shared stylesheet supplies the equivalent visually hidden presentation.
-The browser check distinguishes this known framework violation by its exact
-style hash and rejects other console errors. No CSP permission is added.
+`img-src 'none'` rejects it. Task 9 originally recorded SvelteKit's fixed
+announcer inline style by its exact hash while the shared stylesheet supplied
+the equivalent hidden presentation. v0.2.1 removes the offending inline style
+and that test exception; browser checks now require no console errors.
+No CSP permission is added.
 Task 10 adds authoring controls and floating editor UI coverage. Deployed Access
 verification remains release acceptance work.
 

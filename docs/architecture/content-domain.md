@@ -105,7 +105,8 @@ mockup are provisional rather than fixed acceptance criteria.
 
 ### v0.2.1 Authoring Layout
 
-Status: `Planned`. Apply the same layout to new-post and existing-post editing.
+Status: `Locally implemented; real-device keyboard and deployed acceptance pending`.
+Apply the same layout to new-post and existing-post editing.
 Keep the existing navigation/action bar and explicit save/publication behavior.
 
 - Title input text is `1rem`, with `0.75rem` inner padding. Hide the visible

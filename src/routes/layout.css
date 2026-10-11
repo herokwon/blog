@@ -264,7 +264,7 @@
 }
 .post-form .post-title {
   display: block;
-  margin: 2rem 0 1rem;
+  margin: 1rem 0;
 }
 .post-form .post-title input {
   display: block;
@@ -272,7 +272,59 @@
   padding: 0.75rem;
   border: 1px solid currentColor;
   border-radius: 0.25rem;
-  font-size: 1.5rem;
+  font-size: 1rem;
+}
+/* Reserve space for the session and wrapped controls. At very short heights
+   the page remains scrollable so the controls never become unreachable. */
+.admin-shell:has(.post-form) {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 32rem;
+  padding-bottom: 1rem;
+}
+.admin-shell:has(.post-form) .admin-session {
+  flex-shrink: 0;
+}
+.post-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.post-form > :not(.admin-editor) {
+  flex-shrink: 0;
+}
+.post-form .admin-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 8rem;
+}
+.post-form .admin-editor .milkdown {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #d8dce2;
+  border-radius: 6px;
+}
+.post-form .milkdown .milkdown-top-bar {
+  flex-shrink: 0;
+  position: relative;
+  border-radius: 6px 6px 0 0;
+}
+.post-form .admin-editor .milkdown .ProseMirror {
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+}
+.post-form .milkdown :focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
 }
 .authoring-feedback {
   display: flex;
