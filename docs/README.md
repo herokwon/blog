@@ -26,6 +26,7 @@ Follow ADRs for rationale and operating documents for procedures.
 - [ADR 0001: Organize project documentation by responsibility](adr/0001-organize-project-documentation.md)
 - [ADR 0002: Use a single Post entity](adr/0002-use-a-single-content-entity.md)
 - [ADR 0003: Use explicit save and publication](adr/0003-use-explicit-save-and-publication.md)
+- [ADR 0004: Isolate the Preview Worker and D1](adr/0004-isolate-preview-worker-and-d1.md)
 - [CI/CD operations](operations/ci-cd.md)
 - [Admin validation](operations/admin-validation.md)
 - [v0.2.0 implementation sequence](operations/v0.2.0-implementation.md)

@@ -31,6 +31,28 @@ Tags, series, and media uploads remain outside this release.
 Local acceptance and remaining release evidence are tracked in
 [v0.2.0 acceptance](../operations/v0.2.0-acceptance.md).
 
+## v0.2.1 Delivery Scope
+
+Status: `Planned`. This patch release improves the existing Admin authoring
+experience and isolates remote write-flow testing from Production data.
+
+- [Isolated Preview and paired candidates](deployment.md#v021-isolated-preview)
+  introduce a separate Worker/D1 and a fixed alias for authenticated write tests.
+- [Authoring layout](content-domain.md#v021-authoring-layout) unifies Toolbar
+  and body, improves keyboard traversal, and constrains body scrolling.
+- [Input recovery](content-domain.md#browser-input-recovery) uses an explicit
+  recovery modal and distinguishes intentional discard from browser exit.
+- [Logout completion](content-domain.md#v021-logout-completion) returns home
+  after actual Access logout.
+- [CSP investigation](security.md#v021-csp-investigation) verifies reported
+  violations before selecting a compatible fix.
+- [Environment awareness](content-domain.md#v021-environment-awareness) labels
+  Local/Preview and explains read-only candidate controls.
+
+Keep the single `posts` entity, explicit saves, revision conflict behavior,
+and existing API payloads. Public article UI/APIs, search, media, autosave,
+and a Markdown source toggle remain outside this release.
+
 ## Technology Stack
 
 | Area                 | Technology                                            | Status              |
@@ -76,29 +98,16 @@ Cloudflare Access will protect `/admin`, `/admin/*`, `/api/admin`, and
 descendant paths are explicit because Access wildcards do not cover the
 parent path. Public paths remain accessible without Admin authentication.
 
-Identity verification is planned in the unimplemented `src/hooks.server.ts`.
+Identity verification is implemented in `src/hooks.server.ts` and its Admin helpers.
 See [Security](security.md) for JWT verification, authorization, and
 the local-only test identity policy.
 
 ## Environments
 
-| Environment | Runtime                   | Database                | Purpose                                               |
-| ----------- | ------------------------- | ----------------------- | ----------------------------------------------------- |
-| Local       | Local development runtime | Wrangler local D1 state | Development, write-flow testing, migration validation |
-| Production  | Deployed Worker version   | Configured remote D1    | Public service                                        |
-
-The configuration defines one Worker and one remote D1 database. CI/CD
-uploads release candidates before deployment; their Version URLs expose
-uploaded versions without creating separate Workers or databases. See
-[Deployment](deployment.md#runtime-and-environments) for terminology and
-candidate environment details.
-
-Candidate versions share production's remote D1 binding. Worker versions
-do not isolate or version database state.
-
-The planned Version URL policy permits read-only validation. The application
-must block mutations; the shared binding does not enforce this. Save,
-publish, withdrawal, and migration behavior are validated locally.
+The current single-Worker configuration and planned Local/Preview/Production
+separation are defined in [Deployment](deployment.md#runtime-and-environments).
+Its [v0.2.1 matrix](deployment.md#v021-isolated-preview) is authoritative for
+storage and writable entry points.
 
 Production migrations run before Worker deployment in the release promotion
 workflow. See [CI/CD operations](../operations/ci-cd.md) for procedures.
@@ -110,7 +119,8 @@ workflow. See [CI/CD operations](../operations/ci-cd.md) for procedures.
    production and Version URLs, or an explicitly enabled local test identity
    with local D1.
 3. After authentication and authorization, Admin mutation requests enforce
-   the Version URL read-only policy and server-side request-origin checks.
+   the configured writable-origin policy and server-side request-origin checks;
+   the v0.2.1 target also permits the isolated Preview fixed alias.
 4. Zod validates parameters and payloads; Post rules determine visibility
    and permitted actions.
 5. Server storage reads or writes D1 through Drizzle.

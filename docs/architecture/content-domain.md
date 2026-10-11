@@ -7,6 +7,10 @@ protected Admin list/trash/detail pages and new/edit authoring are implemented.
 Task 11 [acceptance evidence](../operations/v0.2.0-acceptance.md) separates local
 verification from incomplete physical-device and deployed checks. The schema contains only `posts`.
 
+The v0.2.1 authoring layout, recovery modal, explicit-discard handling, and
+logout completion below are `Planned`. Their acceptance does not establish
+implementation or deployed verification.
+
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
 
@@ -97,6 +101,46 @@ them. Final colors, typography sizes, borders, and exact spacing remain
 adjustable during implementation. Preserve the agreed organization and
 clear separation between top controls and content; numerical gaps in the
 mockup are provisional rather than fixed acceptance criteria.
+
+### v0.2.1 Authoring Layout
+
+Status: `Planned`. Apply the same layout to new-post and existing-post editing.
+Keep the existing navigation/action bar and explicit save/publication behavior.
+
+- Title input text is `1rem`, with `0.75rem` inner padding. Hide the visible
+  `제목` label while retaining that accessible name; use `제목` as the placeholder.
+- Keyboard order is title, fixed Toolbar controls in visual order, then body.
+  Support reverse traversal with Shift+Tab and keyboard activation of controls,
+  including their menus. Do not require pointer interaction to enter the body.
+- Toolbar and body share one border and corner treatment, with an internal
+  divider. Keep Toolbar visible while the body scrolls.
+- The editor fills the viewport space remaining below session controls,
+  the navigation/action bar, and title, leaving visible bottom spacing.
+  Long content scrolls inside the body instead of growing the page. Account
+  for wrapping controls, viewport resizing, and the mobile keyboard; short
+  viewports must still permit access to all controls.
+- Body inner padding is `0.75rem`, matching the title. This applies to the
+  editor container, not Markdown nesting or code indentation.
+- Pending/recovery states must not collapse or remove the body region.
+  After recovery selection, restore the visible editor and usable focus.
+
+Verify keyboard and layout behavior on both authoring routes, desktop and
+mobile widths, short and long content, and viewport height changes.
+
+### v0.2.1 Environment Awareness
+
+Status: `Planned`. The shared Admin session header displays a text badge
+`Local` or `Preview` in those environments; Production retains its existing
+presentation. Derive the label from explicit server configuration, not URL
+substring guesses. Do not expose database IDs, Access settings, or secrets.
+
+On read-only Version URLs, show `읽기 전용 환경입니다.` and disable all
+mutation controls, including save, publish, archive, delete, and restore.
+For Preview, provide `Preview에서 작성하기` linking to the configured fixed
+alias's `/admin/posts` page. Production candidates show the explanation without
+a Preview shortcut. Reads and navigation remain available; server enforcement
+still rejects direct mutation requests. Share the server's exact-Origin
+decision rather than maintaining a separate client permission rule.
 
 ### Admin Detail
 
@@ -251,10 +295,34 @@ succeeded. Do not persist creation-request keys or payload snapshots, and
 do not automatically submit recovered input. If creation was uncertain,
 the author checks the post list before submitting again.
 
-When a recovery copy exists, show `미저장 작성 내용이 있습니다` and offer
-`복구` and `버리기`. Do not apply it automatically. Recovery loads its title
-and body as unsaved editor input; discard removes the recovery copy without
-changing server content. Retain the existing unsaved-navigation confirmation.
+For v0.2.1 (`Planned`), an unexpired recovery copy opens a modal before
+new-post editing begins. Show `미저장 작성 내용이 있습니다`, the previous
+title and last-edit time, and the explanation
+`확인하면 이전 내용을 복구합니다. 취소하거나 창을 닫으면 이전 내용이 삭제됩니다.`
+Use `확인`, `취소`, and an accessible close (X) control. Do not automatically
+restore the copy or submit it to the server.
+
+Only `확인` restores the title and body as unsaved editor input. Cancel,
+Escape, backdrop click, and X all discard the recovery copy and start an
+empty form. A click inside the dialog is not a backdrop dismissal. Route
+every intentional dismissal through one discard action, exactly once.
+Do not interpret component teardown, reload, or tab/browser closure as
+dialog dismissal: those retain the unexpired copy.
+
+While the modal is open, the underlying title/body regions remain present
+but editing, saving, and page controls are unavailable. Confine keyboard
+focus to the modal, provide an accessible name/description, and focus the
+title input after either decision. Storage failure retains the existing
+one-time notice and nonblocking-authoring policy; do not claim that a copy
+was removed when storage could not be changed.
+
+Retain the unsaved-navigation confirmation after editing starts. Confirming
+`저장하지 않은 변경 사항을 버리고 이동할까요?` for an application page
+transition deletes the current new-post recovery copy, cancels queued writes,
+and prevents navigation/teardown handlers from recording it again. Rejecting
+the confirmation preserves input and the copy. Reload, tab/browser closure,
+and abrupt exit retain best-effort recovery; they do not count as an explicit
+application discard. Successful save navigation is not a discard action.
 
 After confirmed new-post creation success, clear the recovery copy corresponding
 to the submitted input. Failed saves or unconfirmed outcomes must not clear
@@ -263,6 +331,22 @@ follow the API lost-response contract. A confirmed creation followed by a
 failed publish is an existing saved draft and does not retain a new-post
 input recovery copy. Existing-post mutation revision preconditions remain
 required independently of browser input recovery.
+
+### v0.2.1 Logout Completion
+
+Status: `Planned`. Leaving dirty authoring for logout follows the same
+explicit-discard confirmation. On the logout page, remove this site's Admin
+recovery copy, complete Cloudflare Access logout, then replace browser
+location with the current environment's home (`/`). Preview returns to the
+Preview home and Production to the Production home. Public home must remain
+reachable without Admin authentication.
+
+A failed cleanup or logout displays an error and a retry action, rather than
+pretending success and navigating home. Local development must not claim
+Access session revocation: the service does not exist on the local origin.
+The execution plan must first validate the browser logout response, cookie
+removal, and subsequent protected access in Preview. Do not assume an
+undocumented redirect parameter or replace logout with navigation alone.
 
 ### Concurrent Changes
 
@@ -485,6 +569,6 @@ outcome, requesting attention only when needed.
 defines creation persistence without a request-record table. Resolve
 remaining client-visible contracts before API/Admin implementation.
 
-Validate write flows locally using local D1 state. Version URLs share
-production D1 and follow the read-only policy in
-[Architecture Overview](overview.md).
+Validate writes locally with local D1 and, after v0.2.1 implementation,
+through the isolated Preview fixed alias. Other candidate Version URLs
+remain read-only; see [Deployment](deployment.md#v021-isolated-preview).
