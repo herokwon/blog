@@ -120,14 +120,7 @@ for (const width of [1280, 390]) {
               .map(e => (e as HTMLStyleElement).nonce),
           ),
       ).toContain(nonce);
-      expect(
-        errors.filter(
-          value =>
-            !value.includes(
-              'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo=',
-            ),
-        ),
-      ).toEqual([]);
+      expect(errors).toEqual([]);
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,

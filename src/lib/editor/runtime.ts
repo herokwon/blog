@@ -94,6 +94,20 @@ export async function mountEditor(options: {
     const button = (event.target as Element).closest<HTMLElement>(
       '.milkdown-top-bar button',
     );
+    if (button && event.key === 'Escape') {
+      const selector = button.closest('.top-bar-heading-selector');
+      if (selector?.querySelector('.top-bar-heading-dropdown')) {
+        event.preventDefault();
+        const trigger = selector.querySelector<HTMLButtonElement>(
+          '.top-bar-heading-button',
+        );
+        trigger?.dispatchEvent(
+          new PointerEvent('pointerdown', { bubbles: true, cancelable: true }),
+        );
+        trigger?.focus();
+      }
+      return;
+    }
     if (button && ['Enter', ' '].includes(event.key)) {
       event.preventDefault();
       if (!locked)

@@ -70,6 +70,38 @@ function view(): EditorView {
   return captured.editors.at(-1)!.editor.action(ctx => ctx.get(editorViewCtx));
 }
 describe('real Crepe integration', () => {
+  it('restores fixed formatting controls after repeated readonly transitions', async () => {
+    const editor = await mount('original');
+    for (let i = 0; i < 2; i++) {
+      editor.setReadonly(true);
+      await vi.waitFor(() =>
+        expect(root.querySelector('.top-bar-inner')).toBeNull(),
+      );
+      editor.setReadonly(false);
+      await expect
+        .element(page.getByRole('button', { name: 'bold', exact: true }))
+        .toBeVisible();
+    }
+    expect(editor.getMarkdown()).toBe('original');
+  });
+  it('dismisses the fixed heading menu with Escape and returns focus to its trigger', async () => {
+    await mount('original');
+    page
+      .getByRole('button', { name: 'Paragraph', exact: true })
+      .element()
+      .focus();
+    await userEvent.keyboard('{Enter}{Tab}');
+    await expect
+      .element(
+        page.getByRole('button', { name: 'Paragraph', exact: true }).last(),
+      )
+      .toBeVisible();
+    await userEvent.keyboard('{Escape}');
+    expect(root.querySelector('.top-bar-heading-dropdown')).toBeNull();
+    expect(document.activeElement).toBe(
+      root.querySelector('.top-bar-heading-button'),
+    );
+  });
   it('ignores a delayed selection transaction after newer typing without losing input', async () => {
     const editor = await mount('original');
     const stale = view().state.tr.setSelection(view().state.selection);

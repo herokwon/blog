@@ -1,0 +1,12 @@
+diff --git a/src/runtime/components/root.svelte b/src/runtime/components/root.svelte
+index e5a97282639f5700a9c85406c32ae9bae89de3cb..33d7847101b95ad897a718f2ec594df0324e4454 100644
+--- a/src/runtime/components/root.svelte
++++ b/src/runtime/components/root.svelte
+@@ -47,7 +47,6 @@
+ 		id="svelte-announcer"
+ 		aria-live="assertive"
+ 		aria-atomic="true"
+-		style="position: absolute; left: 0; top: 0; clip: rect(0 0 0 0); clip-path: inset(50%); overflow: hidden; white-space: nowrap; width: 1px; height: 1px"
+ 	>
+ 		{#if navigated}
+ 			{title}

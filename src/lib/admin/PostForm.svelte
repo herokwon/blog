@@ -292,8 +292,9 @@
     </div>
   {/if}
   <label class="post-title" for="post-title"
-    >제목<input
+    ><span class="sr-only">제목</span><input
       id="post-title"
+      placeholder="제목"
       bind:this={titleInput}
       bind:value={form.input.title}
       disabled={locked}
