@@ -28,6 +28,15 @@ export function generateTriggerConfig(source: string, output: string) {
   }
   const config = { ...parsed.config };
   delete config.assets;
+  for (const environment of Object.values(config.env ?? {})) {
+    if (
+      !environment ||
+      typeof environment !== 'object' ||
+      Array.isArray(environment)
+    )
+      throw new Error('Invalid Worker environment');
+    delete (environment as Record<string, unknown>).assets;
+  }
   writeFileSync(output, JSON.stringify(config, null, 2) + '\n');
 }
 

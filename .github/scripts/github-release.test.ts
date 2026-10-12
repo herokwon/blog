@@ -82,6 +82,13 @@ test('successful preflight allows promotion while hotfix and preview bypass rele
     context.needs['select-release-version'].result = 'skipped';
     context.needs['migrate-d1'].result = 'skipped';
     assert.equal(runInNewContext(jobCondition('migrate-d1'), context), false);
-    assert.equal(runInNewContext(jobCondition('deploy-worker'), context), true);
+    assert.equal(
+      runInNewContext(jobCondition('deploy-worker'), context),
+      strategy === 'hotfix',
+    );
+    assert.equal(
+      runInNewContext(jobCondition('prepare-candidate'), context),
+      strategy === 'upload',
+    );
   }
 });

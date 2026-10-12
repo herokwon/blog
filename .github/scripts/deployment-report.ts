@@ -3,6 +3,19 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type ReportInput = {
+  pair?: {
+    previewWorker: string;
+    productionWorker: string;
+    previewId: string;
+    productionId: string;
+    previewUpload: string;
+    productionUpload: string;
+    previewDeploy: string;
+    previewTriggers: string;
+    previewMigration: string;
+    previewUrl: string;
+    previewOrigin: string;
+  };
   strategy: string;
   environment: string;
   packageVersion: string;
@@ -22,6 +35,8 @@ export type ReportInput = {
 };
 
 export function createDeploymentReport(input: ReportInput) {
+  const pair = input.pair;
+  const pairedOutcome = (value: string) => value || 'unconfirmed';
   const production = input.environment === 'production';
   const versionId = input.versionId || null;
   const uploadedId = input.uploadResult === 'success' ? versionId : null;
@@ -29,16 +44,55 @@ export function createDeploymentReport(input: ReportInput) {
     production && input.deployResult === 'success' ? versionId : null;
   const success =
     input.workerResult === 'success' &&
-    (production
-      ? Boolean(deployedId) && input.triggersResult === 'success'
-      : Boolean(uploadedId));
-  const partial = !success && Boolean(deployedId);
+    (pair
+      ? Boolean(pair.previewId && pair.productionId) &&
+        [
+          pair.previewUpload,
+          pair.productionUpload,
+          pair.previewDeploy,
+          pair.previewTriggers,
+          pair.previewMigration,
+        ].every(value => value === 'success')
+      : production
+        ? Boolean(deployedId) && input.triggersResult === 'success'
+        : Boolean(uploadedId));
+  const partial =
+    !success &&
+    Boolean(
+      deployedId || (pair?.previewId && pair.previewDeploy === 'success'),
+    );
   const outcome = success
     ? '✅ Success'
     : partial
       ? '⚠️ Partial success'
       : '❌ Failed';
   const payload = {
+    ...(pair
+      ? {
+          preview: {
+            worker: pair.previewWorker || null,
+            uploaded_version_id:
+              pair.previewUpload === 'success' ? pair.previewId || null : null,
+            deployed_version_id:
+              pair.previewDeploy === 'success' ? pair.previewId || null : null,
+            upload_result: pairedOutcome(pair.previewUpload),
+            deployment_result: pairedOutcome(pair.previewDeploy),
+            triggers_result: pairedOutcome(pair.previewTriggers),
+            migration_result: pairedOutcome(pair.previewMigration),
+            version_url: pair.previewUrl || null,
+            default_url: pair.previewOrigin || null,
+          },
+          production_candidate: {
+            worker: pair.productionWorker || null,
+            uploaded_version_id:
+              pair.productionUpload === 'success'
+                ? pair.productionId || null
+                : null,
+            upload_result: pairedOutcome(pair.productionUpload),
+            deployed_version_id: null,
+          },
+        }
+      : {}),
     strategy: input.strategy,
     package_version: input.packageVersion || null,
     target_merge_sha: input.mergeSha,
@@ -72,7 +126,26 @@ export function createDeploymentReport(input: ReportInput) {
     ['Package version', input.packageVersion || 'Unavailable'],
     ...commits,
   ];
-  if (versionId) {
+  if (pair) {
+    rows.push(['Preview Worker', pair.previewWorker || 'Unavailable']);
+    if (pair.previewId) rows.push(['Preview Version ID', pair.previewId]);
+    if (pair.productionId)
+      rows.push([
+        'Production candidate Version ID (undeployed)',
+        pair.productionId,
+      ]);
+    rows.push([
+      'Preview state',
+      `Migration: ${pairedOutcome(pair.previewMigration)}; upload: ${pairedOutcome(pair.previewUpload)}; deployment: ${pairedOutcome(pair.previewDeploy)}; triggers: ${pairedOutcome(pair.previewTriggers)}${['failure', 'cancelled', ''].includes(pair.previewMigration) ? '; partial D1 changes may remain' : ''}`,
+    ]);
+    rows.push([
+      'Production candidate',
+      `Upload: ${pairedOutcome(pair.productionUpload)}; undeployed`,
+    ]);
+    if (pair.previewOrigin)
+      rows.push(['Preview default URL', pair.previewOrigin]);
+    if (pair.previewUrl) rows.push(['Preview Version URL', pair.previewUrl]);
+  } else if (versionId) {
     rows.push([
       deployedId
         ? 'Deployed Worker Version ID'
@@ -90,6 +163,9 @@ export function createDeploymentReport(input: ReportInput) {
           ? `${label} cancelled`
           : null;
     const failure =
+      (pair
+        ? 'Paired candidate preparation incomplete; confirmed outcomes are retained above. Inspect Actions.'
+        : null) ??
       (input.strategy === 'promote'
         ? (stopped('Release tag validation', input.tagValidationResult ?? '') ??
           stopped('Exact candidate selection', input.selectionResult) ??
@@ -132,7 +208,7 @@ export function createDeploymentReport(input: ReportInput) {
       auto_merge: false,
       required_contexts: [],
       production_environment: production,
-      transient_environment: !production,
+      transient_environment: !production && !pair,
       payload,
     },
     status: {
@@ -144,7 +220,9 @@ export function createDeploymentReport(input: ReportInput) {
         : success
           ? 'Workflow completed successfully.'
           : 'Workflow failed or was blocked; inspect run details.',
-      ...(input.url ? { environment_url: input.url } : {}),
+      ...(pair?.previewOrigin || input.url
+        ? { environment_url: pair?.previewOrigin || input.url }
+        : {}),
     },
     comment: `### ⚡ Cloudflare Workers deployment\n\n| Field | Result |\n| :--- | :--- |\n${rows.map(([label, value]) => `| ${label} | ${cell(value)} |`).join('\n')}\n`,
   };
@@ -156,6 +234,23 @@ if (
 ) {
   const value = (key: string) => process.env[key] ?? '';
   const report = createDeploymentReport({
+    ...(value('PAIRED_CANDIDATE') === 'true'
+      ? {
+          pair: {
+            previewWorker: value('PREVIEW_WORKER_NAME'),
+            productionWorker: value('PRODUCTION_WORKER_NAME'),
+            previewId: value('PREVIEW_VERSION_ID'),
+            productionId: value('PRODUCTION_VERSION_ID'),
+            previewUpload: value('PREVIEW_UPLOAD_RESULT'),
+            productionUpload: value('PRODUCTION_UPLOAD_RESULT'),
+            previewDeploy: value('PREVIEW_DEPLOY_RESULT'),
+            previewTriggers: value('PREVIEW_TRIGGERS_RESULT'),
+            previewMigration: value('PREVIEW_MIGRATION_RESULT'),
+            previewUrl: value('PREVIEW_VERSION_URL'),
+            previewOrigin: value('PREVIEW_ORIGIN'),
+          },
+        }
+      : {}),
     strategy: value('STRATEGY'),
     environment: value('ENVIRONMENT'),
     packageVersion: value('PACKAGE_VERSION'),
