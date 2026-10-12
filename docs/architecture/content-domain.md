@@ -12,7 +12,7 @@ locally verified; [Tasks 1–2 evidence](../operations/v0.2.1-authoring.md#tasks
 records the checks. Authoring layout and CSP fixes are locally implemented;
 [Tasks 3–4 evidence](../operations/v0.2.1-authoring.md#tasks-34-local-evidence-2026-10-11)
 records their checks. Real-device mobile-keyboard acceptance remains outstanding,
-and logout completion remains `Planned`.
+and logout completion is implemented with scoped Preview acceptance recorded.
 Deployed v0.2.1 acceptance remains outstanding.
 
 The `Post` model represents a blog article. All states use one entity with no
@@ -343,7 +343,7 @@ required independently of browser input recovery.
 
 ### v0.2.1 Logout Completion
 
-Status: `Planned`. Leaving dirty authoring for logout follows the same
+Status: `Implemented; scoped Preview acceptance passed`. See [Task 5 evidence](../operations/v0.2.1-acceptance.md#task-5-implementation-and-preview-acceptance-2026-10-13). Production and combined remote acceptance remain pending. Leaving dirty authoring for logout follows the same
 explicit-discard confirmation. On the logout page, remove this site's Admin
 recovery copy, complete Cloudflare Access logout, then replace browser
 location with the current environment's home (`/`). Preview returns to the
