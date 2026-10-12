@@ -92,3 +92,48 @@ test('types remain stable when the built entrypoint appears and reject stale bin
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('checks_both_environment_binding_contracts', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'worker-types-preview-'));
+  const configPath = join(directory, 'wrangler.jsonc');
+  const outputPath = join(directory, 'worker.d.ts');
+  const config = {
+    name: 'types-test',
+    compatibility_date: '2026-09-25',
+    vars: {
+      APP_ENVIRONMENT: 'production',
+      ADMIN_ORIGIN: 'https://production.example.com',
+      ACCESS_AUDIENCE: 'production-aud',
+    },
+    env: {
+      preview: {
+        vars: {
+          APP_ENVIRONMENT: 'preview',
+          ADMIN_ORIGIN: 'https://preview.example.com',
+          ACCESS_AUDIENCE: 'preview-aud',
+          PREVIEW_ORIGIN: 'https://preview.example.com',
+        },
+        kv_namespaces: [{ binding: 'PREVIEW_ONLY', id: 'test-id' }],
+      },
+    },
+  };
+  try {
+    writeFileSync(configPath, JSON.stringify(config));
+    runTypes('generate', configPath, outputPath);
+    const generated = readFileSync(outputPath, 'utf8');
+    assert.match(generated, /PREVIEW_ONLY/);
+    for (const value of [
+      'production-aud',
+      'preview-aud',
+      'https://production.example.com',
+      'https://preview.example.com',
+    ])
+      assert.ok(generated.includes(value));
+    config.env.preview.kv_namespaces[0].binding = 'PREVIEW_CHANGED';
+    writeFileSync(configPath, JSON.stringify(config));
+    runTypes('check', configPath, outputPath, 1);
+    assert.equal(readFileSync(outputPath, 'utf8'), generated);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

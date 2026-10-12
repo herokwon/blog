@@ -43,7 +43,15 @@ export default defineConfig({
       },
       // Unit tests mock cloudflare:workers; the adapter rewrites that import
       // to a development proxy, which would bypass Vitest's module mocks.
-      adapter: process.env.VITEST ? undefined : adapter(),
+      adapter: process.env.VITEST
+        ? undefined
+        : adapter({
+            platformProxy: {
+              environment: 'preview',
+              persist: true,
+              remoteBindings: false,
+            },
+          }),
     }),
   ],
   test: {

@@ -32,6 +32,91 @@ const input: ReportInput = {
   runUrl: 'https://github.com/herokwon/blog/actions/runs/123',
 };
 
+test('paired candidate success requires both uploads, Preview deploy and triggers', () => {
+  const pair = {
+    previewWorker: 'blog-preview',
+    productionWorker: 'blog',
+    previewId: id,
+    productionId: '28f97339-c287-4872-9bdd-e2135c07ec12',
+    previewUpload: 'success',
+    productionUpload: 'success',
+    previewDeploy: 'success',
+    previewTriggers: 'success',
+    previewMigration: 'success',
+    previewUrl: 'https://version-blog-preview.example.workers.dev',
+    previewOrigin: 'https://blog-preview.example.workers.dev',
+  };
+  const complete = createDeploymentReport({
+    ...input,
+    strategy: 'upload',
+    environment: 'preview',
+    pair,
+  });
+  assert.equal(complete.status.state, 'success');
+  assert.equal(complete.deployment.transient_environment, false);
+  assert.match(complete.comment, /Production candidate.*undeployed/);
+  assert.match(complete.comment, /28f97339/);
+  for (const field of [
+    'previewUpload',
+    'productionUpload',
+    'previewDeploy',
+    'previewTriggers',
+    'previewMigration',
+  ]) {
+    for (const result of ['failure', 'cancelled', 'skipped', '']) {
+      const report = createDeploymentReport({
+        ...input,
+        strategy: 'upload',
+        environment: 'preview',
+        pair: { ...pair, [field]: result },
+      });
+      assert.equal(report.status.state, 'failure', `${field}: ${result}`);
+      assert.equal(report.deployment.payload.deployed_worker_version_id, null);
+      assert.match(report.comment, /Failure summary/);
+    }
+  }
+  for (const field of ['previewId', 'productionId']) {
+    assert.equal(
+      createDeploymentReport({
+        ...input,
+        strategy: 'upload',
+        environment: 'preview',
+        pair: { ...pair, [field]: '' },
+      }).status.state,
+      'failure',
+    );
+  }
+});
+
+test('cancelled pair with absent outcomes reports unconfirmed changes rather than skipped', () => {
+  const report = createDeploymentReport({
+    ...input,
+    strategy: 'upload',
+    environment: 'preview',
+    workerResult: 'cancelled',
+    pair: {
+      previewWorker: 'blog-preview',
+      productionWorker: 'blog',
+      previewId: '',
+      productionId: '',
+      previewUpload: '',
+      productionUpload: '',
+      previewDeploy: '',
+      previewTriggers: '',
+      previewMigration: '',
+      previewUrl: '',
+      previewOrigin: 'https://blog-preview.example.workers.dev',
+    },
+  });
+  assert.match(report.comment, /unconfirmed/);
+  assert.doesNotMatch(report.comment, /Migration: skipped/);
+  assert.match(report.comment, /partial D1 changes may remain/);
+  assert.equal(
+    report.status.environment_url,
+    'https://blog-preview.example.workers.dev',
+  );
+});
+
 test('release tag preflight failure reports blocked production without claiming changes', () => {
   const report = createDeploymentReport({
     ...input,

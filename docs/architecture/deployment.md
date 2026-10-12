@@ -6,7 +6,7 @@ Worker upload, production promotion, version automation, and deployment
 reporting are `Implemented` in repository workflows. Application-enforced
 read-only behavior on candidate Version URLs is implemented in the current
 request-origin guard. v0.2.1 Preview isolation and paired candidate upload
-are `Planned`; existing configuration still defines only the Production Worker.
+are `Locally implemented; merged-pipeline and remote acceptance pending`.
 
 This document records deployment boundaries and release policies.
 [CI/CD operations](../operations/ci-cd.md) covers commands, credentials,
@@ -15,19 +15,22 @@ confirm verified production resources or security policies.
 
 ## Runtime and Environments
 
-[wrangler.jsonc](../../wrangler.jsonc) defines one Worker named `blog`,
-a SvelteKit Worker entrypoint, Workers Static Assets, and a `DB` binding
-to one remote D1 database.
+[wrangler.jsonc](../../wrangler.jsonc) retains Production `blog` at the top level
+and defines `blog-preview` in `env.preview`. Both use the same SvelteKit Worker
+entrypoint and Static Assets, with a `DB` binding to their own D1 database.
 
-| Context               | Purpose                                          | Storage                 |
-| --------------------- | ------------------------------------------------ | ----------------------- |
-| Local                 | Development, write testing, migration validation | Wrangler local D1 state |
-| Candidate Version URL | Validate an uploaded version before promotion    | Shared production D1    |
-| Production            | Serve the deployed application                   | Production D1           |
+| Context                          | Purpose                                          | Storage                 |
+| -------------------------------- | ------------------------------------------------ | ----------------------- |
+| Local                            | Development, write testing, migration validation | Wrangler local D1 state |
+| Preview default URL              | Authenticated remote lifecycle testing           | Preview D1              |
+| Preview Version URL              | Read-only validation of a specific version       | Preview D1              |
+| Production candidate Version URL | Read-only validation before promotion            | Production D1           |
+| Production                       | Serve the deployed application                   | Production D1           |
 
 Version URLs, formerly called Preview URLs, expose versions uploaded
 with `wrangler versions upload`. They create neither separate Workers
-nor database environments. The workflow labels this context `preview`.
+nor database environments. The historical single-Worker workflow labeled
+Production candidates `preview`; the paired workflow records each Worker separately.
 
 Candidates are read-only: the application must reject mutations, including
 direct API requests. Validate writes and migrations locally, following
@@ -35,7 +38,7 @@ direct API requests. Validate writes and migrations locally, following
 
 ### v0.2.1 Isolated Preview
 
-Status: `Planned`. Replace the single shared candidate test environment with
+Status: `Locally implemented; remote acceptance pending`. Replace the single shared candidate test environment with
 a separate Preview Worker and Preview D1. Both Workers run the same application
 and expose one `DB` binding, but each binding targets only its own remote D1.
 Preview has no Production D1 binding. Keep the existing Production Worker and
@@ -101,12 +104,12 @@ without applying production migrations or deploying production triggers.
 
 ### v0.2.1 Paired Candidates
 
-Status: `Planned`. A merged PR into the active versioned release branch runs
+Status: `Locally implemented; merged-pipeline execution pending`. A merged PR into the active versioned release branch runs
 the following candidate flow, including dependency PRs:
 
-1. Build the release merge SHA once using the normal verified build.
-2. Apply pending Preview D1 migrations with an explicit Preview target.
+1. Apply pending Preview D1 migrations with an explicit Preview target.
    Failure stops both candidate uploads; Production D1 is never migrated here.
+2. Build the release merge SHA once using the normal verified build.
 3. Upload that build output to the Preview Worker, deploy its returned Version
    ID at 100% traffic, and apply Preview triggers. Do not select by upload order.
 4. Upload the same build output to the Production Worker as an undeployed

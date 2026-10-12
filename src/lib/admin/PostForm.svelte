@@ -18,6 +18,7 @@
   import RecoveryDialog from './RecoveryDialog.svelte';
 
   let { post }: { post?: AdminPost } = $props();
+  const writable = $derived(page.data.adminContext?.writable ?? true);
   // svelte-ignore state_referenced_locally
   let form = $state(createAuthoringState(post));
   // svelte-ignore state_referenced_locally
@@ -148,6 +149,7 @@
   });
 
   async function submit(intent: 'save' | 'publish' | 'retry') {
+    if (!writable) return;
     if (locked || !supported || !controller) return;
     record();
     message = '';
@@ -242,11 +244,12 @@
     <div class="post-actions">
       {#if !form.base}<button
           type="button"
-          disabled={locked || !supported || !controller}
+          disabled={locked || !supported || !controller || !writable}
           onclick={() => submit('publish')}>발행</button
         >{/if}
-      <button type="submit" disabled={locked || !supported || !controller}
-        >저장</button
+      <button
+        type="submit"
+        disabled={locked || !supported || !controller || !writable}>저장</button
       >
       <a
         href={form.base
@@ -286,7 +289,7 @@
       >
       {#if form.result?.kind === 'unresolved'}<button
           type="button"
-          disabled={locked}
+          disabled={locked || !writable}
           onclick={() => submit('retry')}>원래 요청 다시 시도</button
         >{/if}
     </div>

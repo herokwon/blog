@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.base.ref == 'main' && 'production' || 'preview' }}
+  group: ${{ github.workflow }}-workers
   queue: max
   cancel-in-progress: false
 
@@ -141,6 +141,13 @@ jobs:
           node-version: '26'
           package-manager-cache: false
 
+      - name: Setup candidate selector dependencies
+        uses: ./.github/actions/setup-env
+
+      - name: Resolve Production selection target
+        id: production-target
+        run: node .github/scripts/worker-target.ts production
+
       - name: Select version
         id: candidate
         env:
@@ -148,11 +155,11 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RELEASE_REF: ${{ needs.resolve.outputs.release-ref }}
           RELEASE_HEAD_SHA: ${{ needs.resolve.outputs.release-head-sha }}
+          WORKER_NAME: ${{ steps.production-target.outputs.name }}
         run: |
-          worker_name=$(jq -r '.name' wrangler.jsonc)
           curl -fsSL --retry 3 \
             -H "Authorization: Bearer $CF_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/$worker_name/versions?deployable=true" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/$WORKER_NAME/versions?deployable=true" \
             -o "$RUNNER_TEMP/release-versions.json"
           node .github/scripts/release-candidate.ts "$RELEASE_REF" "$RELEASE_HEAD_SHA" \
             < "$RUNNER_TEMP/release-versions.json"
@@ -191,13 +198,116 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm db:migrate:remote
+        run: pnpm db:migrate:production
+
+  prepare-candidate:
+    name: Prepare paired candidates and deploy Preview
+    needs: resolve
+    if: >-
+      needs.resolve.outputs.strategy == 'upload'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      preview-worker-name: ${{ steps.preview.outputs.name }}
+      production-worker-name: ${{ steps.production.outputs.name }}
+      preview-version-id: ${{ steps.preview-version.outputs.version-id }}
+      production-version-id: ${{ steps.production-version.outputs.version-id }}
+      preview-upload-result: ${{ steps.preview-upload.outcome }}
+      production-upload-result: ${{ steps.production-upload.outcome }}
+      preview-deploy-result: ${{ steps.preview-deploy.outcome }}
+      preview-triggers-result: ${{ steps.preview-triggers.outcome }}
+      preview-migration-result: ${{ steps.migrate.outcome }}
+      preview-url: ${{ steps.preview-urls.outputs.version-url || steps.preview-version.outputs.url }}
+      preview-origin: ${{ steps.preview.outputs.admin-origin }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RELEASE_REF: ${{ needs.resolve.outputs.release-ref }}
+      SOURCE_SHA: ${{ needs.resolve.outputs.commit-sha }}
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.commit-sha }}
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+      - name: Resolve Preview target
+        id: preview
+        run: node .github/scripts/worker-target.ts preview
+      - name: Resolve Production target
+        id: production
+        run: node .github/scripts/worker-target.ts production
+      - name: Reject stale preparation before migration
+        run: |
+          node .github/scripts/preview-preflight.ts
+          current=$(git ls-remote origin "refs/heads/$RELEASE_REF" | cut -f1)
+          [[ "$current" == "$SOURCE_SHA" ]] || { echo '::error::Candidate source is no longer the release head'; exit 1; }
+      - name: Apply pending Preview migrations
+        id: migrate
+        run: pnpm db:migrate:preview
+      - name: Build paired application artifacts once
+        run: pnpm build
+      - name: Upload Preview candidate
+        id: preview-upload
+        uses: cloudflare/wrangler-action@v4
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/preview-upload.ndjson
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --env preview --tag ${{ needs.resolve.outputs.commit-sha }} --message "${{ needs.resolve.outputs.release-ref }} @ ${{ needs.resolve.outputs.commit-sha }}"
+      - name: Read confirmed Preview upload
+        id: preview-version
+        if: always() && steps.preview-upload.outcome == 'success'
+        run: node .github/scripts/worker-output.ts "$RUNNER_TEMP/preview-upload.ndjson"
+      - name: Prepare and validate Preview triggers
+        run: |
+          node .github/scripts/trigger-config.ts
+          pnpm exec wrangler triggers deploy --config wrangler.trigger.json --env preview --dry-run
+      - name: Reject stale deployment
+        run: |
+          node .github/scripts/preview-preflight.ts
+          current=$(git ls-remote origin "refs/heads/$RELEASE_REF" | cut -f1)
+          [[ "$current" == "$SOURCE_SHA" ]] || { echo '::error::Candidate source changed during preparation'; exit 1; }
+      - name: Deploy exact Preview candidate
+        id: preview-deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions deploy ${{ steps.preview-version.outputs.version-id }}@100% --env preview -y
+      - name: Apply Preview triggers
+        id: preview-triggers
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: triggers deploy --config wrangler.trigger.json --env preview
+      - name: Verify Preview default and Version entry points
+        id: preview-urls
+        env:
+          PREVIEW_VERSION_ID: ${{ steps.preview-version.outputs.version-id }}
+          PREVIEW_ORIGIN: ${{ steps.preview.outputs.admin-origin }}
+        run: node .github/scripts/preview-urls.ts
+      - name: Upload undeployed Production candidate from the same build
+        id: production-upload
+        uses: cloudflare/wrangler-action@v4
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/production-upload.ndjson
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --env= --tag ${{ needs.resolve.outputs.commit-sha }} --message "${{ needs.resolve.outputs.release-ref }} @ ${{ needs.resolve.outputs.commit-sha }}"
+      - name: Read confirmed Production upload
+        id: production-version
+        if: always() && steps.production-upload.outcome == 'success'
+        run: node .github/scripts/worker-output.ts "$RUNNER_TEMP/production-upload.ndjson"
 
   deploy-worker:
     name: Deploy to Cloudflare Workers
     needs: [resolve, validate-release-tag, select-release-version, migrate-d1]
     if: >-
-      always() && needs.resolve.result == 'success' &&
+      always() && needs.resolve.result == 'success' && needs.resolve.outputs.strategy != 'upload' &&
       (needs.resolve.outputs.strategy != 'promote' ||
        (needs.validate-release-tag.result == 'success' &&
         needs.select-release-version.result == 'success' && needs.migrate-d1.result == 'success'))
@@ -223,7 +333,7 @@ jobs:
 
       - name: Resolve Worker name
         id: worker
-        run: echo "name=$(jq -r '.name' wrangler.jsonc)" >> "$GITHUB_OUTPUT"
+        run: node .github/scripts/worker-target.ts production
 
       - name: Build Worker
         if: needs.resolve.outputs.strategy != 'promote'
@@ -295,11 +405,11 @@ jobs:
           ENVIRONMENT: ${{ needs.resolve.outputs.environment }}
           PREVIEW_URL: ${{ steps.uploaded.outputs.url }}
           DEPLOYMENT_URL: ${{ steps.deploy-version.outputs.deployment-url }}
+          PRODUCTION_ORIGIN: ${{ steps.worker.outputs.admin-origin }}
         run: |
           if [[ "$ENVIRONMENT" == production ]]; then
-            domain=$(jq -r '(.routes // [])[] | select(.custom_domain == true) | .pattern' wrangler.jsonc | head -n 1)
-            if [[ -n "$domain" ]]; then
-              echo "url=https://$domain" >> "$GITHUB_OUTPUT"
+            if [[ -n "$PRODUCTION_ORIGIN" ]]; then
+              echo "url=$PRODUCTION_ORIGIN" >> "$GITHUB_OUTPUT"
             elif [[ -n "$DEPLOYMENT_URL" ]]; then
               echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
             fi
@@ -316,6 +426,7 @@ jobs:
         select-release-version,
         migrate-d1,
         deploy-worker,
+        prepare-candidate,
       ]
     if: always() && needs.resolve.result == 'success'
     runs-on: ubuntu-latest
@@ -331,7 +442,7 @@ jobs:
       COMMIT_SHA: ${{ needs.resolve.outputs.commit-sha }}
       SOURCE_SHA: ${{ needs.resolve.outputs.source-sha }}
       VERSION_ID: ${{ needs.deploy-worker.outputs.version-id || needs.select-release-version.outputs.version-id }}
-      WORKER_RESULT: ${{ needs.deploy-worker.result }}
+      WORKER_RESULT: ${{ needs.resolve.outputs.strategy == 'upload' && needs.prepare-candidate.result || needs.deploy-worker.result }}
       UPLOAD_RESULT: ${{ needs.deploy-worker.outputs.upload-result }}
       DEPLOY_RESULT: ${{ needs.deploy-worker.outputs.deploy-result }}
       TRIGGERS_RESULT: ${{ needs.deploy-worker.outputs.triggers-result }}
@@ -341,6 +452,18 @@ jobs:
       WORKER_URL: ${{ needs.deploy-worker.outputs.url }}
       PR_URL: ${{ github.event.pull_request.html_url }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      PREVIEW_TRIGGERS_RESULT: ${{ needs.prepare-candidate.outputs.preview-triggers-result }}
+      PRODUCTION_VERSION_ID: ${{ needs.prepare-candidate.outputs.production-version-id }}
+      PAIRED_CANDIDATE: ${{ needs.resolve.outputs.strategy == 'upload' }}
+      PREVIEW_WORKER_NAME: ${{ needs.prepare-candidate.outputs.preview-worker-name }}
+      PRODUCTION_WORKER_NAME: ${{ needs.prepare-candidate.outputs.production-worker-name }}
+      PREVIEW_VERSION_ID: ${{ needs.prepare-candidate.outputs.preview-version-id }}
+      PREVIEW_UPLOAD_RESULT: ${{ needs.prepare-candidate.outputs.preview-upload-result }}
+      PRODUCTION_UPLOAD_RESULT: ${{ needs.prepare-candidate.outputs.production-upload-result }}
+      PREVIEW_DEPLOY_RESULT: ${{ needs.prepare-candidate.outputs.preview-deploy-result }}
+      PREVIEW_MIGRATION_RESULT: ${{ needs.prepare-candidate.outputs.preview-migration-result }}
+      PREVIEW_VERSION_URL: ${{ needs.prepare-candidate.outputs.preview-url }}
+      PREVIEW_ORIGIN: ${{ needs.prepare-candidate.outputs.preview-origin }}
     steps:
       - name: Checkout reporting code
         uses: actions/checkout@v7

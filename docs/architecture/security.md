@@ -135,8 +135,8 @@ actions. Browsers never access D1 directly.
 
 ### Version URLs
 
-Current candidates share Production D1 and reject Admin mutations. The
-v0.2.1 environment policy is `Planned`: only the separate Preview Worker's
+Production candidates retain Production D1 and reject Admin mutations. The
+v0.2.1 environment policy is `Locally implemented; remote acceptance pending`: only the separate Preview Worker's
 default Worker URL permits remote testing writes, with Preview D1 as its sole DB.
 See the [environment matrix](deployment.md#v021-isolated-preview).
 

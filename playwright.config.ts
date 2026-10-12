@@ -11,7 +11,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      'pnpm run build && pnpm exec wrangler deploy --dry-run --outdir .wrangler/admin-api-build && pnpm run preview',
+      'pnpm run build && pnpm exec wrangler deploy --env preview --dry-run --outdir .wrangler/admin-api-build && pnpm run preview',
     url: baseURL,
     reuseExistingServer: false,
   },

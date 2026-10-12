@@ -134,7 +134,7 @@ mobile widths, short and long content, and viewport height changes.
 
 ### v0.2.1 Environment Awareness
 
-Status: `Planned`. The shared Admin session header displays a text badge
+Status: `Locally implemented; remote acceptance pending`. The shared Admin session header displays a text badge
 `Local` or `Preview` in those environments; Production retains its existing
 presentation. Derive the label from explicit server configuration, not URL
 substring guesses. Do not expose database IDs, Access settings, or secrets.

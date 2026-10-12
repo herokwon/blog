@@ -1,5 +1,14 @@
 # Admin validation
 
+## v0.2.1 Environment Verification
+
+Current environment implementation, approved provisioning and remaining remote
+gates are recorded in [v0.2.1 evidence](v0.2.1-acceptance.md). The API fixture
+also simulates Preview/Production Origin and AUD boundaries entirely in-process;
+read-only UI checks preserve local input while disabling server mutations.
+These local simulations do not prove actual Access login or logout completion.
+The v0.2.0 sections below remain historical evidence.
+
 ## Status and Scope
 
 Task 11 local acceptance verification is complete. The criterion-to-test map,
