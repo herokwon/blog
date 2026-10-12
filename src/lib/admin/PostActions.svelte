@@ -1,6 +1,7 @@
 <script lang="ts">
   import { beforeNavigate } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import type { AdminPostListItem, PostCommand } from './contracts';
   import { runMutation } from './mutations';
 
@@ -18,11 +19,12 @@
   const localState = $state({ busy: false, message: '' });
   let action = $derived(actionState ?? localState);
   let menuOpen = $state(false);
+  const writable = $derived(page.data.adminContext?.writable ?? true);
   beforeNavigate(navigation => {
     if (!overflow && action.busy) navigation.cancel();
   });
   async function command(kind: PostCommand) {
-    if (action.busy) return;
+    if (action.busy || !writable) return;
     const warning =
       kind === 'delete'
         ? post.status === 'published'
@@ -73,20 +75,25 @@
       }}>수정</a
     >
     {#if post.status !== 'published'}
-      <button disabled={action.busy} onclick={() => command('publish')}
+      <button
+        disabled={action.busy || !writable}
+        onclick={() => command('publish')}
         >{post.status === 'archived' ? '재발행' : '발행'}</button
       >
     {:else}
-      <button disabled={action.busy} onclick={() => command('archive')}
-        >공개 취소</button
+      <button
+        disabled={action.busy || !writable}
+        onclick={() => command('archive')}>공개 취소</button
       >
     {/if}
-    <button disabled={action.busy} onclick={() => command('delete')}
-      >삭제</button
+    <button
+      disabled={action.busy || !writable}
+      onclick={() => command('delete')}>삭제</button
     >
   {:else}
-    <button disabled={action.busy} onclick={() => command('restore')}
-      >복구</button
+    <button
+      disabled={action.busy || !writable}
+      onclick={() => command('restore')}>복구</button
     >
   {/if}
 {/snippet}

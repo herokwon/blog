@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AdminEnvironment } from './environment';
 import {
   assertAdminMutationAllowed,
+  getAdminContext,
   isAdminPath,
   isLocalAdminEnabled,
 } from './environment';
@@ -32,6 +33,43 @@ function event(url = 'https://blog.example/api/admin/posts', origin?: string) {
 describe('Admin request boundaries', () => {
   beforeEach(() => {
     runtime.dev = false;
+  });
+
+  it('allows only Preview default-origin writes while GET context ignores missing Origin', () => {
+    const origin = 'https://blog-preview.example.workers.dev';
+    const request = event(`${origin}/admin/posts`, origin);
+    Object.assign(worker.env, {
+      APP_ENVIRONMENT: 'preview',
+      ADMIN_ORIGIN: origin,
+      PREVIEW_ORIGIN: origin,
+    });
+    expect(() => assertAdminMutationAllowed(request)).not.toThrow();
+    const getRequest = { ...request, request: new Request(request.url) };
+    expect(getAdminContext(getRequest)).toEqual({
+      environment: 'preview',
+      writable: true,
+      previewAdminUrl: `${origin}/admin/posts`,
+    });
+    expect(() => assertAdminMutationAllowed(getRequest)).toThrow();
+    const candidateRequest = {
+      ...getRequest,
+      url: new URL(
+        'https://version-blog-preview.example.workers.dev/admin/posts',
+      ),
+    };
+    expect(getAdminContext(candidateRequest).writable).toBe(false);
+    expect(() => assertAdminMutationAllowed(candidateRequest)).toThrow();
+  });
+
+  it('reports Local only for an explicitly enabled local identity in dev', () => {
+    const request = event('http://localhost:5173/admin/posts');
+    expect(getAdminContext(request).environment).toBe('production');
+    runtime.dev = true;
+    expect(getAdminContext(request)).toEqual({
+      environment: 'local',
+      writable: true,
+      previewAdminUrl: null,
+    });
   });
 
   it.each([

@@ -4,6 +4,8 @@ import { env } from 'cloudflare:workers';
 import { AdminApiError } from './errors';
 
 export interface AdminEnvironment {
+  APP_ENVIRONMENT?: string;
+  PREVIEW_ORIGIN?: string;
   ADMIN_ORIGIN?: string;
   ACCESS_ISSUER?: string;
   ACCESS_AUDIENCE?: string;
@@ -38,6 +40,39 @@ export function isLocalAdminEnabled(event: RequestEvent): boolean {
   );
 }
 
+export function isAdminMutationAllowed(event: RequestEvent): boolean {
+  const expected = isLocalAdminEnabled(event)
+    ? event.url.origin
+    : adminEnvironment().ADMIN_ORIGIN;
+  return Boolean(expected && event.url.origin === expected);
+}
+
+export function getAdminContext(event: RequestEvent): {
+  environment: 'local' | 'preview' | 'production';
+  writable: boolean;
+  previewAdminUrl: string | null;
+} {
+  const config = adminEnvironment();
+  const environment = isLocalAdminEnabled(event)
+    ? 'local'
+    : config.APP_ENVIRONMENT === 'preview'
+      ? 'preview'
+      : 'production';
+  const previewOrigin = config.PREVIEW_ORIGIN;
+  return {
+    environment,
+    writable: isAdminMutationAllowed(event),
+    previewAdminUrl:
+      environment === 'preview' &&
+      previewOrigin === config.ADMIN_ORIGIN &&
+      /^https:\/\/blog-preview\.[a-z0-9-]+\.workers\.dev$/.test(
+        previewOrigin ?? '',
+      )
+        ? `${previewOrigin}/admin/posts`
+        : null,
+  };
+}
+
 export function assertAdminMutationAllowed(event: RequestEvent): void {
   const expected = isLocalAdminEnabled(event)
     ? event.url.origin
@@ -52,11 +87,10 @@ export function assertAdminMutationAllowed(event: RequestEvent): void {
     /* Missing and malformed origins fail closed. */
   }
 
-  // Only the explicitly configured production origin permits deployed writes.
-  // All other hosts (including Version URLs and workers.dev aliases) are read-only.
+  // Each Worker trusts only its configured default origin. Version URLs are read-only.
   if (
     !expected ||
-    event.url.origin !== expected ||
+    !isAdminMutationAllowed(event) ||
     origin !== expected ||
     !validOrigin
   ) {
