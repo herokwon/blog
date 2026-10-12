@@ -27,11 +27,26 @@ This flow intentionally generates Env/runtime types without entrypoint-derived `
 The [implementation sequence](v0.2.1-environments.md) specifies affected files,
 task dependencies, failure cases, and local/remote acceptance gates.
 
-Status: `Planned`. Implement the
+Status: `Locally implemented; merged-pipeline and remote acceptance pending`. The
 [paired-candidate flow](../architecture/deployment.md#v021-paired-candidates)
-and [isolated Preview policy](../architecture/deployment.md#v021-isolated-preview).
-Current commands below describe the existing single-Worker workflow until
-that implementation is verified.
+and [isolated Preview policy](../architecture/deployment.md#v021-isolated-preview)
+are implemented locally. Candidate preparation migrates Preview, builds once,
+uploads/deploys the exact Preview Version ID and applies its triggers, then
+uploads the Production candidate from the same artifacts without deploying it.
+Both Preview entry points must be available before preparation succeeds.
+
+All Worker operations share one concurrency queue. Before migration and Preview
+deployment, check both the release branch's current HEAD and the live Preview
+release annotation. A lower release version cannot replace an already deployed
+higher release version, even when its old branch still exists. Same-source
+retries may create new IDs; preserve confirmed outcomes and revalidate the
+deployed ID before acceptance. Missing outcomes are unconfirmed, not skipped;
+failed/cancelled/unconfirmed migrations may leave partial D1 changes.
+
+Preview GitHub Deployments are persistent (`transient_environment: false`) and
+their status URL is the default Preview origin. Individual Version URLs remain
+separate recorded evidence, with writes rejected by the application. Historical
+single-Worker reports retain their original payload contract.
 
 Follow Tasks 1–2 for configuration, commands, and type generation; Tasks 3–4
 for paired upload, exact Production selection, and separate structured outcomes;
@@ -43,7 +58,7 @@ preparation does not provision resources or change Production.
 
 ## Production D1 migrations and Worker deployment
 
-Apply and test migrations locally during development. Merging a same-repository `release/v<major>.<minor>.<patch> → main` pull request authorizes production D1 migration and Worker deployment. The `deployment.yml` workflow uses the merged main commit and first validates any existing release tag and confirms that a release Worker version is available. Its `Apply production D1 migrations` job runs `pnpm db:migrate:remote` when `drizzle/*.sql` files exist; otherwise the job succeeds without contacting D1. A failed migration prevents the Worker deployment. Wrangler applies only migrations not yet recorded in production D1.
+Apply and test migrations locally during development. Merging a same-repository `release/v<major>.<minor>.<patch> → main` pull request authorizes production D1 migration and Worker deployment. The `deployment.yml` workflow uses the merged main commit and first validates any existing release tag and confirms that a release Worker version is available. Its `Apply production D1 migrations` job runs `pnpm db:migrate:production` when `drizzle/*.sql` files exist; otherwise the job succeeds without contacting D1. A failed migration prevents the Worker deployment. Wrangler applies only migrations not yet recorded in production D1.
 
 Store `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository Actions secrets. The token needs permissions for D1 migration and Workers version upload, deployment, and trigger changes. No GitHub Environment or Required reviewers are used. Review release migration SQL and compatibility with the running Worker before merging.
 
