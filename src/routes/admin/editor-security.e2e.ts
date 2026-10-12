@@ -254,7 +254,12 @@ for (const width of [1280, 390]) {
       ).toHaveLength(0);
       page.once('dialog', dialog => dialog.accept());
       await page.getByRole('link', { name: '로그아웃', exact: true }).click();
-      await expect(page).toHaveURL(`${localD1.origin}/cdn-cgi/access/logout`);
+      // The production fixture has no Access edge: unconfirmed logout must
+      // remain retryable rather than pretending authentication was revoked.
+      await expect(page).toHaveURL(`${localD1.origin}/admin/logout`);
+      await expect(
+        page.getByRole('button', { name: '다시 시도' }),
+      ).toBeVisible();
       await expect
         .poll(() =>
           page.evaluate(() =>
