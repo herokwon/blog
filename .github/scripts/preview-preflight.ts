@@ -13,7 +13,8 @@ export function assertPreviewReleaseAllowed(
 ) {
   const requestedVersion = /^release\/v(\d+)\.(\d+)\.(\d+)$/.exec(requested);
   if (!requestedVersion) throw new Error('Invalid release branch');
-  if (deployedMessage == null) return; // Secret-only initial Worker has no release annotation.
+  if (deployedMessage == null)
+    throw new Error('Preview release identity is unconfirmed');
   if (typeof deployedMessage !== 'string')
     throw new Error('Invalid deployed annotation');
   const deployed = /^release\/v(\d+)\.(\d+)\.(\d+) @ [0-9a-f]{40}$/.exec(
@@ -40,7 +41,8 @@ if (
   } = process.env;
   if (!token || !account || !release)
     throw new Error('Missing Preview preflight context');
-  assertPreviewReleaseAllowed(release, undefined);
+  if (!/^release\/v(\d+)\.(\d+)\.(\d+)$/.test(release))
+    throw new Error('Invalid release branch');
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/workers/scripts/blog-preview`;
   async function result(path: string) {
     const response = await fetch(endpoint + path, {
@@ -53,8 +55,9 @@ if (
     return record(body.result);
   }
   const deployments = (await result('/deployments')).deployments;
-  if (!Array.isArray(deployments))
+  if (!Array.isArray(deployments) || !deployments.length)
     throw new Error('Invalid Preview deployments response');
+  let traffic = 0;
   if (deployments.length) {
     const versions = record(deployments[0]).versions;
     if (!Array.isArray(versions)) throw new Error('Invalid Preview deployment');
@@ -62,10 +65,15 @@ if (
       const deployed = record(value);
       if (
         typeof deployed.percentage !== 'number' ||
-        typeof deployed.version_id !== 'string'
+        !Number.isFinite(deployed.percentage) ||
+        deployed.percentage < 0 ||
+        deployed.percentage > 100 ||
+        typeof deployed.version_id !== 'string' ||
+        !deployed.version_id
       )
         throw new Error('Invalid Preview traffic assignment');
       if (deployed.percentage <= 0) continue;
+      traffic += deployed.percentage;
       const version = await result(
         `/versions/${encodeURIComponent(deployed.version_id)}`,
       );
@@ -77,4 +85,6 @@ if (
       );
     }
   }
+  if (traffic !== 100)
+    throw new Error('Preview traffic identity is unconfirmed');
 }
