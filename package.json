@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "pnpm types:check && vite build",
-    "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
+    "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --env preview --port 4173",
     "prepare": "svelte-kit sync || echo ''",
     "check": "pnpm types:check && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -25,8 +25,10 @@
     "types:check": "node .github/scripts/worker-types.ts check",
     "gen": "node .github/scripts/worker-types.ts generate && prettier --write worker-configuration.d.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply blog --local",
-    "db:migrate:remote": "wrangler d1 migrations apply blog --remote"
+    "db:migrate:local": "wrangler d1 migrations apply DB --local --env preview",
+    "db:migrate:preview": "wrangler d1 migrations apply DB --remote --env preview",
+    "db:migrate:production": "wrangler d1 migrations apply DB --remote --env=",
+    "db:migrate:remote": "pnpm db:migrate:production"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
