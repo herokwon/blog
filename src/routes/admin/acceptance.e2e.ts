@@ -70,6 +70,12 @@ for (const scope of ['normal', 'trash'] as const) {
     ]);
     await nav.getByRole('link', { name: '다음 페이지' }).click();
     await nav.getByRole('link', { name: '10 페이지', exact: true }).click();
+    await expect(page).toHaveURL(
+      `${localD1.origin}${path}?${filter}page=10&limit=1`,
+    );
+    await expect(
+      nav.getByRole('link', { name: '다음 페이지' }),
+    ).toHaveAttribute('href', `${path}?${filter}page=11&limit=1`);
     await nav.getByRole('link', { name: '다음 페이지' }).click();
     await expect(nav.locator('.page-numbers a')).toHaveText(['11', '12']);
     const group = await nav.locator('.page-numbers').boundingBox();
