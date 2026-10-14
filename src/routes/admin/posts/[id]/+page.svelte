@@ -20,8 +20,8 @@
 <article class="admin-content post-detail">
   <h1>{data.post.title}</h1>
   <dl class="post-metadata">
-    <dt>상태</dt>
-    <dd>
+    <dt class="post-status">상태</dt>
+    <dd class="post-status">
       {statusLabels[data.post.status]}{data.post.deleted_at ? ' · 삭제됨' : ''}
     </dd>
     <dt>작성</dt>

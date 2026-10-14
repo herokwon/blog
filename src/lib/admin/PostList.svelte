@@ -148,8 +148,8 @@
             ><PostActions {post} {refresh} state={actionState} overflow />
           </div>
           <dl>
-            <dt>상태</dt>
-            <dd>{statusLabels[post.status]}</dd>
+            <dt class="post-status">상태</dt>
+            <dd class="post-status">{statusLabels[post.status]}</dd>
             <dt>작성</dt>
             <dd>{displayTime(post.created_at)}</dd>
             <dt>발행</dt>

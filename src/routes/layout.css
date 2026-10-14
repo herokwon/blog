@@ -124,6 +124,7 @@
 }
 .post-table time {
   font-size: 0.75rem;
+  color: #596170;
 }
 .post-actions {
   position: relative;
@@ -213,6 +214,11 @@
 .post-metadata dd,
 .post-cards dd {
   overflow-wrap: anywhere;
+}
+.post-metadata .post-status,
+.post-cards .post-status {
+  color: #20242c;
+  font-weight: 600;
 }
 .post-detail .admin-reading {
   overflow-wrap: anywhere;
@@ -362,6 +368,10 @@
 .recovery-title {
   font-weight: 600;
   white-space: pre-wrap;
+}
+.recovery-meta {
+  opacity: 0.7;
+  font-size: 0.875rem;
 }
 .recovery-actions {
   display: flex;
