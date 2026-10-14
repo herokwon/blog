@@ -7,11 +7,20 @@ const parser = unified().use(remarkParse).use(remarkGfm).use(remarkStringify);
 
 type MarkdownNode = {
   type: string;
+  value?: string;
   url?: string;
   title?: string | null;
   identifier?: string;
   children?: MarkdownNode[];
 };
+
+// Milkdown serializes empty paragraphs using a bare break marker. This is
+// structural compatibility only; attributes and other HTML stay unsupported.
+function isEmptyLineMarker(node: { type: string; value?: string }): boolean {
+  return (
+    node.type === 'html' && /^<br\s*\/?\s*>$/i.test(node.value?.trim() ?? '')
+  );
+}
 
 function referenceDefinitions(tree: MarkdownNode): Map<string, MarkdownNode> {
   const definitions = new Map<string, MarkdownNode>();
@@ -70,6 +79,7 @@ export function readingMarkdown(body: string): string {
   ]);
   // Invalid definitions become plain labels rather than links in Crepe.
   function clean(node: MarkdownNode): MarkdownNode[] {
+    if (isEmptyLineMarker(node)) return [node];
     if (!allowed.has(node.type)) return [];
     if (node.type === 'definition') return [];
     if (node.children) node.children = node.children.flatMap(clean);
@@ -103,13 +113,15 @@ export function inspectMarkdown(body: string): {
   const definitions = referenceDefinitions(tree);
   function visit(node: {
     type: string;
+    value?: string;
     url?: string;
     identifier?: string;
     children?: typeof tree.children;
   }) {
     if (['image', 'imageReference'].includes(node.type))
       reasons.add('Unsupported images');
-    if (node.type === 'html') reasons.add('Unsupported HTML');
+    if (node.type === 'html' && !isEmptyLineMarker(node))
+      reasons.add('Unsupported HTML');
     if (node.type.startsWith('footnote')) reasons.add('Unsupported footnotes');
     const url =
       node.type === 'linkReference'
