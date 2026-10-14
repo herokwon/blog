@@ -3,8 +3,10 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import type { AdminPostListItem, PostCommand } from './contracts';
+  import type { FeedbackTone } from './feedback';
   import { runMutation } from './mutations';
   import { useProcessing } from './processing.svelte';
+  import ResultNotice from './ResultNotice.svelte';
 
   let {
     post,
@@ -15,12 +17,20 @@
     post: AdminPostListItem;
     overflow?: boolean;
     refresh: (publishedId?: string) => Promise<void>;
-    state?: { busy: boolean; message: string; operation?: string };
+    state?: {
+      busy: boolean;
+      message: string;
+      operation?: string;
+      tone?: FeedbackTone;
+      details?: string;
+    };
   } = $props();
   const localState = $state({
     busy: false,
     message: '',
     operation: '처리 중…',
+    tone: 'success' as FeedbackTone,
+    details: '',
   });
   let action = $derived(actionState ?? localState);
   let menuOpen = $state(false);
@@ -57,6 +67,7 @@
     }[kind];
     action.busy = true;
     action.message = '';
+    action.details = '';
     menuOpen = false;
     const title = post.title;
     try {
@@ -70,16 +81,34 @@
           : result.kind === 'observed'
             ? ''
             : result.kind === 'conflict'
-              ? '다른 화면에서 변경된 글입니다. 최신 상태를 확인하고 다시 선택하세요.'
+              ? '다른 화면에서 변경된 글입니다.'
               : result.kind === 'rejected'
-                ? `변경하지 못했습니다. ${result.error.message}`
-                : '변경 결과를 확인할 수 없습니다. 최신 상태를 확인한 뒤 다시 선택하세요.';
+                ? '변경하지 못했습니다.'
+                : '변경 결과를 확인할 수 없습니다.';
+      action.details =
+        result.kind === 'conflict'
+          ? '최신 상태를 확인하세요.'
+          : result.kind === 'rejected'
+            ? result.error.message
+            : result.kind === 'unresolved'
+              ? '최신 상태에서 변경 여부를 확인하세요.'
+              : '';
       action.message = message ? `${title}: ${message}` : '';
+      action.tone =
+        result.kind === 'confirmed'
+          ? 'success'
+          : result.kind === 'conflict'
+            ? 'conflict'
+            : result.kind === 'rejected'
+              ? 'error'
+              : 'uncertain';
       await refresh(
         result.kind === 'confirmed' && kind === 'publish' ? post.id : undefined,
       );
     } catch {
-      action.message = `${title}: 최신 상태를 불러오지 못했습니다. 페이지를 새로고침해 확인하세요.`;
+      action.tone = 'uncertain';
+      action.message = `${title}: 최신 상태를 불러오지 못했습니다.`;
+      action.details = '페이지를 새로고침해 변경 결과를 확인하세요.';
     } finally {
       action.busy = false;
     }
@@ -140,6 +169,10 @@
   {#if !overflow}
     {#if action.busy}<span class="admin-processing" role="status"
         >{action.operation ?? '처리 중…'}</span
-      >{:else if action.message}<span role="status">{action.message}</span>{/if}
+      >{:else if action.message}<ResultNotice
+        tone={action.tone ?? 'uncertain'}
+        message={action.message}
+        details={action.details}
+      />{/if}
   {/if}
 </div>

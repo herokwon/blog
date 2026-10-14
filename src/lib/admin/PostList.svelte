@@ -3,10 +3,12 @@
   import { beforeNavigate, goto, refreshAll } from '$app/navigation';
   import { resolve } from '$app/paths';
   import type { AdminPostPage, PostStatus } from './contracts';
+  import type { FeedbackTone } from './feedback';
   import { pageAfterMutation } from './pagination';
   import Pagination from './Pagination.svelte';
   import PostActions from './PostActions.svelte';
   import { displayTime, statusLabels } from './presentation';
+  import ResultNotice from './ResultNotice.svelte';
 
   let {
     posts,
@@ -18,6 +20,8 @@
     busy: false,
     message: '',
     operation: '처리 중…',
+    tone: 'success' as FeedbackTone,
+    details: '',
   });
   let correction: string | undefined;
   beforeNavigate(navigation => {
@@ -83,9 +87,11 @@
 >
   {#if actionState.busy}<p class="admin-processing" role="status">
       {actionState.operation}
-    </p>{:else if actionState.message}<p role="status">
-      {actionState.message}
-    </p>{/if}
+    </p>{:else if actionState.message}<ResultNotice
+      tone={actionState.tone}
+      message={actionState.message}
+      details={actionState.details}
+    />{/if}
   {#if !trash}
     <nav class="post-filters" aria-label="상태 필터" inert={actionState.busy}>
       {#each filters as filter (filter)}

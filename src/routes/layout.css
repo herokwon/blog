@@ -54,6 +54,54 @@
 .admin-shell a {
   text-decoration: none;
 }
+.admin-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem 0.75rem;
+  line-height: 1.6;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  color: #303744;
+  background: #f3f4f6;
+}
+.feedback-icon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  margin-top: calc((1lh - 1em) / 2);
+}
+.feedback-content {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-feedback .feedback-icon {
+  color: var(--feedback-color);
+}
+.feedback-summary {
+  display: block;
+  font-weight: 600;
+}
+.feedback-details {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: inherit;
+  color: #596170;
+  white-space: pre-line;
+}
+.admin-feedback[data-tone='success'] {
+  --feedback-color: #166534;
+}
+.admin-feedback[data-tone='error'] {
+  --feedback-color: #991b1b;
+}
+.admin-feedback[data-tone='conflict'],
+.admin-feedback[data-tone='warning'] {
+  --feedback-color: #92400e;
+}
+.admin-feedback[data-tone='uncertain'] {
+  --feedback-color: #1e40af;
+}
 .admin-shell h1 {
   font-size: 1.75rem;
   font-weight: 700;

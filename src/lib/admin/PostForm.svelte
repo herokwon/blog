@@ -8,6 +8,7 @@
   import { page } from '$app/state';
   import { createAuthoringState, submitAuthoring } from './authoring';
   import { createPostSchema, type AdminPost } from './contracts';
+  import type { FeedbackTone } from './feedback';
   import { readAdminPost } from './mutations';
   import { useProcessing } from './processing.svelte';
   import {
@@ -17,6 +18,7 @@
     type RecoveryCopy,
   } from './recovery';
   import RecoveryDialog from './RecoveryDialog.svelte';
+  import ResultNotice from './ResultNotice.svelte';
 
   let { post }: { post?: AdminPost } = $props();
   const writable = $derived(page.data.adminContext?.writable ?? true);
@@ -29,6 +31,8 @@
   let recovery = $state<RecoveryCopy | null>(null);
   let storageNotice = $state(false);
   let message = $state('');
+  let messageDetails = $state('');
+  let messageTone = $state<FeedbackTone>('error');
   let loading = $state(false);
   let client = false;
   let recordingDisabled = false;
@@ -161,6 +165,8 @@
     serialize();
     if (intent !== 'retry' && !createPostSchema.safeParse(form.input).success) {
       message = '제목과 본문을 입력하세요.';
+      messageDetails = '';
+      messageTone = 'error';
       return;
     }
     const warning =
@@ -174,6 +180,7 @@
     if (!confirm(warning)) return;
     record();
     message = '';
+    messageDetails = '';
     await submitAuthoring(form, intent, fetch);
     if (form.created) {
       cancelTimers();
@@ -187,15 +194,27 @@
           clearRecovery(store);
       });
     }
-    if (form.result?.kind === 'conflict')
+    if (form.result?.kind === 'conflict') {
       message = '다른 화면에서 글이 변경되었습니다.';
-    else if (form.result?.kind === 'rejected')
-      message = `저장하지 못했습니다: ${form.result.error.message}`;
-    else if (form.result?.kind === 'unresolved')
+    } else if (form.result?.kind === 'rejected') {
+      message = '저장하지 못했습니다.';
+      messageDetails = form.result.error.message;
+    } else if (form.result?.kind === 'unresolved') {
       message =
         form.request?.kind === 'create'
-          ? '생성 결과를 확인할 수 없습니다. 글 목록을 확인한 뒤 다시 시도하세요.'
-          : '저장 결과를 확인할 수 없습니다. 입력을 유지합니다. 원래 요청을 다시 시도하거나 최신 글을 확인하세요.';
+          ? '생성 결과를 확인할 수 없습니다.'
+          : '저장 결과를 확인할 수 없습니다.';
+      messageDetails =
+        form.request?.kind === 'create'
+          ? '글 목록에서 생성 여부를 확인하세요.'
+          : '최신 글에서 저장 여부를 확인하세요.';
+    }
+    messageTone =
+      form.result?.kind === 'conflict'
+        ? 'conflict'
+        : form.result?.kind === 'unresolved'
+          ? 'uncertain'
+          : 'error';
     if (form.destination) {
       permittedDestination = form.destination;
       try {
@@ -204,7 +223,9 @@
             form.destination.slice('/admin/posts'.length),
         );
       } catch {
-        message = '화면을 이동하지 못했습니다. 저장된 글을 확인하세요.';
+        message = '화면을 이동하지 못했습니다.';
+        messageDetails = '저장된 글을 확인하세요.';
+        messageTone = 'uncertain';
       } finally {
         permittedDestination = null;
       }
@@ -213,6 +234,10 @@
       form.result?.kind === 'observed'
     ) {
       bodyChanged = form.input.body !== form.base?.body;
+      if (form.result?.kind === 'confirmed') {
+        message = '저장이 완료되었습니다.';
+        messageTone = 'success';
+      }
     }
   }
   async function reloadLatest() {
@@ -233,8 +258,11 @@
       bodyChanged = false;
       editorKey++;
       message = '';
+      messageDetails = '';
     } catch {
-      message = '최신 내용을 불러오지 못했습니다. 입력을 유지합니다.';
+      message = '최신 내용을 불러오지 못했습니다.';
+      messageDetails = '';
+      messageTone = 'error';
     } finally {
       loading = false;
     }
@@ -276,20 +304,26 @@
           ? '발행 중…'
           : '저장 중…'}
     </p>{/if}
-  {#if storageNotice}<p role="status">
-      브라우저 입력 복구를 사용할 수 없습니다.
-    </p>{/if}
-  {#if page.url.searchParams.get('publication') === 'unconfirmed'}<p
-      role="status"
-    >
-      초안은 저장되었습니다. 발행 결과를 확인할 수 없습니다. 상세 화면을 확인한
-      뒤 다시 시도하세요.
-    </p>{/if}
-  {#if page.url.searchParams.get('publication') === 'failed'}<p role="status">
-      초안은 저장되었습니다. 발행하지 못했습니다. 상세 화면에서 발행을 다시
-      시도하세요.
-    </p>{/if}
-  {#if message}<p role="status">{message}</p>{/if}
+  {#if storageNotice}<ResultNotice
+      tone="warning"
+      message="브라우저 입력 복구를 사용할 수 없습니다."
+    />{/if}
+  {#if page.url.searchParams.get('publication') === 'unconfirmed'}<ResultNotice
+      tone="uncertain"
+      message="발행 결과를 확인할 수 없습니다."
+      details="초안은 저장되었습니다.
+상세 화면에서 발행 여부를 확인하세요."
+    />{/if}
+  {#if page.url.searchParams.get('publication') === 'failed'}<ResultNotice
+      tone="error"
+      message="발행하지 못했습니다."
+      details="초안은 저장되었습니다."
+    />{/if}
+  {#if message}<ResultNotice
+      tone={messageTone}
+      {message}
+      details={messageDetails}
+    />{/if}
   {#if form.result?.kind === 'unresolved' && form.request?.kind === 'create'}
     <a href={resolve('/admin/posts')} target="_blank" rel="noopener noreferrer"
       >글 목록 확인</a
