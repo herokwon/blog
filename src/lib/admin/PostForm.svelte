@@ -245,11 +245,13 @@
     <a href={resolve('/admin/posts')}>목록</a>
     <div class="post-actions">
       {#if !form.base}<button
+          class="action-publish"
           type="button"
           disabled={locked || !supported || !controller || !writable}
           onclick={() => submit('publish')}>발행</button
         >{/if}
       <button
+        class="action-save"
         type="submit"
         disabled={locked || !supported || !controller || !writable}>저장</button
       >

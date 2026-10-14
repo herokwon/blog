@@ -80,6 +80,7 @@
     >
     {#if post.status !== 'published'}
       <button
+        class="action-publish"
         disabled={action.busy || !writable}
         onclick={() => command('publish')}
         >{post.status === 'archived' ? '재발행' : '발행'}</button
@@ -91,11 +92,13 @@
       >
     {/if}
     <button
+      class="action-danger"
       disabled={action.busy || !writable}
       onclick={() => command('delete')}>삭제</button
     >
   {:else}
     <button
+      class="action-primary"
       disabled={action.busy || !writable}
       onclick={() => command('restore')}>복구</button
     >

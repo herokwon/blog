@@ -65,7 +65,11 @@
       삭제됩니다.
     </p>
     <div class="recovery-actions">
-      <button type="button" onclick={() => decide('restore')}>확인</button>
+      <button
+        class="action-primary"
+        type="button"
+        onclick={() => decide('restore')}>확인</button
+      >
       <button type="button" onclick={() => decide('discard')}>취소</button>
     </div>
     <button

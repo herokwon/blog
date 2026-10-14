@@ -163,6 +163,32 @@
 .post-menu button:hover {
   background: #f3f4f6;
 }
+.admin-shell button.action-primary {
+  color: white;
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+.admin-shell button.action-save,
+.admin-shell button.action-publish {
+  color: #1e40af;
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+.admin-shell button.action-danger {
+  color: #b91c1c;
+  background: #fff;
+  border-color: #fca5a5;
+}
+.admin-shell button.action-primary:not(:disabled):hover {
+  background: #1e40af;
+}
+.admin-shell button.action-save:not(:disabled):hover,
+.admin-shell button.action-publish:not(:disabled):hover {
+  background: #dbeafe;
+}
+.admin-shell button.action-danger:not(:disabled):hover {
+  background: #fef2f2;
+}
 .post-actions [role='status'] {
   font-size: 0.875rem;
   flex-basis: 100%;
