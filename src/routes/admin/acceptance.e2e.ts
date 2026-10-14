@@ -2,9 +2,11 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
 
-test.beforeEach(async ({ localD1 }) => {
+test.beforeEach(async ({ localD1, page }) => {
+  acceptMutationConfirmations(page);
   await localD1.db.prepare('DELETE FROM posts').run();
 });
 

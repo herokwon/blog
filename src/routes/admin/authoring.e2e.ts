@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import type { AdminPost } from '#lib/admin/contracts.ts';
+import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
 
 const recoveryKey = 'blog:admin:new-post-recovery:v1';
@@ -20,6 +21,7 @@ async function openRecovery(page: Page, origin: string) {
 }
 
 test.beforeEach(async ({ localD1, page }) => {
+  acceptMutationConfirmations(page);
   await localD1.db.prepare('DELETE FROM posts').run();
   await page.setExtraHTTPHeaders({
     'Cf-Access-Jwt-Assertion': await localD1.token(),

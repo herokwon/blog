@@ -1,9 +1,11 @@
 import { writeFile } from 'node:fs/promises';
 import { expect } from '@playwright/test';
 import type { AdminPost } from '#lib/admin/contracts.ts';
+import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
 
 test.beforeEach(async ({ localD1, page }) => {
+  acceptMutationConfirmations(page);
   await localD1.db.prepare('DELETE FROM posts').run();
   await page.setExtraHTTPHeaders({
     'Cf-Access-Jwt-Assertion': await localD1.token(),

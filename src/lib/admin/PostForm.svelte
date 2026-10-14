@@ -118,7 +118,7 @@
       return;
     }
     if (dirty) {
-      if (!window.confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')) {
+      if (!confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')) {
         navigation.cancel();
         return;
       }
@@ -151,20 +151,22 @@
   async function submit(intent: 'save' | 'publish' | 'retry') {
     if (!writable) return;
     if (locked || !supported || !controller) return;
-    record();
-    message = '';
+    serialize();
     if (intent !== 'retry' && !createPostSchema.safeParse(form.input).success) {
       message = '제목과 본문을 입력하세요.';
       return;
     }
-    if (
-      form.result?.kind === 'unresolved' &&
-      form.request?.kind === 'create' &&
-      !window.confirm(
-        '생성 결과가 불확실합니다. 글 목록을 확인했으며 다시 생성할까요?',
-      )
-    )
-      return;
+    const warning =
+      form.result?.kind === 'unresolved' && form.request?.kind === 'create'
+        ? '생성 결과가 불확실합니다. 글 목록을 확인했으며 다시 생성할까요?'
+        : intent === 'publish'
+          ? '현재 내용을 저장하고 공개할까요?'
+          : intent === 'retry'
+            ? '원래 저장 요청을 다시 시도할까요?'
+            : '현재 내용을 저장할까요?';
+    if (!confirm(warning)) return;
+    record();
+    message = '';
     await submitAuthoring(form, intent, fetch);
     if (form.created) {
       cancelTimers();
@@ -210,7 +212,7 @@
     if (
       locked ||
       !form.base ||
-      !window.confirm('현재 입력을 버리고 최신 내용을 불러올까요?')
+      !confirm('현재 입력을 버리고 최신 내용을 불러올까요?')
     )
       return;
     loading = true;

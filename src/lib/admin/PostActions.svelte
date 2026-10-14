@@ -32,8 +32,12 @@
           : '게시글을 휴지통으로 이동할까요?'
         : kind === 'restore' && post.status === 'published'
           ? '복구하면 게시글이 다시 공개됩니다. 복구할까요?'
-          : undefined;
-    if (warning && !window.confirm(warning)) return;
+          : kind === 'restore'
+            ? '게시글을 복구할까요?'
+            : kind === 'archive'
+              ? '이 게시글의 공개를 취소할까요?'
+              : '이 게시글을 공개할까요?';
+    if (!confirm(warning)) return;
     action.busy = true;
     action.message = '';
     menuOpen = false;
