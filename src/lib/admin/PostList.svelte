@@ -14,7 +14,11 @@
     trash = false,
   }: { posts: AdminPostPage; status?: PostStatus; trash?: boolean } = $props();
   const filters = [undefined, 'draft', 'published', 'archived'] as const;
-  const actionState = $state({ busy: false, message: '' });
+  const actionState = $state({
+    busy: false,
+    message: '',
+    operation: '처리 중…',
+  });
   let correction: string | undefined;
   beforeNavigate(navigation => {
     const destination = navigation.to?.url;
@@ -57,7 +61,7 @@
 <svelte:head><title>{trash ? '휴지통' : '게시글'} · Admin</title></svelte:head>
 <header class="admin-heading">
   <h1>{trash ? '휴지통' : '게시글'}</h1>
-  <div class="heading-actions">
+  <div class="heading-actions" inert={actionState.busy}>
     {#if trash}<a href={resolve('/admin/posts')}>게시글 목록</a>
     {:else}
       <a href={resolve('/admin/posts/new')}>글쓰기</a>
@@ -77,13 +81,13 @@
   class="admin-content"
   aria-label={trash ? '삭제한 게시글' : '게시글 목록'}
 >
-  {#if actionState.busy}<p role="status">
-      처리 중…
+  {#if actionState.busy}<p class="admin-processing" role="status">
+      {actionState.operation}
     </p>{:else if actionState.message}<p role="status">
       {actionState.message}
     </p>{/if}
   {#if !trash}
-    <nav class="post-filters" aria-label="상태 필터">
+    <nav class="post-filters" aria-label="상태 필터" inert={actionState.busy}>
       {#each filters as filter (filter)}
         <a
           href={resolve(`${path}${queryString(filter)}`)}
@@ -161,5 +165,7 @@
       {/each}
     </div>
   {/if}
-  <Pagination current={posts.page} total={posts.totalPages} {trash} />
+  <div inert={actionState.busy}>
+    <Pagination current={posts.page} total={posts.totalPages} {trash} />
+  </div>
 </section>

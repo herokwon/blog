@@ -4,6 +4,7 @@
   import { page } from '$app/state';
   import type { AdminPostListItem, PostCommand } from './contracts';
   import { runMutation } from './mutations';
+  import { useProcessing } from './processing.svelte';
 
   let {
     post,
@@ -14,12 +15,22 @@
     post: AdminPostListItem;
     overflow?: boolean;
     refresh: (publishedId?: string) => Promise<void>;
-    state?: { busy: boolean; message: string };
+    state?: { busy: boolean; message: string; operation?: string };
   } = $props();
-  const localState = $state({ busy: false, message: '' });
+  const localState = $state({
+    busy: false,
+    message: '',
+    operation: '처리 중…',
+  });
   let action = $derived(actionState ?? localState);
   let menuOpen = $state(false);
   const writable = $derived(page.data.adminContext?.writable ?? true);
+  const processing = useProcessing();
+  const processingOwner = Symbol();
+  $effect(() => {
+    processing.update(processingOwner, action.busy);
+    return () => processing.update(processingOwner, false);
+  });
   beforeNavigate(navigation => {
     if (!overflow && action.busy) navigation.cancel();
   });
@@ -38,6 +49,12 @@
               ? '이 게시글의 공개를 취소할까요?'
               : '이 게시글을 공개할까요?';
     if (!confirm(warning)) return;
+    action.operation = {
+      publish: '발행 중…',
+      archive: '공개 취소 중…',
+      delete: '휴지통으로 이동 중…',
+      restore: '복구 중…',
+    }[kind];
     action.busy = true;
     action.message = '';
     menuOpen = false;
@@ -121,7 +138,8 @@
     </div>
   {:else}{@render controls()}{/if}
   {#if !overflow}
-    {#if action.busy}<span role="status">처리 중…</span
+    {#if action.busy}<span class="admin-processing" role="status"
+        >{action.operation ?? '처리 중…'}</span
       >{:else if action.message}<span role="status">{action.message}</span>{/if}
   {/if}
 </div>

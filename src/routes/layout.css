@@ -41,6 +41,16 @@
   padding: 32px 20px 64px;
   color: #20242c;
 }
+.admin-workspace {
+  display: contents;
+}
+.admin-processing {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d8dce2;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #20242c;
+}
 .admin-shell a {
   text-decoration: none;
 }

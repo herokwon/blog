@@ -1,6 +1,46 @@
 import { expect } from '@playwright/test';
 import { test } from '../../../tests/admin/local-d1';
 
+test('pending logout locks Admin controls while its status remains accessible, then failure unlocks retry', async ({
+  page,
+  localD1,
+}) => {
+  await page.setExtraHTTPHeaders({
+    'Cf-Access-Jwt-Assertion': await localD1.token(),
+  });
+  await page.addInitScript(() => {
+    const original = window.fetch;
+    window.fetch = async (input, options) => {
+      if (String(input) === '/cdn-cgi/access/logout') {
+        await new Promise<void>(resolve => {
+          Object.assign(window, { finishLogoutProbe: resolve });
+        });
+        throw new TypeError('Controlled logout failure');
+      }
+      return original(input, options);
+    };
+  });
+  await page.goto(`${localD1.origin}/admin/logout`);
+  await expect(page.locator('.admin-workspace')).toHaveAttribute('inert', '');
+  await expect(page.getByRole('status')).toContainText('로그아웃');
+  expect(
+    await page.locator('.admin-session a').evaluate(link => {
+      (link as HTMLElement).focus();
+      return document.activeElement === link;
+    }),
+  ).toBe(false);
+  await page.evaluate(() =>
+    (
+      window as unknown as { finishLogoutProbe: () => void }
+    ).finishLogoutProbe(),
+  );
+  await expect(page.locator('.admin-workspace')).not.toHaveAttribute(
+    'inert',
+    '',
+  );
+  await expect(page.getByRole('button', { name: '다시 시도' })).toBeFocused();
+});
+
 test('verified logout returns home after both checks', async ({
   page,
   localD1,

@@ -9,6 +9,7 @@
   import { createAuthoringState, submitAuthoring } from './authoring';
   import { createPostSchema, type AdminPost } from './contracts';
   import { readAdminPost } from './mutations';
+  import { useProcessing } from './processing.svelte';
   import {
     clearRecovery,
     readRecovery,
@@ -40,6 +41,12 @@
   let titleInput: HTMLInputElement;
   const supported = $derived(inspectMarkdown(editorSource).supported);
   const locked = $derived(form.pending || loading || recovery !== null);
+  const processing = useProcessing();
+  const processingOwner = Symbol();
+  $effect(() => {
+    processing.update(processingOwner, form.pending || loading);
+    return () => processing.update(processingOwner, false);
+  });
   const dirty = $derived(
     form.base
       ? form.input.title !== form.base.title ||
@@ -262,6 +269,13 @@
       >
     </div>
   </header>
+  {#if form.pending || loading}<p class="admin-processing" role="status">
+      {loading
+        ? '최신 내용 불러오는 중…'
+        : form.request?.kind === 'publish'
+          ? '발행 중…'
+          : '저장 중…'}
+    </p>{/if}
   {#if storageNotice}<p role="status">
       브라우저 입력 복구를 사용할 수 없습니다.
     </p>{/if}
