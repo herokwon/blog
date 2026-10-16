@@ -33,6 +33,8 @@ for (const width of [1280, 390]) {
         const title = page.getByRole('textbox', { name: '제목', exact: true });
         const editor = page.locator('.admin-editor .ProseMirror');
         await expect(editor).toHaveAttribute('contenteditable', 'true');
+        await expect(page.getByRole('banner')).toHaveCount(1);
+        await expect(page.getByRole('main').locator('header')).toHaveCount(0);
         await expect(title).toHaveAttribute('placeholder', '제목');
         expect(
           await title.evaluate(el => ({
@@ -65,6 +67,10 @@ for (const width of [1280, 390]) {
         await page.keyboard.press('Shift+Tab');
         await expect(title).toBeFocused();
         if (route === 'new') await editor.fill(body);
+        await page.screenshot({
+          path: `.wrangler/admin-ui-task3/${route}-${width}.png`,
+          fullPage: true,
+        });
         for (const height of [900, 520, 360]) {
           await page.setViewportSize({ width, height });
           const before = await toolbar.boundingBox();
@@ -89,9 +95,15 @@ for (const width of [1280, 390]) {
           ).toBe(true);
           await expect(title).toBeVisible();
           await expect(
-            page.getByRole('button', { name: '저장', exact: true }),
+            page.getByRole('button', {
+              name: route === 'new' ? '초안 생성' : '저장',
+              exact: true,
+            }),
           ).toBeVisible();
-          const save = page.getByRole('button', { name: '저장', exact: true });
+          const save = page.getByRole('button', {
+            name: route === 'new' ? '초안 생성' : '저장',
+            exact: true,
+          });
           await save.scrollIntoViewIfNeeded();
           const saveBox = await save.boundingBox();
           expect(saveBox!.y + saveBox!.height).toBeLessThanOrEqual(height);

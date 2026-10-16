@@ -42,6 +42,10 @@ for (const width of [1280, 390]) {
         })
       ).json()) as AdminPost;
       await page.goto(`${localD1.origin}/admin/posts/${post.id}/edit`);
+      await expect(page.locator('.admin-editor .ProseMirror')).toHaveAttribute(
+        'contenteditable',
+        'true',
+      );
       await page.getByLabel('제목', { exact: true }).fill('Submitted');
       let loseFirst = true;
       await page.route(`**/api/admin/posts/${post.id}`, async route => {
@@ -160,7 +164,7 @@ for (const width of [1280, 390]) {
         page.getByRole('button', { name: '원래 요청 다시 시도' }),
       ).toHaveCount(0);
       await expect(
-        page.getByText('저장이 완료되었습니다.', { exact: true }),
+        page.getByText('저장되었습니다.', { exact: true }),
       ).toHaveCount(0);
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
@@ -178,17 +182,57 @@ for (const width of [1280, 390]) {
       const editor = page.locator('.admin-editor .ProseMirror');
       await expect(editor).toHaveAttribute('contenteditable', 'true');
       await editor.fill('Draft body');
-      await page.getByRole('button', { name: '저장', exact: true }).click();
-      await expect(page).toHaveURL(/\/admin\/posts\/[^/]+\/edit$/);
+      let release!: () => void;
+      const pending = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      await page.route('**/api/admin/posts', async route => {
+        if (route.request().method() === 'POST') await pending;
+        await route.continue();
+      });
+      await page
+        .getByRole('button', { name: '초안 생성', exact: true })
+        .click();
+      await expect(page.getByRole('status')).toHaveText('초안 생성 중…');
+      await expect(
+        page.getByRole('button', { name: '초안 생성', exact: true }),
+      ).toBeDisabled();
+      await expect(page.getByLabel('제목', { exact: true })).toBeDisabled();
+      release();
+      await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"] .feedback-summary'),
+      ).toHaveText('초안이 생성되었습니다.');
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"]'),
+      ).toHaveCount(1);
+      await page.mouse.move(0, 0);
+      await page.screenshot({
+        path: `.wrangler/admin-ui-task3/draft-${width}.png`,
+        fullPage: true,
+      });
       const id = new URL(page.url()).pathname.split('/')[3];
       const saved = (await (
         await api.get(`/api/admin/posts/${id}`)
       ).json()) as AdminPost;
       expect(saved.status).toBe('draft');
       expect(saved.body).toContain('Draft body');
+      expect(
+        (await (await api.get('/api/admin/posts')).json()).items,
+      ).toHaveLength(1);
+      await page.getByRole('link', { name: '수정', exact: true }).click();
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
       await page.getByLabel('제목', { exact: true }).fill('Title changed');
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${id}`);
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"] .feedback-summary'),
+      ).toHaveText('저장되었습니다.');
+      await page.mouse.move(0, 0);
+      await page.screenshot({
+        path: `.wrangler/admin-ui-task2/saved-${width}.png`,
+        fullPage: true,
+      });
       const updated = (await (
         await api.get(`/api/admin/posts/${id}`)
       ).json()) as AdminPost;
@@ -210,6 +254,9 @@ for (const width of [1280, 390]) {
       await page.locator('.admin-editor .ProseMirror').fill('Publish body');
       await page.getByRole('button', { name: '발행', exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"] .feedback-summary'),
+      ).toHaveText('발행되었습니다.');
       const list = await (await api.get('/api/admin/posts')).json();
       expect(list.items).toHaveLength(1);
       expect(list.items[0].status).toBe('published');
@@ -237,6 +284,16 @@ for (const width of [1280, 390]) {
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Local input',
       );
+      await page
+        .locator('.admin-feedback[data-tone="conflict"]')
+        .getByRole('button', { name: '안내 닫기' })
+        .click();
+      await expect(
+        page.locator('.admin-feedback[data-tone="conflict"]'),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('button', { name: '최신 내용 불러오기' }),
+      ).toBeEnabled();
       const opened = context.waitForEvent('page');
       await page.getByRole('link', { name: '최신 글 확인' }).click();
       const latest = await opened;
@@ -446,8 +503,10 @@ for (const width of [1280, 390]) {
       ).toEqual(recoveryCopy);
       await page.getByLabel('제목', { exact: true }).fill('Still editable');
       await page.locator('.admin-editor .ProseMirror').fill('Can save');
-      await page.getByRole('button', { name: '저장', exact: true }).click();
-      await expect(page).toHaveURL(/\/edit$/);
+      await page
+        .getByRole('button', { name: '초안 생성', exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
     });
     for (const recorded of [false, true]) {
       test(`confirmed application discard cannot return after timers or immediate revisit (recorded: ${recorded})`, async ({
@@ -569,8 +628,10 @@ for (const width of [1280, 390]) {
       await page.goto(`${localD1.origin}/admin/posts/new`);
       await page.getByLabel('제목', { exact: true }).fill('Created once');
       await page.locator('.admin-editor .ProseMirror').fill('Saved body');
-      await page.getByRole('button', { name: '저장', exact: true }).click();
-      await expect(page).toHaveURL(/\/edit$/);
+      await page
+        .getByRole('button', { name: '초안 생성', exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
       await page.getByRole('link', { name: '목록', exact: true }).click();
       await page.getByRole('link', { name: '글쓰기', exact: true }).click();
       await expect(page.getByLabel('제목', { exact: true })).toBeEnabled();
@@ -604,7 +665,9 @@ for (const width of [1280, 390]) {
             })
           : route.continue(),
       );
-      await page.getByRole('button', { name: '저장', exact: true }).click();
+      await page
+        .getByRole('button', { name: '초안 생성', exact: true })
+        .click();
       await expect(page.getByText('저장하지 못했습니다.')).toBeVisible();
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Rejected',
@@ -631,7 +694,9 @@ for (const width of [1280, 390]) {
         attempts++;
         return route.fulfill({ status: 503 });
       });
-      await page.getByRole('button', { name: '저장', exact: true }).click();
+      await page
+        .getByRole('button', { name: '초안 생성', exact: true })
+        .click();
       await expect(
         page.getByText('생성 결과를 확인할 수 없습니다.'),
       ).toBeVisible();
@@ -700,8 +765,10 @@ for (const width of [1280, 390]) {
       page.once('dialog', dialog => dialog.dismiss());
       await page.getByRole('link', { name: '목록', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/new`);
-      await page.getByRole('button', { name: '저장', exact: true }).click();
-      await expect(page).toHaveURL(/\/edit$/);
+      await page
+        .getByRole('button', { name: '초안 생성', exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
     });
     test('unsupported persisted body blocks editing and save; deleted posts cannot be edited', async ({
       page,

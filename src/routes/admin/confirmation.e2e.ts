@@ -8,14 +8,14 @@ test.beforeEach(async ({ page, localD1 }) => {
   });
 });
 
-test('saving cancellation retains input and recovery, then confirmation submits once', async ({
+test('draft creation cancellation retains input and recovery, then confirmation submits once', async ({
   page,
   localD1,
 }) => {
   await page.goto(`${localD1.origin}/admin/posts/new`);
   await expect(page.locator('.ProseMirror')).toBeVisible();
   await expect(
-    page.getByRole('button', { name: '저장', exact: true }),
+    page.getByRole('button', { name: '초안 생성', exact: true }),
   ).toBeEnabled();
   await page.getByLabel('제목', { exact: true }).fill('Confirmation draft');
   await page.locator('.ProseMirror').fill('Body');
@@ -38,10 +38,10 @@ test('saving cancellation retains input and recovery, then confirmation submits 
     localStorage.getItem('blog:admin:new-post-recovery:v1'),
   );
   page.once('dialog', async dialog => {
-    expect(dialog.message()).toBe('현재 내용을 저장할까요?');
+    expect(dialog.message()).toBe('현재 내용으로 초안을 생성할까요?');
     await dialog.dismiss();
   });
-  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await page.getByRole('button', { name: '초안 생성', exact: true }).click();
   await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
     'Confirmation draft',
   );
@@ -56,8 +56,8 @@ test('saving cancellation retains input and recovery, then confirmation submits 
     dialogs++;
     await dialog.accept();
   });
-  await page.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(page).toHaveURL(/\/admin\/posts\/[^/]+\/edit$/);
+  await page.getByRole('button', { name: '초안 생성', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
   expect(writes).toBe(1);
   expect(dialogs).toBe(1);
 });

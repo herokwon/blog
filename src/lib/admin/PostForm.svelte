@@ -8,8 +8,9 @@
   import { page } from '$app/state';
   import { createAuthoringState, submitAuthoring } from './authoring';
   import { createPostSchema, type AdminPost } from './contracts';
-  import type { FeedbackTone } from './feedback';
+  import { successMessage, type FeedbackTone } from './feedback';
   import { readAdminPost } from './mutations';
+  import { useNotices } from './notices.svelte';
   import { useProcessing } from './processing.svelte';
   import {
     clearRecovery,
@@ -33,6 +34,7 @@
   let message = $state('');
   let messageDetails = $state('');
   let messageTone = $state<FeedbackTone>('error');
+  let dismissedPublication = $state<string | null>(null);
   let loading = $state(false);
   let client = false;
   let recordingDisabled = false;
@@ -44,8 +46,10 @@
   let permittedDestination: string | null = null;
   let titleInput: HTMLInputElement;
   const supported = $derived(inspectMarkdown(editorSource).supported);
+  const creating = $derived(!form.base && !form.created);
   const locked = $derived(form.pending || loading || recovery !== null);
   const processing = useProcessing();
+  const notices = useNotices();
   const processingOwner = Symbol();
   $effect(() => {
     processing.update(processingOwner, form.pending || loading);
@@ -176,12 +180,26 @@
           ? '현재 내용을 저장하고 공개할까요?'
           : intent === 'retry'
             ? '원래 저장 요청을 다시 시도할까요?'
-            : '현재 내용을 저장할까요?';
+            : creating
+              ? '현재 내용으로 초안을 생성할까요?'
+              : '현재 내용을 저장할까요?';
     if (!confirm(warning)) return;
     record();
     message = '';
     messageDetails = '';
+    notices.dismiss();
+    const wasNew = !form.base && !form.created;
+    const wasArchived = form.base?.status === 'archived';
     await submitAuthoring(form, intent, fetch);
+    const completion = () =>
+      successMessage(
+        form.request?.kind === 'publish'
+          ? 'publish'
+          : wasNew
+            ? 'create'
+            : 'save',
+        wasArchived,
+      );
     if (form.created) {
       cancelTimers();
       storage(store => {
@@ -222,6 +240,7 @@
           resolve('/admin/posts') +
             form.destination.slice('/admin/posts'.length),
         );
+        if (form.result?.kind === 'confirmed') notices.show(completion());
       } catch {
         message = '화면을 이동하지 못했습니다.';
         messageDetails = '저장된 글을 확인하세요.';
@@ -235,8 +254,7 @@
     ) {
       bodyChanged = form.input.body !== form.base?.body;
       if (form.result?.kind === 'confirmed' && !dirty) {
-        message = '저장이 완료되었습니다.';
-        messageTone = 'success';
+        notices.show(completion());
       }
     }
   }
@@ -270,59 +288,67 @@
 </script>
 
 <form
-  class="post-form"
+  class="post-form flex min-h-0 flex-1 flex-col"
   onsubmit={event => {
     event.preventDefault();
     void submit('save');
   }}
 >
-  <header class="admin-heading">
-    <a href={resolve('/admin/posts')}>목록</a>
-    <div class="post-actions">
+  <div class="admin-heading">
+    <a class="admin-button" href={resolve('/admin/posts')}>목록</a>
+    <div class="post-actions flex flex-wrap items-center gap-3">
       {#if !form.base}<button
-          class="action-publish"
+          class="admin-button action-publish"
           type="button"
           disabled={locked || !supported || !controller || !writable}
           onclick={() => submit('publish')}>발행</button
         >{/if}
       <button
-        class="action-save"
+        class="admin-button action-save"
         type="submit"
-        disabled={locked || !supported || !controller || !writable}>저장</button
+        disabled={locked || !supported || !controller || !writable}
+        >{creating ? '초안 생성' : '저장'}</button
       >
       <a
+        class="admin-button"
         href={form.base
           ? resolve('/admin/posts/[id]', { id: form.base.id })
           : resolve('/admin/posts')}>취소</a
       >
     </div>
-  </header>
+  </div>
   {#if form.pending || loading}<p class="admin-processing" role="status">
       {loading
         ? '최신 내용 불러오는 중…'
         : form.request?.kind === 'publish'
           ? '발행 중…'
-          : '저장 중…'}
+          : creating
+            ? '초안 생성 중…'
+            : '저장 중…'}
     </p>{/if}
   {#if storageNotice}<ResultNotice
       tone="warning"
       message="브라우저 입력 복구를 사용할 수 없습니다."
+      ondismiss={() => (storageNotice = false)}
     />{/if}
-  {#if page.url.searchParams.get('publication') === 'unconfirmed'}<ResultNotice
+  {#if page.url.searchParams.get('publication') === 'unconfirmed' && dismissedPublication !== 'unconfirmed'}<ResultNotice
       tone="uncertain"
       message="발행 결과를 확인할 수 없습니다."
       details="초안은 저장되었습니다.
 상세 화면에서 발행 여부를 확인하세요."
+      ondismiss={() => (dismissedPublication = 'unconfirmed')}
     />{/if}
-  {#if page.url.searchParams.get('publication') === 'failed'}<ResultNotice
+  {#if page.url.searchParams.get('publication') === 'failed' && dismissedPublication !== 'failed'}<ResultNotice
       tone="error"
       message="발행하지 못했습니다."
       details="초안은 저장되었습니다."
+      ondismiss={() => (dismissedPublication = 'failed')}
     />{/if}
   {#if message}<ResultNotice
       tone={messageTone}
       {message}
       details={messageDetails}
+      ondismiss={() => (message = '')}
     />{/if}
   {#if form.result?.kind === 'unresolved' && form.request?.kind === 'create'}
     <a href={resolve('/admin/posts')} target="_blank" rel="noopener noreferrer"
@@ -330,24 +356,30 @@
     >
   {/if}
   {#if form.base && ['conflict', 'unresolved'].includes(form.result?.kind ?? '')}
-    <div class="authoring-feedback">
+    <div class="authoring-feedback my-4 flex flex-wrap items-center gap-3">
       <a
+        class="admin-button"
         href={resolve('/admin/posts/[id]', { id: form.base.id })}
         target="_blank"
         rel="noopener noreferrer">최신 글 확인</a
       >
-      <button type="button" disabled={locked} onclick={reloadLatest}
-        >최신 내용 불러오기</button
+      <button
+        class="admin-button"
+        type="button"
+        disabled={locked}
+        onclick={reloadLatest}>최신 내용 불러오기</button
       >
       {#if form.result?.kind === 'unresolved'}<button
+          class="admin-button"
           type="button"
           disabled={locked || !writable}
           onclick={() => submit('retry')}>원래 요청 다시 시도</button
         >{/if}
     </div>
   {/if}
-  <label class="post-title" for="post-title"
+  <label class="post-title my-4 block" for="post-title"
     ><span class="sr-only">제목</span><input
+      class="block w-full rounded border border-current p-3 text-base leading-[inherit]"
       id="post-title"
       placeholder="제목"
       bind:this={titleInput}

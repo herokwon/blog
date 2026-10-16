@@ -4,7 +4,6 @@
 @import '@milkdown/crepe/theme/common/style.css' layer(components);
 @import '@milkdown/crepe/theme/frame.css' layer(components);
 
-/* Preserve the approved palette while sharing it across utilities and components. */
 @theme {
   --color-admin-ink: #20242c;
   --color-admin-feedback: #303744;
@@ -20,47 +19,74 @@
   --color-admin-warning: #92400e;
   --color-admin-info: #1e40af;
   --color-admin-primary: #1d4ed8;
-  --color-admin-action: #eff6ff;
-  --color-admin-action-border: #93c5fd;
   --color-admin-danger: #b91c1c;
   --color-admin-danger-border: #fca5a5;
+  --color-admin-action-border: #93c5fd;
   --color-admin-action-hover: #dbeafe;
   --color-admin-danger-hover: #fef2f2;
   --color-admin-focus: #2563eb;
 }
 
 @layer base {
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
   /* Kit's patched announcer needs static hiding under the strict style CSP. */
   #svelte-announcer {
     @apply absolute top-0 left-0 h-px w-px overflow-hidden whitespace-nowrap [clip-path:inset(50%)] [clip:rect(0_0_0_0)];
   }
 }
 
-/* Crepe imports share this layer so these later application overrides win. */
 @layer components {
-  .milkdown {
-    --crepe-font-default: system-ui, sans-serif;
-    --crepe-font-title: system-ui, sans-serif;
-    --crepe-font-code: ui-monospace, monospace;
+  .admin-title {
+    @apply text-[1.75rem] leading-[inherit] font-bold wrap-anywhere;
   }
-  .admin-reading .milkdown {
-    @apply p-0;
+  .admin-heading {
+    @apply flex flex-wrap items-start justify-between gap-4 border-b border-admin-border pb-6 md:flex-nowrap md:items-center;
   }
-
-  .admin-shell {
-    @apply mx-auto my-0 max-w-5xl px-5 pt-8 pb-16 text-admin-ink;
+  .admin-button {
+    @apply inline-flex cursor-pointer items-center justify-center rounded-md border border-admin-border bg-white px-3 py-2 no-underline;
+  }
+  .admin-button:disabled,
+  .admin-page [aria-disabled='true'] {
+    @apply cursor-default opacity-50;
+  }
+  .admin-page :focus-visible {
+    @apply outline-2 outline-offset-3 outline-admin-focus outline-solid;
+  }
+  .admin-button.action-primary {
+    @apply border-admin-primary bg-admin-primary text-white;
+  }
+  .admin-button.action-save,
+  .admin-button.action-publish {
+    @apply border-admin-action-border text-admin-info;
+  }
+  .admin-button.action-danger {
+    @apply border-admin-danger-border text-admin-danger;
+  }
+  .post-menu .admin-button {
+    @apply justify-start border-0 text-left;
+  }
+  @media (hover: hover) {
+    .admin-button:not(:disabled):not([aria-disabled='true']):not(
+        [inert] *
+      ):hover {
+      @apply bg-admin-surface;
+    }
+    .admin-button.action-primary:not(:disabled):not([inert] *):hover {
+      @apply bg-admin-info;
+    }
+    .admin-button.action-save:not(:disabled):not([inert] *):hover,
+    .admin-button.action-publish:not(:disabled):not([inert] *):hover {
+      @apply bg-admin-action-hover;
+    }
+    .admin-button.action-danger:not(:disabled):not([inert] *):hover {
+      @apply bg-admin-danger-hover;
+    }
   }
   .admin-processing {
     @apply rounded-md border border-admin-border bg-admin-surface px-4 py-3 text-admin-ink;
-  }
-  .admin-shell a {
-    @apply no-underline;
-  }
-  .admin-feedback {
-    @apply flex items-start gap-x-3 gap-y-1 rounded-md bg-admin-surface px-4 py-3 [line-height:1.6] text-admin-feedback;
-  }
-  .feedback-icon {
-    @apply [margin-top:calc((1lh_-_1em)_/_2)] size-[1em] shrink-0;
   }
   .admin-feedback .feedback-icon {
     @apply text-(--feedback-color);
@@ -78,188 +104,19 @@
   .admin-feedback[data-tone='uncertain'] {
     --feedback-color: var(--color-admin-info);
   }
-  .admin-shell h1 {
-    @apply text-[1.75rem] leading-[inherit] font-bold wrap-anywhere;
+
+  /* Crepe generates these elements, so integration rules remain in CSS. */
+  .milkdown {
+    --crepe-font-default: system-ui, sans-serif;
+    --crepe-font-title: system-ui, sans-serif;
+    --crepe-font-code: ui-monospace, monospace;
   }
-  .admin-heading {
-    @apply flex items-center justify-between gap-4 border-b border-admin-border pb-6;
-  }
-  .heading-actions,
-  .post-actions {
-    @apply flex flex-wrap items-center gap-3;
-  }
-  .admin-shell button,
-  .heading-actions a,
-  .admin-heading > a,
-  .post-actions > a {
-    @apply cursor-pointer rounded-md border border-admin-border bg-white px-3 py-2;
-  }
-  .admin-shell button:disabled,
-  .admin-shell [aria-disabled='true'] {
-    @apply cursor-default opacity-50;
-  }
-  .admin-shell :focus-visible {
-    @apply outline-2 outline-offset-3 outline-admin-focus outline-solid;
-  }
-  .trash-link svg {
-    @apply h-5 w-5 fill-none stroke-current stroke-[1.5];
-  }
-  .admin-content {
-    @apply pt-6;
-  }
-  .post-filters {
-    @apply mb-5 flex gap-2;
-  }
-  .post-filters a {
-    @apply rounded-md border border-transparent px-2.5 py-1.5;
-  }
-  .post-filters a[aria-current] {
-    @apply border-admin-filter font-bold;
-  }
-  .post-table {
-    @apply w-full border-collapse text-left text-sm leading-[inherit];
-  }
-  .post-table th,
-  .post-table td {
-    @apply border-b border-admin-divider px-2 py-3;
-  }
-  .post-table td:first-child {
-    @apply w-[30%] wrap-anywhere;
-  }
-  .post-table time {
-    @apply text-xs leading-[inherit] text-admin-muted;
-  }
-  .post-actions {
-    @apply relative;
-  }
-  .post-menu-container {
-    @apply relative;
-  }
-  .admin-shell .post-menu-trigger {
-    @apply cursor-pointer border-0 bg-transparent p-2 text-[1.4rem] leading-none;
-  }
-  .post-menu {
-    @apply absolute top-full right-0 z-10 grid min-w-30 rounded-md border border-admin-border bg-white p-1.5 shadow-[0_4px_12px_#0002];
-  }
-  .post-menu a,
-  .post-menu button {
-    @apply border-0 px-3 py-2 text-left;
-  }
-  .post-menu a:hover,
-  .post-menu button:hover {
-    @apply bg-admin-surface;
-  }
-  .admin-shell button.action-primary {
-    @apply border-admin-primary bg-admin-primary text-white;
-  }
-  .admin-shell button.action-save,
-  .admin-shell button.action-publish {
-    @apply border-admin-action-border bg-admin-action text-admin-info;
-  }
-  .admin-shell button.action-danger {
-    @apply border-admin-danger-border bg-white text-admin-danger;
-  }
-  .admin-shell button.action-primary:not(:disabled):hover {
-    @apply bg-admin-info;
-  }
-  .admin-shell button.action-save:not(:disabled):hover,
-  .admin-shell button.action-publish:not(:disabled):hover {
-    @apply bg-admin-action-hover;
-  }
-  .admin-shell button.action-danger:not(:disabled):hover {
-    @apply bg-admin-danger-hover;
-  }
-  .post-actions [role='status'] {
-    @apply max-w-136 basis-full text-sm leading-[inherit];
-  }
-  .post-cards {
-    @apply hidden;
-  }
-  .admin-empty {
-    @apply px-0 py-12 text-center text-admin-muted;
-  }
-  .admin-pagination {
-    @apply mt-6 flex items-center justify-center gap-2;
-  }
-  .admin-pagination a,
-  .admin-pagination button {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded-md border-0 p-0;
-  }
-  .page-numbers {
-    @apply flex w-45;
-  }
-  .admin-pagination [aria-current] {
-    @apply bg-admin-selected font-bold;
-  }
-  .post-metadata,
-  .post-cards dl {
-    @apply mx-0 mt-4 mb-8 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm leading-[inherit] text-admin-muted;
-  }
-  .post-metadata dd,
-  .post-cards dd {
-    @apply wrap-anywhere;
-  }
-  .post-metadata .post-status,
-  .post-cards .post-status {
-    @apply font-semibold text-admin-ink;
-  }
-  .post-detail .admin-reading {
-    @apply wrap-anywhere;
-  }
-  @media (max-width: 767px) {
-    .admin-editor .milkdown .ProseMirror {
-      @apply px-4 py-6;
-    }
-    .admin-shell {
-      @apply px-4 pt-5 pb-12;
-    }
-    .admin-heading {
-      @apply flex-wrap items-start;
-    }
-    .post-table {
-      @apply hidden;
-    }
-    .post-cards {
-      @apply grid gap-4;
-    }
-    .post-cards article {
-      @apply min-w-0 rounded-lg border border-admin-card p-4;
-    }
-    .card-heading {
-      @apply flex items-start justify-between gap-3;
-    }
-    .card-heading > a {
-      @apply min-w-0 font-semibold wrap-anywhere;
-    }
-    .post-cards dl {
-      @apply mb-0 text-xs leading-[inherit];
-    }
-  }
-  .admin-session {
-    @apply mb-4 flex justify-end;
-  }
-  .post-form .post-title {
-    @apply mx-0 my-4 block;
-  }
-  .post-form .post-title input {
-    @apply block w-full rounded border border-current p-3 text-base leading-[inherit];
-  }
-  /* Reserve space for the session and wrapped controls. At very short heights
-   the page remains scrollable so the controls never become unreachable. */
-  .admin-shell:has(.post-form) {
-    @apply flex h-dvh min-h-128 flex-col pb-4;
-  }
-  .admin-shell:has(.post-form) .admin-session {
-    @apply shrink-0;
-  }
-  .post-form {
-    @apply flex min-h-0 flex-1 flex-col;
+  .admin-reading .milkdown,
+  .admin-reading .milkdown .ProseMirror {
+    @apply p-0;
   }
   .post-form > :not(.admin-editor) {
     @apply shrink-0;
-  }
-  .post-form .admin-editor {
-    @apply flex min-h-32 flex-1 flex-col;
   }
   .post-form .admin-editor .milkdown {
     @apply flex min-h-0 flex-1 flex-col rounded-md border border-admin-border;
@@ -272,29 +129,5 @@
   }
   .post-form .milkdown :focus-visible {
     @apply outline-2 -outline-offset-2 outline-admin-focus outline-solid;
-  }
-  .authoring-feedback {
-    @apply mx-0 my-4 flex flex-wrap items-center gap-3;
-  }
-  .recovery-dialog {
-    @apply m-auto [max-height:calc(100%_-_2rem)] [width:min(32rem,_calc(100%_-_2rem))] overflow-auto rounded-lg border border-admin-border bg-white p-0 text-admin-ink;
-  }
-  .recovery-dialog::backdrop {
-    @apply bg-black/40;
-  }
-  .recovery-panel {
-    @apply relative grid gap-4 p-6 wrap-anywhere;
-  }
-  .recovery-panel h2 {
-    @apply pr-8 text-xl leading-[inherit] font-bold;
-  }
-  .recovery-title {
-    @apply font-semibold whitespace-pre-wrap;
-  }
-  .recovery-actions {
-    @apply flex justify-end gap-3;
-  }
-  .admin-shell .recovery-close {
-    @apply absolute top-2 right-2 border-0 text-2xl leading-none;
   }
 }

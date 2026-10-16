@@ -38,4 +38,4 @@
 
 {#if error}<pre
     class="editor-source wrap-anywhere whitespace-pre-wrap">{initialSource}</pre>{/if}
-<div class="admin-reading" bind:this={root}></div>
+<div class="admin-reading wrap-anywhere" bind:this={root}></div>

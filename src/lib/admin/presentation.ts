@@ -6,6 +6,23 @@ export const statusLabels: Record<PostStatus, string> = {
   archived: '공개 취소',
 };
 
+const koreanTime = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
 export function displayTime(value: string | null): string {
-  return value ? value.replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC') : '—';
+  if (value === null) return '—';
+  const parts = Object.fromEntries(
+    koreanTime
+      .formatToParts(new Date(value))
+      .map(({ type, value }) => [type, value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }

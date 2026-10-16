@@ -633,7 +633,7 @@ test('Preview read-only UI retains input and disables mutations while reads rema
       page.getByRole('textbox', { name: '제목', exact: true }),
     ).toHaveValue('Retained input');
     await expect(
-      page.getByRole('button', { name: '저장', exact: true }),
+      page.getByRole('button', { name: '초안 생성', exact: true }),
     ).toBeDisabled();
     await expect(
       page.getByRole('button', { name: '발행', exact: true }),

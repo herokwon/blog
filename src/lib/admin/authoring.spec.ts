@@ -149,12 +149,12 @@ describe('authoring requests and stage outcomes', () => {
       expected_revision: 3,
     });
   });
-  it('creates a draft once and navigates to its edit page', async () => {
+  it('creates a draft once and navigates to its detail page', async () => {
     const state = createAuthoringState();
     state.input = { title: 'Original', body: post.body };
     const { fetcher, requests } = responses(json(post, 201));
     await submitAuthoring(state, 'save', fetcher);
-    expect(state.destination).toBe(`/admin/posts/${post.id}/edit`);
+    expect(state.destination).toBe(`/admin/posts/${post.id}`);
     expect(state.created?.id).toBe(post.id);
     expect(state.pending).toBe(false);
     expect(requests.map(r => r.url)).toEqual(['/api/admin/posts']);

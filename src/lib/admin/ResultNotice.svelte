@@ -5,7 +5,30 @@
     tone,
     message,
     details = '',
-  }: { tone: FeedbackTone; message: string; details?: string } = $props();
+    ondismiss,
+  }: {
+    tone: FeedbackTone;
+    message: string;
+    details?: string;
+    ondismiss?: () => void;
+  } = $props();
+  let hovered = $state(false);
+  let focused = $state(false);
+  $effect(() => {
+    const currentMessage = message;
+    const dismiss = ondismiss;
+    if (tone !== 'success' || !dismiss || !currentMessage) return;
+    let remaining = 5000;
+    $effect(() => {
+      if (hovered || focused) return;
+      const started = Date.now();
+      const timer = setTimeout(dismiss, remaining);
+      return () => {
+        clearTimeout(timer);
+        remaining = Math.max(0, remaining - (Date.now() - started));
+      };
+    });
+  });
   const labels: Record<FeedbackTone, string> = {
     success: '완료',
     error: '실패',
@@ -22,42 +45,72 @@
   };
 </script>
 
-<p class="admin-feedback text-sm leading-[1.6]" data-tone={tone} role="status">
-  <svg
-    class="feedback-icon"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-    focusable="false"
-  >
-    {#if tone === 'warning'}<path
-        d="M12 3L2 21h20L12 3"
-        fill="currentColor"
-        stroke="none"
-      />
-    {:else if tone !== 'conflict'}<circle
-        cx="12"
-        cy="12"
-        r="11"
-        fill="currentColor"
-        stroke="none"
-      />{/if}
-    <path
-      d={icons[tone]}
-      stroke={tone === 'conflict' ? 'currentColor' : 'white'}
-    />
-  </svg>
-  <span class="feedback-content block min-w-0 wrap-anywhere"
-    ><span class="sr-only">{labels[tone]}: </span><span
-      class="feedback-summary block font-semibold">{message}</span
+<div
+  class="admin-feedback flex items-start gap-x-3 gap-y-1 rounded-md bg-admin-surface px-4 py-3 text-sm leading-[1.6] text-admin-feedback"
+  data-tone={tone}
+  role="group"
+  aria-label="작업 결과"
+  onpointerenter={() => (hovered = true)}
+  onpointerleave={() => (hovered = false)}
+  onfocusin={() => (focused = true)}
+  onfocusout={event => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+      focused = false;
+  }}
+>
+  <div class="flex min-w-0 flex-1 items-start gap-3" role="status">
+    <svg
+      class="feedback-icon mt-[calc((1lh_-_1em)_/_2)] size-[1em] shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
     >
-    {#if details}<span
-        class="feedback-details mt-1 block whitespace-pre-line text-admin-muted"
-        >{details}</span
-      >{/if}</span
-  >
-</p>
+      {#if tone === 'warning'}<path
+          d="M12 3L2 21h20L12 3"
+          fill="currentColor"
+          stroke="none"
+        />
+      {:else if tone !== 'conflict'}<circle
+          cx="12"
+          cy="12"
+          r="11"
+          fill="currentColor"
+          stroke="none"
+        />{/if}
+      <path
+        d={icons[tone]}
+        stroke={tone === 'conflict' ? 'currentColor' : 'white'}
+      />
+    </svg>
+    <span class="feedback-content block min-w-0 wrap-anywhere"
+      ><span class="sr-only">{labels[tone]}: </span><span
+        class="feedback-summary block font-semibold">{message}</span
+      >
+      {#if details}<span
+          class="feedback-details mt-1 block whitespace-pre-line text-admin-muted"
+          >{details}</span
+        >{/if}</span
+    >
+  </div>
+  {#if ondismiss}<button
+      class="admin-button shrink-0 border-0 bg-transparent p-1"
+      type="button"
+      aria-label="안내 닫기"
+      onclick={ondismiss}
+    >
+      <svg
+        class="size-3.5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg
+      >
+    </button>{/if}
+</div>

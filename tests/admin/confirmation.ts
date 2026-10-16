@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
  * explicit dialog handler retain control, including cancellation assertions. */
 export function acceptMutationConfirmations(page: Page) {
   const messages = new Set([
+    '현재 내용으로 초안을 생성할까요?',
     '현재 내용을 저장할까요?',
     '현재 내용을 저장하고 공개할까요?',
     '원래 저장 요청을 다시 시도할까요?',

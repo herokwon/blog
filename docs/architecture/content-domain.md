@@ -15,6 +15,11 @@ records their checks. Real-device mobile-keyboard acceptance remains outstanding
 and logout completion is implemented with scoped Preview acceptance recorded.
 Deployed v0.2.1 acceptance remains outstanding.
 
+The subsequent Admin UI refinement is implemented and locally verified;
+[integrated evidence](../operations/v0.2.1-admin-ui.md#task-4-integrated-local-evidence-2026-10-16)
+covers the shared shell, controls, feedback/navigation, draft destination and
+Korean display time. Updated Preview and physical-device acceptance remain separate.
+
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
 
@@ -35,7 +40,7 @@ records the explicit save and publication decision.
 | `deleted_at`   | Set on soft deletion; cleared on restoration                                                |
 | `revision`     | Positive integer; starts at 1 and increases with each persisted content or lifecycle change |
 
-All timestamps use the fixed UTC format defined in
+Persisted and API timestamps use the fixed UTC format defined in
 [Database Foundation](database-foundation.md#timestamps).
 A NULL `published_at` means never published, not currently hidden.
 Summary is derived, not persisted.
@@ -81,6 +86,11 @@ now use the same shell. The organization applies to all Admin pages.
 
 - Desktop content has a maximum width of 1024px. Mobile adapts the same
   management flow rather than removing actions.
+- The document language is Korean. A session `header > nav` precedes a sibling
+  `main`, containing page headings/action bars and content. Body and the shared
+  page wrapper fill at least the dynamic viewport; main fills the space below
+  the header. Main has 32px vertical padding on mobile and 48px on desktop.
+  Short viewports remain scrollable so authoring controls stay reachable.
 - Main-page headings or editor navigation/action bars precede the content
   area. Status filters belong to the list content area below that separation.
 - The normal list groups the writing action and trash icon at the right of
@@ -89,15 +99,29 @@ now use the same shell. The organization applies to all Admin pages.
 - Desktop lists use tables; mobile lists use cards. Both present title,
   status, creation and publication timestamps, plus the updated timestamp
   for normal posts or deleted timestamp for trash. Row/card actions use an
-  overflow menu. Timestamp headings omit `시각`; titles have no underline.
+  overflow menu. Timestamp headings omit `시각`; titles have no resting underline.
+  Non-menu areas of each row/card open detail in both normal/trash lists.
+  Preserve real title anchors and table semantics; background clicks ignore
+  modifiers, text selection, menu interactions and pending mutation locks.
+  Item hover underlines its title only on hover-capable devices. Keyboard
+  focus identifies the title link independently of hover support.
   Item-count labels and a separate pagination top divider are omitted.
+- Pagination centers the previous arrow, actual visible numbers and next arrow
+  as one content-sized group, with symmetric arrow gaps and equal-size controls.
+  Do not reserve blank slots for missing page numbers; preserve the five-page
+  groups, disabled boundary arrows and hidden pagination for empty scopes.
 - Detail places the title before status and timestamp metadata. Navigation
   is on the left of the top action row, with applicable management actions
   on the right.
 - Existing-post editing and new-post authoring use a top navigation/action
   bar, then a title input and formatted body editor. Existing editing has
-  save and cancel; creation orders publish, save, and cancel. Editor pages
+  save and cancel; creation orders publish, `초안 생성`, and cancel. Editor pages
   omit a standalone status badge. Return buttons are labeled `목록`.
+- List, trash, detail and recovery timestamps share `Asia/Seoul` display in
+  zero-padded `yyyy-MM-dd HH:mm:ss` format, without milliseconds or a timezone
+  suffix. Midnight uses `00:00:00`, independently of device/server timezone.
+  Null timestamps remain `—`. UTC storage/API and `time[datetime]` values retain
+  the timestamp contract in [API Design](api-design.md).
 
 Action availability, navigation, pagination, and mutation behavior follow
 their contracts elsewhere in this document; the layout does not override
@@ -167,15 +191,38 @@ Keep the visible content concise: omit redundant retry/input-retention copy.
 Success uses a check, rejection a cross, conflict overlapping documents,
 uncertain completion a question mark, and recovery unavailability a warning
 triangle. Icons are decorative; retain the accessible status label and
-`role="status"`. Save completion says `저장이 완료되었습니다.`.
+`role="status"`. A close button sits outside the announced text.
+Confirmed success uses only a bold result summary, without the post title or
+secondary details: `초안이 생성되었습니다.`, `저장되었습니다.`,
+`발행되었습니다.`, `재발행되었습니다.`, `공개가 취소되었습니다.`,
+`삭제되었습니다.` or `복구되었습니다.`. Distinguish publication from
+republication using the state before the command.
+Success expires after five seconds; pointer hover or focus within pauses the
+remaining time. Every new result gets a fresh timer, including identical text.
+Errors, conflicts, uncertain outcomes and warnings persist until dismissed or
+superseded. Dismissal affects presentation only, preserving input, conflict
+state and recovery/retry controls. Environment guidance and pending-operation
+status have no expiry or dismissal.
+A single in-memory success entry in the mounted Admin layout carries a
+confirmed result across its required internal navigation. Other navigation
+consumes it; do not persist it or trust success query parameters. Failed list
+refreshes after a command report the refresh problem, without claiming that
+the mutation failed.
 Confirmed, observed, rejected, conflicting and unknown mutation results
 remain distinct; an observed outcome must not be announced as confirmed success.
 A confirmed retry of an older snapshot must not announce generic save completion
 while the visible form still contains unsaved edits.
 
-Save and publish have equal emphasis. Restore is the primary action and
+Save and publish have equal emphasis. Restore uses the neutral Edit treatment;
 soft deletion uses the danger treatment. Status remains more prominent than
 secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
+Logout and neutral navigation/actions share bordered buttons.
+Save/publish/republish use blue text and a light blue border on a white resting background, with
+subtle hover like danger actions; menu items retain their borderless treatment.
+Hover applies only on hover-capable devices and enabled controls; keyboard
+focus remains visible. Exclusive logout makes both header and main controls inert.
+Detail reading has no outer Milkdown/ProseMirror padding; preserve Markdown
+indentation and the editing surface's 12px padding.
 
 Application styles use Tailwind v4 utilities, shared `@theme` palette
 values, `@layer base` for framework accessibility defaults and
@@ -266,6 +313,8 @@ to new and existing posts regardless of status.
 
 Before save, creation/publication, manual retry, publication/republication,
 archive, soft deletion and restoration, use the native `confirm` dialog.
+New draft creation asks `현재 내용으로 초안을 생성할까요?` and reports
+`초안 생성 중…` while pending; existing editing retains its save wording.
 Cancellation must not send a mutation or discard input/recovery. A dirty
 application departure has one confirmation; the successful operation's own
 navigation must not ask again.
@@ -281,7 +330,7 @@ After confirmed mutation outcomes, use the following navigation:
 
 | Outcome                                        | Destination or behavior                                             |
 | ---------------------------------------------- | ------------------------------------------------------------------- |
-| New draft saved                                | `/admin/posts/[id]/edit`                                            |
+| New draft created with unchanged input         | `/admin/posts/[id]`                                                 |
 | New post created and published                 | `/admin/posts/[id]`                                                 |
 | New post created but publication failed        | Its edit page, with publication failure and retry guidance          |
 | Existing post saved, in any non-deleted status | `/admin/posts/[id]`                                                 |

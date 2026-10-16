@@ -13,11 +13,13 @@
   let retryButton = $state<HTMLButtonElement>();
 
   let failed = $state(false);
+  let noticeHidden = $state(false);
   async function logout() {
     if (busy) return;
     busy = true;
     processing.update(owner, true, true);
     failed = false;
+    noticeHidden = false;
     let completed = false;
     try {
       clearRecovery(localStorage);
@@ -42,10 +44,11 @@
   });
 </script>
 
-{#if failed}<ResultNotice
+{#if failed && !noticeHidden}<ResultNotice
     tone="uncertain"
     message="로그아웃 완료를 확인하지 못했습니다."
     details="브라우저 입력 복구 삭제에 실패했다면 사이트 데이터를 확인하세요."
+    ondismiss={() => (noticeHidden = true)}
   />{/if}
 {#if data.adminContext.environment === 'local'}
   <p>
@@ -54,6 +57,7 @@
   </p>
 {/if}
 {#if failed}<button
+    class="admin-button"
     bind:this={retryButton}
     type="button"
     onclick={logout}

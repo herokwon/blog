@@ -122,7 +122,7 @@ export async function submitAuthoring(
                 ? `/admin/posts/${state.created.id}/edit`
                 : `/admin/posts/${state.created.id}/edit?publication=${result.kind === 'unresolved' ? 'unconfirmed' : 'failed'}`;
       } else if (unchanged())
-        state.destination = `/admin/posts/${state.created.id}/edit`;
+        state.destination = `/admin/posts/${state.created.id}`;
     } else if (
       (result.kind === 'confirmed' || result.kind === 'observed') &&
       result.post

@@ -12,26 +12,29 @@
 <svelte:head><title>{data.post.title} · Admin</title></svelte:head>
 <div class="admin-heading">
   <a
+    class="admin-button"
     href={resolve(data.post.deleted_at ? '/admin/posts/trash' : '/admin/posts')}
     >목록</a
   >
   {#key data.post.id}<PostActions post={data.post} refresh={refreshAll} />{/key}
 </div>
-<article class="admin-content post-detail">
-  <h1>{data.post.title}</h1>
-  <dl class="post-metadata">
-    <dt class="post-status">상태</dt>
-    <dd class="post-status">
+<article class="admin-content post-detail pt-6">
+  <h1 class="admin-title">{data.post.title}</h1>
+  <dl
+    class="post-metadata mt-4 mb-8 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm leading-[inherit] text-admin-muted"
+  >
+    <dt class="post-status font-semibold wrap-anywhere text-admin-ink">상태</dt>
+    <dd class="post-status font-semibold wrap-anywhere text-admin-ink">
       {statusLabels[data.post.status]}{data.post.deleted_at ? ' · 삭제됨' : ''}
     </dd>
     <dt>작성</dt>
-    <dd>{displayTime(data.post.created_at)}</dd>
+    <dd class="wrap-anywhere">{displayTime(data.post.created_at)}</dd>
     <dt>발행</dt>
-    <dd>{displayTime(data.post.published_at)}</dd>
+    <dd class="wrap-anywhere">{displayTime(data.post.published_at)}</dd>
     <dt>수정</dt>
-    <dd>{displayTime(data.post.updated_at)}</dd>
+    <dd class="wrap-anywhere">{displayTime(data.post.updated_at)}</dd>
     {#if data.post.deleted_at}<dt>삭제</dt>
-      <dd>{displayTime(data.post.deleted_at)}</dd>{/if}
+      <dd class="wrap-anywhere">{displayTime(data.post.deleted_at)}</dd>{/if}
   </dl>
   {#key data.post.id + ':' + data.post.revision}<PostBody
       source={data.post.body}
