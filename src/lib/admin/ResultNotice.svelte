@@ -22,7 +22,7 @@
   };
 </script>
 
-<p class="admin-feedback text-sm" data-tone={tone} role="status">
+<p class="admin-feedback text-sm leading-[1.6]" data-tone={tone} role="status">
   <svg
     class="feedback-icon"
     viewBox="0 0 24 24"
@@ -51,10 +51,13 @@
       stroke={tone === 'conflict' ? 'currentColor' : 'white'}
     />
   </svg>
-  <span class="feedback-content"
-    ><span class="sr-only">{labels[tone]}: </span><span class="feedback-summary"
-      >{message}</span
+  <span class="feedback-content block min-w-0 wrap-anywhere"
+    ><span class="sr-only">{labels[tone]}: </span><span
+      class="feedback-summary block font-semibold">{message}</span
     >
-    {#if details}<span class="feedback-details">{details}</span>{/if}</span
+    {#if details}<span
+        class="feedback-details mt-1 block whitespace-pre-line text-admin-muted"
+        >{details}</span
+      >{/if}</span
   >
 </p>

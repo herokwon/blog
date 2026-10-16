@@ -55,7 +55,7 @@
   <div class="recovery-panel">
     <h2 id="recovery-heading">미저장 작성 내용이 있습니다</h2>
     <p class="recovery-title">{title}</p>
-    <p class="recovery-meta">
+    <p class="recovery-meta text-sm leading-[inherit] opacity-70">
       마지막 수정: <time datetime={new Date(editedAt).toISOString()}
         >{new Date(editedAt).toLocaleString('ko-KR')}</time
       >

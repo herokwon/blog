@@ -11,7 +11,7 @@
 </script>
 
 <main class="admin-shell" lang="ko">
-  <div class="admin-workspace" inert={processing.exclusive}>
+  <div class="admin-workspace contents" inert={processing.exclusive}>
     <nav class="admin-session items-center gap-3">
       {#if data.adminContext.environment !== 'production' || !data.adminContext.writable}
         <div class="flex items-center gap-1">
