@@ -128,28 +128,61 @@ Keep the existing navigation/action bar and explicit save/publication behavior.
   editor container, not Markdown nesting or code indentation.
 - Pending/recovery states must not collapse or remove the body region.
   After recovery selection, restore the visible editor and usable focus.
+- Use the native browser caret (`Cursor.virtual: false`). Show the body
+  placeholder only when the complete document is empty (`Placeholder.mode: doc`).
+- Preserve empty paragraphs using Crepe's bare `<br />` Markdown markers,
+  including previously stored bare-break content. Editing without a body
+  change must retain the original source; arbitrary HTML remains unsupported.
 
 Verify keyboard and layout behavior on both authoring routes, desktop and
 mobile widths, short and long content, and viewport height changes.
 
 ### v0.2.1 Environment Awareness
 
-Status: `Locally implemented; remote acceptance pending`. The shared Admin session header displays a text badge
-`Local` or `Preview` in those environments; Production retains its existing
-presentation. Derive the label from explicit server configuration, not URL
-substring guesses. Do not expose database IDs, Access settings, or secrets.
+Status: `Locally implemented; updated presentation awaits remote acceptance`.
+The shared Admin session header displays a 12px `Local` or `Preview` badge.
+Read-only access adds a separate amber `Read Only` badge, 4px from the
+environment badge. Production displays `Production` only for read-only
+access; its writable default URL retains no environment badge. Derive both
+environment and write permission from server context, not URL substring guesses.
+Do not expose database IDs, Access settings, or secrets.
 
-On read-only Version URLs, show `읽기 전용 환경입니다.` and disable all
-mutation controls, including save, publish, archive, delete, and restore.
-For Preview, provide `Preview에서 작성하기` linking to the configured
-default Worker URL's `/admin/posts` page. Production candidates show the explanation without
-a Preview shortcut. Reads and navigation remain available; server enforcement
-still rejects direct mutation requests. Share the server's exact-Origin
-decision rather than maintaining a separate client permission rule.
+When the server reports read-only access, show `읽기 전용으로 접속 중입니다.`
+and disable save, publish, archive, delete and restore. For Preview, provide
+`작성 가능한 Preview로 이동` linking to the configured default Worker URL's
+`/admin/posts`. Production candidates show the explanation without a Preview
+shortcut. Inputs, recovery, reads and navigation remain available; the server
+still rejects direct mutation requests using the same exact-Origin decision.
 
 See [environment implementation](../operations/v0.2.1-environments.md#task-5-preview-authentication-and-mutation-boundaries)
 and [authoring implementation](../operations/v0.2.1-authoring.md) for sequencing
 and acceptance tests.
+
+### Admin Feedback and Style Organization
+
+Result notices use a borderless neutral gray background (`#f3f4f6`),
+`text-sm` text and a 1em icon aligned to the first line. Put one core
+result sentence first in weight 600, with optional muted details beneath.
+Keep the visible content concise: omit redundant retry/input-retention copy.
+Success uses a check, rejection a cross, conflict overlapping documents,
+uncertain completion a question mark, and recovery unavailability a warning
+triangle. Icons are decorative; retain the accessible status label and
+`role="status"`. Save completion says `저장이 완료되었습니다.`.
+Confirmed, observed, rejected, conflicting and unknown mutation results
+remain distinct; an observed outcome must not be announced as confirmed success.
+
+Save and publish have equal emphasis. Restore is the primary action and
+soft deletion uses the danger treatment. Status remains more prominent than
+secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
+
+Application styles use Tailwind v4 utilities, shared `@theme` palette
+values, `@layer base` for framework accessibility defaults and
+`@layer components`/`@apply` for reusable Admin and Crepe integration
+rules. Single-purpose element styles live in markup. Import Crepe themes
+into the components layer before application overrides; retain its font
+variables and strict-CSP integration. Prefer built-in utilities; introduce
+`@utility` only when a reusable custom utility is actually needed.
+Preserve explicit line heights and the existing 767px responsive boundary.
 
 ### Admin Detail
 
@@ -228,6 +261,19 @@ When leaving a page with unsaved changes, ask whether to leave without
 saving using a confirmation dialog. Canceling keeps the editor and input;
 confirming permits navigation without saving or publishing. This applies
 to new and existing posts regardless of status.
+
+Before save, creation/publication, manual retry, publication/republication,
+archive, soft deletion and restoration, use the native `confirm` dialog.
+Cancellation must not send a mutation or discard input/recovery. A dirty
+application departure has one confirmation; the successful operation's own
+navigation must not ask again.
+
+While an operation is pending, disable duplicate controls and the shared
+logout link; list refreshes keep filters and pagination inert. Logout uses
+an exclusive workspace lock with its accessible processing status outside
+the inert region. Failure releases the lock and focuses retry. Verified
+logout must be able to return home without the navigation lock blocking its
+own departure.
 
 After confirmed mutation outcomes, use the following navigation:
 
