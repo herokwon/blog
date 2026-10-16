@@ -1,16 +1,22 @@
 <script lang="ts">
+  import { provideNotices } from '#lib/admin/notices.svelte.ts';
   import { provideProcessing } from '#lib/admin/processing.svelte.ts';
+  import ResultNotice from '#lib/admin/ResultNotice.svelte';
   import { beforeNavigate } from '$app/navigation';
   import { resolve } from '$app/paths';
 
   let { children, data } = $props();
   const processing = provideProcessing();
+  const notices = provideNotices();
   beforeNavigate(navigation => {
     if (
       processing.exclusive &&
       !(navigation.type === 'leave' && processing.leaving)
     )
       navigation.cancel();
+    // Successful mutations show their notice after their permitted navigation.
+    // Other navigation consumes the previous result rather than replaying it.
+    else notices.dismiss();
   });
 </script>
 
@@ -83,6 +89,18 @@
               >{/if}
           </div>
         </aside>
+      {/if}
+      {#if notices.current}
+        {#key notices.current.id}
+          {@const notice = notices.current}
+          <div class="mb-4 shrink-0">
+            <ResultNotice
+              tone="success"
+              message={notice.message}
+              ondismiss={() => notices.dismiss(notice.id)}
+            />
+          </div>
+        {/key}
       {/if}
       {@render children()}
     </div>

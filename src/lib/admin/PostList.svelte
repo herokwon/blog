@@ -24,6 +24,24 @@
     details: '',
   });
   let correction: string | undefined;
+  function openItem(event: MouseEvent, id: string) {
+    if (actionState.busy) {
+      event.preventDefault();
+      return;
+    }
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey ||
+      (event.target as Element).closest('a, button, .post-actions') ||
+      window.getSelection()?.toString()
+    )
+      return;
+    void goto(resolve('/admin/posts/[id]', { id }));
+  }
   beforeNavigate(navigation => {
     const destination = navigation.to?.url;
     if (
@@ -99,6 +117,7 @@
       tone={actionState.tone}
       message={actionState.message}
       details={actionState.details}
+      ondismiss={() => (actionState.message = '')}
     />{/if}
   {#if !trash}
     <nav
@@ -139,10 +158,16 @@
       >
       <tbody>
         {#each posts.items as post (post.id)}
-          <tr>
+          <!-- Real title anchors provide keyboard and native link navigation. -->
+          <tr
+            class="group cursor-pointer"
+            onclick={event => openItem(event, post.id)}
+          >
             <td
               class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
-              ><a href={resolve('/admin/posts/[id]', { id: post.id })}
+              ><a
+                class="focus-visible:underline [@media(hover:hover)]:group-hover:underline"
+                href={resolve('/admin/posts/[id]', { id: post.id })}
                 >{post.title}</a
               ></td
             >
@@ -184,10 +209,15 @@
     </table>
     <div class="post-cards grid gap-4 md:hidden">
       {#each posts.items as post (post.id)}
-        <article class="min-w-0 rounded-lg border border-admin-card p-4">
+        <!-- Real title anchors provide keyboard and native link navigation. -->
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+        <article
+          class="group min-w-0 cursor-pointer rounded-lg border border-admin-card p-4"
+          onclick={event => openItem(event, post.id)}
+        >
           <div class="card-heading flex items-start justify-between gap-3">
             <a
-              class="min-w-0 font-semibold wrap-anywhere"
+              class="min-w-0 font-semibold wrap-anywhere focus-visible:underline [@media(hover:hover)]:group-hover:underline"
               href={resolve('/admin/posts/[id]', { id: post.id })}
               >{post.title}</a
             ><PostActions {post} {refresh} state={actionState} overflow />

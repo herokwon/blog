@@ -160,7 +160,7 @@ for (const width of [1280, 390]) {
         page.getByRole('button', { name: '원래 요청 다시 시도' }),
       ).toHaveCount(0);
       await expect(
-        page.getByText('저장이 완료되었습니다.', { exact: true }),
+        page.getByText('저장되었습니다.', { exact: true }),
       ).toHaveCount(0);
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
@@ -180,6 +180,9 @@ for (const width of [1280, 390]) {
       await editor.fill('Draft body');
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/posts\/[^/]+\/edit$/);
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"] .feedback-summary'),
+      ).toHaveText('초안이 생성되었습니다.');
       const id = new URL(page.url()).pathname.split('/')[3];
       const saved = (await (
         await api.get(`/api/admin/posts/${id}`)
@@ -189,6 +192,14 @@ for (const width of [1280, 390]) {
       await page.getByLabel('제목', { exact: true }).fill('Title changed');
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${id}`);
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"] .feedback-summary'),
+      ).toHaveText('저장되었습니다.');
+      await page.mouse.move(0, 0);
+      await page.screenshot({
+        path: `.wrangler/admin-ui-task2/saved-${width}.png`,
+        fullPage: true,
+      });
       const updated = (await (
         await api.get(`/api/admin/posts/${id}`)
       ).json()) as AdminPost;
@@ -210,6 +221,9 @@ for (const width of [1280, 390]) {
       await page.locator('.admin-editor .ProseMirror').fill('Publish body');
       await page.getByRole('button', { name: '발행', exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"] .feedback-summary'),
+      ).toHaveText('발행되었습니다.');
       const list = await (await api.get('/api/admin/posts')).json();
       expect(list.items).toHaveLength(1);
       expect(list.items[0].status).toBe('published');
@@ -237,6 +251,16 @@ for (const width of [1280, 390]) {
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Local input',
       );
+      await page
+        .locator('.admin-feedback[data-tone="conflict"]')
+        .getByRole('button', { name: '안내 닫기' })
+        .click();
+      await expect(
+        page.locator('.admin-feedback[data-tone="conflict"]'),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('button', { name: '최신 내용 불러오기' }),
+      ).toBeEnabled();
       const opened = context.waitForEvent('page');
       await page.getByRole('link', { name: '최신 글 확인' }).click();
       const latest = await opened;

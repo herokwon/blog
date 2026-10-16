@@ -11,6 +11,15 @@ number groups in both normal and trash lists. Preserve authoring body scrolling,
 short-viewport control access and exclusive logout locking across both landmarks.
 Record local evidence separately from updated Preview/physical-device acceptance.
 
+For Task 2, check row/card background navigation in normal/trash lists while
+menus, selected text, modified clicks and busy mutations remain isolated.
+Verify real title links, keyboard focus decoration and hover underline only
+on hover-capable devices. Check all seven operation-specific success summaries
+without post titles/details, delivery across required navigation, replacement
+of identical results, five-second expiry and remaining-time pause during
+hover/focus. Use controlled browser time. Errors/warnings must persist until
+dismissed, and dismissal must preserve conflict/retry controls and input.
+
 ## v0.2.1 Environment Verification
 
 Current environment implementation, approved provisioning and remaining remote

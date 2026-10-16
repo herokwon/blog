@@ -94,7 +94,12 @@ now use the same shell. The organization applies to all Admin pages.
 - Desktop lists use tables; mobile lists use cards. Both present title,
   status, creation and publication timestamps, plus the updated timestamp
   for normal posts or deleted timestamp for trash. Row/card actions use an
-  overflow menu. Timestamp headings omit `시각`; titles have no underline.
+  overflow menu. Timestamp headings omit `시각`; titles have no resting underline.
+  Non-menu areas of each row/card open detail in both normal/trash lists.
+  Preserve real title anchors and table semantics; background clicks ignore
+  modifiers, text selection, menu interactions and pending mutation locks.
+  Item hover underlines its title only on hover-capable devices. Keyboard
+  focus identifies the title link independently of hover support.
   Item-count labels and a separate pagination top divider are omitted.
 - Pagination centers the previous arrow, actual visible numbers and next arrow
   as one content-sized group, with symmetric arrow gaps and equal-size controls.
@@ -176,7 +181,23 @@ Keep the visible content concise: omit redundant retry/input-retention copy.
 Success uses a check, rejection a cross, conflict overlapping documents,
 uncertain completion a question mark, and recovery unavailability a warning
 triangle. Icons are decorative; retain the accessible status label and
-`role="status"`. Save completion says `저장이 완료되었습니다.`.
+`role="status"`. A close button sits outside the announced text.
+Confirmed success uses only a bold result summary, without the post title or
+secondary details: `초안이 생성되었습니다.`, `저장되었습니다.`,
+`발행되었습니다.`, `재발행되었습니다.`, `공개가 취소되었습니다.`,
+`삭제되었습니다.` or `복구되었습니다.`. Distinguish publication from
+republication using the state before the command.
+Success expires after five seconds; pointer hover or focus within pauses the
+remaining time. Every new result gets a fresh timer, including identical text.
+Errors, conflicts, uncertain outcomes and warnings persist until dismissed or
+superseded. Dismissal affects presentation only, preserving input, conflict
+state and recovery/retry controls. Environment guidance and pending-operation
+status have no expiry or dismissal.
+A single in-memory success entry in the mounted Admin layout carries a
+confirmed result across its required internal navigation. Other navigation
+consumes it; do not persist it or trust success query parameters. Failed list
+refreshes after a command report the refresh problem, without claiming that
+the mutation failed.
 Confirmed, observed, rejected, conflicting and unknown mutation results
 remain distinct; an observed outcome must not be announced as confirmed success.
 A confirmed retry of an older snapshot must not announce generic save completion

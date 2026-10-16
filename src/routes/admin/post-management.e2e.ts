@@ -51,7 +51,73 @@ for (const viewport of [
   { width: 390, height: 844 },
 ]) {
   test.describe(`${viewport.width}px management`, () => {
-    test.use({ viewport });
+    test.use({ viewport, hasTouch: viewport.width < 768 });
+
+    test('item backgrounds navigate while menus and selected text stay in place', async ({
+      api,
+      localD1,
+      page,
+    }) => {
+      const post = await create(api, 'Navigable item');
+      for (const trash of [false, true]) {
+        if (trash)
+          await api.delete(`/api/admin/posts/${post.id}`, {
+            data: { expected_revision: post.revision },
+          });
+        const path = trash ? '/admin/posts/trash' : '/admin/posts';
+        await page.goto(`${localD1.origin}${path}`);
+        const item =
+          viewport.width < 768
+            ? page
+                .locator('.post-cards article')
+                .filter({ hasText: post.title })
+            : page.getByRole('row').filter({ hasText: post.title });
+        await item.getByRole('button', { name: /작업 메뉴/ }).click();
+        await expect(page).toHaveURL(`${localD1.origin}${path}`);
+        await expect(
+          item.getByRole(trash ? 'button' : 'link', {
+            name: trash ? '복구' : '수정',
+            exact: true,
+          }),
+        ).toBeVisible();
+        await item.getByRole('button', { name: /작업 메뉴/ }).press('Escape');
+        await page.keyboard.press('Shift+Tab');
+        const title = item.getByRole('link', { name: post.title, exact: true });
+        await expect(title).toBeFocused();
+        expect(
+          await title.evaluate(el => getComputedStyle(el).textDecorationLine),
+        ).toBe('underline');
+        await page.getByRole('heading', { level: 1 }).click();
+        await item.evaluate(el => {
+          const selection = window.getSelection()!;
+          const range = document.createRange();
+          range.selectNodeContents(el.querySelector('a')!);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        });
+        const target =
+          viewport.width < 768
+            ? item.locator('dt').first()
+            : item.locator('td').nth(1);
+        await target.dispatchEvent('click', { button: 0 });
+        await expect(page).toHaveURL(`${localD1.origin}${path}`);
+        await page.evaluate(() => window.getSelection()?.removeAllRanges());
+        await target.hover();
+        expect(
+          await title.evaluate(el => getComputedStyle(el).textDecorationLine),
+        ).toBe(viewport.width < 768 ? 'none' : 'underline');
+        await page.screenshot({
+          path: `.wrangler/admin-ui-task2/${trash ? 'trash' : 'list'}-${viewport.width}.png`,
+          fullPage: true,
+        });
+        await target.click({ modifiers: ['Control'] });
+        await expect(page).toHaveURL(`${localD1.origin}${path}`);
+        await target.click();
+        await expect(page).toHaveURL(
+          `${localD1.origin}/admin/posts/${post.id}`,
+        );
+      }
+    });
 
     test('long mobile titles wrap without pushing the action menu outside the viewport', async ({
       api,
@@ -482,6 +548,11 @@ for (const viewport of [
       await page
         .getByRole('link', { name: '휴지통', exact: true })
         .click({ force: true });
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
+      await page
+        .locator('.post-table tbody td, .post-cards dt')
+        .first()
+        .dispatchEvent('click', { button: 0 });
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
       release();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);

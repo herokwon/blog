@@ -8,8 +8,9 @@
   import { page } from '$app/state';
   import { createAuthoringState, submitAuthoring } from './authoring';
   import { createPostSchema, type AdminPost } from './contracts';
-  import type { FeedbackTone } from './feedback';
+  import { successMessage, type FeedbackTone } from './feedback';
   import { readAdminPost } from './mutations';
+  import { useNotices } from './notices.svelte';
   import { useProcessing } from './processing.svelte';
   import {
     clearRecovery,
@@ -33,6 +34,7 @@
   let message = $state('');
   let messageDetails = $state('');
   let messageTone = $state<FeedbackTone>('error');
+  let dismissedPublication = $state<string | null>(null);
   let loading = $state(false);
   let client = false;
   let recordingDisabled = false;
@@ -46,6 +48,7 @@
   const supported = $derived(inspectMarkdown(editorSource).supported);
   const locked = $derived(form.pending || loading || recovery !== null);
   const processing = useProcessing();
+  const notices = useNotices();
   const processingOwner = Symbol();
   $effect(() => {
     processing.update(processingOwner, form.pending || loading);
@@ -181,7 +184,19 @@
     record();
     message = '';
     messageDetails = '';
+    notices.dismiss();
+    const wasNew = !form.base && !form.created;
+    const wasArchived = form.base?.status === 'archived';
     await submitAuthoring(form, intent, fetch);
+    const completion = () =>
+      successMessage(
+        form.request?.kind === 'publish'
+          ? 'publish'
+          : wasNew
+            ? 'create'
+            : 'save',
+        wasArchived,
+      );
     if (form.created) {
       cancelTimers();
       storage(store => {
@@ -222,6 +237,7 @@
           resolve('/admin/posts') +
             form.destination.slice('/admin/posts'.length),
         );
+        if (form.result?.kind === 'confirmed') notices.show(completion());
       } catch {
         message = '화면을 이동하지 못했습니다.';
         messageDetails = '저장된 글을 확인하세요.';
@@ -235,8 +251,7 @@
     ) {
       bodyChanged = form.input.body !== form.base?.body;
       if (form.result?.kind === 'confirmed' && !dirty) {
-        message = '저장이 완료되었습니다.';
-        messageTone = 'success';
+        notices.show(completion());
       }
     }
   }
@@ -308,22 +323,26 @@
   {#if storageNotice}<ResultNotice
       tone="warning"
       message="브라우저 입력 복구를 사용할 수 없습니다."
+      ondismiss={() => (storageNotice = false)}
     />{/if}
-  {#if page.url.searchParams.get('publication') === 'unconfirmed'}<ResultNotice
+  {#if page.url.searchParams.get('publication') === 'unconfirmed' && dismissedPublication !== 'unconfirmed'}<ResultNotice
       tone="uncertain"
       message="발행 결과를 확인할 수 없습니다."
       details="초안은 저장되었습니다.
 상세 화면에서 발행 여부를 확인하세요."
+      ondismiss={() => (dismissedPublication = 'unconfirmed')}
     />{/if}
-  {#if page.url.searchParams.get('publication') === 'failed'}<ResultNotice
+  {#if page.url.searchParams.get('publication') === 'failed' && dismissedPublication !== 'failed'}<ResultNotice
       tone="error"
       message="발행하지 못했습니다."
       details="초안은 저장되었습니다."
+      ondismiss={() => (dismissedPublication = 'failed')}
     />{/if}
   {#if message}<ResultNotice
       tone={messageTone}
       {message}
       details={messageDetails}
+      ondismiss={() => (message = '')}
     />{/if}
   {#if form.result?.kind === 'unresolved' && form.request?.kind === 'create'}
     <a href={resolve('/admin/posts')} target="_blank" rel="noopener noreferrer"
