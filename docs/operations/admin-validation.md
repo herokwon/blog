@@ -20,6 +20,14 @@ of identical results, five-second expiry and remaining-time pause during
 hover/focus. Use controlled browser time. Errors/warnings must persist until
 dismissed, and dismissal must preserve conflict/retry controls and input.
 
+For Task 3, confirm that new-post `초안 생성` submits once, shows creation
+confirmation/progress, opens the saved detail and delivers one success notice.
+Existing editing retains `저장`. Check recovery cleanup, newer-input retention,
+unknown creation staying in place and partial-publication recovery routes.
+Check exact `yyyy-MM-dd HH:mm:ss` Korean timestamps in list/trash/detail and
+recovery under UTC and non-Korean browser timezones, including midnight/day/year
+boundaries. API/storage and `time[datetime]` must remain UTC ISO8601.
+
 ## v0.2.1 Environment Verification
 
 Current environment implementation, approved provisioning and remaining remote

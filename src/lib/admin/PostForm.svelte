@@ -46,6 +46,7 @@
   let permittedDestination: string | null = null;
   let titleInput: HTMLInputElement;
   const supported = $derived(inspectMarkdown(editorSource).supported);
+  const creating = $derived(!form.base && !form.created);
   const locked = $derived(form.pending || loading || recovery !== null);
   const processing = useProcessing();
   const notices = useNotices();
@@ -179,7 +180,9 @@
           ? '현재 내용을 저장하고 공개할까요?'
           : intent === 'retry'
             ? '원래 저장 요청을 다시 시도할까요?'
-            : '현재 내용을 저장할까요?';
+            : creating
+              ? '현재 내용으로 초안을 생성할까요?'
+              : '현재 내용을 저장할까요?';
     if (!confirm(warning)) return;
     record();
     message = '';
@@ -303,7 +306,8 @@
       <button
         class="admin-button action-save"
         type="submit"
-        disabled={locked || !supported || !controller || !writable}>저장</button
+        disabled={locked || !supported || !controller || !writable}
+        >{creating ? '초안 생성' : '저장'}</button
       >
       <a
         class="admin-button"
@@ -318,7 +322,9 @@
         ? '최신 내용 불러오는 중…'
         : form.request?.kind === 'publish'
           ? '발행 중…'
-          : '저장 중…'}
+          : creating
+            ? '초안 생성 중…'
+            : '저장 중…'}
     </p>{/if}
   {#if storageNotice}<ResultNotice
       tone="warning"

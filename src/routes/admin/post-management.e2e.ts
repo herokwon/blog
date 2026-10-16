@@ -46,6 +46,77 @@ test.beforeEach(async ({ localD1, page }) => {
   });
 });
 
+for (const timezoneId of ['UTC', 'America/Los_Angeles']) {
+  test.describe(`Korean timestamps in ${timezoneId}`, () => {
+    test.use({ timezoneId, viewport: { width: 1280, height: 900 } });
+    test('list, trash, detail and recovery share Korean time while API and datetime stay UTC', async ({
+      page,
+      api,
+      localD1,
+    }) => {
+      const post = await create(api, 'Korean time');
+      const utc = '2026-10-15T15:00:00.123Z';
+      await localD1.db
+        .prepare('UPDATE posts SET created_at = ?, updated_at = ? WHERE id = ?')
+        .bind(utc, utc, post.id)
+        .run();
+      await page.goto(`${localD1.origin}/admin/posts`);
+      const time = page.locator('.post-table time').first();
+      await expect(time).toHaveText('2026-10-16 00:00:00');
+      await expect(time).toHaveAttribute('datetime', utc);
+      await page.getByRole('link', { name: post.title, exact: true }).click();
+      await expect(page.locator('.post-metadata dd').nth(1)).toHaveText(
+        '2026-10-16 00:00:00',
+      );
+      expect(
+        (await (await api.get(`/api/admin/posts/${post.id}`)).json())
+          .created_at,
+      ).toBe(utc);
+      await api.delete(`/api/admin/posts/${post.id}`, {
+        data: { expected_revision: post.revision },
+      });
+      await localD1.db
+        .prepare('UPDATE posts SET deleted_at = ? WHERE id = ?')
+        .bind(utc, post.id)
+        .run();
+      await page.goto(`${localD1.origin}/admin/posts/trash`);
+      await expect(page.locator('.post-table time').last()).toHaveText(
+        '2026-10-16 00:00:00',
+      );
+      await expect(page.locator('.post-table time').last()).toHaveAttribute(
+        'datetime',
+        utc,
+      );
+      await page.clock.setFixedTime(new Date('2026-10-16T00:00:01.000Z'));
+      await page.goto(`${localD1.origin}/admin/posts/new`);
+      await expect(page.locator('.admin-editor .ProseMirror')).toHaveAttribute(
+        'contenteditable',
+        'true',
+      );
+      await page.evaluate(
+        ({ editedAt }) =>
+          localStorage.setItem(
+            'blog:admin:new-post-recovery:v1',
+            JSON.stringify({
+              title: 'Recovered Korean time',
+              body: 'Body',
+              editedAt,
+            }),
+          ),
+        { editedAt: Date.parse(utc) },
+      );
+      await page.reload();
+      const recovery = page.getByRole('dialog').locator('time');
+      await expect(recovery).toHaveText('2026-10-16 00:00:00');
+      await expect(recovery).toHaveAttribute('datetime', utc);
+      await page.screenshot({
+        path: `.wrangler/admin-ui-task3/recovery-${timezoneId.replaceAll('/', '-')}.png`,
+        fullPage: true,
+      });
+    });
+  });
+}
+
 for (const viewport of [
   { width: 1280, height: 900 },
   { width: 390, height: 844 },

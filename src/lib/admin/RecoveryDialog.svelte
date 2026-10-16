@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { displayTime } from './presentation';
 
   let {
     title,
@@ -59,7 +60,7 @@
     <p class="recovery-title font-semibold whitespace-pre-wrap">{title}</p>
     <p class="recovery-meta text-sm leading-[inherit] opacity-70">
       마지막 수정: <time datetime={new Date(editedAt).toISOString()}
-        >{new Date(editedAt).toLocaleString('ko-KR')}</time
+        >{displayTime(new Date(editedAt).toISOString())}</time
       >
     </p>
     <p id="recovery-description">

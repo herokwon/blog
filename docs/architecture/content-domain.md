@@ -110,8 +110,13 @@ now use the same shell. The organization applies to all Admin pages.
   on the right.
 - Existing-post editing and new-post authoring use a top navigation/action
   bar, then a title input and formatted body editor. Existing editing has
-  save and cancel; creation orders publish, save, and cancel. Editor pages
+  save and cancel; creation orders publish, `초안 생성`, and cancel. Editor pages
   omit a standalone status badge. Return buttons are labeled `목록`.
+- List, trash, detail and recovery timestamps share `Asia/Seoul` display in
+  zero-padded `yyyy-MM-dd HH:mm:ss` format, without milliseconds or a timezone
+  suffix. Midnight uses `00:00:00`, independently of device/server timezone.
+  Null timestamps remain `—`. UTC storage/API and `time[datetime]` values retain
+  the timestamp contract in [API Design](api-design.md).
 
 Action availability, navigation, pagination, and mutation behavior follow
 their contracts elsewhere in this document; the layout does not override
@@ -303,6 +308,8 @@ to new and existing posts regardless of status.
 
 Before save, creation/publication, manual retry, publication/republication,
 archive, soft deletion and restoration, use the native `confirm` dialog.
+New draft creation asks `현재 내용으로 초안을 생성할까요?` and reports
+`초안 생성 중…` while pending; existing editing retains its save wording.
 Cancellation must not send a mutation or discard input/recovery. A dirty
 application departure has one confirmation; the successful operation's own
 navigation must not ask again.
@@ -318,7 +325,7 @@ After confirmed mutation outcomes, use the following navigation:
 
 | Outcome                                        | Destination or behavior                                             |
 | ---------------------------------------------- | ------------------------------------------------------------------- |
-| New draft saved                                | `/admin/posts/[id]/edit`                                            |
+| New draft created with unchanged input         | `/admin/posts/[id]`                                                 |
 | New post created and published                 | `/admin/posts/[id]`                                                 |
 | New post created but publication failed        | Its edit page, with publication failure and retry guidance          |
 | Existing post saved, in any non-deleted status | `/admin/posts/[id]`                                                 |
