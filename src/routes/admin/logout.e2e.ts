@@ -61,8 +61,15 @@ test('verified logout returns home after both checks', async ({
       return original(input, options);
     };
   });
-  await page.goto(`${localD1.origin}/admin/logout`);
+  const dialogs: string[] = [];
+  page.on('dialog', async dialog => {
+    dialogs.push(dialog.type());
+    await dialog.dismiss();
+  });
+  await page.goto(`${localD1.origin}/admin/posts`);
+  await page.getByRole('link', { name: '로그아웃', exact: true }).click();
   await expect(page).toHaveURL(`${localD1.origin}/`);
+  expect(dialogs).toEqual([]);
 });
 
 test('unknown logout stays on the error screen and retry completes', async ({

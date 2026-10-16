@@ -22,6 +22,7 @@
     try {
       clearRecovery(localStorage);
       await completeLogout(data.adminContext.environment === 'local');
+      processing.allowLeave(owner);
       window.location.replace('/');
       completed = true;
     } catch {

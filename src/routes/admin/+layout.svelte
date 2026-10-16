@@ -6,7 +6,11 @@
   let { children, data } = $props();
   const processing = provideProcessing();
   beforeNavigate(navigation => {
-    if (processing.exclusive) navigation.cancel();
+    if (
+      processing.exclusive &&
+      !(navigation.type === 'leave' && processing.leaving)
+    )
+      navigation.cancel();
   });
 </script>
 

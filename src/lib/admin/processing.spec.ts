@@ -25,4 +25,18 @@ describe('Admin processing ownership', () => {
     expect(state.exclusive).toBe(false);
     expect(state.busy).toBe(true);
   });
+  it('permits the verified exclusive owner to leave without unlocking controls', () => {
+    const state = new AdminProcessing();
+    const logout = Symbol();
+    state.update(logout, true, true);
+    state.allowLeave(Symbol());
+    expect(state.leaving).toBe(false);
+    state.allowLeave(logout);
+    expect(state.leaving).toBe(true);
+    expect(state.exclusive).toBe(true);
+    state.update(logout, false);
+    expect(state.leaving).toBe(false);
+    state.update(logout, true, true);
+    expect(state.leaving).toBe(false);
+  });
 });
