@@ -18,6 +18,27 @@ describe('Markdown policy', () => {
     }
     expect(readingMarkdown('```html\n<br />\n```')).toContain('<br />');
   });
+  it.each([
+    'before<br>after',
+    'before<br />after',
+    '**before**<BR />after',
+    '[before<br>after](/safe)',
+    '| A | B |\n| --- | --- |\n| before<br>after | value |',
+    '> before<br>after',
+    '- before<br>after',
+  ])('rejects inline HTML break markers in %s', source => {
+    expect(inspectMarkdown(source).supported).toBe(false);
+    expect(readingMarkdown(source)).not.toMatch(/<br\s*\/?\s*>/i);
+    expect(readingMarkdown(source)).toContain('before');
+    expect(readingMarkdown(source)).toContain('after');
+  });
+  it.each(['> <br />', '- <br />'])(
+    'preserves standalone nested empty markers in %s',
+    source => {
+      expect(inspectMarkdown(source).supported).toBe(true);
+      expect(readingMarkdown(source)).toContain('<br />');
+    },
+  );
   it('does not promote shadowed definitions into clickable reading links', () => {
     expect(
       readingMarkdown('[link][x]\n\n[x]: javascript:alert(1)\n[x]: /safe'),
