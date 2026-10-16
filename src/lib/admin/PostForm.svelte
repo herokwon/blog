@@ -234,7 +234,7 @@
       form.result?.kind === 'observed'
     ) {
       bodyChanged = form.input.body !== form.base?.body;
-      if (form.result?.kind === 'confirmed') {
+      if (form.result?.kind === 'confirmed' && !dirty) {
         message = '저장이 완료되었습니다.';
         messageTone = 'success';
       }

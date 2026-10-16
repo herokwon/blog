@@ -156,6 +156,12 @@ for (const width of [1280, 390]) {
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Newer input',
       );
+      await expect(
+        page.getByRole('button', { name: '원래 요청 다시 시도' }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText('저장이 완료되었습니다.', { exact: true }),
+      ).toHaveCount(0);
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
       expect(
