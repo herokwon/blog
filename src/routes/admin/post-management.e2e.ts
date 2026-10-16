@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 import type { AdminPost } from '#lib/admin/contracts.ts';
+import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
 
 test('Admin page redirects authenticate first and remain uncached', async ({
@@ -38,6 +39,7 @@ async function create(
 }
 
 test.beforeEach(async ({ localD1, page }) => {
+  acceptMutationConfirmations(page);
   await localD1.db.prepare('DELETE FROM posts').run();
   await page.setExtraHTTPHeaders({
     'Cf-Access-Jwt-Assertion': await localD1.token(),
@@ -335,7 +337,7 @@ for (const viewport of [
       });
       await page.getByRole('button', { name: /작업 메뉴/ }).click();
       await page.getByRole('button', { name: '발행', exact: true }).click();
-      await expect(page.getByRole('status')).toContainText('처리 중');
+      await expect(page.getByRole('status')).toContainText('발행 중');
       await page.setViewportSize({
         width: viewport.width === 390 ? 1280 : 390,
         height: 900,
@@ -344,7 +346,13 @@ for (const viewport of [
       await expect(
         page.getByRole('button', { name: '발행', exact: true }),
       ).toBeDisabled();
-      await page.getByRole('link', { name: '휴지통', exact: true }).click();
+      await expect(page.locator('.heading-actions')).toHaveAttribute(
+        'inert',
+        '',
+      );
+      await page
+        .getByRole('link', { name: '휴지통', exact: true })
+        .click({ force: true });
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
       release();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);

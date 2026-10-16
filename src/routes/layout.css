@@ -1,378 +1,300 @@
+@layer theme, base, components, utilities;
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
-@import '@milkdown/crepe/theme/common/style.css';
-@import '@milkdown/crepe/theme/frame.css';
+@import '@milkdown/crepe/theme/common/style.css' layer(components);
+@import '@milkdown/crepe/theme/frame.css' layer(components);
 
-.app-root {
-  display: contents;
-}
-/* The version-scoped Kit patch removes the announcer's inline style. Keep its
-   live region visually hidden here without allowing inline styles. */
-#svelte-announcer {
-  position: absolute;
-  left: 0;
-  top: 0;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  overflow: hidden;
-  white-space: nowrap;
-  width: 1px;
-  height: 1px;
-}
-.milkdown {
-  --crepe-font-default: system-ui, sans-serif;
-  --crepe-font-title: system-ui, sans-serif;
-  --crepe-font-code: ui-monospace, monospace;
-}
-.editor-source {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.editor-locked {
-  pointer-events: none;
-}
-.admin-reading .milkdown {
-  padding: 0;
+/* Preserve the approved palette while sharing it across utilities and components. */
+@theme {
+  --color-admin-ink: #20242c;
+  --color-admin-feedback: #303744;
+  --color-admin-muted: #596170;
+  --color-admin-border: #d8dce2;
+  --color-admin-divider: #e8ebef;
+  --color-admin-filter: #555f70;
+  --color-admin-card: #e0e4ea;
+  --color-admin-selected: #edf1f7;
+  --color-admin-surface: #f3f4f6;
+  --color-admin-success: #166534;
+  --color-admin-error: #991b1b;
+  --color-admin-warning: #92400e;
+  --color-admin-info: #1e40af;
+  --color-admin-primary: #1d4ed8;
+  --color-admin-action: #eff6ff;
+  --color-admin-action-border: #93c5fd;
+  --color-admin-danger: #b91c1c;
+  --color-admin-danger-border: #fca5a5;
+  --color-admin-action-hover: #dbeafe;
+  --color-admin-danger-hover: #fef2f2;
+  --color-admin-focus: #2563eb;
 }
 
-.admin-shell {
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 32px 20px 64px;
-  color: #20242c;
-}
-.admin-shell a {
-  text-decoration: none;
-}
-.admin-shell h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-.admin-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #d8dce2;
-}
-.heading-actions,
-.post-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.admin-shell button,
-.heading-actions a,
-.admin-heading > a,
-.post-actions > a {
-  cursor: pointer;
-  padding: 8px 12px;
-  border: 1px solid #d8dce2;
-  border-radius: 6px;
-  background: white;
-}
-.admin-shell button:disabled,
-.admin-shell [aria-disabled='true'] {
-  opacity: 0.5;
-  cursor: default;
-}
-.admin-shell :focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 3px;
-}
-.trash-link svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-.admin-content {
-  padding-top: 24px;
-}
-.post-filters {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-.post-filters a {
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-}
-.post-filters a[aria-current] {
-  font-weight: 700;
-  border-color: #555f70;
-}
-.post-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.875rem;
-}
-.post-table th,
-.post-table td {
-  padding: 12px 8px;
-  border-bottom: 1px solid #e8ebef;
-}
-.post-table td:first-child {
-  width: 30%;
-  overflow-wrap: anywhere;
-}
-.post-table time {
-  font-size: 0.75rem;
-}
-.post-actions {
-  position: relative;
-}
-.post-menu-container {
-  position: relative;
-}
-.admin-shell .post-menu-trigger {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  padding: 8px;
-  font-size: 1.4rem;
-  line-height: 1;
-}
-.post-menu {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  min-width: 120px;
-  z-index: 10;
-  display: grid;
-  padding: 6px;
-  border: 1px solid #d8dce2;
-  border-radius: 6px;
-  background: white;
-  box-shadow: 0 4px 12px #0002;
-}
-.post-menu a,
-.post-menu button {
-  padding: 8px 12px;
-  text-align: left;
-  border: 0;
-}
-.post-menu a:hover,
-.post-menu button:hover {
-  background: #f3f4f6;
-}
-.post-actions [role='status'] {
-  font-size: 0.875rem;
-  flex-basis: 100%;
-  max-width: 34rem;
-}
-.post-cards {
-  display: none;
-}
-.admin-empty {
-  padding: 48px 0;
-  text-align: center;
-  color: #596170;
-}
-.admin-pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 24px;
-}
-.admin-pagination a,
-.admin-pagination button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-}
-.page-numbers {
-  display: flex;
-  width: 180px;
-}
-.admin-pagination [aria-current] {
-  font-weight: 700;
-  background: #edf1f7;
-}
-.post-metadata,
-.post-cards dl {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 12px;
-  font-size: 0.875rem;
-  color: #596170;
-  margin: 16px 0 32px;
-}
-.post-metadata dd,
-.post-cards dd {
-  overflow-wrap: anywhere;
-}
-.post-detail .admin-reading {
-  overflow-wrap: anywhere;
-}
-@media (max-width: 767px) {
-  .admin-editor .milkdown .ProseMirror {
-    padding: 24px 16px;
+@layer base {
+  /* Kit's patched announcer needs static hiding under the strict style CSP. */
+  #svelte-announcer {
+    @apply absolute top-0 left-0 h-px w-px overflow-hidden whitespace-nowrap [clip-path:inset(50%)] [clip:rect(0_0_0_0)];
   }
+}
+
+/* Crepe imports share this layer so these later application overrides win. */
+@layer components {
+  .milkdown {
+    --crepe-font-default: system-ui, sans-serif;
+    --crepe-font-title: system-ui, sans-serif;
+    --crepe-font-code: ui-monospace, monospace;
+  }
+  .admin-reading .milkdown {
+    @apply p-0;
+  }
+
   .admin-shell {
-    padding: 20px 16px 48px;
+    @apply mx-auto my-0 max-w-5xl px-5 pt-8 pb-16 text-admin-ink;
+  }
+  .admin-processing {
+    @apply rounded-md border border-admin-border bg-admin-surface px-4 py-3 text-admin-ink;
+  }
+  .admin-shell a {
+    @apply no-underline;
+  }
+  .admin-feedback {
+    @apply flex items-start gap-x-3 gap-y-1 rounded-md bg-admin-surface px-4 py-3 [line-height:1.6] text-admin-feedback;
+  }
+  .feedback-icon {
+    @apply [margin-top:calc((1lh_-_1em)_/_2)] size-[1em] shrink-0;
+  }
+  .admin-feedback .feedback-icon {
+    @apply text-(--feedback-color);
+  }
+  .admin-feedback[data-tone='success'] {
+    --feedback-color: var(--color-admin-success);
+  }
+  .admin-feedback[data-tone='error'] {
+    --feedback-color: var(--color-admin-error);
+  }
+  .admin-feedback[data-tone='conflict'],
+  .admin-feedback[data-tone='warning'] {
+    --feedback-color: var(--color-admin-warning);
+  }
+  .admin-feedback[data-tone='uncertain'] {
+    --feedback-color: var(--color-admin-info);
+  }
+  .admin-shell h1 {
+    @apply text-[1.75rem] leading-[inherit] font-bold wrap-anywhere;
   }
   .admin-heading {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    @apply flex items-center justify-between gap-4 border-b border-admin-border pb-6;
+  }
+  .heading-actions,
+  .post-actions {
+    @apply flex flex-wrap items-center gap-3;
+  }
+  .admin-shell button,
+  .heading-actions a,
+  .admin-heading > a,
+  .post-actions > a {
+    @apply cursor-pointer rounded-md border border-admin-border bg-white px-3 py-2;
+  }
+  .admin-shell button:disabled,
+  .admin-shell [aria-disabled='true'] {
+    @apply cursor-default opacity-50;
+  }
+  .admin-shell :focus-visible {
+    @apply outline-2 outline-offset-3 outline-admin-focus outline-solid;
+  }
+  .trash-link svg {
+    @apply h-5 w-5 fill-none stroke-current stroke-[1.5];
+  }
+  .admin-content {
+    @apply pt-6;
+  }
+  .post-filters {
+    @apply mb-5 flex gap-2;
+  }
+  .post-filters a {
+    @apply rounded-md border border-transparent px-2.5 py-1.5;
+  }
+  .post-filters a[aria-current] {
+    @apply border-admin-filter font-bold;
   }
   .post-table {
-    display: none;
+    @apply w-full border-collapse text-left text-sm leading-[inherit];
+  }
+  .post-table th,
+  .post-table td {
+    @apply border-b border-admin-divider px-2 py-3;
+  }
+  .post-table td:first-child {
+    @apply w-[30%] wrap-anywhere;
+  }
+  .post-table time {
+    @apply text-xs leading-[inherit] text-admin-muted;
+  }
+  .post-actions {
+    @apply relative;
+  }
+  .post-menu-container {
+    @apply relative;
+  }
+  .admin-shell .post-menu-trigger {
+    @apply cursor-pointer border-0 bg-transparent p-2 text-[1.4rem] leading-none;
+  }
+  .post-menu {
+    @apply absolute top-full right-0 z-10 grid min-w-30 rounded-md border border-admin-border bg-white p-1.5 shadow-[0_4px_12px_#0002];
+  }
+  .post-menu a,
+  .post-menu button {
+    @apply border-0 px-3 py-2 text-left;
+  }
+  .post-menu a:hover,
+  .post-menu button:hover {
+    @apply bg-admin-surface;
+  }
+  .admin-shell button.action-primary {
+    @apply border-admin-primary bg-admin-primary text-white;
+  }
+  .admin-shell button.action-save,
+  .admin-shell button.action-publish {
+    @apply border-admin-action-border bg-admin-action text-admin-info;
+  }
+  .admin-shell button.action-danger {
+    @apply border-admin-danger-border bg-white text-admin-danger;
+  }
+  .admin-shell button.action-primary:not(:disabled):hover {
+    @apply bg-admin-info;
+  }
+  .admin-shell button.action-save:not(:disabled):hover,
+  .admin-shell button.action-publish:not(:disabled):hover {
+    @apply bg-admin-action-hover;
+  }
+  .admin-shell button.action-danger:not(:disabled):hover {
+    @apply bg-admin-danger-hover;
+  }
+  .post-actions [role='status'] {
+    @apply max-w-136 basis-full text-sm leading-[inherit];
   }
   .post-cards {
-    display: grid;
-    gap: 16px;
+    @apply hidden;
   }
-  .post-cards article {
-    padding: 16px;
-    border: 1px solid #e0e4ea;
-    border-radius: 8px;
-    min-width: 0;
+  .admin-empty {
+    @apply px-0 py-12 text-center text-admin-muted;
   }
-  .card-heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    gap: 12px;
+  .admin-pagination {
+    @apply mt-6 flex items-center justify-center gap-2;
   }
-  .card-heading > a {
-    font-weight: 600;
-    overflow-wrap: anywhere;
-    min-width: 0;
+  .admin-pagination a,
+  .admin-pagination button {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-md border-0 p-0;
   }
+  .page-numbers {
+    @apply flex w-45;
+  }
+  .admin-pagination [aria-current] {
+    @apply bg-admin-selected font-bold;
+  }
+  .post-metadata,
   .post-cards dl {
-    margin-bottom: 0;
-    font-size: 0.75rem;
+    @apply mx-0 mt-4 mb-8 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm leading-[inherit] text-admin-muted;
   }
-}
-.admin-session {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
-}
-.post-form .post-title {
-  display: block;
-  margin: 1rem 0;
-}
-.post-form .post-title input {
-  display: block;
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid currentColor;
-  border-radius: 0.25rem;
-  font-size: 1rem;
-}
-/* Reserve space for the session and wrapped controls. At very short heights
+  .post-metadata dd,
+  .post-cards dd {
+    @apply wrap-anywhere;
+  }
+  .post-metadata .post-status,
+  .post-cards .post-status {
+    @apply font-semibold text-admin-ink;
+  }
+  .post-detail .admin-reading {
+    @apply wrap-anywhere;
+  }
+  @media (max-width: 767px) {
+    .admin-editor .milkdown .ProseMirror {
+      @apply px-4 py-6;
+    }
+    .admin-shell {
+      @apply px-4 pt-5 pb-12;
+    }
+    .admin-heading {
+      @apply flex-wrap items-start;
+    }
+    .post-table {
+      @apply hidden;
+    }
+    .post-cards {
+      @apply grid gap-4;
+    }
+    .post-cards article {
+      @apply min-w-0 rounded-lg border border-admin-card p-4;
+    }
+    .card-heading {
+      @apply flex items-start justify-between gap-3;
+    }
+    .card-heading > a {
+      @apply min-w-0 font-semibold wrap-anywhere;
+    }
+    .post-cards dl {
+      @apply mb-0 text-xs leading-[inherit];
+    }
+  }
+  .admin-session {
+    @apply mb-4 flex justify-end;
+  }
+  .post-form .post-title {
+    @apply mx-0 my-4 block;
+  }
+  .post-form .post-title input {
+    @apply block w-full rounded border border-current p-3 text-base leading-[inherit];
+  }
+  /* Reserve space for the session and wrapped controls. At very short heights
    the page remains scrollable so the controls never become unreachable. */
-.admin-shell:has(.post-form) {
-  display: flex;
-  flex-direction: column;
-  height: 100dvh;
-  min-height: 32rem;
-  padding-bottom: 1rem;
-}
-.admin-shell:has(.post-form) .admin-session {
-  flex-shrink: 0;
-}
-.post-form {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-.post-form > :not(.admin-editor) {
-  flex-shrink: 0;
-}
-.post-form .admin-editor {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 8rem;
-}
-.post-form .admin-editor .milkdown {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  border: 1px solid #d8dce2;
-  border-radius: 6px;
-}
-.post-form .milkdown .milkdown-top-bar {
-  flex-shrink: 0;
-  position: relative;
-  border-radius: 6px 6px 0 0;
-}
-.post-form .admin-editor .milkdown .ProseMirror {
-  flex: 1;
-  min-height: 0;
-  padding: 0.75rem;
-  overflow-y: auto;
-  overflow-wrap: anywhere;
-  overscroll-behavior: contain;
-}
-.post-form .milkdown :focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: -2px;
-}
-.authoring-feedback {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  margin: 1rem 0;
-}
-.recovery-dialog {
-  margin: auto;
-  padding: 0;
-  width: min(32rem, calc(100% - 2rem));
-  max-height: calc(100% - 2rem);
-  overflow: auto;
-  border: 1px solid #d8dce2;
-  border-radius: 8px;
-  color: #20242c;
-  background: white;
-}
-.recovery-dialog::backdrop {
-  background: #0006;
-}
-.recovery-panel {
-  position: relative;
-  display: grid;
-  gap: 1rem;
-  padding: 1.5rem;
-  overflow-wrap: anywhere;
-}
-.recovery-panel h2 {
-  padding-right: 2rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-.recovery-title {
-  font-weight: 600;
-  white-space: pre-wrap;
-}
-.recovery-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-.admin-shell .recovery-close {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  border: 0;
-  font-size: 1.5rem;
-  line-height: 1;
+  .admin-shell:has(.post-form) {
+    @apply flex h-dvh min-h-128 flex-col pb-4;
+  }
+  .admin-shell:has(.post-form) .admin-session {
+    @apply shrink-0;
+  }
+  .post-form {
+    @apply flex min-h-0 flex-1 flex-col;
+  }
+  .post-form > :not(.admin-editor) {
+    @apply shrink-0;
+  }
+  .post-form .admin-editor {
+    @apply flex min-h-32 flex-1 flex-col;
+  }
+  .post-form .admin-editor .milkdown {
+    @apply flex min-h-0 flex-1 flex-col rounded-md border border-admin-border;
+  }
+  .post-form .milkdown .milkdown-top-bar {
+    @apply relative shrink-0 rounded-t-md rounded-b-none;
+  }
+  .post-form .admin-editor .milkdown .ProseMirror {
+    @apply min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 wrap-anywhere;
+  }
+  .post-form .milkdown :focus-visible {
+    @apply outline-2 -outline-offset-2 outline-admin-focus outline-solid;
+  }
+  .authoring-feedback {
+    @apply mx-0 my-4 flex flex-wrap items-center gap-3;
+  }
+  .recovery-dialog {
+    @apply m-auto [max-height:calc(100%_-_2rem)] [width:min(32rem,_calc(100%_-_2rem))] overflow-auto rounded-lg border border-admin-border bg-white p-0 text-admin-ink;
+  }
+  .recovery-dialog::backdrop {
+    @apply bg-black/40;
+  }
+  .recovery-panel {
+    @apply relative grid gap-4 p-6 wrap-anywhere;
+  }
+  .recovery-panel h2 {
+    @apply pr-8 text-xl leading-[inherit] font-bold;
+  }
+  .recovery-title {
+    @apply font-semibold whitespace-pre-wrap;
+  }
+  .recovery-actions {
+    @apply flex justify-end gap-3;
+  }
+  .admin-shell .recovery-close {
+    @apply absolute top-2 right-2 border-0 text-2xl leading-none;
+  }
 }

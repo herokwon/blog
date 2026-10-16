@@ -600,11 +600,14 @@ test('Preview read-only UI retains input and disables mutations while reads rema
     });
     await page.goto(`${localD1.origin}/admin/posts/${draft.id}`);
     await expect(page.getByText('Preview', { exact: true })).toBeVisible();
+    await expect(page.getByText('Read Only', { exact: true })).toBeVisible();
     await expect(
-      page.getByText('읽기 전용 환경입니다.', { exact: true }),
+      page.getByText('읽기 전용으로 접속 중입니다.', {
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
-      page.getByRole('link', { name: 'Preview에서 작성하기' }),
+      page.getByRole('link', { name: '작성 가능한 Preview로 이동' }),
     ).toHaveAttribute('href', `${simulated.adminOrigin}/admin/posts`);
     await expect(
       page.getByRole('button', { name: '발행', exact: true }),

@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import type { AdminPost } from '#lib/admin/contracts.ts';
+import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
 
 const recoveryKey = 'blog:admin:new-post-recovery:v1';
@@ -20,6 +21,7 @@ async function openRecovery(page: Page, origin: string) {
 }
 
 test.beforeEach(async ({ localD1, page }) => {
+  acceptMutationConfirmations(page);
   await localD1.db.prepare('DELETE FROM posts').run();
   await page.setExtraHTTPHeaders({
     'Cf-Access-Jwt-Assertion': await localD1.token(),
@@ -105,7 +107,7 @@ for (const width of [1280, 390]) {
       await expect(page.getByLabel('제목', { exact: true })).toBeDisabled();
       await page.clock.fastForward(30001);
       await expect(
-        page.getByText('최신 내용을 불러오지 못했습니다. 입력을 유지합니다.'),
+        page.getByText('최신 내용을 불러오지 못했습니다.'),
       ).toBeVisible({ timeout: 1500 });
       await expect(page.getByLabel('제목', { exact: true })).toBeEnabled();
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
@@ -154,6 +156,12 @@ for (const width of [1280, 390]) {
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Newer input',
       );
+      await expect(
+        page.getByRole('button', { name: '원래 요청 다시 시도' }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText('저장이 완료되었습니다.', { exact: true }),
+      ).toHaveCount(0);
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
       expect(
@@ -248,7 +256,7 @@ for (const width of [1280, 390]) {
       page.once('dialog', dialog => dialog.accept());
       await page.getByRole('button', { name: '최신 내용 불러오기' }).click();
       await expect(
-        page.getByText('최신 내용을 불러오지 못했습니다. 입력을 유지합니다.'),
+        page.getByText('최신 내용을 불러오지 못했습니다.'),
       ).toBeVisible();
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Local input',
@@ -597,7 +605,7 @@ for (const width of [1280, 390]) {
           : route.continue(),
       );
       await page.getByRole('button', { name: '저장', exact: true }).click();
-      await expect(page.getByText('저장하지 못했습니다: Denied')).toBeVisible();
+      await expect(page.getByText('저장하지 못했습니다.')).toBeVisible();
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Rejected',
       );
@@ -625,9 +633,7 @@ for (const width of [1280, 390]) {
       });
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(
-        page.getByText(
-          '생성 결과를 확인할 수 없습니다. 글 목록을 확인한 뒤 다시 시도하세요.',
-        ),
+        page.getByText('생성 결과를 확인할 수 없습니다.'),
       ).toBeVisible();
       await expect(
         page.getByRole('link', { name: '글 목록 확인' }),
@@ -664,11 +670,7 @@ for (const width of [1280, 390]) {
       );
       await page.getByRole('button', { name: '발행', exact: true }).click();
       await expect(page).toHaveURL(/\/edit\?publication=failed$/);
-      await expect(
-        page.getByText(
-          '초안은 저장되었습니다. 발행하지 못했습니다. 상세 화면에서 발행을 다시 시도하세요.',
-        ),
-      ).toBeVisible();
+      await expect(page.getByText('발행하지 못했습니다.')).toBeVisible();
       expect(
         await page.evaluate(() =>
           localStorage.getItem('blog:admin:new-post-recovery:v1'),

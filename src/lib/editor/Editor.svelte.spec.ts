@@ -70,6 +70,42 @@ function view(): EditorView {
   return captured.editors.at(-1)!.editor.action(ctx => ctx.get(editorViewCtx));
 }
 describe('real Crepe integration', () => {
+  it('round trips the existing Preview post with empty paragraphs and a table', async () => {
+    const source =
+      'Disposable Preview acceptance post. Lifecycle, persistence, recovery and mobile validation only.\n\n<br />\n\n<br />\n\nDd\n\n' +
+      '<br />\n\n'.repeat(7) +
+      'Dddd\n\n|    |    |    |\n| :- | :- | :- |\n|    |    |    |\n|    |    |    |\n';
+    const editor = await mount(source);
+    expect(root.querySelectorAll('.ProseMirror > p').length).toBe(12);
+    expect(root.querySelector('table')).not.toBeNull();
+    view().dispatch(view().state.tr.insertText('Updated ', 1));
+    const saved = editor.getMarkdown();
+    expect(saved.match(/<br \/>/g)).toHaveLength(9);
+    await editor.destroy();
+    controller = undefined;
+    root.remove();
+    await mount(saved, true);
+    expect(root.querySelectorAll('.ProseMirror > p').length).toBe(12);
+    expect(root.querySelector('table')).not.toBeNull();
+  });
+  it('uses the native caret and only shows a placeholder for an empty document', async () => {
+    await mount('');
+    const pm = view();
+    pm.focus();
+    pm.dispatch(pm.state.tr);
+    expect(root.querySelector('.virtual-cursor-enabled')).toBeNull();
+    expect(root.querySelector('.prosemirror-virtual-cursor')).toBeNull();
+    expect(root.querySelector('.crepe-placeholder')).not.toBeNull();
+    const paragraph = pm.state.schema.nodes.paragraph;
+    pm.dispatch(
+      pm.state.tr.replaceWith(0, pm.state.doc.content.size, [
+        paragraph.create(null, pm.state.schema.text('Content')),
+        paragraph.create(),
+      ]),
+    );
+    await userEvent.keyboard('{Control>}{End}{/Control}');
+    expect(root.querySelector('.crepe-placeholder')).toBeNull();
+  });
   it('restores fixed formatting controls after repeated readonly transitions', async () => {
     const editor = await mount('original');
     for (let i = 0; i < 2; i++) {

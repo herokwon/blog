@@ -7,11 +7,22 @@ const parser = unified().use(remarkParse).use(remarkGfm).use(remarkStringify);
 
 type MarkdownNode = {
   type: string;
+  value?: string;
   url?: string;
   title?: string | null;
   identifier?: string;
   children?: MarkdownNode[];
 };
+
+// Milkdown serializes empty paragraphs using a bare break marker. This is
+// structural compatibility only; attributes and other HTML stay unsupported.
+function isEmptyLineMarker(node: MarkdownNode, parent?: MarkdownNode): boolean {
+  return (
+    node.type === 'html' &&
+    ['root', 'blockquote', 'listItem'].includes(parent?.type ?? '') &&
+    /^<br\s*\/?\s*>$/i.test(node.value?.trim() ?? '')
+  );
+}
 
 function referenceDefinitions(tree: MarkdownNode): Map<string, MarkdownNode> {
   const definitions = new Map<string, MarkdownNode>();
@@ -69,10 +80,12 @@ export function readingMarkdown(body: string): string {
     'tableCell',
   ]);
   // Invalid definitions become plain labels rather than links in Crepe.
-  function clean(node: MarkdownNode): MarkdownNode[] {
+  function clean(node: MarkdownNode, parent?: MarkdownNode): MarkdownNode[] {
+    if (isEmptyLineMarker(node, parent)) return [node];
     if (!allowed.has(node.type)) return [];
     if (node.type === 'definition') return [];
-    if (node.children) node.children = node.children.flatMap(clean);
+    if (node.children)
+      node.children = node.children.flatMap(child => clean(child, node));
     if (node.type === 'linkReference') {
       const definition = definitions.get(node.identifier ?? '');
       if (!definition?.url || !isAllowedLink(definition.url))
@@ -101,15 +114,11 @@ export function inspectMarkdown(body: string): {
   const reasons = new Set<string>();
   const tree = parser.parse(body);
   const definitions = referenceDefinitions(tree);
-  function visit(node: {
-    type: string;
-    url?: string;
-    identifier?: string;
-    children?: typeof tree.children;
-  }) {
+  function visit(node: MarkdownNode, parent?: MarkdownNode) {
     if (['image', 'imageReference'].includes(node.type))
       reasons.add('Unsupported images');
-    if (node.type === 'html') reasons.add('Unsupported HTML');
+    if (node.type === 'html' && !isEmptyLineMarker(node, parent))
+      reasons.add('Unsupported HTML');
     if (node.type.startsWith('footnote')) reasons.add('Unsupported footnotes');
     const url =
       node.type === 'linkReference'
@@ -119,8 +128,8 @@ export function inspectMarkdown(body: string): {
           : undefined;
     if (url !== undefined && !isAllowedLink(url))
       reasons.add('Disallowed links');
-    node.children?.forEach(visit);
+    node.children?.forEach(child => visit(child, node));
   }
-  tree.children.forEach(visit);
+  visit(tree);
   return { supported: reasons.size === 0, reasons: [...reasons] };
 }

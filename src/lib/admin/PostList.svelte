@@ -3,10 +3,12 @@
   import { beforeNavigate, goto, refreshAll } from '$app/navigation';
   import { resolve } from '$app/paths';
   import type { AdminPostPage, PostStatus } from './contracts';
+  import type { FeedbackTone } from './feedback';
   import { pageAfterMutation } from './pagination';
   import Pagination from './Pagination.svelte';
   import PostActions from './PostActions.svelte';
   import { displayTime, statusLabels } from './presentation';
+  import ResultNotice from './ResultNotice.svelte';
 
   let {
     posts,
@@ -14,7 +16,13 @@
     trash = false,
   }: { posts: AdminPostPage; status?: PostStatus; trash?: boolean } = $props();
   const filters = [undefined, 'draft', 'published', 'archived'] as const;
-  const actionState = $state({ busy: false, message: '' });
+  const actionState = $state({
+    busy: false,
+    message: '',
+    operation: '처리 중…',
+    tone: 'success' as FeedbackTone,
+    details: '',
+  });
   let correction: string | undefined;
   beforeNavigate(navigation => {
     const destination = navigation.to?.url;
@@ -57,7 +65,7 @@
 <svelte:head><title>{trash ? '휴지통' : '게시글'} · Admin</title></svelte:head>
 <header class="admin-heading">
   <h1>{trash ? '휴지통' : '게시글'}</h1>
-  <div class="heading-actions">
+  <div class="heading-actions" inert={actionState.busy}>
     {#if trash}<a href={resolve('/admin/posts')}>게시글 목록</a>
     {:else}
       <a href={resolve('/admin/posts/new')}>글쓰기</a>
@@ -77,13 +85,15 @@
   class="admin-content"
   aria-label={trash ? '삭제한 게시글' : '게시글 목록'}
 >
-  {#if actionState.busy}<p role="status">
-      처리 중…
-    </p>{:else if actionState.message}<p role="status">
-      {actionState.message}
-    </p>{/if}
+  {#if actionState.busy}<p class="admin-processing" role="status">
+      {actionState.operation}
+    </p>{:else if actionState.message}<ResultNotice
+      tone={actionState.tone}
+      message={actionState.message}
+      details={actionState.details}
+    />{/if}
   {#if !trash}
-    <nav class="post-filters" aria-label="상태 필터">
+    <nav class="post-filters" aria-label="상태 필터" inert={actionState.busy}>
       {#each filters as filter (filter)}
         <a
           href={resolve(`${path}${queryString(filter)}`)}
@@ -148,8 +158,8 @@
             ><PostActions {post} {refresh} state={actionState} overflow />
           </div>
           <dl>
-            <dt>상태</dt>
-            <dd>{statusLabels[post.status]}</dd>
+            <dt class="post-status">상태</dt>
+            <dd class="post-status">{statusLabels[post.status]}</dd>
             <dt>작성</dt>
             <dd>{displayTime(post.created_at)}</dd>
             <dt>발행</dt>
@@ -161,5 +171,7 @@
       {/each}
     </div>
   {/if}
-  <Pagination current={posts.page} total={posts.totalPages} {trash} />
+  <div inert={actionState.busy}>
+    <Pagination current={posts.page} total={posts.totalPages} {trash} />
+  </div>
 </section>

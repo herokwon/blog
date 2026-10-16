@@ -55,7 +55,7 @@
   <div class="recovery-panel">
     <h2 id="recovery-heading">미저장 작성 내용이 있습니다</h2>
     <p class="recovery-title">{title}</p>
-    <p>
+    <p class="recovery-meta text-sm leading-[inherit] opacity-70">
       마지막 수정: <time datetime={new Date(editedAt).toISOString()}
         >{new Date(editedAt).toLocaleString('ko-KR')}</time
       >
@@ -65,7 +65,11 @@
       삭제됩니다.
     </p>
     <div class="recovery-actions">
-      <button type="button" onclick={() => decide('restore')}>확인</button>
+      <button
+        class="action-primary"
+        type="button"
+        onclick={() => decide('restore')}>확인</button
+      >
       <button type="button" onclick={() => decide('discard')}>취소</button>
     </div>
     <button

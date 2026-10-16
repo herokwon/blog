@@ -355,9 +355,14 @@ announcer handling is historical evidence, not permission to ignore new errors.
 Task 7 selected Crepe/Kit `7.22.2`; the current dependency stack uses CodeMirror view `6.43.14` and state
 `6.7.6`. Admin reading uses read-only Crepe, with authoring controls disabled;
 no separate HTML renderer or sanitizer is required. A Markdown AST display
-projection removes source HTML, images and footnotes and unwraps disallowed
-links before Crepe parses it. This projection never replaces persisted source.
-Authoring preflight rejects those constructs and preserves the complete source.
+projection removes source HTML except standalone, attribute-free break markers
+(`br` with an optional self-closing slash) used by Crepe for empty paragraphs.
+The marker must be its entire HTML block under the document, blockquote or list
+item; inline markers within text, links and table cells remain unsupported.
+It also removes images and footnotes and unwraps disallowed links before Crepe
+parses it. This projection never replaces persisted source.
+Authoring preflight allows only that structural break-marker exception, rejects
+all other HTML and unsupported constructs, and preserves the complete source.
 Capture-phase paste/drop checks run before library parsing/upload, followed by
 a document/stored-mark transaction guard using the same URL policy.
 

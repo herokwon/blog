@@ -134,6 +134,8 @@ export async function mountEditor(options: {
       [Crepe.Feature.Cursor]: !options.readonly,
     },
     featureConfigs: {
+      [Crepe.Feature.Cursor]: { virtual: false },
+      [Crepe.Feature.Placeholder]: { mode: 'doc' },
       [Crepe.Feature.TopBar]: {
         buildTopBar(builder) {
           for (const group of builder.build()) {

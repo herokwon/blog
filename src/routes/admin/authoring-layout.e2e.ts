@@ -161,6 +161,7 @@ for (const width of [1280, 390]) {
           }),
         });
       });
+      page.once('dialog', dialog => dialog.accept());
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page.locator('.ProseMirror')).toHaveAttribute(
         'contenteditable',
@@ -188,6 +189,7 @@ for (const width of [1280, 390]) {
         page.getByRole('button', { name: 'Paragraph', exact: true }),
       ).toBeVisible();
       await page.unroute(`**/api/admin/posts/${post.id}`);
+      page.once('dialog', dialog => dialog.accept());
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
       await page.getByRole('link', { name: '수정', exact: true }).click();
