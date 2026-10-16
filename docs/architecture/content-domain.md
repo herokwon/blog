@@ -15,6 +15,11 @@ records their checks. Real-device mobile-keyboard acceptance remains outstanding
 and logout completion is implemented with scoped Preview acceptance recorded.
 Deployed v0.2.1 acceptance remains outstanding.
 
+The subsequent Admin UI refinement is implemented and locally verified;
+[integrated evidence](../operations/v0.2.1-admin-ui.md#task-4-integrated-local-evidence-2026-10-16)
+covers the shared shell, controls, feedback/navigation, draft destination and
+Korean display time. Updated Preview and physical-device acceptance remain separate.
+
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
 
@@ -35,7 +40,7 @@ records the explicit save and publication decision.
 | `deleted_at`   | Set on soft deletion; cleared on restoration                                                |
 | `revision`     | Positive integer; starts at 1 and increases with each persisted content or lifecycle change |
 
-All timestamps use the fixed UTC format defined in
+Persisted and API timestamps use the fixed UTC format defined in
 [Database Foundation](database-foundation.md#timestamps).
 A NULL `published_at` means never published, not currently hidden.
 Summary is derived, not persisted.

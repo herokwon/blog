@@ -28,6 +28,21 @@ Check exact `yyyy-MM-dd HH:mm:ss` Korean timestamps in list/trash/detail and
 recovery under UTC and non-Korean browser timezones, including midnight/day/year
 boundaries. API/storage and `time[datetime]` must remain UTC ISO8601.
 
+### Integrated Local Result — 2026-10-16
+
+The [final refinement record](v0.2.1-admin-ui.md#task-4-integrated-local-evidence-2026-10-16)
+maps the user requests to implementation and verification. At source `eac50b1`,
+type checking and lint passed; the full suite passed 82 workflow, 459 unit/component
+and 126 browser tests, including the production build. Two additional local-only
+visual probes reused that Worker bundle and captured 32 views at 1280px/390px
+(the latter with touch), with no horizontal overflow. No new product fix was
+required by the integrated review.
+
+This proves local behavior only. Updated isolated Preview/Access verification
+and physical-device keyboard acceptance remain outstanding; use the existing
+[v0.2.1 acceptance procedure](v0.2.1-acceptance.md) when authorized. Keep scoped
+historical logout acceptance separate from acceptance of this updated candidate.
+
 ## v0.2.1 Environment Verification
 
 Current environment implementation, approved provisioning and remaining remote
