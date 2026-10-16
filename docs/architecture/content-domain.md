@@ -170,6 +170,8 @@ triangle. Icons are decorative; retain the accessible status label and
 `role="status"`. Save completion says `저장이 완료되었습니다.`.
 Confirmed, observed, rejected, conflicting and unknown mutation results
 remain distinct; an observed outcome must not be announced as confirmed success.
+A confirmed retry of an older snapshot must not announce generic save completion
+while the visible form still contains unsaved edits.
 
 Save and publish have equal emphasis. Restore is the primary action and
 soft deletion uses the danger treatment. Status remains more prominent than
