@@ -54,6 +54,7 @@
   </p>
 {/if}
 {#if failed}<button
+    class="admin-button"
     bind:this={retryButton}
     type="button"
     onclick={logout}

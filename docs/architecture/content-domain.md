@@ -81,6 +81,11 @@ now use the same shell. The organization applies to all Admin pages.
 
 - Desktop content has a maximum width of 1024px. Mobile adapts the same
   management flow rather than removing actions.
+- The document language is Korean. A session `header > nav` precedes a sibling
+  `main`, containing page headings/action bars and content. Body and the shared
+  page wrapper fill at least the dynamic viewport; main fills the space below
+  the header. Main has 32px vertical padding on mobile and 48px on desktop.
+  Short viewports remain scrollable so authoring controls stay reachable.
 - Main-page headings or editor navigation/action bars precede the content
   area. Status filters belong to the list content area below that separation.
 - The normal list groups the writing action and trash icon at the right of
@@ -91,6 +96,10 @@ now use the same shell. The organization applies to all Admin pages.
   for normal posts or deleted timestamp for trash. Row/card actions use an
   overflow menu. Timestamp headings omit `시각`; titles have no underline.
   Item-count labels and a separate pagination top divider are omitted.
+- Pagination centers the previous arrow, actual visible numbers and next arrow
+  as one content-sized group, with symmetric arrow gaps and equal-size controls.
+  Do not reserve blank slots for missing page numbers; preserve the five-page
+  groups, disabled boundary arrows and hidden pagination for empty scopes.
 - Detail places the title before status and timestamp metadata. Navigation
   is on the left of the top action row, with applicable management actions
   on the right.
@@ -173,9 +182,16 @@ remain distinct; an observed outcome must not be announced as confirmed success.
 A confirmed retry of an older snapshot must not announce generic save completion
 while the visible form still contains unsaved edits.
 
-Save and publish have equal emphasis. Restore is the primary action and
+Save and publish have equal emphasis. Restore uses the neutral Edit treatment;
 soft deletion uses the danger treatment. Status remains more prominent than
 secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
+Logout and neutral navigation/actions share bordered buttons.
+Save/publish/republish use colored text on a white resting background, with
+subtle hover like danger actions; menu items retain their borderless treatment.
+Hover applies only on hover-capable devices and enabled controls; keyboard
+focus remains visible. Exclusive logout makes both header and main controls inert.
+Detail reading has no outer Milkdown/ProseMirror padding; preserve Markdown
+indentation and the editing surface's 12px padding.
 
 Application styles use Tailwind v4 utilities, shared `@theme` palette
 values, `@layer base` for framework accessibility defaults and

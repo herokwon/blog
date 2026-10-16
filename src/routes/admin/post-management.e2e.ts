@@ -53,6 +53,126 @@ for (const viewport of [
   test.describe(`${viewport.width}px management`, () => {
     test.use({ viewport });
 
+    test('long mobile titles wrap without pushing the action menu outside the viewport', async ({
+      api,
+      localD1,
+      page,
+    }) => {
+      await create(api, 'A'.repeat(200));
+      await page.goto(`${localD1.origin}/admin/posts`);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      const menu = await page
+        .getByRole('button', { name: /작업 메뉴/ })
+        .boundingBox();
+      expect(menu!.x + menu!.width).toBeLessThanOrEqual(viewport.width);
+    });
+
+    test('session header and main fill empty pages without reserving pagination space', async ({
+      page,
+      localD1,
+    }) => {
+      for (const path of ['/admin/posts', '/admin/posts/trash']) {
+        await page.goto(`${localD1.origin}${path}`);
+        await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
+        const main = page.getByRole('main');
+        const header = page.getByRole('banner');
+        await expect(
+          header.getByRole('link', { name: '로그아웃', exact: true }),
+        ).toBeVisible();
+        expect(
+          await main.evaluate(el => el.previousElementSibling?.tagName),
+        ).toBe('HEADER');
+        const headerBox = await header.boundingBox();
+        const mainBox = await main.boundingBox();
+        expect(mainBox!.y).toBeCloseTo(headerBox!.y + headerBox!.height, 0);
+        expect(mainBox!.y + mainBox!.height).toBeGreaterThanOrEqual(
+          viewport.height,
+        );
+        expect(await main.evaluate(el => getComputedStyle(el).paddingTop)).toBe(
+          viewport.width < 768 ? '32px' : '48px',
+        );
+        await expect(
+          page.getByRole('navigation', { name: '페이지', exact: true }),
+        ).toHaveCount(0);
+      }
+    });
+
+    test('pagination centers actual number groups between evenly spaced arrows', async ({
+      api,
+      localD1,
+      page,
+    }) => {
+      const posts = [];
+      for (let index = 0; index < 7; index++)
+        posts.push(await create(api, `Page ${index}`));
+      for (const trash of [false, true]) {
+        if (trash)
+          for (const post of posts)
+            expect(
+              (
+                await api.delete(`/api/admin/posts/${post.id}`, {
+                  data: { expected_revision: post.revision },
+                })
+              ).status(),
+            ).toBe(204);
+        const path = trash ? '/admin/posts/trash' : '/admin/posts';
+        for (const [query, numbers] of [
+          ['?limit=10', ['1']],
+          ['?limit=3', ['1', '2', '3']],
+          ['?limit=1', ['1', '2', '3', '4', '5']],
+          ['?limit=1&page=6', ['6', '7']],
+        ] as const) {
+          await page.goto(`${localD1.origin}${path}${query}`);
+          const nav = page.getByRole('navigation', {
+            name: '페이지',
+            exact: true,
+          });
+          const links = nav.getByRole('link', { name: /^\d+ 페이지$/ });
+          await expect(links).toHaveText([...numbers]);
+          expect(
+            await nav.locator('[aria-current="page"]').evaluate(el => ({
+              background: getComputedStyle(el).backgroundColor,
+              weight: getComputedStyle(el).fontWeight,
+            })),
+          ).toEqual({ background: 'rgb(237, 241, 247)', weight: '700' });
+          const first = await links.first().boundingBox();
+          const last = await links.last().boundingBox();
+          const previous = nav
+            .getByRole('button', { name: '이전 페이지' })
+            .or(nav.getByRole('link', { name: '이전 페이지' }));
+          const next = nav
+            .getByRole('button', { name: '다음 페이지' })
+            .or(nav.getByRole('link', { name: '다음 페이지' }));
+          const left = await previous.boundingBox();
+          const right = await next.boundingBox();
+          expect((left!.x + right!.x + right!.width) / 2).toBeCloseTo(
+            viewport.width / 2,
+            0,
+          );
+          expect(first!.x - left!.x - left!.width).toBeCloseTo(
+            right!.x - last!.x - last!.width,
+            0,
+          );
+          if (numbers.length === 1) {
+            expect(first!.x + first!.width / 2).toBeCloseTo(
+              viewport.width / 2,
+              0,
+            );
+            await expect(previous).toBeDisabled();
+            await expect(next).toBeDisabled();
+          }
+        }
+        await page.screenshot({
+          path: `.wrangler/admin-ui-task1/${trash ? 'trash' : 'pagination'}-${viewport.width}.png`,
+          fullPage: true,
+        });
+      }
+    });
+
     test('protected lists reset filters, preserve limit and show accessible heading controls', async ({
       api,
       localD1,
@@ -81,7 +201,7 @@ for (const viewport of [
       const shell = await page.locator('.admin-shell').boundingBox();
       expect(shell!.width).toBeLessThanOrEqual(1024);
       await page.screenshot({
-        path: `.superpowers/sdd/v0.2.0-implementation/task9-list-${viewport.width}.png`,
+        path: `.wrangler/admin-ui-task1/list-${viewport.width}.png`,
         fullPage: true,
       });
       await page.setViewportSize({ width: 390, height: 844 });
@@ -126,7 +246,16 @@ for (const viewport of [
       await expect(page.locator('.admin-reading .ProseMirror')).toContainText(
         'First body',
       );
+      expect(
+        await page
+          .locator('.admin-reading .ProseMirror')
+          .evaluate(el => getComputedStyle(el).padding),
+      ).toBe('0px');
       await expect(page.locator('.admin-reading .cm-editor')).toBeVisible();
+      await page.screenshot({
+        path: `.wrangler/admin-ui-task1/detail-${viewport.width}.png`,
+        fullPage: true,
+      });
       await expect(
         page.locator('.admin-reading [contenteditable=true]'),
       ).toHaveCount(0);

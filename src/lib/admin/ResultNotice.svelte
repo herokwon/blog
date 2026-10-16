@@ -22,9 +22,13 @@
   };
 </script>
 
-<p class="admin-feedback text-sm leading-[1.6]" data-tone={tone} role="status">
+<p
+  class="admin-feedback flex items-start gap-x-3 gap-y-1 rounded-md bg-admin-surface px-4 py-3 text-sm leading-[1.6] text-admin-feedback"
+  data-tone={tone}
+  role="status"
+>
   <svg
-    class="feedback-icon"
+    class="feedback-icon mt-[calc((1lh_-_1em)_/_2)] size-[1em] shrink-0"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"

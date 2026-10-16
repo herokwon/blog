@@ -118,6 +118,7 @@
 {#snippet controls()}
   {#if post.deleted_at === null}
     <a
+      class="admin-button"
       href={resolve('/admin/posts/[id]/edit', { id: post.id })}
       aria-disabled={action.busy}
       onclick={event => {
@@ -126,36 +127,40 @@
     >
     {#if post.status !== 'published'}
       <button
-        class="action-publish"
+        class="admin-button action-publish"
         disabled={action.busy || !writable}
         onclick={() => command('publish')}
         >{post.status === 'archived' ? '재발행' : '발행'}</button
       >
     {:else}
       <button
+        class="admin-button"
         disabled={action.busy || !writable}
         onclick={() => command('archive')}>공개 취소</button
       >
     {/if}
     <button
-      class="action-danger"
+      class="admin-button action-danger"
       disabled={action.busy || !writable}
       onclick={() => command('delete')}>삭제</button
     >
   {:else}
     <button
-      class="action-primary"
+      class="admin-button"
       disabled={action.busy || !writable}
       onclick={() => command('restore')}>복구</button
     >
   {/if}
 {/snippet}
 
-<div class="post-actions" aria-busy={action.busy}>
+<div
+  class="post-actions relative flex flex-wrap items-center gap-3 [&>[role=status]]:max-w-136 [&>[role=status]]:basis-full [&>[role=status]]:text-sm [&>[role=status]]:leading-[inherit]"
+  aria-busy={action.busy}
+>
   {#if overflow}
-    <div class="post-menu-container">
+    <div class="post-menu-container relative">
       <button
-        class="post-menu-trigger"
+        class="admin-button post-menu-trigger border-0 bg-transparent p-2 text-[1.4rem] leading-none"
         aria-label={`${post.title} 작업 메뉴`}
         aria-expanded={menuOpen}
         onclick={() => (menuOpen = !menuOpen)}
@@ -163,7 +168,11 @@
           if (event.key === 'Escape') menuOpen = false;
         }}>⋯</button
       >
-      {#if menuOpen}<div class="post-menu">{@render controls()}</div>{/if}
+      {#if menuOpen}<div
+          class="post-menu absolute top-full right-0 z-10 grid min-w-30 rounded-md border border-admin-border bg-white p-1.5 shadow-[0_4px_12px_#0002]"
+        >
+          {@render controls()}
+        </div>{/if}
     </div>
   {:else}{@render controls()}{/if}
   {#if !overflow}

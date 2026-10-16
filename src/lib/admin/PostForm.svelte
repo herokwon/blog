@@ -270,33 +270,34 @@
 </script>
 
 <form
-  class="post-form"
+  class="post-form flex min-h-0 flex-1 flex-col"
   onsubmit={event => {
     event.preventDefault();
     void submit('save');
   }}
 >
-  <header class="admin-heading">
-    <a href={resolve('/admin/posts')}>목록</a>
-    <div class="post-actions">
+  <div class="admin-heading">
+    <a class="admin-button" href={resolve('/admin/posts')}>목록</a>
+    <div class="post-actions flex flex-wrap items-center gap-3">
       {#if !form.base}<button
-          class="action-publish"
+          class="admin-button action-publish"
           type="button"
           disabled={locked || !supported || !controller || !writable}
           onclick={() => submit('publish')}>발행</button
         >{/if}
       <button
-        class="action-save"
+        class="admin-button action-save"
         type="submit"
         disabled={locked || !supported || !controller || !writable}>저장</button
       >
       <a
+        class="admin-button"
         href={form.base
           ? resolve('/admin/posts/[id]', { id: form.base.id })
           : resolve('/admin/posts')}>취소</a
       >
     </div>
-  </header>
+  </div>
   {#if form.pending || loading}<p class="admin-processing" role="status">
       {loading
         ? '최신 내용 불러오는 중…'
@@ -330,24 +331,30 @@
     >
   {/if}
   {#if form.base && ['conflict', 'unresolved'].includes(form.result?.kind ?? '')}
-    <div class="authoring-feedback">
+    <div class="authoring-feedback my-4 flex flex-wrap items-center gap-3">
       <a
+        class="admin-button"
         href={resolve('/admin/posts/[id]', { id: form.base.id })}
         target="_blank"
         rel="noopener noreferrer">최신 글 확인</a
       >
-      <button type="button" disabled={locked} onclick={reloadLatest}
-        >최신 내용 불러오기</button
+      <button
+        class="admin-button"
+        type="button"
+        disabled={locked}
+        onclick={reloadLatest}>최신 내용 불러오기</button
       >
       {#if form.result?.kind === 'unresolved'}<button
+          class="admin-button"
           type="button"
           disabled={locked || !writable}
           onclick={() => submit('retry')}>원래 요청 다시 시도</button
         >{/if}
     </div>
   {/if}
-  <label class="post-title" for="post-title"
+  <label class="post-title my-4 block" for="post-title"
     ><span class="sr-only">제목</span><input
+      class="block w-full rounded border border-current p-3 text-base leading-[inherit]"
       id="post-title"
       placeholder="제목"
       bind:this={titleInput}

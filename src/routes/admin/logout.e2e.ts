@@ -22,6 +22,9 @@ test('pending logout locks Admin controls while its status remains accessible, t
   });
   await page.goto(`${localD1.origin}/admin/logout`);
   await expect(page.locator('.admin-workspace')).toHaveAttribute('inert', '');
+  await expect(
+    page.getByRole('banner', { includeHidden: true }),
+  ).toHaveAttribute('inert', '');
   await expect(page.getByRole('status')).toContainText('로그아웃');
   expect(
     await page.locator('.admin-session a').evaluate(link => {

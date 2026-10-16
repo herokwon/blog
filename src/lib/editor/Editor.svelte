@@ -63,7 +63,7 @@
     class="editor-source wrap-anywhere whitespace-pre-wrap">{initialSource}</pre>
 {/if}
 <div
-  class="admin-editor"
+  class="admin-editor flex min-h-32 flex-1 flex-col"
   class:pointer-events-none={locked}
   bind:this={root}
 ></div>

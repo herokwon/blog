@@ -85,7 +85,7 @@ for (const scope of ['normal', 'trash'] as const) {
       .getByRole('link', { name: '11 페이지', exact: true })
       .boundingBox();
     expect(first!.x).toBeCloseTo(group!.x, 0);
-    expect(group!.width).toBeGreaterThan(first!.width * 2);
+    expect(group!.width).toBeCloseTo(first!.width * 2, 0);
     await expect(page).toHaveURL(
       `${localD1.origin}${path}?${filter}page=11&limit=1`,
     );

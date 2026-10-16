@@ -1,5 +1,16 @@
 # Admin validation
 
+## Admin UI Refinement Checks
+
+Follow [Admin UI refinement](v0.2.1-admin-ui.md) for the current task status.
+Check session header/main landmarks, full-height empty pages, neutral and
+colored-text controls, hover-capable-only feedback, keyboard focus and disabled
+states. Verify long unbroken titles retain reachable menus on mobile, reading
+padding does not change editing padding, and pagination centers one/partial/full
+number groups in both normal and trash lists. Preserve authoring body scrolling,
+short-viewport control access and exclusive logout locking across both landmarks.
+Record local evidence separately from updated Preview/physical-device acceptance.
+
 ## v0.2.1 Environment Verification
 
 Current environment implementation, approved provisioning and remaining remote
