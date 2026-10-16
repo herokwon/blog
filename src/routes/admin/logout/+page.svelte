@@ -13,13 +13,11 @@
   let retryButton = $state<HTMLButtonElement>();
 
   let failed = $state(false);
-  let noticeHidden = $state(false);
   async function logout() {
     if (busy) return;
     busy = true;
     processing.update(owner, true, true);
     failed = false;
-    noticeHidden = false;
     let completed = false;
     try {
       clearRecovery(localStorage);
@@ -44,22 +42,22 @@
   });
 </script>
 
-{#if failed && !noticeHidden}<ResultNotice
+{#if failed}<ResultNotice
     tone="uncertain"
     message="로그아웃 완료를 확인하지 못했습니다."
     details="브라우저 입력 복구 삭제에 실패했다면 사이트 데이터를 확인하세요."
-    ondismiss={() => (noticeHidden = true)}
-  />{/if}
+  >
+    {#snippet actions()}<button
+        class="admin-button"
+        bind:this={retryButton}
+        type="button"
+        onclick={logout}
+        disabled={busy}>다시 시도</button
+      >{/snippet}
+  </ResultNotice>{/if}
 {#if data.adminContext.environment === 'local'}
   <p>
     Local 환경에는 Cloudflare Access 세션이 없습니다. 입력 복구를 정리하고
     홈으로 이동합니다.
   </p>
 {/if}
-{#if failed}<button
-    class="admin-button"
-    bind:this={retryButton}
-    type="button"
-    onclick={logout}
-    disabled={busy}>다시 시도</button
-  >{/if}

@@ -96,9 +96,32 @@ test('unknown logout stays on the error screen and retry completes', async ({
     };
   });
   await page.goto(`${localD1.origin}/admin/logout`);
-  await expect(page.getByRole('button', { name: '다시 시도' })).toBeVisible();
+  const notice = page.getByRole('group', { name: '작업 결과' });
+  const retry = notice.getByRole('button', { name: '다시 시도' });
+  await expect(retry).toBeFocused();
+  await expect(notice.getByRole('button', { name: '안내 닫기' })).toHaveCount(
+    0,
+  );
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    const noticeBox = await notice.boundingBox();
+    const retryBox = await retry.boundingBox();
+    expect(retryBox!.width).toBeLessThan(noticeBox!.width / 2);
+    const messageBox = await notice.getByRole('status').boundingBox();
+    if (width === 390) {
+      expect(retryBox!.y).toBeGreaterThanOrEqual(
+        messageBox!.y + messageBox!.height,
+      );
+      expect(retryBox!.x).toBeCloseTo(messageBox!.x, 0);
+    } else {
+      expect(retryBox!.y).toBeLessThan(messageBox!.y + messageBox!.height);
+      expect(
+        noticeBox!.x + noticeBox!.width - retryBox!.x - retryBox!.width,
+      ).toBeCloseTo(16, 0);
+    }
+  }
   await expect(page).toHaveURL(`${localD1.origin}/admin/logout`);
-  await page.getByRole('button', { name: '다시 시도' }).click();
+  await retry.click();
   await expect(page).toHaveURL(`${localD1.origin}/`);
 });
 
