@@ -607,7 +607,7 @@ test('Preview read-only UI retains input and disables mutations while reads rema
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole('link', { name: '작성 가능한 Preview로 이동' }),
+      page.getByRole('link', { name: '작성 화면으로 이동' }),
     ).toHaveAttribute('href', `${simulated.adminOrigin}/admin/posts`);
     await expect(
       page.getByRole('button', { name: '발행', exact: true }),

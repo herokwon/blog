@@ -61,33 +61,32 @@
     <div class="admin-workspace contents" inert={processing.exclusive}>
       {#if !data.adminContext.writable}
         <aside
-          class="admin-read-only mb-4 flex items-start gap-3 rounded-md bg-gray-100 px-4 py-3 text-sm"
+          class="admin-read-only mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-gray-100 px-4 py-3 text-sm"
           aria-label="환경 안내"
         >
-          <svg
-            class="mt-[calc((1lh-1em)/2)] h-[1em] w-[1em] shrink-0 text-blue-800"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-            focusable="false"
-            ><circle cx="12" cy="12" r="11" /><path
-              d="M12 10v7 M12 6.5h.01"
+          <div class="flex min-w-0 flex-1 basis-80 items-start gap-3">
+            <svg
+              class="mt-[calc((1lh_-_1.25em)_/_2)] size-[1.25em] shrink-0 text-amber-600"
+              viewBox="0 0 24 24"
               fill="none"
-              stroke="white"
-              stroke-width="2.5"
+              stroke="currentColor"
+              stroke-width="2"
               stroke-linecap="round"
-            /></svg
-          >
-          <div class="min-w-0">
-            <p class="font-semibold text-gray-800">
+              stroke-linejoin="round"
+              aria-hidden="true"
+              focusable="false"
+              ><rect x="5" y="10" width="14" height="11" rx="2" /><path
+                d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"
+              /></svg
+            >
+            <p class="min-w-0 font-semibold text-gray-800">
               읽기 전용으로 접속 중입니다.
             </p>
-            {#if data.adminContext.previewAdminUrl}<a
-                class="mt-1 inline-block text-blue-800 hover:underline focus-visible:underline"
-                href={data.adminContext.previewAdminUrl}
-                >작성 가능한 Preview로 이동</a
-              >{/if}
           </div>
+          {#if data.adminContext.previewAdminUrl}<a
+              class="admin-button ml-[calc(1.25em_+_0.75rem)] shrink-0"
+              href={data.adminContext.previewAdminUrl}>작성 화면으로 이동</a
+            >{/if}
         </aside>
       {/if}
       {#if notices.current}
