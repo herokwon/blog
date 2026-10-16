@@ -21,6 +21,7 @@
   --color-admin-primary: #1d4ed8;
   --color-admin-danger: #b91c1c;
   --color-admin-danger-border: #fca5a5;
+  --color-admin-action-border: #93c5fd;
   --color-admin-action-hover: #dbeafe;
   --color-admin-danger-hover: #fef2f2;
   --color-admin-focus: #2563eb;
@@ -59,7 +60,7 @@
   }
   .admin-button.action-save,
   .admin-button.action-publish {
-    @apply text-admin-info;
+    @apply border-admin-action-border text-admin-info;
   }
   .admin-button.action-danger {
     @apply border-admin-danger-border text-admin-danger;

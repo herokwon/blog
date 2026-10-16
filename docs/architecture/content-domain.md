@@ -212,7 +212,7 @@ Save and publish have equal emphasis. Restore uses the neutral Edit treatment;
 soft deletion uses the danger treatment. Status remains more prominent than
 secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
 Logout and neutral navigation/actions share bordered buttons.
-Save/publish/republish use colored text on a white resting background, with
+Save/publish/republish use blue text and a light blue border on a white resting background, with
 subtle hover like danger actions; menu items retain their borderless treatment.
 Hover applies only on hover-capable devices and enabled controls; keyboard
 focus remains visible. Exclusive logout makes both header and main controls inert.
