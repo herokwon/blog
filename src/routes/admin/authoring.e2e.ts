@@ -60,6 +60,54 @@ for (const width of [1280, 390]) {
       ).json();
       expect(current.revision).toBe(post.revision);
     });
+    test('reverted existing content leaves and reloads without an unsaved-changes warning', async ({
+      page,
+      api,
+      localD1,
+    }) => {
+      const post = await (
+        await api.post('/api/admin/posts', {
+          data: { title: 'Original title', body: 'Original body' },
+        })
+      ).json();
+      const editUrl = `${localD1.origin}/admin/posts/${post.id}/edit`;
+      await page.goto(editUrl);
+      const editor = page.locator('.admin-editor .ProseMirror');
+      const title = page.getByLabel('제목', { exact: true });
+      const save = page.getByRole('button', { name: '저장', exact: true });
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
+      const dialogs: string[] = [];
+      page.on('dialog', async dialog => {
+        dialogs.push(dialog.type());
+        await dialog.accept();
+      });
+      await title.fill('Changed title');
+      await editor.fill('Changed body');
+      await title.fill(post.title);
+      await editor.fill(post.body);
+      await expect(save).toBeDisabled();
+      await page.getByRole('link', { name: '목록', exact: true }).click();
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
+      expect(dialogs).toEqual([]);
+
+      await page.goto(editUrl);
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
+      await editor.fill('Changed again');
+      await editor.fill(post.body);
+      await expect(save).toBeDisabled();
+      await page.reload();
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
+      expect(dialogs).toEqual([]);
+      await expect(save).toBeDisabled();
+      await editor.fill('Actual unsaved change');
+      await expect(save).toBeEnabled();
+      await page.getByRole('link', { name: '목록', exact: true }).click();
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
+      expect(dialogs).toEqual(['confirm']);
+      expect(
+        await (await api.get(`/api/admin/posts/${post.id}`)).json(),
+      ).toEqual(post);
+    });
     test('title-only lost response with concurrent body requires explicit whole-post reload', async ({
       page,
       api,

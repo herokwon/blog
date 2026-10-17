@@ -54,10 +54,11 @@
   const hasEdits = $derived(
     !form.base ||
       form.input.title !== form.base.title ||
-      currentEditorMarkdown !==
-        (form.base.body === editorBaselineSource
-          ? editorBaselineMarkdown
-          : form.base.body),
+      (bodyChanged &&
+        currentEditorMarkdown !==
+          (form.base.body === editorBaselineSource
+            ? editorBaselineMarkdown
+            : form.base.body)),
   );
   const locked = $derived(form.pending || loading || recovery !== null);
   const processing = useProcessing();
@@ -69,9 +70,7 @@
   });
   const dirty = $derived(
     form.base
-      ? form.input.title !== form.base.title ||
-          bodyChanged ||
-          form.input.body !== form.base.body
+      ? hasEdits
       : form.input.title !== '' || bodyChanged || form.input.body !== '',
   );
 

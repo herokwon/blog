@@ -311,6 +311,8 @@ The new-post page retains its separate creation-followed-by-publication flow.
 Existing-post Save is enabled only when title or normalized editor Markdown
 differs from its loaded baseline; reverting both disables it again. Comparison
 must not serialize untouched source into a save or alter explicit retry rules.
+Use the same comparison for existing-post navigation and browser-exit warnings,
+so fully reverted edits do not prompt the author to discard nonexistent changes.
 
 When leaving a page with unsaved changes, ask whether to leave without
 saving using a confirmation dialog. Canceling keeps the editor and input;
