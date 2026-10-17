@@ -31,6 +31,35 @@ test.beforeEach(async ({ localD1, page }) => {
 for (const width of [1280, 390]) {
   test.describe(`${width}px authoring`, () => {
     test.use({ viewport: { width, height: 900 } });
+    test('save is enabled only while existing title or body differs', async ({
+      page,
+      api,
+      localD1,
+    }) => {
+      const post = await (
+        await api.post('/api/admin/posts', {
+          data: { title: 'Unchanged title', body: 'Original body' },
+        })
+      ).json();
+      await page.goto(`${localD1.origin}/admin/posts/${post.id}/edit`);
+      const editor = page.locator('.admin-editor .ProseMirror');
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
+      const save = page.getByRole('button', { name: '저장', exact: true });
+      const title = page.getByLabel('제목', { exact: true });
+      await expect(save).toBeDisabled();
+      await title.fill('Changed title');
+      await expect(save).toBeEnabled();
+      await title.fill(post.title);
+      await expect(save).toBeDisabled();
+      await editor.fill('Changed body');
+      await expect(save).toBeEnabled();
+      await editor.fill('Original body');
+      await expect(save).toBeDisabled();
+      const current = await (
+        await api.get(`/api/admin/posts/${post.id}`)
+      ).json();
+      expect(current.revision).toBe(post.revision);
+    });
     test('title-only lost response with concurrent body requires explicit whole-post reload', async ({
       page,
       api,
