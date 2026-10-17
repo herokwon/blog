@@ -36,6 +36,8 @@ updates:
       prefix: chore
       include: scope
     ignore:
+      # Upgrade Crepe and Kit together after verifying the version-specific Crepe patch.
+      - dependency-name: '@milkdown/*'
       - dependency-name: typescript
         update-types: [version-update:semver-major]
       - dependency-name: svelte
