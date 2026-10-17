@@ -70,7 +70,7 @@
     if (publishedId || number !== posts.page) {
       const destination = publishedId
         ? resolve('/admin/posts/[id]', { id: publishedId })
-        : `${resolve(path)}${queryString(status, number)}`;
+        : resolve(`${path}${queryString(status, number)}`);
       correction = destination;
       try {
         await goto(destination);
