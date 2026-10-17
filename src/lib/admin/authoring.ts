@@ -14,7 +14,7 @@ export type AuthoringState = {
   request: MutationRequest | null;
   submitted: AuthoringInput | null;
   result: MutationResult | null;
-  destination: string | null;
+  destination: `/admin/posts/${string}` | null;
 };
 
 export function createAuthoringState(post?: AdminPost): AuthoringState {
