@@ -7,6 +7,7 @@
   import { runMutation } from './mutations';
   import { useNotices } from './notices.svelte';
   import { useProcessing } from './processing.svelte';
+  import ProcessingIndicator from './ProcessingIndicator.svelte';
   import ResultNotice from './ResultNotice.svelte';
 
   let {
@@ -196,9 +197,11 @@
     </div>
   {:else}{@render controls()}{/if}
   {#if !overflow}
-    {#if action.busy}<span class="admin-processing" role="status"
-        >{action.operation ?? '처리 중…'}</span
-      >{:else if action.message}<ResultNotice
+    <ProcessingIndicator
+      active={action.busy}
+      message={action.operation ?? '처리 중…'}
+    />
+    {#if !action.busy && action.message}<ResultNotice
         tone={action.tone ?? 'uncertain'}
         message={action.message}
         details={action.details}

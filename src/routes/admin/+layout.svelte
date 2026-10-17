@@ -1,6 +1,7 @@
 <script lang="ts">
   import { provideNotices } from '#lib/admin/notices.svelte.ts';
   import { provideProcessing } from '#lib/admin/processing.svelte.ts';
+  import ProcessingIndicator from '#lib/admin/ProcessingIndicator.svelte';
   import ResultNotice from '#lib/admin/ResultNotice.svelte';
   import { beforeNavigate } from '$app/navigation';
   import { resolve } from '$app/paths';
@@ -23,7 +24,7 @@
 <div
   class="admin-page flex min-h-screen flex-col text-admin-ink has-[.post-form]:h-dvh has-[.post-form]:min-h-128 supports-[height:100dvh]:min-h-dvh"
 >
-  <header class="shrink-0" inert={processing.exclusive}>
+  <header class="shrink-0" inert={processing.busy}>
     <nav
       class="admin-session mx-auto flex w-full max-w-5xl items-center justify-end gap-3 px-4 py-4 md:px-5"
       aria-label="세션"
@@ -61,6 +62,7 @@
     <div class="admin-workspace contents" inert={processing.exclusive}>
       {#if !data.adminContext.writable}
         <aside
+          inert={processing.busy}
           class="admin-read-only mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-gray-100 px-4 py-3 text-sm"
           aria-label="환경 안내"
         >
@@ -103,8 +105,10 @@
       {/if}
       {@render children()}
     </div>
-    {#if processing.exclusive}<p class="admin-processing" role="status">
-        로그아웃 중입니다.
-      </p>{/if}
   </main>
+  <ProcessingIndicator
+    active={processing.exclusive}
+    scope="global"
+    message="로그아웃 중입니다."
+  />
 </div>

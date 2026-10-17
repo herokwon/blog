@@ -4,7 +4,7 @@ import { test } from '../../../tests/admin/local-d1';
 test('pending logout locks Admin controls while its status remains accessible, then failure unlocks retry', async ({
   page,
   localD1,
-}) => {
+}, testInfo) => {
   await page.setExtraHTTPHeaders({
     'Cf-Access-Jwt-Assertion': await localD1.token(),
   });
@@ -26,6 +26,11 @@ test('pending logout locks Admin controls while its status remains accessible, t
     page.getByRole('banner', { includeHidden: true }),
   ).toHaveAttribute('inert', '');
   await expect(page.getByRole('status')).toContainText('로그아웃');
+  const overlay = page.locator('[data-processing="global"]');
+  await expect(overlay).toBeVisible();
+  const bounds = await overlay.boundingBox();
+  expect(bounds).toEqual({ x: 0, y: 0, ...page.viewportSize() });
+  await page.screenshot({ path: testInfo.outputPath('global-loading.png') });
   expect(
     await page.locator('.admin-session a').evaluate(link => {
       (link as HTMLElement).focus();
@@ -42,6 +47,7 @@ test('pending logout locks Admin controls while its status remains accessible, t
     '',
   );
   await expect(page.getByRole('button', { name: '다시 시도' })).toBeFocused();
+  await expect(overlay).toHaveCount(0);
 });
 
 test('verified logout returns home after both checks', async ({

@@ -8,6 +8,7 @@
   import Pagination from './Pagination.svelte';
   import PostActions from './PostActions.svelte';
   import { displayTime, statusLabels } from './presentation';
+  import ProcessingIndicator from './ProcessingIndicator.svelte';
   import ResultNotice from './ResultNotice.svelte';
 
   let {
@@ -111,9 +112,11 @@
   class="admin-content flex-1 pt-6"
   aria-label={trash ? '삭제한 게시글' : '게시글 목록'}
 >
-  {#if actionState.busy}<p class="admin-processing" role="status">
-      {actionState.operation}
-    </p>{:else if actionState.message}<ResultNotice
+  <ProcessingIndicator
+    active={actionState.busy}
+    message={actionState.operation}
+  />
+  {#if !actionState.busy && actionState.message}<ResultNotice
       tone={actionState.tone}
       message={actionState.message}
       details={actionState.details}
