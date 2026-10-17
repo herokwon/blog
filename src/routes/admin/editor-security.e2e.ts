@@ -1,9 +1,11 @@
 import { writeFile } from 'node:fs/promises';
 import { expect } from '@playwright/test';
 import type { AdminPost } from '#lib/admin/contracts.ts';
+import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
 
 test.beforeEach(async ({ localD1, page }) => {
+  acceptMutationConfirmations(page);
   await localD1.db.prepare('DELETE FROM posts').run();
   await page.setExtraHTTPHeaders({
     'Cf-Access-Jwt-Assertion': await localD1.token(),
@@ -120,14 +122,7 @@ for (const width of [1280, 390]) {
               .map(e => (e as HTMLStyleElement).nonce),
           ),
       ).toContain(nonce);
-      expect(
-        errors.filter(
-          value =>
-            !value.includes(
-              'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo=',
-            ),
-        ),
-      ).toEqual([]);
+      expect(errors).toEqual([]);
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
@@ -192,7 +187,22 @@ for (const width of [1280, 390]) {
         'contenteditable',
         'false',
       );
-      await page.getByRole('link', { name: '목록', exact: true }).click();
+      await expect(page.locator('.post-form .admin-heading')).toHaveAttribute(
+        'inert',
+        '',
+      );
+      const list = page.getByRole('link', { name: '목록', exact: true });
+      expect(
+        await list.evaluate(link => {
+          (link as HTMLElement).focus();
+          return document.activeElement === link;
+        }),
+      ).toBe(false);
+      const listBox = await list.boundingBox();
+      await page.mouse.click(
+        listBox!.x + listBox!.width / 2,
+        listBox!.y + listBox!.height / 2,
+      );
       await expect(page).toHaveURL(
         `${localD1.origin}/admin/posts/${post.id}/edit`,
       );
@@ -261,7 +271,12 @@ for (const width of [1280, 390]) {
       ).toHaveLength(0);
       page.once('dialog', dialog => dialog.accept());
       await page.getByRole('link', { name: '로그아웃', exact: true }).click();
-      await expect(page).toHaveURL(`${localD1.origin}/cdn-cgi/access/logout`);
+      // The production fixture has no Access edge: unconfirmed logout must
+      // remain retryable rather than pretending authentication was revoked.
+      await expect(page).toHaveURL(`${localD1.origin}/admin/logout`);
+      await expect(
+        page.getByRole('button', { name: '다시 시도' }),
+      ).toBeVisible();
       await expect
         .poll(() =>
           page.evaluate(() =>

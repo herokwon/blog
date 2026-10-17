@@ -10,7 +10,7 @@ import { inspectMarkdown, isAllowedLink, readingMarkdown } from './policy';
 import { validatedTransferHtml } from './transfer-html';
 
 export type EditorController = {
-  getMarkdown(): string;
+  getMarkdown(normalized?: boolean): string;
   setReadonly(value: boolean): void;
   destroy(): Promise<void>;
 };
@@ -94,6 +94,20 @@ export async function mountEditor(options: {
     const button = (event.target as Element).closest<HTMLElement>(
       '.milkdown-top-bar button',
     );
+    if (button && event.key === 'Escape') {
+      const selector = button.closest('.top-bar-heading-selector');
+      if (selector?.querySelector('.top-bar-heading-dropdown')) {
+        event.preventDefault();
+        const trigger = selector.querySelector<HTMLButtonElement>(
+          '.top-bar-heading-button',
+        );
+        trigger?.dispatchEvent(
+          new PointerEvent('pointerdown', { bubbles: true, cancelable: true }),
+        );
+        trigger?.focus();
+      }
+      return;
+    }
     if (button && ['Enter', ' '].includes(event.key)) {
       event.preventDefault();
       if (!locked)
@@ -120,6 +134,8 @@ export async function mountEditor(options: {
       [Crepe.Feature.Cursor]: !options.readonly,
     },
     featureConfigs: {
+      [Crepe.Feature.Cursor]: { virtual: false },
+      [Crepe.Feature.Placeholder]: { mode: 'doc' },
       [Crepe.Feature.TopBar]: {
         buildTopBar(builder) {
           for (const group of builder.build()) {
@@ -235,7 +251,8 @@ export async function mountEditor(options: {
     throw error;
   }
   return {
-    getMarkdown: () => (dirty ? crepe.getMarkdown() : options.body),
+    getMarkdown: (normalized = false) =>
+      normalized || dirty ? crepe.getMarkdown() : options.body,
     setReadonly(value) {
       locked = options.readonly || value;
       crepe.setReadonly(locked);

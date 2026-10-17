@@ -2,6 +2,43 @@ import { describe, expect, it } from 'vitest';
 import { inspectMarkdown, isAllowedLink, readingMarkdown } from './policy';
 
 describe('Markdown policy', () => {
+  it('preserves pure empty-paragraph markers without allowing HTML attributes', () => {
+    const source = 'First\n\n<br />\n\n<br>\n\nLast\n';
+    expect(inspectMarkdown(source).supported).toBe(true);
+    expect(readingMarkdown(source)).toContain('<br />');
+    expect(readingMarkdown(source)).toContain('<br>');
+    for (const html of [
+      '<br onclick="alert(1)">',
+      '<br class="x">',
+      '<div><br /></div>',
+      '<br />\n<script>alert(1)</script>',
+    ]) {
+      expect(inspectMarkdown(html).supported).toBe(false);
+      expect(readingMarkdown(html)).not.toContain(html);
+    }
+    expect(readingMarkdown('```html\n<br />\n```')).toContain('<br />');
+  });
+  it.each([
+    'before<br>after',
+    'before<br />after',
+    '**before**<BR />after',
+    '[before<br>after](/safe)',
+    '| A | B |\n| --- | --- |\n| before<br>after | value |',
+    '> before<br>after',
+    '- before<br>after',
+  ])('rejects inline HTML break markers in %s', source => {
+    expect(inspectMarkdown(source).supported).toBe(false);
+    expect(readingMarkdown(source)).not.toMatch(/<br\s*\/?\s*>/i);
+    expect(readingMarkdown(source)).toContain('before');
+    expect(readingMarkdown(source)).toContain('after');
+  });
+  it.each(['> <br />', '- <br />'])(
+    'preserves standalone nested empty markers in %s',
+    source => {
+      expect(inspectMarkdown(source).supported).toBe(true);
+      expect(readingMarkdown(source)).toContain('<br />');
+    },
+  );
   it('does not promote shadowed definitions into clickable reading links', () => {
     expect(
       readingMarkdown('[link][x]\n\n[x]: javascript:alert(1)\n[x]: /safe'),

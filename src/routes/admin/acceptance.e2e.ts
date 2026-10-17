@@ -2,9 +2,11 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
 
-test.beforeEach(async ({ localD1 }) => {
+test.beforeEach(async ({ localD1, page }) => {
+  acceptMutationConfirmations(page);
   await localD1.db.prepare('DELETE FROM posts').run();
 });
 
@@ -70,6 +72,12 @@ for (const scope of ['normal', 'trash'] as const) {
     ]);
     await nav.getByRole('link', { name: '다음 페이지' }).click();
     await nav.getByRole('link', { name: '10 페이지', exact: true }).click();
+    await expect(page).toHaveURL(
+      `${localD1.origin}${path}?${filter}page=10&limit=1`,
+    );
+    await expect(
+      nav.getByRole('link', { name: '다음 페이지' }),
+    ).toHaveAttribute('href', `${path}?${filter}page=11&limit=1`);
     await nav.getByRole('link', { name: '다음 페이지' }).click();
     await expect(nav.locator('.page-numbers a')).toHaveText(['11', '12']);
     const group = await nav.locator('.page-numbers').boundingBox();
@@ -77,7 +85,7 @@ for (const scope of ['normal', 'trash'] as const) {
       .getByRole('link', { name: '11 페이지', exact: true })
       .boundingBox();
     expect(first!.x).toBeCloseTo(group!.x, 0);
-    expect(group!.width).toBeGreaterThan(first!.width * 2);
+    expect(group!.width).toBeCloseTo(first!.width * 2, 0);
     await expect(page).toHaveURL(
       `${localD1.origin}${path}?${filter}page=11&limit=1`,
     );
@@ -135,10 +143,13 @@ test('new-post recovery survives a real browser restart without applying or subm
     context = await launch();
     page = await context.newPage();
     await page.goto(`${localD1.origin}/admin/posts/new`);
-    await expect(page.getByText('미저장 작성 내용이 있습니다')).toBeVisible();
+    const dialog = page.getByRole('dialog', {
+      name: '미저장 작성 내용이 있습니다',
+    });
+    await expect(dialog).toBeVisible();
     await expect(page.getByLabel('제목', { exact: true })).toHaveValue('');
     await expect(page.locator('.ProseMirror')).toHaveText('');
-    await page.getByRole('button', { name: '복구', exact: true }).click();
+    await dialog.getByRole('button', { name: '확인', exact: true }).click();
     await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
       'Restarted input',
     );

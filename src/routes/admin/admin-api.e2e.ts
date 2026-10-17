@@ -510,3 +510,135 @@ test('the local fixture refuses production and candidate network origins', () =>
     expect(() => assertLocalOrigin(origin)).toThrow();
   expect(() => assertLocalOrigin('http://127.0.0.1:1234')).not.toThrow();
 });
+
+test('isolated Preview and Production Origin/AUD simulations reject writes without DB changes', async ({
+  localD1,
+}) => {
+  for (const environment of ['preview', 'production'] as const) {
+    const simulated = await localD1.configureEnvironment(environment);
+    try {
+      const before = await localD1.db
+        .prepare('SELECT count(*) AS count FROM posts')
+        .first<{ count: number }>();
+      const allowed = await simulated.fetch(
+        simulated.adminOrigin,
+        collection,
+        simulated.adminOrigin,
+      );
+      expect(allowed.status).toBe(201);
+      for (const [host, origin, aud, status] of [
+        [
+          `https://version-${environment === 'preview' ? 'blog-preview' : 'blog'}.example.workers.dev`,
+          simulated.adminOrigin,
+          'admin-api-tests',
+          403,
+        ],
+        [
+          simulated.adminOrigin,
+          environment === 'preview'
+            ? 'https://blog.example.test'
+            : 'https://blog-preview.example.workers.dev',
+          'admin-api-tests',
+          403,
+        ],
+        [
+          simulated.adminOrigin,
+          simulated.adminOrigin,
+          'opposite-environment-audience',
+          401,
+        ],
+      ] as const) {
+        expect(
+          (await simulated.fetch(host, collection, origin, aud)).status,
+        ).toBe(status);
+      }
+      const after = await localD1.db
+        .prepare('SELECT count(*) AS count FROM posts')
+        .first<{ count: number }>();
+      expect(after?.count).toBe((before?.count ?? 0) + 1);
+    } finally {
+      await simulated.reset();
+    }
+  }
+});
+
+test('Preview read-only UI retains input and disables mutations while reads remain available', async ({
+  page,
+  localD1,
+  api,
+}) => {
+  const draft = await (
+    await api.post(collection, {
+      data: { title: 'Read-only UI', body: 'Read-only body' },
+    })
+  ).json();
+  const published = await create(api, 'Published read-only');
+  const publishedResult = await (
+    await api.post(`${collection}/${published.id}/publish`, {
+      data: { expected_revision: published.revision },
+    })
+  ).json();
+  const deleted = await create(api, 'Deleted read-only');
+  const deletedResult = await api.delete(`${collection}/${deleted.id}`, {
+    data: { expected_revision: deleted.revision },
+  });
+  expect(deletedResult.status()).toBe(204);
+  const archived = await create(api, 'Archived read-only');
+  const archivedPublished = await (
+    await api.post(`${collection}/${archived.id}/publish`, {
+      data: { expected_revision: archived.revision },
+    })
+  ).json();
+  await api.post(`${collection}/${archived.id}/archive`, {
+    data: { expected_revision: archivedPublished.revision },
+  });
+  expect(publishedResult.status).toBe('published');
+  const simulated = await localD1.configureEnvironment('preview');
+  try {
+    await page.setExtraHTTPHeaders({
+      'Cf-Access-Jwt-Assertion': await localD1.token(),
+    });
+    await page.goto(`${localD1.origin}/admin/posts/${draft.id}`);
+    await expect(page.getByText('Preview', { exact: true })).toBeVisible();
+    await expect(page.getByText('Read Only', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('읽기 전용으로 접속 중입니다.', {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: '작성 화면으로 이동' }),
+    ).toHaveAttribute('href', `${simulated.adminOrigin}/admin/posts`);
+    await expect(
+      page.getByRole('button', { name: '발행', exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: '삭제', exact: true }),
+    ).toBeDisabled();
+    for (const [id, name] of [
+      [published.id, '공개 취소'],
+      [archived.id, '재발행'],
+      [deleted.id, '복구'],
+    ]) {
+      await page.goto(`${localD1.origin}/admin/posts/${id}`);
+      await expect(
+        page.getByRole('button', { name, exact: true }),
+      ).toBeDisabled();
+    }
+    await page.goto(`${localD1.origin}/admin/posts/new`);
+    await page
+      .getByRole('textbox', { name: '제목', exact: true })
+      .fill('Retained input');
+    await expect(
+      page.getByRole('textbox', { name: '제목', exact: true }),
+    ).toHaveValue('Retained input');
+    await expect(
+      page.getByRole('button', { name: '초안 생성', exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: '발행', exact: true }),
+    ).toBeDisabled();
+  } finally {
+    await simulated.reset();
+  }
+});

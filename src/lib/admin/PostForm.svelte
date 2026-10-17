@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import Editor from '#lib/editor/Editor.svelte';
   import { inspectMarkdown } from '#lib/editor/policy.ts';
   import type { EditorController } from '#lib/editor/runtime.ts';
@@ -8,15 +8,22 @@
   import { page } from '$app/state';
   import { createAuthoringState, submitAuthoring } from './authoring';
   import { createPostSchema, type AdminPost } from './contracts';
+  import { successMessage, type FeedbackTone } from './feedback';
   import { readAdminPost } from './mutations';
+  import { useNotices } from './notices.svelte';
+  import { useProcessing } from './processing.svelte';
+  import ProcessingIndicator from './ProcessingIndicator.svelte';
   import {
     clearRecovery,
     readRecovery,
     writeRecovery,
     type RecoveryCopy,
   } from './recovery';
+  import RecoveryDialog from './RecoveryDialog.svelte';
+  import ResultNotice from './ResultNotice.svelte';
 
   let { post }: { post?: AdminPost } = $props();
+  const writable = $derived(page.data.adminContext?.writable ?? true);
   // svelte-ignore state_referenced_locally
   let form = $state(createAuthoringState(post));
   // svelte-ignore state_referenced_locally
@@ -26,21 +33,44 @@
   let recovery = $state<RecoveryCopy | null>(null);
   let storageNotice = $state(false);
   let message = $state('');
+  let messageDetails = $state('');
+  let messageTone = $state<FeedbackTone>('error');
+  let dismissedPublication = $state<string | null>(null);
   let loading = $state(false);
   let client = false;
   let recordingDisabled = false;
+  let discarded = false;
   let debounce: ReturnType<typeof setTimeout> | undefined;
   let maximum: ReturnType<typeof setTimeout> | undefined;
   let editedAt = 0;
   let bodyChanged = $state(false);
+  let editorBaselineSource = $state('');
+  let editorBaselineMarkdown = $state('');
+  let currentEditorMarkdown = $state('');
   let permittedDestination: string | null = null;
+  let titleInput: HTMLInputElement;
   const supported = $derived(inspectMarkdown(editorSource).supported);
+  const creating = $derived(!form.base && !form.created);
+  const hasEdits = $derived(
+    !form.base ||
+      form.input.title !== form.base.title ||
+      (bodyChanged &&
+        currentEditorMarkdown !==
+          (form.base.body === editorBaselineSource
+            ? editorBaselineMarkdown
+            : form.base.body)),
+  );
   const locked = $derived(form.pending || loading || recovery !== null);
+  const processing = useProcessing();
+  const notices = useNotices();
+  const processingOwner = Symbol();
+  $effect(() => {
+    processing.update(processingOwner, form.pending || loading);
+    return () => processing.update(processingOwner, false);
+  });
   const dirty = $derived(
     form.base
-      ? form.input.title !== form.base.title ||
-          bodyChanged ||
-          form.input.body !== form.base.body
+      ? hasEdits
       : form.input.title !== '' || bodyChanged || form.input.body !== '',
   );
 
@@ -67,18 +97,28 @@
   }
   function record() {
     cancelTimers();
+    if (discarded) return;
     serialize();
     if (!form.base && !form.created && !recovery && editedAt)
       storage(store => writeRecovery(store, { ...form.input, editedAt }));
   }
   function changed(body = false) {
-    if (body) bodyChanged = true;
+    discarded = false;
+    if (body) {
+      bodyChanged = true;
+      if (controller) currentEditorMarkdown = controller.getMarkdown(true);
+    }
     editedAt = Date.now();
     clearTimeout(debounce);
     debounce = setTimeout(record, 500);
     maximum ??= setTimeout(record, 2000);
   }
-  function chooseRecovery(restore: boolean) {
+  function discardRecovery() {
+    cancelTimers();
+    discarded = true;
+    if (!form.base && !form.created) storage(clearRecovery);
+  }
+  async function chooseRecovery(restore: boolean) {
     const copy = recovery;
     if (!copy) return;
     if (restore) {
@@ -87,10 +127,15 @@
       controller = undefined;
       editorKey++;
       editedAt = copy.editedAt;
-    } else storage(clearRecovery);
+    } else discardRecovery();
     recovery = null;
+    await tick();
+    titleInput.focus();
   }
   beforeNavigate(navigation => {
+    // Browser reload/closure is not an application discard. beforeunload owns
+    // best-effort recording and its native departure warning.
+    if (navigation.type === 'leave') return;
     if (
       navigation.to &&
       navigation.to.url.pathname + navigation.to.url.search ===
@@ -101,11 +146,12 @@
       navigation.cancel();
       return;
     }
-    if (
-      dirty &&
-      !window.confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')
-    ) {
-      navigation.cancel();
+    if (dirty) {
+      if (!confirm('저장하지 않은 변경 사항을 버리고 이동할까요?')) {
+        navigation.cancel();
+        return;
+      }
+      discardRecovery();
       return;
     }
     record();
@@ -118,7 +164,7 @@
       });
     const unload = (event: BeforeUnloadEvent) => {
       record();
-      if (form.pending || loading || dirty) {
+      if (!discarded && (form.pending || loading || dirty)) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -132,22 +178,43 @@
   });
 
   async function submit(intent: 'save' | 'publish' | 'retry') {
+    if (!writable) return;
     if (locked || !supported || !controller) return;
-    record();
-    message = '';
+    if (intent === 'save' && !hasEdits) return;
+    serialize();
     if (intent !== 'retry' && !createPostSchema.safeParse(form.input).success) {
       message = '제목과 본문을 입력하세요.';
+      messageDetails = '';
+      messageTone = 'error';
       return;
     }
-    if (
-      form.result?.kind === 'unresolved' &&
-      form.request?.kind === 'create' &&
-      !window.confirm(
-        '생성 결과가 불확실합니다. 글 목록을 확인했으며 다시 생성할까요?',
-      )
-    )
-      return;
+    const warning =
+      form.result?.kind === 'unresolved' && form.request?.kind === 'create'
+        ? '생성 결과가 불확실합니다. 글 목록을 확인했으며 다시 생성할까요?'
+        : intent === 'publish'
+          ? '현재 내용을 저장하고 공개할까요?'
+          : intent === 'retry'
+            ? '원래 저장 요청을 다시 시도할까요?'
+            : creating
+              ? '현재 내용으로 초안을 생성할까요?'
+              : '현재 내용을 저장할까요?';
+    if (!confirm(warning)) return;
+    record();
+    message = '';
+    messageDetails = '';
+    notices.dismiss();
+    const wasNew = !form.base && !form.created;
+    const wasArchived = form.base?.status === 'archived';
     await submitAuthoring(form, intent, fetch);
+    const completion = () =>
+      successMessage(
+        form.request?.kind === 'publish'
+          ? 'publish'
+          : wasNew
+            ? 'create'
+            : 'save',
+        wasArchived,
+      );
     if (form.created) {
       cancelTimers();
       storage(store => {
@@ -160,15 +227,27 @@
           clearRecovery(store);
       });
     }
-    if (form.result?.kind === 'conflict')
+    if (form.result?.kind === 'conflict') {
       message = '다른 화면에서 글이 변경되었습니다.';
-    else if (form.result?.kind === 'rejected')
-      message = `저장하지 못했습니다: ${form.result.error.message}`;
-    else if (form.result?.kind === 'unresolved')
+    } else if (form.result?.kind === 'rejected') {
+      message = '저장하지 못했습니다.';
+      messageDetails = form.result.error.message;
+    } else if (form.result?.kind === 'unresolved') {
       message =
         form.request?.kind === 'create'
-          ? '생성 결과를 확인할 수 없습니다. 글 목록을 확인한 뒤 다시 시도하세요.'
-          : '저장 결과를 확인할 수 없습니다. 입력을 유지합니다. 원래 요청을 다시 시도하거나 최신 글을 확인하세요.';
+          ? '생성 결과를 확인할 수 없습니다.'
+          : '저장 결과를 확인할 수 없습니다.';
+      messageDetails =
+        form.request?.kind === 'create'
+          ? '글 목록에서 생성 여부를 확인하세요.'
+          : '최신 글에서 저장 여부를 확인하세요.';
+    }
+    messageTone =
+      form.result?.kind === 'conflict'
+        ? 'conflict'
+        : form.result?.kind === 'unresolved'
+          ? 'uncertain'
+          : 'error';
     if (form.destination) {
       permittedDestination = form.destination;
       try {
@@ -176,8 +255,11 @@
           resolve('/admin/posts') +
             form.destination.slice('/admin/posts'.length),
         );
+        if (form.result?.kind === 'confirmed') notices.show(completion());
       } catch {
-        message = '화면을 이동하지 못했습니다. 저장된 글을 확인하세요.';
+        message = '화면을 이동하지 못했습니다.';
+        messageDetails = '저장된 글을 확인하세요.';
+        messageTone = 'uncertain';
       } finally {
         permittedDestination = null;
       }
@@ -186,13 +268,16 @@
       form.result?.kind === 'observed'
     ) {
       bodyChanged = form.input.body !== form.base?.body;
+      if (form.result?.kind === 'confirmed' && !dirty) {
+        notices.show(completion());
+      }
     }
   }
   async function reloadLatest() {
     if (
       locked ||
       !form.base ||
-      !window.confirm('현재 입력을 버리고 최신 내용을 불러올까요?')
+      !confirm('현재 입력을 버리고 최신 내용을 불러올까요?')
     )
       return;
     loading = true;
@@ -206,8 +291,11 @@
       bodyChanged = false;
       editorKey++;
       message = '';
+      messageDetails = '';
     } catch {
-      message = '최신 내용을 불러오지 못했습니다. 입력을 유지합니다.';
+      message = '최신 내용을 불러오지 못했습니다.';
+      messageDetails = '';
+      messageTone = 'error';
     } finally {
       loading = false;
     }
@@ -215,88 +303,138 @@
 </script>
 
 <form
-  class="post-form"
+  class="post-form flex min-h-0 flex-1 flex-col"
   onsubmit={event => {
     event.preventDefault();
     void submit('save');
   }}
 >
-  <header class="admin-heading">
-    <a href={resolve('/admin/posts')}>목록</a>
-    <div class="post-actions">
+  <div class="admin-heading" inert={form.pending || loading}>
+    <a class="admin-button" href={resolve('/admin/posts')}>목록</a>
+    <div class="post-actions flex flex-wrap items-center gap-3">
       {#if !form.base}<button
+          class="admin-button action-publish"
           type="button"
-          disabled={locked || !supported || !controller}
+          disabled={locked || !supported || !controller || !writable}
           onclick={() => submit('publish')}>발행</button
         >{/if}
-      <button type="submit" disabled={locked || !supported || !controller}
-        >저장</button
+      <button
+        class="admin-button action-save"
+        type="submit"
+        disabled={locked || !supported || !controller || !writable || !hasEdits}
+        >{creating ? '초안 생성' : '저장'}</button
       >
       <a
+        class="admin-button"
         href={form.base
           ? resolve('/admin/posts/[id]', { id: form.base.id })
           : resolve('/admin/posts')}>취소</a
       >
     </div>
-  </header>
-  {#if recovery}
-    <aside class="authoring-feedback">
-      <p>미저장 작성 내용이 있습니다</p>
-      <button type="button" onclick={() => chooseRecovery(true)}>복구</button>
-      <button type="button" onclick={() => chooseRecovery(false)}>버리기</button
-      >
-    </aside>
-  {/if}
-  {#if storageNotice}<p role="status">
-      브라우저 입력 복구를 사용할 수 없습니다.
-    </p>{/if}
-  {#if page.url.searchParams.get('publication') === 'unconfirmed'}<p
-      role="status"
-    >
-      초안은 저장되었습니다. 발행 결과를 확인할 수 없습니다. 상세 화면을 확인한
-      뒤 다시 시도하세요.
-    </p>{/if}
-  {#if page.url.searchParams.get('publication') === 'failed'}<p role="status">
-      초안은 저장되었습니다. 발행하지 못했습니다. 상세 화면에서 발행을 다시
-      시도하세요.
-    </p>{/if}
-  {#if message}<p role="status">{message}</p>{/if}
+  </div>
+  {#if storageNotice}<ResultNotice
+      tone="warning"
+      message="브라우저 입력 복구를 사용할 수 없습니다."
+      ondismiss={() => (storageNotice = false)}
+    />{/if}
+  {#if page.url.searchParams.get('publication') === 'unconfirmed' && dismissedPublication !== 'unconfirmed'}<ResultNotice
+      tone="uncertain"
+      message="발행 결과를 확인할 수 없습니다."
+      details="초안은 저장되었습니다.
+상세 화면에서 발행 여부를 확인하세요."
+      ondismiss={() => (dismissedPublication = 'unconfirmed')}
+    />{/if}
+  {#if page.url.searchParams.get('publication') === 'failed' && dismissedPublication !== 'failed'}<ResultNotice
+      tone="error"
+      message="발행하지 못했습니다."
+      details="초안은 저장되었습니다."
+      ondismiss={() => (dismissedPublication = 'failed')}
+    />{/if}
+  {#if message}<ResultNotice
+      tone={messageTone}
+      {message}
+      details={messageDetails}
+      ondismiss={() => (message = '')}
+    />{/if}
   {#if form.result?.kind === 'unresolved' && form.request?.kind === 'create'}
     <a href={resolve('/admin/posts')} target="_blank" rel="noopener noreferrer"
       >글 목록 확인</a
     >
   {/if}
   {#if form.base && ['conflict', 'unresolved'].includes(form.result?.kind ?? '')}
-    <div class="authoring-feedback">
+    <div
+      class="authoring-feedback my-4 flex flex-wrap items-center gap-3"
+      inert={form.pending || loading}
+    >
       <a
+        class="admin-button"
         href={resolve('/admin/posts/[id]', { id: form.base.id })}
         target="_blank"
         rel="noopener noreferrer">최신 글 확인</a
       >
-      <button type="button" disabled={locked} onclick={reloadLatest}
-        >최신 내용 불러오기</button
+      <button
+        class="admin-button"
+        type="button"
+        disabled={locked}
+        onclick={reloadLatest}>최신 내용 불러오기</button
       >
       {#if form.result?.kind === 'unresolved'}<button
+          class="admin-button"
           type="button"
-          disabled={locked}
+          disabled={locked || !writable}
           onclick={() => submit('retry')}>원래 요청 다시 시도</button
         >{/if}
     </div>
   {/if}
-  <label class="post-title" for="post-title"
-    >제목<input
-      id="post-title"
-      bind:value={form.input.title}
-      disabled={locked}
-      oninput={() => changed()}
-    /></label
-  >
-  {#key editorKey}<Editor
-      source={editorSource}
-      {locked}
-      onchange={() => changed(true)}
-      onready={mounted => {
-        controller = mounted;
-      }}
-    />{/key}
+  <div class="post-inputs relative flex min-h-0 flex-1 flex-col">
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+      inert={locked}
+      aria-busy={form.pending || loading}
+    >
+      <label class="post-title my-4 block shrink-0" for="post-title"
+        ><span class="sr-only">제목</span><input
+          class="block w-full rounded border border-current p-3 text-base leading-[inherit]"
+          id="post-title"
+          placeholder="제목"
+          bind:this={titleInput}
+          bind:value={form.input.title}
+          disabled={locked}
+          oninput={() => changed()}
+        /></label
+      >
+      {#key editorKey}<Editor
+          source={editorSource}
+          {locked}
+          onchange={() => changed(true)}
+          onready={mounted => {
+            controller = mounted;
+            editorBaselineSource = editorSource;
+            editorBaselineMarkdown = mounted.getMarkdown(true);
+            currentEditorMarkdown = editorBaselineMarkdown;
+          }}
+        />{/key}
+    </div>
+    <ProcessingIndicator
+      active={form.pending || loading}
+      scope="region"
+      message={loading
+        ? '최신 내용 불러오는 중…'
+        : form.request?.kind === 'publish'
+          ? '발행 중…'
+          : creating
+            ? '초안 생성 중…'
+            : '저장 중…'}
+    />
+  </div>
 </form>
+
+{#if recovery}
+  <RecoveryDialog
+    title={recovery.title}
+    editedAt={recovery.editedAt}
+    onDecision={decision => {
+      void chooseRecovery(decision === 'restore');
+    }}
+  />
+{/if}

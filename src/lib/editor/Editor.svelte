@@ -59,6 +59,11 @@
   <p role="alert">
     {error || `지원하지 않는 콘텐츠: ${inspection.reasons.join(', ')}`}
   </p>
-  <pre class="editor-source">{initialSource}</pre>
+  <pre
+    class="editor-source wrap-anywhere whitespace-pre-wrap">{initialSource}</pre>
 {/if}
-<div class="admin-editor" class:editor-locked={locked} bind:this={root}></div>
+<div
+  class="admin-editor flex min-h-32 flex-1 flex-col"
+  class:pointer-events-none={locked}
+  bind:this={root}
+></div>

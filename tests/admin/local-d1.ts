@@ -126,7 +126,7 @@ async function startLocalD1() {
         bindings: { ...options.bindings, ADMIN_ORIGIN: url.origin },
       }),
     );
-    const db = await mf.getD1Database('DB');
+    let db = await mf.getD1Database('DB');
     for (const filename of (await readdir('drizzle'))
       .filter(name => name.endsWith('.sql'))
       .sort()) {
@@ -135,19 +135,80 @@ async function startLocalD1() {
         .map(sql => db.prepare(sql));
       await db.batch(statements);
     }
-    const token = async (email = 'admin@example.test') =>
+    const token = async (
+      email = 'admin@example.test',
+      tokenAudience = audience,
+    ) =>
       new SignJWT({ email })
         .setProtectedHeader({ alg: 'RS256', kid: 'local-test' })
         .setIssuer(issuer)
-        .setAudience(audience)
+        .setAudience(tokenAudience)
         .setSubject(email)
         .setIssuedAt()
         .setExpirationTime('10m')
         .sign(keys.privateKey);
     return {
       origin: url.origin,
-      db,
+      get db() {
+        return db;
+      },
       token,
+      async configureEnvironment(environment: 'preview' | 'production') {
+        const adminOrigin =
+          environment === 'preview'
+            ? 'https://blog-preview.example.workers.dev'
+            : 'https://blog.example.test';
+        await mf.setOptions(
+          convertV4MiniflareOptions({
+            ...options,
+            port: Number(url.port),
+            bindings: {
+              ...options.bindings,
+              APP_ENVIRONMENT: environment,
+              ADMIN_ORIGIN: adminOrigin,
+              ...(environment === 'preview'
+                ? { PREVIEW_ORIGIN: adminOrigin }
+                : {}),
+            },
+          }),
+        );
+        db = await mf.getD1Database('DB');
+        return {
+          adminOrigin,
+          async fetch(
+            host: string,
+            path: string,
+            origin: string,
+            tokenAudience = audience,
+          ) {
+            return mf.dispatchFetch(`${host}${path}`, {
+              method: 'POST',
+              headers: {
+                Origin: origin,
+                'Cf-Access-Jwt-Assertion': await token(
+                  'admin@example.test',
+                  tokenAudience,
+                ),
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                title: 'Environment test',
+                body: 'Environment test',
+              }),
+            });
+          },
+          async reset() {
+            await mf.setOptions(
+              convertV4MiniflareOptions({
+                ...options,
+                port: Number(url.port),
+                bindings: { ...options.bindings, ADMIN_ORIGIN: url.origin },
+              }),
+            );
+            db = await mf.getD1Database('DB');
+          },
+        };
+      },
       // In-process URL simulation only; no request is sent to this candidate host.
       candidateFetch: async (path: string, body: unknown) =>
         mf.dispatchFetch(`https://candidate-blog.example.workers.dev${path}`, {

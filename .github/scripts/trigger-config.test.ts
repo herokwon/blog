@@ -76,3 +76,31 @@ test('malformed trigger source is rejected before writing configuration', () => 
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('removes nested assets while retaining explicit Preview configuration', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'trigger-preview-'));
+  try {
+    const source = join(directory, 'wrangler.jsonc');
+    const output = join(directory, 'wrangler.trigger.json');
+    writeFileSync(
+      source,
+      JSON.stringify({
+        assets: { directory: 'missing' },
+        env: {
+          preview: {
+            name: 'blog-preview',
+            assets: { directory: 'also-missing' },
+            routes: [],
+            workers_dev: true,
+          },
+        },
+      }),
+    );
+    generateTriggerConfig(source, output);
+    assert.deepEqual(JSON.parse(readFileSync(output, 'utf8')), {
+      env: { preview: { name: 'blog-preview', routes: [], workers_dev: true } },
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

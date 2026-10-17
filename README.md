@@ -31,6 +31,18 @@ pnpm run dev
 pnpm run dev -- --open
 ```
 
+Local development and `pnpm preview` select Preview configuration with local
+bindings. The adapter disables remote bindings and persists local D1 data in
+`.wrangler/state/v3`; restarting the server does not reset it. Automated tests
+use separate disposable fixtures and never connect to remote D1.
+
+Run `pnpm db:migrate:local` to apply pending migrations to local Preview D1.
+For authorized remote operations, `pnpm db:migrate:preview` explicitly targets
+Preview and `pnpm db:migrate:production` targets Production.
+`pnpm db:migrate:remote` is a Production compatibility alias.
+`pnpm gen` and `pnpm types:check` cover both environments in one committed type
+artifact, including distinct Origin and Access audience values.
+
 ## Building
 
 To create a production version of your app:

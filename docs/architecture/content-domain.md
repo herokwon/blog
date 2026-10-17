@@ -7,6 +7,19 @@ protected Admin list/trash/detail pages and new/edit authoring are implemented.
 Task 11 [acceptance evidence](../operations/v0.2.0-acceptance.md) separates local
 verification from incomplete physical-device and deployed checks. The schema contains only `posts`.
 
+The v0.2.1 recovery modal and explicit-discard handling are implemented and
+locally verified; [Tasks 1–2 evidence](../operations/v0.2.1-authoring.md#tasks-12-local-evidence-2026-10-11)
+records the checks. Authoring layout and CSP fixes are locally implemented;
+[Tasks 3–4 evidence](../operations/v0.2.1-authoring.md#tasks-34-local-evidence-2026-10-11)
+records their checks. Real-device mobile-keyboard acceptance remains outstanding,
+and logout completion is implemented with scoped Preview acceptance recorded.
+Deployed v0.2.1 acceptance remains outstanding.
+
+The subsequent Admin UI refinement is implemented and locally verified;
+[integrated evidence](../operations/v0.2.1-admin-ui.md#task-4-integrated-local-evidence-2026-10-16)
+covers the shared shell, controls, feedback/navigation, draft destination and
+Korean display time. Updated Preview and physical-device acceptance remain separate.
+
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
 
@@ -27,7 +40,7 @@ records the explicit save and publication decision.
 | `deleted_at`   | Set on soft deletion; cleared on restoration                                                |
 | `revision`     | Positive integer; starts at 1 and increases with each persisted content or lifecycle change |
 
-All timestamps use the fixed UTC format defined in
+Persisted and API timestamps use the fixed UTC format defined in
 [Database Foundation](database-foundation.md#timestamps).
 A NULL `published_at` means never published, not currently hidden.
 Summary is derived, not persisted.
@@ -73,6 +86,11 @@ now use the same shell. The organization applies to all Admin pages.
 
 - Desktop content has a maximum width of 1024px. Mobile adapts the same
   management flow rather than removing actions.
+- The document language is Korean. A session `header > nav` precedes a sibling
+  `main`, containing page headings/action bars and content. Body and the shared
+  page wrapper fill at least the dynamic viewport; main fills the space below
+  the header. Main has 32px vertical padding on mobile and 48px on desktop.
+  Short viewports remain scrollable so authoring controls stay reachable.
 - Main-page headings or editor navigation/action bars precede the content
   area. Status filters belong to the list content area below that separation.
 - The normal list groups the writing action and trash icon at the right of
@@ -81,15 +99,29 @@ now use the same shell. The organization applies to all Admin pages.
 - Desktop lists use tables; mobile lists use cards. Both present title,
   status, creation and publication timestamps, plus the updated timestamp
   for normal posts or deleted timestamp for trash. Row/card actions use an
-  overflow menu. Timestamp headings omit `시각`; titles have no underline.
+  overflow menu. Timestamp headings omit `시각`; titles have no resting underline.
+  Non-menu areas of each row/card open detail in both normal/trash lists.
+  Preserve real title anchors and table semantics; background clicks ignore
+  modifiers, text selection, menu interactions and pending mutation locks.
+  Item hover underlines its title only on hover-capable devices. Keyboard
+  focus identifies the title link independently of hover support.
   Item-count labels and a separate pagination top divider are omitted.
+- Pagination centers the previous arrow, actual visible numbers and next arrow
+  as one content-sized group, with symmetric arrow gaps and equal-size controls.
+  Do not reserve blank slots for missing page numbers; preserve the five-page
+  groups, disabled boundary arrows and hidden pagination for empty scopes.
 - Detail places the title before status and timestamp metadata. Navigation
   is on the left of the top action row, with applicable management actions
   on the right.
 - Existing-post editing and new-post authoring use a top navigation/action
   bar, then a title input and formatted body editor. Existing editing has
-  save and cancel; creation orders publish, save, and cancel. Editor pages
+  save and cancel; creation orders publish, `초안 생성`, and cancel. Editor pages
   omit a standalone status badge. Return buttons are labeled `목록`.
+- List, trash, detail and recovery timestamps share `Asia/Seoul` display in
+  zero-padded `yyyy-MM-dd HH:mm:ss` format, without milliseconds or a timezone
+  suffix. Midnight uses `00:00:00`, independently of device/server timezone.
+  Null timestamps remain `—`. UTC storage/API and `time[datetime]` values retain
+  the timestamp contract in [API Design](api-design.md).
 
 Action availability, navigation, pagination, and mutation behavior follow
 their contracts elsewhere in this document; the layout does not override
@@ -97,6 +129,112 @@ them. Final colors, typography sizes, borders, and exact spacing remain
 adjustable during implementation. Preserve the agreed organization and
 clear separation between top controls and content; numerical gaps in the
 mockup are provisional rather than fixed acceptance criteria.
+
+### v0.2.1 Authoring Layout
+
+Status: `Locally implemented; real-device keyboard and deployed acceptance pending`.
+Apply the same layout to new-post and existing-post editing.
+Keep the existing navigation/action bar and explicit save/publication behavior.
+
+- Title input text is `1rem`, with `0.75rem` inner padding. Hide the visible
+  `제목` label while retaining that accessible name; use `제목` as the placeholder.
+- Keyboard order is title, fixed Toolbar controls in visual order, then body.
+  Support reverse traversal with Shift+Tab and keyboard activation of controls,
+  including their menus. Do not require pointer interaction to enter the body.
+- Toolbar and body share one border and corner treatment, with an internal
+  divider. Keep Toolbar visible while the body scrolls.
+- The editor fills the viewport space remaining below session controls,
+  the navigation/action bar, and title, leaving visible bottom spacing.
+  Long content scrolls inside the body instead of growing the page. Account
+  for wrapping controls, viewport resizing, and the mobile keyboard; short
+  viewports must still permit access to all controls.
+- Body inner padding is `0.75rem`, matching the title. This applies to the
+  editor container, not Markdown nesting or code indentation.
+- Pending/recovery states must not collapse or remove the body region.
+  After recovery selection, restore the visible editor and usable focus.
+- Use the native browser caret (`Cursor.virtual: false`). Show the body
+  placeholder only when the complete document is empty (`Placeholder.mode: doc`).
+- Preserve empty paragraphs using Crepe's bare `<br />` Markdown markers,
+  including previously stored bare-break content. Editing without a body
+  change must retain the original source; arbitrary HTML remains unsupported.
+
+Verify keyboard and layout behavior on both authoring routes, desktop and
+mobile widths, short and long content, and viewport height changes.
+
+### v0.2.1 Environment Awareness
+
+Status: `Locally implemented; updated presentation awaits remote acceptance`.
+The shared Admin session header displays a 12px `Local` or `Preview` badge.
+Read-only access adds a separate amber `Read Only` badge, 4px from the
+environment badge. Production displays `Production` only for read-only
+access; its writable default URL retains no environment badge. Derive both
+environment and write permission from server context, not URL substring guesses.
+Do not expose database IDs, Access settings, or secrets.
+
+When the server reports read-only access, show `읽기 전용으로 접속 중입니다.`
+and disable save, publish, archive, delete and restore. For Preview, provide
+the neutral bordered `작성 화면으로 이동` link to the configured default Worker URL's
+`/admin/posts`. Production candidates show the explanation without a Preview
+shortcut. Inputs, recovery, reads and navigation remain available; the server
+still rejects direct mutation requests using the same exact-Origin decision.
+Use an amber lock icon at 1.25 times the notice text size. Place the action
+at the right on a shared line, or align it with the message text on the left
+when it wraps below.
+
+See [environment implementation](../operations/v0.2.1-environments.md#task-5-preview-authentication-and-mutation-boundaries)
+and [authoring implementation](../operations/v0.2.1-authoring.md) for sequencing
+and acceptance tests.
+
+### Admin Feedback and Style Organization
+
+Result notices use a borderless neutral gray background (`#f3f4f6`),
+`text-sm` text and a 1em icon aligned to the first line. Put one core
+result sentence first in weight 600, with optional muted details beneath.
+Keep the visible content concise: omit redundant retry/input-retention copy.
+Success uses a check, rejection a cross, conflict overlapping documents,
+uncertain completion a question mark, and recovery unavailability a warning
+triangle. Icons are decorative; retain the accessible status label and
+`role="status"`. A close button sits outside the announced text.
+Confirmed success uses only a bold result summary, without the post title or
+secondary details: `초안이 생성되었습니다.`, `저장되었습니다.`,
+`발행되었습니다.`, `재발행되었습니다.`, `공개가 취소되었습니다.`,
+`삭제되었습니다.` or `복구되었습니다.`. Distinguish publication from
+republication using the state before the command.
+Success expires after five seconds; pointer hover or focus within pauses the
+remaining time. Every new result gets a fresh timer, including identical text.
+Errors, conflicts, uncertain outcomes and warnings persist until dismissed or
+superseded. Dismissal affects presentation only, preserving input, conflict
+state and recovery/retry controls. Environment guidance and pending-operation
+status have no expiry or dismissal.
+A single in-memory success entry in the mounted Admin layout carries a
+confirmed result across its required internal navigation. Other navigation
+consumes it; do not persist it or trust success query parameters. Failed list
+refreshes after a command report the refresh problem, without claiming that
+the mutation failed.
+Confirmed, observed, rejected, conflicting and unknown mutation results
+remain distinct; an observed outcome must not be announced as confirmed success.
+A confirmed retry of an older snapshot must not announce generic save completion
+while the visible form still contains unsaved edits.
+
+Save and publish have equal emphasis. Restore uses the neutral Edit treatment;
+soft deletion uses the danger treatment. Status remains more prominent than
+secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
+Logout and neutral navigation/actions share bordered buttons.
+Save/publish/republish use blue text and a light blue border on a white resting background, with
+subtle hover like danger actions; menu items retain their borderless treatment.
+Hover applies only on hover-capable devices and enabled controls; keyboard
+focus remains visible. Exclusive logout makes both header and main controls inert.
+Detail reading has no outer Milkdown/ProseMirror padding; preserve Markdown
+indentation and the editing surface's 12px padding.
+
+Application styles use Tailwind v4 utilities, shared `@theme` palette
+values, `@layer base` for framework accessibility defaults and
+`@layer components`/`@apply` for reusable Admin and Crepe integration
+rules. Single-purpose element styles live in markup. Import Crepe themes
+into the components layer before application overrides; retain its font
+variables and strict-CSP integration. Prefer built-in utilities; introduce
+`@utility` only when a reusable custom utility is actually needed.
+Preserve explicit line heights and the existing 767px responsive boundary.
 
 ### Admin Detail
 
@@ -170,17 +308,51 @@ republication are available through persisted-content management views.
 These actions publish persisted content and do not implicitly save editor
 input. Leaving dirty editor input follows the confirmation rule below.
 The new-post page retains its separate creation-followed-by-publication flow.
+Existing-post Save is enabled only when title or normalized editor Markdown
+differs from its loaded baseline; reverting both disables it again. Comparison
+must not serialize untouched source into a save or alter explicit retry rules.
+Use the same comparison for existing-post navigation and browser-exit warnings,
+so fully reverted edits do not prompt the author to discard nonexistent changes.
 
 When leaving a page with unsaved changes, ask whether to leave without
 saving using a confirmation dialog. Canceling keeps the editor and input;
 confirming permits navigation without saving or publishing. This applies
 to new and existing posts regardless of status.
 
+Before save, creation/publication, manual retry, publication/republication,
+archive, soft deletion and restoration, use the native `confirm` dialog.
+New draft creation asks `현재 내용으로 초안을 생성할까요?` and reports
+`초안 생성 중…` while pending; existing editing retains its save wording.
+Cancellation must not send a mutation or discard input/recovery. A dirty
+application departure has one confirmation; the successful operation's own
+navigation must not ask again.
+
+While an operation is pending, disable duplicate controls and the shared
+logout link; list refreshes keep filters and pagination inert. Logout uses
+an exclusive workspace lock with its accessible processing status outside
+the inert region. Failure releases the lock and focuses retry. Verified
+logout must be able to return home without the navigation lock blocking its
+own departure.
+
+Use three processing presentations: a viewport overlay for logout; an overlay
+covering title, formatting tools and body for create/save/publish/latest-content
+reload; and a local bordered status block for list/detail lifecycle actions.
+Keep the form's dimensions and body-only scrolling stable. While the input
+overlay applies, make the session header, upper navigation/actions and inputs
+inert immediately; failures unlock them without discarding input. Processing
+status remains outside inert content. Delay visual feedback by 180ms to avoid
+flashing on short requests, cancel the delay on completion/unmount, and remove
+feedback immediately when settled. All presentations share a one-second linear
+rotating spinner, static when reduced motion is requested.
+
+List/trash overflow menus close on an outside pointer press and on a second
+press of their trigger; interacting inside must preserve action execution.
+
 After confirmed mutation outcomes, use the following navigation:
 
 | Outcome                                        | Destination or behavior                                             |
 | ---------------------------------------------- | ------------------------------------------------------------------- |
-| New draft saved                                | `/admin/posts/[id]/edit`                                            |
+| New draft created with unchanged input         | `/admin/posts/[id]`                                                 |
 | New post created and published                 | `/admin/posts/[id]`                                                 |
 | New post created but publication failed        | Its edit page, with publication failure and retry guidance          |
 | Existing post saved, in any non-deleted status | `/admin/posts/[id]`                                                 |
@@ -251,10 +423,34 @@ succeeded. Do not persist creation-request keys or payload snapshots, and
 do not automatically submit recovered input. If creation was uncertain,
 the author checks the post list before submitting again.
 
-When a recovery copy exists, show `미저장 작성 내용이 있습니다` and offer
-`복구` and `버리기`. Do not apply it automatically. Recovery loads its title
-and body as unsaved editor input; discard removes the recovery copy without
-changing server content. Retain the existing unsaved-navigation confirmation.
+For v0.2.1 (locally implemented; deployed acceptance pending), an unexpired recovery copy opens a modal before
+new-post editing begins. Show `미저장 작성 내용이 있습니다`, the previous
+title and last-edit time, and the explanation
+`확인하면 이전 내용을 복구합니다. 취소하거나 창을 닫으면 이전 내용이 삭제됩니다.`
+Use `확인`, `취소`, and an accessible close (X) control. Do not automatically
+restore the copy or submit it to the server.
+
+Only `확인` restores the title and body as unsaved editor input. Cancel,
+Escape, backdrop click, and X all discard the recovery copy and start an
+empty form. A click inside the dialog is not a backdrop dismissal. Route
+every intentional dismissal through one discard action, exactly once.
+Do not interpret component teardown, reload, or tab/browser closure as
+dialog dismissal: those retain the unexpired copy.
+
+While the modal is open, the underlying title/body regions remain present
+but editing, saving, and page controls are unavailable. Confine keyboard
+focus to the modal, provide an accessible name/description, and focus the
+title input after either decision. Storage failure retains the existing
+one-time notice and nonblocking-authoring policy; do not claim that a copy
+was removed when storage could not be changed.
+
+Retain the unsaved-navigation confirmation after editing starts. Confirming
+`저장하지 않은 변경 사항을 버리고 이동할까요?` for an application page
+transition deletes the current new-post recovery copy, cancels queued writes,
+and prevents navigation/teardown handlers from recording it again. Rejecting
+the confirmation preserves input and the copy. Reload, tab/browser closure,
+and abrupt exit retain best-effort recovery; they do not count as an explicit
+application discard. Successful save navigation is not a discard action.
 
 After confirmed new-post creation success, clear the recovery copy corresponding
 to the submitted input. Failed saves or unconfirmed outcomes must not clear
@@ -263,6 +459,25 @@ follow the API lost-response contract. A confirmed creation followed by a
 failed publish is an existing saved draft and does not retain a new-post
 input recovery copy. Existing-post mutation revision preconditions remain
 required independently of browser input recovery.
+
+### v0.2.1 Logout Completion
+
+Status: `Implemented; scoped Preview acceptance passed`. See [Task 5 evidence](../operations/v0.2.1-acceptance.md#task-5-implementation-and-preview-acceptance-2026-10-13). Production and combined remote acceptance remain pending. Leaving dirty authoring for logout follows the same
+explicit-discard confirmation. On the logout page, remove this site's Admin
+recovery copy, complete Cloudflare Access logout, then replace browser
+location with the current environment's home (`/`). Preview returns to the
+Preview home and Production to the Production home. Public home must remain
+reachable without Admin authentication.
+
+A failed cleanup or logout displays an error and a retry action, rather than
+pretending success and navigating home. Local development must not claim
+Access session revocation: the service does not exist on the local origin.
+Use the persistent error notice `로그아웃에 실패했습니다.` with the failure
+icon and a normal-width retry button inside the notice. Its action follows
+the read-only notice's shared-line/right and wrapped-line/left alignment.
+The execution plan must first validate the browser logout response, cookie
+removal, and subsequent protected access in Preview. Do not assume an
+undocumented redirect parameter or replace logout with navigation alone.
 
 ### Concurrent Changes
 
@@ -485,6 +700,6 @@ outcome, requesting attention only when needed.
 defines creation persistence without a request-record table. Resolve
 remaining client-visible contracts before API/Admin implementation.
 
-Validate write flows locally using local D1 state. Version URLs share
-production D1 and follow the read-only policy in
-[Architecture Overview](overview.md).
+Validate writes locally with local D1 and, after v0.2.1 implementation,
+through the isolated Preview default Worker URL. Other candidate Version URLs
+remain read-only; see [Deployment](deployment.md#v021-isolated-preview).

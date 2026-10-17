@@ -135,16 +135,27 @@ actions. Browsers never access D1 directly.
 
 ### Version URLs
 
-Version URLs share production D1 and permit read-only validation.
-Admin authentication does not authorize mutations through those URLs.
+Production candidates retain Production D1 and reject Admin mutations. The
+v0.2.1 environment policy is `Locally implemented; remote acceptance pending`: only the separate Preview Worker's
+default Worker URL permits remote testing writes, with Preview D1 as its sole DB.
+See the [environment matrix](deployment.md#v021-isolated-preview).
 
-After authentication and authorization, all Admin mutation requests through
-Version URLs return `403 FORBIDDEN`, including
-creation, editing, publishing, archiving, deletion, and restoration.
-Disabling UI actions alone is insufficient.
+Configure a separate Preview Access audience and the authorized Admin email
+allowlist. Reuse the verified issuer/JWKS/JWT policy, not the local identity
+bypass. Protect the same Admin page/API paths on the default Preview Worker URL and individual Preview
+Version URLs; home/public paths remain outside the Admin Access application.
+Verify actual Access hostname/path coverage before enabling remote testing.
 
-Validate write flows and migrations locally. Worker versions do not
-isolate or version database state.
+For Preview mutations, both request URL origin and `Origin` must exactly
+equal the configured HTTPS default Worker origin. No suffix matching, wildcard
+origin permission, forwarded-host trust, or Production-origin substitution.
+Missing, malformed, mismatched, and individual-version origins return
+`403 FORBIDDEN` after normal identity checks. Production retains its exact
+configured domain and read-only candidate URLs. Enforce these checks for
+direct API requests as well as UI actions. Local bypass retains its existing
+compile-time development, loopback, and explicit-flag requirements.
+
+Worker versions do not isolate or version database state.
 
 ## Public Post Boundary
 
@@ -278,7 +289,7 @@ rather than HTML login redirects:
 | --------------------------------------------------------------- | ----------- | ------------ |
 | Missing or invalid authentication                               | 401         | UNAUTHORIZED |
 | Authenticated identity not allowed                              | 403         | FORBIDDEN    |
-| Authorized mutation through a Version URL                       | 403         | FORBIDDEN    |
+| Authorized mutation through a read-only Version URL             | 403         | FORBIDDEN    |
 | Authorized mutation with missing, unusable, or different origin | 403         | FORBIDDEN    |
 
 Use the common error shape and predefined codes in API Design.
@@ -304,14 +315,54 @@ denial responses handled before the Worker. `no-store` governs HTTP caching;
 browser persistence of new-post input follows the
 [input recovery contract](content-domain.md#browser-input-recovery).
 
+### v0.2.1 CSP Investigation
+
+Status: `Locally implemented; deployed acceptance pending`. Built-Worker
+Chromium probes identified SvelteKit's announcer inline style as the
+`style-src-attr` source. Crepe's `container.style.display` updates produced no
+violation; its disappearing controls were a separate reactive-render bug:
+the readonly branch stopped observing the version used to rerender on unlock.
+Zod's caught dynamic-compilation probe also produced a `script-src` eval event.
+
+Version-scoped pnpm patches remove only SvelteKit 3.0.1's announcer inline
+style (the existing `#svelte-announcer` stylesheet retains its hidden live
+region) and keep Crepe 7.22.2's TopBar subscribed across readonly transitions.
+Source and shipped ESM/CJS Crepe entries are patched. Zod uses its supported
+`jitless` setting before constructing shared Admin schemas. No dependency
+upgrade or CSP permission change is involved. Revalidate both package patches
+against upstream changes on dependency upgrades; remove them when upstream
+provides equivalent behavior. See [Tasks 3–4 evidence](../operations/v0.2.1-authoring.md#tasks-34-local-evidence-2026-10-11).
+
+Before choosing a fix, reproduce recovery/pending locks and editor remounts
+under the built Worker's enforced policy. Capture `securitypolicyviolation`
+details, the offending element/action, console errors, and visibility/focus
+state. Distinguish TopBar, framework announcer, and other editor/menu writes.
+Verify title-to-Toolbar-to-body traversal and short/long scroll behavior in
+the same actual-page tests, rather than treating a hidden editor as solved
+by the modal alone.
+
+Prefer supported integration and stylesheet/class behavior for the proven
+source. Do not remove `style-src-attr 'none'`, broadly permit inline styles,
+or add a general console-error ignore to hide the report. Preserve nonce
+propagation, Markdown/URL/transfer guards, and existing script restrictions.
+Any necessary policy exception or dependency/integration change must be
+specified and reviewed before implementation. Recheck initial load, client
+remount, locks, menus, and nested CodeMirror editors. Existing exact-hash
+announcer handling is historical evidence, not permission to ignore new errors.
+
 ### CSP Configuration and Verification
 
 Task 7 selected Crepe/Kit `7.22.2`; the current dependency stack uses CodeMirror view `6.43.14` and state
 `6.7.6`. Admin reading uses read-only Crepe, with authoring controls disabled;
 no separate HTML renderer or sanitizer is required. A Markdown AST display
-projection removes source HTML, images and footnotes and unwraps disallowed
-links before Crepe parses it. This projection never replaces persisted source.
-Authoring preflight rejects those constructs and preserves the complete source.
+projection removes source HTML except standalone, attribute-free break markers
+(`br` with an optional self-closing slash) used by Crepe for empty paragraphs.
+The marker must be its entire HTML block under the document, blockquote or list
+item; inline markers within text, links and table cells remain unsupported.
+It also removes images and footnotes and unwraps disallowed links before Crepe
+parses it. This projection never replaces persisted source.
+Authoring preflight allows only that structural break-marker exception, rejects
+all other HTML and unsupported constructs, and preserves the complete source.
 Capture-phase paste/drop checks run before library parsing/upload, followed by
 a document/stored-mark transaction guard using the same URL policy.
 
@@ -343,11 +394,11 @@ interactions and dynamic styles. No style exception is introduced.
 Task 9 exercises protected list/detail HTML, read-only code blocks, client
 navigation/remounts, and lifecycle controls with the actual local production
 Worker at desktop and mobile sizes. Admin omits the favicon link because
-`img-src 'none'` rejects it. SvelteKit's generated `#svelte-announcer` still
-attempts its fixed inline hiding style, which `style-src-attr 'none'` blocks;
-the shared stylesheet supplies the equivalent visually hidden presentation.
-The browser check distinguishes this known framework violation by its exact
-style hash and rejects other console errors. No CSP permission is added.
+`img-src 'none'` rejects it. Task 9 originally recorded SvelteKit's fixed
+announcer inline style by its exact hash while the shared stylesheet supplied
+the equivalent hidden presentation. v0.2.1 removes the offending inline style
+and that test exception; browser checks now require no console errors.
+No CSP permission is added.
 Task 10 adds authoring controls and floating editor UI coverage. Deployed Access
 verification remains release acceptance work.
 

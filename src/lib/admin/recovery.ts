@@ -17,7 +17,8 @@ function parseCopy(raw: string): RecoveryCopy | null {
     typeof body !== 'string' ||
     typeof editedAt !== 'number' ||
     !Number.isSafeInteger(editedAt) ||
-    editedAt < 0
+    editedAt < 0 ||
+    Number.isNaN(new Date(editedAt).getTime())
   )
     return null;
   return { title, body, editedAt };

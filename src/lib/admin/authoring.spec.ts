@@ -149,12 +149,12 @@ describe('authoring requests and stage outcomes', () => {
       expected_revision: 3,
     });
   });
-  it('creates a draft once and navigates to its edit page', async () => {
+  it('creates a draft once and navigates to its detail page', async () => {
     const state = createAuthoringState();
     state.input = { title: 'Original', body: post.body };
     const { fetcher, requests } = responses(json(post, 201));
     await submitAuthoring(state, 'save', fetcher);
-    expect(state.destination).toBe(`/admin/posts/${post.id}/edit`);
+    expect(state.destination).toBe(`/admin/posts/${post.id}`);
     expect(state.created?.id).toBe(post.id);
     expect(state.pending).toBe(false);
     expect(requests.map(r => r.url)).toEqual(['/api/admin/posts']);
@@ -204,6 +204,27 @@ describe('authoring requests and stage outcomes', () => {
     expect(state.destination).toBeNull();
     expect(state.input).toEqual({ title: post.title, body: post.body });
     expect(requests).toHaveLength(1);
+  });
+  it('keeps rejected creation input and submitted copy without navigation or retry', async () => {
+    const state = createAuthoringState();
+    state.input = { title: 'Retain rejected', body: 'Original unsaved body' };
+    const { fetcher, requests } = responses(
+      json({ error: { code: 'FORBIDDEN', message: 'Denied' } }, 403),
+    );
+    await submitAuthoring(state, 'save', fetcher);
+    expect(state.result?.kind).toBe('rejected');
+    expect(state.created).toBeNull();
+    expect(state.destination).toBeNull();
+    expect(state.input).toEqual({
+      title: 'Retain rejected',
+      body: 'Original unsaved body',
+    });
+    expect(state.submitted).toEqual({
+      title: 'Retain rejected',
+      body: 'Original unsaved body',
+    });
+    expect(requests).toHaveLength(1);
+    expect(state.pending).toBe(false);
   });
   it('ordinary conflict preserves input and the entire loaded base', async () => {
     const state = createAuthoringState(post);

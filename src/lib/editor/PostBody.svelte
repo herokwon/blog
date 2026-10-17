@@ -36,5 +36,6 @@
   });
 </script>
 
-{#if error}<pre class="editor-source">{initialSource}</pre>{/if}
-<div class="admin-reading" bind:this={root}></div>
+{#if error}<pre
+    class="editor-source wrap-anywhere whitespace-pre-wrap">{initialSource}</pre>{/if}
+<div class="admin-reading wrap-anywhere" bind:this={root}></div>

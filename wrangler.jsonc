@@ -11,6 +11,7 @@
   "workers_dev": false,
   "preview_urls": true,
   "vars": {
+    "APP_ENVIRONMENT": "production",
     "ADMIN_ORIGIN": "https://blog.herokwon.dev",
     "ACCESS_ISSUER": "https://herokwon.cloudflareaccess.com",
     "ACCESS_AUDIENCE": "f6c677cfe2456b0113c8c7367c28a498ba757893c80773c0ae9a1e99387f6bc5"
@@ -30,6 +31,30 @@
     "traces": {
       "enabled": true,
       "head_sampling_rate": 1
+    }
+  },
+  "env": {
+    "preview": {
+      "name": "blog-preview",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "vars": {
+        "APP_ENVIRONMENT": "preview",
+        "ADMIN_ORIGIN": "https://blog-preview.wooyng825.workers.dev",
+        "PREVIEW_ORIGIN": "https://blog-preview.wooyng825.workers.dev",
+        "ACCESS_ISSUER": "https://herokwon.cloudflareaccess.com",
+        "ACCESS_AUDIENCE": "86e20741dcc32d649cc4efd971e6260adea58abd58cf3ce57729d8897e43e495"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blog-preview",
+          "database_id": "2cb26acd-de66-4530-968c-53323558d9f2",
+          "migrations_dir": "./drizzle",
+          "migrations_pattern": "./drizzle/*.sql"
+        }
+      ]
     }
   },
   "d1_databases": [

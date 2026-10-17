@@ -1,5 +1,57 @@
 # Admin validation
 
+## Admin UI Refinement Checks
+
+Follow [Admin UI refinement](v0.2.1-admin-ui.md) for the current task status.
+Check session header/main landmarks, full-height empty pages, neutral and
+colored-text controls, hover-capable-only feedback, keyboard focus and disabled
+states. Verify long unbroken titles retain reachable menus on mobile, reading
+padding does not change editing padding, and pagination centers one/partial/full
+number groups in both normal and trash lists. Preserve authoring body scrolling,
+short-viewport control access and exclusive logout locking across both landmarks.
+Record local evidence separately from updated Preview/physical-device acceptance.
+
+For Task 2, check row/card background navigation in normal/trash lists while
+menus, selected text, modified clicks and busy mutations remain isolated.
+Verify real title links, keyboard focus decoration and hover underline only
+on hover-capable devices. Check all seven operation-specific success summaries
+without post titles/details, delivery across required navigation, replacement
+of identical results, five-second expiry and remaining-time pause during
+hover/focus. Use controlled browser time. Errors/warnings must persist until
+dismissed, and dismissal must preserve conflict/retry controls and input.
+
+For Task 3, confirm that new-post `초안 생성` submits once, shows creation
+confirmation/progress, opens the saved detail and delivers one success notice.
+Existing editing retains `저장`. Check recovery cleanup, newer-input retention,
+unknown creation staying in place and partial-publication recovery routes.
+Check exact `yyyy-MM-dd HH:mm:ss` Korean timestamps in list/trash/detail and
+recovery under UTC and non-Korean browser timezones, including midnight/day/year
+boundaries. API/storage and `time[datetime]` must remain UTC ISO8601.
+
+### Integrated Local Result — 2026-10-16
+
+The [final refinement record](v0.2.1-admin-ui.md#task-4-integrated-local-evidence-2026-10-16)
+maps the user requests to implementation and verification. At source `eac50b1`,
+type checking and lint passed; the full suite passed 82 workflow, 459 unit/component
+and 126 browser tests, including the production build. Two additional local-only
+visual probes reused that Worker bundle and captured 32 views at 1280px/390px
+(the latter with touch), with no horizontal overflow. No new product fix was
+required by the integrated review.
+
+This proves local behavior only. Updated isolated Preview/Access verification
+and physical-device keyboard acceptance remain outstanding; use the existing
+[v0.2.1 acceptance procedure](v0.2.1-acceptance.md) when authorized. Keep scoped
+historical logout acceptance separate from acceptance of this updated candidate.
+
+## v0.2.1 Environment Verification
+
+Current environment implementation, approved provisioning and remaining remote
+gates are recorded in [v0.2.1 evidence](v0.2.1-acceptance.md). The API fixture
+also simulates Preview/Production Origin and AUD boundaries entirely in-process;
+read-only UI checks preserve local input while disabling server mutations.
+These local simulations do not prove actual Access login or logout completion.
+The v0.2.0 sections below remain historical evidence.
+
 ## Status and Scope
 
 Task 11 local acceptance verification is complete. The criterion-to-test map,
@@ -232,6 +284,16 @@ before adding them; the fallback pipeline probe does not mandate dependencies.
 Run the relevant repository checks (`pnpm check`, `pnpm lint`, unit tests,
 E2E tests, and the production build) as required by the implementation scope
 and existing CI. Document test setup and evidence on the corresponding PR.
+
+For processing feedback, hold requests open to inspect the global logout
+overlay, input-only authoring overlay and local lifecycle block. At desktop
+and mobile widths, verify stable input geometry, header/action keyboard and
+pointer locks, visible status outside inert regions, and input preservation
+after rejection. Check delayed display, cancellation of short-operation timers,
+immediate completion/removal, retry and reduced-motion behavior. Also verify
+outside-click/trigger menu dismissal and Save activation/reversion without a
+database revision change for untouched content. These local checks do not
+replace protected Preview or physical-device acceptance.
 
 ## Local Authentication Configuration
 
