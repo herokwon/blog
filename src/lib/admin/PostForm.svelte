@@ -249,12 +249,12 @@
           ? 'uncertain'
           : 'error';
     if (form.destination) {
-      permittedDestination = form.destination;
+      const destination = resolve(
+        `admin/posts/${form.destination.slice('/admin/posts/'.length)}`,
+      );
+      permittedDestination = destination;
       try {
-        await goto(
-          resolve('/admin/posts') +
-            form.destination.slice('/admin/posts'.length),
-        );
+        await goto(destination);
         if (form.result?.kind === 'confirmed') notices.show(completion());
       } catch {
         message = '화면을 이동하지 못했습니다.';
