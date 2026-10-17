@@ -43,8 +43,8 @@
 </script>
 
 {#if failed}<ResultNotice
-    tone="uncertain"
-    message="로그아웃 완료를 확인하지 못했습니다."
+    tone="error"
+    message="로그아웃에 실패했습니다."
     details="브라우저 입력 복구 삭제에 실패했다면 사이트 데이터를 확인하세요."
   >
     {#snippet actions()}<button

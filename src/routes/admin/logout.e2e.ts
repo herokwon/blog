@@ -97,6 +97,9 @@ test('unknown logout stays on the error screen and retry completes', async ({
   });
   await page.goto(`${localD1.origin}/admin/logout`);
   const notice = page.getByRole('group', { name: '작업 결과' });
+  await expect(notice.getByRole('status')).toContainText(
+    '로그아웃에 실패했습니다.',
+  );
   const retry = notice.getByRole('button', { name: '다시 시도' });
   await expect(retry).toBeFocused();
   await expect(notice.getByRole('button', { name: '안내 닫기' })).toHaveCount(
