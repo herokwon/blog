@@ -35,6 +35,20 @@
   });
   let action = $derived(actionState ?? localState);
   let menuOpen = $state(false);
+  let menuContainer = $state<HTMLDivElement>();
+  $effect(() => {
+    if (!menuOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !menuContainer?.contains(event.target)
+      )
+        menuOpen = false;
+    };
+    document.addEventListener('pointerdown', closeOutside, true);
+    return () =>
+      document.removeEventListener('pointerdown', closeOutside, true);
+  });
   const writable = $derived(page.data.adminContext?.writable ?? true);
   const processing = useProcessing();
   const notices = useNotices();
@@ -164,7 +178,7 @@
   aria-busy={action.busy}
 >
   {#if overflow}
-    <div class="post-menu-container relative">
+    <div class="post-menu-container relative" bind:this={menuContainer}>
       <button
         class="admin-button post-menu-trigger border-0 bg-transparent p-2 text-[1.4rem] leading-none"
         aria-label={`${post.title} 작업 메뉴`}
