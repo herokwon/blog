@@ -10,7 +10,7 @@ import { inspectMarkdown, isAllowedLink, readingMarkdown } from './policy';
 import { validatedTransferHtml } from './transfer-html';
 
 export type EditorController = {
-  getMarkdown(): string;
+  getMarkdown(normalized?: boolean): string;
   setReadonly(value: boolean): void;
   destroy(): Promise<void>;
 };
@@ -251,7 +251,8 @@ export async function mountEditor(options: {
     throw error;
   }
   return {
-    getMarkdown: () => (dirty ? crepe.getMarkdown() : options.body),
+    getMarkdown: (normalized = false) =>
+      normalized || dirty ? crepe.getMarkdown() : options.body,
     setReadonly(value) {
       locked = options.readonly || value;
       crepe.setReadonly(locked);

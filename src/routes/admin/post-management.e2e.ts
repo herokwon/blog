@@ -151,6 +151,13 @@ for (const viewport of [
             exact: true,
           }),
         ).toBeVisible();
+        await page.getByRole('heading', { level: 1 }).click();
+        await expect(item.locator('.post-menu')).toHaveCount(0);
+        await item.getByRole('button', { name: /작업 메뉴/ }).click();
+        await expect(item.locator('.post-menu')).toBeVisible();
+        await item.getByRole('button', { name: /작업 메뉴/ }).click();
+        await expect(item.locator('.post-menu')).toHaveCount(0);
+        await item.getByRole('button', { name: /작업 메뉴/ }).click();
         await item.getByRole('button', { name: /작업 메뉴/ }).press('Escape');
         await page.keyboard.press('Shift+Tab');
         const title = item.getByRole('link', { name: post.title, exact: true });

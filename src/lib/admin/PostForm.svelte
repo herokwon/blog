@@ -12,6 +12,7 @@
   import { readAdminPost } from './mutations';
   import { useNotices } from './notices.svelte';
   import { useProcessing } from './processing.svelte';
+  import ProcessingIndicator from './ProcessingIndicator.svelte';
   import {
     clearRecovery,
     readRecovery,
@@ -43,10 +44,22 @@
   let maximum: ReturnType<typeof setTimeout> | undefined;
   let editedAt = 0;
   let bodyChanged = $state(false);
+  let editorBaselineSource = $state('');
+  let editorBaselineMarkdown = $state('');
+  let currentEditorMarkdown = $state('');
   let permittedDestination: string | null = null;
   let titleInput: HTMLInputElement;
   const supported = $derived(inspectMarkdown(editorSource).supported);
   const creating = $derived(!form.base && !form.created);
+  const hasEdits = $derived(
+    !form.base ||
+      form.input.title !== form.base.title ||
+      (bodyChanged &&
+        currentEditorMarkdown !==
+          (form.base.body === editorBaselineSource
+            ? editorBaselineMarkdown
+            : form.base.body)),
+  );
   const locked = $derived(form.pending || loading || recovery !== null);
   const processing = useProcessing();
   const notices = useNotices();
@@ -57,9 +70,7 @@
   });
   const dirty = $derived(
     form.base
-      ? form.input.title !== form.base.title ||
-          bodyChanged ||
-          form.input.body !== form.base.body
+      ? hasEdits
       : form.input.title !== '' || bodyChanged || form.input.body !== '',
   );
 
@@ -93,7 +104,10 @@
   }
   function changed(body = false) {
     discarded = false;
-    if (body) bodyChanged = true;
+    if (body) {
+      bodyChanged = true;
+      if (controller) currentEditorMarkdown = controller.getMarkdown(true);
+    }
     editedAt = Date.now();
     clearTimeout(debounce);
     debounce = setTimeout(record, 500);
@@ -166,6 +180,7 @@
   async function submit(intent: 'save' | 'publish' | 'retry') {
     if (!writable) return;
     if (locked || !supported || !controller) return;
+    if (intent === 'save' && !hasEdits) return;
     serialize();
     if (intent !== 'retry' && !createPostSchema.safeParse(form.input).success) {
       message = '제목과 본문을 입력하세요.';
@@ -294,7 +309,7 @@
     void submit('save');
   }}
 >
-  <div class="admin-heading">
+  <div class="admin-heading" inert={form.pending || loading}>
     <a class="admin-button" href={resolve('/admin/posts')}>목록</a>
     <div class="post-actions flex flex-wrap items-center gap-3">
       {#if !form.base}<button
@@ -306,7 +321,7 @@
       <button
         class="admin-button action-save"
         type="submit"
-        disabled={locked || !supported || !controller || !writable}
+        disabled={locked || !supported || !controller || !writable || !hasEdits}
         >{creating ? '초안 생성' : '저장'}</button
       >
       <a
@@ -317,15 +332,6 @@
       >
     </div>
   </div>
-  {#if form.pending || loading}<p class="admin-processing" role="status">
-      {loading
-        ? '최신 내용 불러오는 중…'
-        : form.request?.kind === 'publish'
-          ? '발행 중…'
-          : creating
-            ? '초안 생성 중…'
-            : '저장 중…'}
-    </p>{/if}
   {#if storageNotice}<ResultNotice
       tone="warning"
       message="브라우저 입력 복구를 사용할 수 없습니다."
@@ -356,7 +362,10 @@
     >
   {/if}
   {#if form.base && ['conflict', 'unresolved'].includes(form.result?.kind ?? '')}
-    <div class="authoring-feedback my-4 flex flex-wrap items-center gap-3">
+    <div
+      class="authoring-feedback my-4 flex flex-wrap items-center gap-3"
+      inert={form.pending || loading}
+    >
       <a
         class="admin-button"
         href={resolve('/admin/posts/[id]', { id: form.base.id })}
@@ -377,25 +386,47 @@
         >{/if}
     </div>
   {/if}
-  <label class="post-title my-4 block" for="post-title"
-    ><span class="sr-only">제목</span><input
-      class="block w-full rounded border border-current p-3 text-base leading-[inherit]"
-      id="post-title"
-      placeholder="제목"
-      bind:this={titleInput}
-      bind:value={form.input.title}
-      disabled={locked}
-      oninput={() => changed()}
-    /></label
-  >
-  {#key editorKey}<Editor
-      source={editorSource}
-      {locked}
-      onchange={() => changed(true)}
-      onready={mounted => {
-        controller = mounted;
-      }}
-    />{/key}
+  <div class="post-inputs relative flex min-h-0 flex-1 flex-col">
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+      inert={locked}
+      aria-busy={form.pending || loading}
+    >
+      <label class="post-title my-4 block shrink-0" for="post-title"
+        ><span class="sr-only">제목</span><input
+          class="block w-full rounded border border-current p-3 text-base leading-[inherit]"
+          id="post-title"
+          placeholder="제목"
+          bind:this={titleInput}
+          bind:value={form.input.title}
+          disabled={locked}
+          oninput={() => changed()}
+        /></label
+      >
+      {#key editorKey}<Editor
+          source={editorSource}
+          {locked}
+          onchange={() => changed(true)}
+          onready={mounted => {
+            controller = mounted;
+            editorBaselineSource = editorSource;
+            editorBaselineMarkdown = mounted.getMarkdown(true);
+            currentEditorMarkdown = editorBaselineMarkdown;
+          }}
+        />{/key}
+    </div>
+    <ProcessingIndicator
+      active={form.pending || loading}
+      scope="region"
+      message={loading
+        ? '최신 내용 불러오는 중…'
+        : form.request?.kind === 'publish'
+          ? '발행 중…'
+          : creating
+            ? '초안 생성 중…'
+            : '저장 중…'}
+    />
+  </div>
 </form>
 
 {#if recovery}

@@ -115,7 +115,7 @@
   .admin-reading .milkdown .ProseMirror {
     @apply p-0;
   }
-  .post-form > :not(.admin-editor) {
+  .post-form > :not(.post-inputs) {
     @apply shrink-0;
   }
   .post-form .admin-editor .milkdown {

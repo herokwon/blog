@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { FeedbackTone } from './feedback';
 
   let {
@@ -6,11 +7,13 @@
     message,
     details = '',
     ondismiss,
+    actions,
   }: {
     tone: FeedbackTone;
     message: string;
     details?: string;
     ondismiss?: () => void;
+    actions?: Snippet;
   } = $props();
   let hovered = $state(false);
   let focused = $state(false);
@@ -58,44 +61,51 @@
       focused = false;
   }}
 >
-  <div class="flex min-w-0 flex-1 items-start gap-3" role="status">
-    <svg
-      class="feedback-icon mt-[calc((1lh_-_1em)_/_2)] size-[1em] shrink-0"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {#if tone === 'warning'}<path
-          d="M12 3L2 21h20L12 3"
-          fill="currentColor"
-          stroke="none"
-        />
-      {:else if tone !== 'conflict'}<circle
-          cx="12"
-          cy="12"
-          r="11"
-          fill="currentColor"
-          stroke="none"
-        />{/if}
-      <path
-        d={icons[tone]}
-        stroke={tone === 'conflict' ? 'currentColor' : 'white'}
-      />
-    </svg>
-    <span class="feedback-content block min-w-0 wrap-anywhere"
-      ><span class="sr-only">{labels[tone]}: </span><span
-        class="feedback-summary block font-semibold">{message}</span
+  <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
+    <div class="flex min-w-0 flex-1 basis-80 items-start gap-3">
+      <svg
+        class="feedback-icon mt-[calc((1lh_-_1.25em)_/_2)] size-[1.25em] shrink-0"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
       >
-      {#if details}<span
-          class="feedback-details mt-1 block whitespace-pre-line text-admin-muted"
-          >{details}</span
-        >{/if}</span
-    >
+        {#if tone === 'warning'}<path
+            d="M12 3L2 21h20L12 3"
+            fill="currentColor"
+            stroke="none"
+          />
+        {:else if tone !== 'conflict'}<circle
+            cx="12"
+            cy="12"
+            r="11"
+            fill="currentColor"
+            stroke="none"
+          />{/if}
+        <path
+          d={icons[tone]}
+          stroke={tone === 'conflict' ? 'currentColor' : 'white'}
+        />
+      </svg>
+      <div class="feedback-content min-w-0 wrap-anywhere">
+        <div role="status">
+          <span class="sr-only">{labels[tone]}: </span><span
+            class="feedback-summary block font-semibold">{message}</span
+          >
+          {#if details}<span
+              class="feedback-details mt-1 block whitespace-pre-line text-admin-muted"
+              >{details}</span
+            >{/if}
+        </div>
+      </div>
+    </div>
+    {#if actions}<div class="ml-[calc(1.25em_+_0.75rem)] shrink-0">
+        {@render actions()}
+      </div>{/if}
   </div>
   {#if ondismiss}<button
       class="admin-button shrink-0 border-0 bg-transparent p-1"

@@ -187,7 +187,22 @@ for (const width of [1280, 390]) {
         'contenteditable',
         'false',
       );
-      await page.getByRole('link', { name: '목록', exact: true }).click();
+      await expect(page.locator('.post-form .admin-heading')).toHaveAttribute(
+        'inert',
+        '',
+      );
+      const list = page.getByRole('link', { name: '목록', exact: true });
+      expect(
+        await list.evaluate(link => {
+          (link as HTMLElement).focus();
+          return document.activeElement === link;
+        }),
+      ).toBe(false);
+      const listBox = await list.boundingBox();
+      await page.mouse.click(
+        listBox!.x + listBox!.width / 2,
+        listBox!.y + listBox!.height / 2,
+      );
       await expect(page).toHaveURL(
         `${localD1.origin}/admin/posts/${post.id}/edit`,
       );

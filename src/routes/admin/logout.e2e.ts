@@ -4,7 +4,7 @@ import { test } from '../../../tests/admin/local-d1';
 test('pending logout locks Admin controls while its status remains accessible, then failure unlocks retry', async ({
   page,
   localD1,
-}) => {
+}, testInfo) => {
   await page.setExtraHTTPHeaders({
     'Cf-Access-Jwt-Assertion': await localD1.token(),
   });
@@ -26,6 +26,11 @@ test('pending logout locks Admin controls while its status remains accessible, t
     page.getByRole('banner', { includeHidden: true }),
   ).toHaveAttribute('inert', '');
   await expect(page.getByRole('status')).toContainText('로그아웃');
+  const overlay = page.locator('[data-processing="global"]');
+  await expect(overlay).toBeVisible();
+  const bounds = await overlay.boundingBox();
+  expect(bounds).toEqual({ x: 0, y: 0, ...page.viewportSize() });
+  await page.screenshot({ path: testInfo.outputPath('global-loading.png') });
   expect(
     await page.locator('.admin-session a').evaluate(link => {
       (link as HTMLElement).focus();
@@ -42,6 +47,7 @@ test('pending logout locks Admin controls while its status remains accessible, t
     '',
   );
   await expect(page.getByRole('button', { name: '다시 시도' })).toBeFocused();
+  await expect(overlay).toHaveCount(0);
 });
 
 test('verified logout returns home after both checks', async ({
@@ -96,9 +102,35 @@ test('unknown logout stays on the error screen and retry completes', async ({
     };
   });
   await page.goto(`${localD1.origin}/admin/logout`);
-  await expect(page.getByRole('button', { name: '다시 시도' })).toBeVisible();
+  const notice = page.getByRole('group', { name: '작업 결과' });
+  await expect(notice.getByRole('status')).toContainText(
+    '로그아웃에 실패했습니다.',
+  );
+  const retry = notice.getByRole('button', { name: '다시 시도' });
+  await expect(retry).toBeFocused();
+  await expect(notice.getByRole('button', { name: '안내 닫기' })).toHaveCount(
+    0,
+  );
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    const noticeBox = await notice.boundingBox();
+    const retryBox = await retry.boundingBox();
+    expect(retryBox!.width).toBeLessThan(noticeBox!.width / 2);
+    const messageBox = await notice.getByRole('status').boundingBox();
+    if (width === 390) {
+      expect(retryBox!.y).toBeGreaterThanOrEqual(
+        messageBox!.y + messageBox!.height,
+      );
+      expect(retryBox!.x).toBeCloseTo(messageBox!.x, 0);
+    } else {
+      expect(retryBox!.y).toBeLessThan(messageBox!.y + messageBox!.height);
+      expect(
+        noticeBox!.x + noticeBox!.width - retryBox!.x - retryBox!.width,
+      ).toBeCloseTo(16, 0);
+    }
+  }
   await expect(page).toHaveURL(`${localD1.origin}/admin/logout`);
-  await page.getByRole('button', { name: '다시 시도' }).click();
+  await retry.click();
   await expect(page).toHaveURL(`${localD1.origin}/`);
 });
 
