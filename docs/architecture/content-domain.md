@@ -173,10 +173,13 @@ Do not expose database IDs, Access settings, or secrets.
 
 When the server reports read-only access, show `읽기 전용으로 접속 중입니다.`
 and disable save, publish, archive, delete and restore. For Preview, provide
-`작성 가능한 Preview로 이동` linking to the configured default Worker URL's
+the neutral bordered `작성 화면으로 이동` link to the configured default Worker URL's
 `/admin/posts`. Production candidates show the explanation without a Preview
 shortcut. Inputs, recovery, reads and navigation remain available; the server
 still rejects direct mutation requests using the same exact-Origin decision.
+Use an amber lock icon at 1.25 times the notice text size. Place the action
+at the right on a shared line, or align it with the message text on the left
+when it wraps below.
 
 See [environment implementation](../operations/v0.2.1-environments.md#task-5-preview-authentication-and-mutation-boundaries)
 and [authoring implementation](../operations/v0.2.1-authoring.md) for sequencing
@@ -305,6 +308,9 @@ republication are available through persisted-content management views.
 These actions publish persisted content and do not implicitly save editor
 input. Leaving dirty editor input follows the confirmation rule below.
 The new-post page retains its separate creation-followed-by-publication flow.
+Existing-post Save is enabled only when title or normalized editor Markdown
+differs from its loaded baseline; reverting both disables it again. Comparison
+must not serialize untouched source into a save or alter explicit retry rules.
 
 When leaving a page with unsaved changes, ask whether to leave without
 saving using a confirmation dialog. Canceling keeps the editor and input;
@@ -325,6 +331,20 @@ an exclusive workspace lock with its accessible processing status outside
 the inert region. Failure releases the lock and focuses retry. Verified
 logout must be able to return home without the navigation lock blocking its
 own departure.
+
+Use three processing presentations: a viewport overlay for logout; an overlay
+covering title, formatting tools and body for create/save/publish/latest-content
+reload; and a local bordered status block for list/detail lifecycle actions.
+Keep the form's dimensions and body-only scrolling stable. While the input
+overlay applies, make the session header, upper navigation/actions and inputs
+inert immediately; failures unlock them without discarding input. Processing
+status remains outside inert content. Delay visual feedback by 180ms to avoid
+flashing on short requests, cancel the delay on completion/unmount, and remove
+feedback immediately when settled. All presentations share a one-second linear
+rotating spinner, static when reduced motion is requested.
+
+List/trash overflow menus close on an outside pointer press and on a second
+press of their trigger; interacting inside must preserve action execution.
 
 After confirmed mutation outcomes, use the following navigation:
 
@@ -450,6 +470,9 @@ reachable without Admin authentication.
 A failed cleanup or logout displays an error and a retry action, rather than
 pretending success and navigating home. Local development must not claim
 Access session revocation: the service does not exist on the local origin.
+Use the persistent error notice `로그아웃에 실패했습니다.` with the failure
+icon and a normal-width retry button inside the notice. Its action follows
+the read-only notice's shared-line/right and wrapped-line/left alignment.
 The execution plan must first validate the browser logout response, cookie
 removal, and subsequent protected access in Preview. Do not assume an
 undocumented redirect parameter or replace logout with navigation alone.

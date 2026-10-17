@@ -285,6 +285,16 @@ Run the relevant repository checks (`pnpm check`, `pnpm lint`, unit tests,
 E2E tests, and the production build) as required by the implementation scope
 and existing CI. Document test setup and evidence on the corresponding PR.
 
+For processing feedback, hold requests open to inspect the global logout
+overlay, input-only authoring overlay and local lifecycle block. At desktop
+and mobile widths, verify stable input geometry, header/action keyboard and
+pointer locks, visible status outside inert regions, and input preservation
+after rejection. Check delayed display, cancellation of short-operation timers,
+immediate completion/removal, retry and reduced-motion behavior. Also verify
+outside-click/trigger menu dismissal and Save activation/reversion without a
+database revision change for untouched content. These local checks do not
+replace protected Preview or physical-device acceptance.
+
 ## Local Authentication Configuration
 
 Task 2 uses `jose` to verify RS256 Access JWTs against the team's HTTPS
