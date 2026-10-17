@@ -48,12 +48,15 @@ jobs:
         if: steps.policy.outputs.eligible == 'true'
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.CI_APP_ID }}
-          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.DEPENDABOT_MERGE_AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPENDABOT_MERGE_AUTOMATION_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Enable auto-merge
         if: steps.policy.outputs.eligible == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --merge "$PR_URL"
+        run: gh pr merge --auto --squash "$PR_URL"
