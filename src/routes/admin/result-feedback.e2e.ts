@@ -20,7 +20,7 @@ test('confirmed results use the summary, cross navigation once and expire or dis
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.getByRole('button', { name: 'Private title 작업 메뉴' }).click();
   await page.getByRole('button', { name: '발행', exact: true }).click();
-  await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
+  await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
   const notice = page.locator('.admin-feedback[data-tone="success"]');
   await expect(notice.locator('.feedback-summary')).toHaveText(
     '발행되었습니다.',
@@ -36,6 +36,7 @@ test('confirmed results use the summary, cross navigation once and expire or dis
   await expect(notice).toBeVisible();
   await page.clock.fastForward(1);
   await expect(notice).toHaveCount(0);
+  await page.getByRole('button', { name: 'Private title 작업 메뉴' }).click();
   await page.getByRole('button', { name: '보관', exact: true }).click();
   await expect(notice.locator('.feedback-summary')).toHaveText(
     '보관되었습니다.',
@@ -46,12 +47,16 @@ test('confirmed results use the summary, cross navigation once and expire or dis
   await expect(notice).toBeVisible();
   await close.click();
   await expect(notice).toHaveCount(0);
+  await page.getByRole('button', { name: 'Private title 작업 메뉴' }).click();
   await page.getByRole('button', { name: '재발행', exact: true }).click();
   await expect(notice.locator('.feedback-summary')).toHaveText(
     '재발행되었습니다.',
   );
   // SvelteKit link navigation waits for a frame and a timer before routing.
   await page.clock.resume();
+  await page.getByRole('link', { name: 'Private title', exact: true }).click();
+  await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
+  await expect(notice).toHaveCount(0);
   await page.getByRole('link', { name: '목록', exact: true }).click();
   await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
   await expect(notice).toHaveCount(0);

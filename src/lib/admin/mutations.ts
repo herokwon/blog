@@ -1,7 +1,11 @@
 import {
+  adminPostPageSchema,
   adminPostSchema,
   apiErrorResponseSchema,
+  type AdminListQuery,
+  type AdminListScope,
   type AdminPost,
+  type AdminPostPage,
   type ApiErrorResponse,
   type CreatePostInput,
   type PatchPostInput,
@@ -123,6 +127,30 @@ export async function readAdminPost(
   const post = adminPostSchema.parse(body);
   if (post.id !== id) throw new Error('Post identity does not match.');
   return post;
+}
+
+/** Revalidation must retain the current screen when the read fails. */
+export async function readAdminPostPage(
+  scope: AdminListScope,
+  query: AdminListQuery,
+  fetcher: typeof fetch,
+): Promise<AdminPostPage> {
+  const search = new URLSearchParams({
+    page: String(query.page),
+    limit: String(query.limit),
+  });
+  if (scope === 'normal' && query.status) search.set('status', query.status);
+  const { response, body } = await readResponse(
+    fetcher,
+    `/api/admin/posts${scope === 'trash' ? '/trash' : ''}?${search}`,
+    { method: 'GET', credentials: 'same-origin', cache: 'no-store' },
+  );
+  if (response.status !== 200)
+    throw new Error('Post list could not be loaded.');
+  const posts = adminPostPageSchema.parse(body);
+  if (posts.page !== query.page || posts.limit !== query.limit)
+    throw new Error('Post list scope does not match.');
+  return posts;
 }
 
 async function attempt(

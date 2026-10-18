@@ -631,11 +631,13 @@ for (const viewport of [
         .dispatchEvent('click', { button: 0 });
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
       release();
-      await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
+      await expect(page.locator('.feedback-summary')).toHaveText(
+        '발행되었습니다.',
+      );
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
       expect(
         await (await api.get(`/api/admin/posts/${post.id}`)).json(),
       ).toMatchObject({ status: 'published', revision: 2 });
-      await page.getByRole('link', { name: '목록', exact: true }).click();
       await page.getByRole('link', { name: '휴지통', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/trash`);
     });

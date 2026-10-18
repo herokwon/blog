@@ -18,7 +18,7 @@
   }: {
     post: AdminPostListItem;
     overflow?: boolean;
-    refresh: (publishedId?: string) => Promise<void>;
+    refresh: () => Promise<void>;
     state?: {
       busy: boolean;
       message: string;
@@ -91,11 +91,13 @@
     notices.dismiss();
     menuOpen = false;
     const title = post.title;
+    let confirmed = false;
     try {
       const result = await runMutation(
         { kind, id: post.id, input: { expected_revision: post.revision } },
         fetch,
       );
+      confirmed = result.kind === 'confirmed';
       const message =
         result.kind === 'confirmed'
           ? ''
@@ -123,15 +125,15 @@
             : result.kind === 'rejected'
               ? 'error'
               : 'uncertain';
-      await refresh(
-        result.kind === 'confirmed' && kind === 'publish' ? post.id : undefined,
-      );
+      await refresh();
       if (result.kind === 'confirmed')
         notices.show(successMessage(kind, republish));
     } catch {
       action.tone = 'uncertain';
       action.message = `${title}: 최신 상태를 불러오지 못했습니다.`;
-      action.details = '페이지를 새로고침해 변경 결과를 확인하세요.';
+      action.details = confirmed
+        ? '작업은 완료되었습니다. 페이지를 새로고침해 최신 상태를 확인하세요.'
+        : '페이지를 새로고침해 변경 결과를 확인하세요.';
     } finally {
       action.busy = false;
     }
