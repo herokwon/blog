@@ -3,7 +3,7 @@ import type { PostStatus } from './contracts';
 export const statusLabels: Record<PostStatus, string> = {
   draft: '초안',
   published: '발행',
-  archived: '공개 취소',
+  archived: '보관',
 };
 
 const koreanTime = new Intl.DateTimeFormat('en-CA', {

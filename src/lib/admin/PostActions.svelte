@@ -63,22 +63,25 @@
   });
   async function command(kind: PostCommand) {
     if (action.busy || !writable) return;
+    const republish = post.status === 'archived';
     const warning =
       kind === 'delete'
         ? post.status === 'published'
-          ? '게시글을 삭제하면 공개되지 않습니다. 삭제할까요?'
+          ? '게시글을 휴지통으로 이동할까요?\n더 이상 공개되지 않으며, 복구하면 다시 공개됩니다.'
           : '게시글을 휴지통으로 이동할까요?'
         : kind === 'restore' && post.status === 'published'
           ? '복구하면 게시글이 다시 공개됩니다. 복구할까요?'
           : kind === 'restore'
             ? '게시글을 복구할까요?'
             : kind === 'archive'
-              ? '이 게시글의 공개를 취소할까요?'
-              : '이 게시글을 공개할까요?';
+              ? '게시글을 보관할까요?\n더 이상 공개되지 않습니다.'
+              : republish
+                ? '게시글을 다시 발행할까요?\n다시 공개되며 최초 발행일은 유지됩니다.'
+                : '게시글을 발행할까요?\n공개 목록과 상세 페이지에 표시됩니다.';
     if (!confirm(warning)) return;
     action.operation = {
-      publish: '발행 중…',
-      archive: '공개 취소 중…',
+      publish: republish ? '재발행 중…' : '발행 중…',
+      archive: '보관 중…',
       delete: '휴지통으로 이동 중…',
       restore: '복구 중…',
     }[kind];
@@ -88,7 +91,6 @@
     notices.dismiss();
     menuOpen = false;
     const title = post.title;
-    const republish = post.status === 'archived';
     try {
       const result = await runMutation(
         { kind, id: post.id, input: { expected_revision: post.revision } },
@@ -148,7 +150,8 @@
     >
     {#if post.status !== 'published'}
       <button
-        class="admin-button action-publish"
+        class="admin-button"
+        class:action-publish={!overflow}
         disabled={action.busy || !writable}
         onclick={() => command('publish')}
         >{post.status === 'archived' ? '재발행' : '발행'}</button
@@ -157,7 +160,7 @@
       <button
         class="admin-button"
         disabled={action.busy || !writable}
-        onclick={() => command('archive')}>공개 취소</button
+        onclick={() => command('archive')}>보관</button
       >
     {/if}
     <button

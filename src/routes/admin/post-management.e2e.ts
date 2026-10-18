@@ -450,16 +450,14 @@ for (const viewport of [
         page.getByRole('button', { name: '발행', exact: true }),
       ).toHaveCount(0);
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeVisible();
-      await page
-        .getByRole('button', { name: '공개 취소', exact: true })
-        .click();
+      await page.getByRole('button', { name: '보관', exact: true }).click();
       await page.getByRole('button', { name: '재발행', exact: true }).click();
       page.once('dialog', dialog => dialog.dismiss());
       await page.getByRole('button', { name: '삭제', exact: true }).click();
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeVisible();
       page.once('dialog', async dialog => {
         expect(dialog.message()).toContain('공개');
@@ -486,7 +484,7 @@ for (const viewport of [
       page.once('dialog', dialog => dialog.accept());
       await page.getByRole('button', { name: '복구', exact: true }).click();
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeVisible();
     });
 
@@ -700,7 +698,7 @@ for (const viewport of [
       });
       await page.getByRole('button', { name: '발행', exact: true }).click();
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeEnabled();
       await expect(page.getByRole('status')).toHaveCount(0);
       expect(attempts).toBe(2);

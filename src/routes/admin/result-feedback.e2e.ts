@@ -36,9 +36,9 @@ test('confirmed results use the summary, cross navigation once and expire or dis
   await expect(notice).toBeVisible();
   await page.clock.fastForward(1);
   await expect(notice).toHaveCount(0);
-  await page.getByRole('button', { name: '공개 취소', exact: true }).click();
+  await page.getByRole('button', { name: '보관', exact: true }).click();
   await expect(notice.locator('.feedback-summary')).toHaveText(
-    '공개가 취소되었습니다.',
+    '보관되었습니다.',
   );
   const close = notice.getByRole('button', { name: '안내 닫기' });
   await close.focus();
@@ -77,7 +77,7 @@ test('repeated delete and restore results replace their timers and retain operat
     await page.getByRole('button', { name: `${title} 작업 메뉴` }).click();
     await page.getByRole('button', { name: '삭제', exact: true }).click();
     await expect(notice.locator('.feedback-summary')).toHaveText(
-      '삭제되었습니다.',
+      '휴지통으로 이동했습니다.',
     );
     await page.clock.fastForward(4000);
     await expect(notice).toBeVisible();

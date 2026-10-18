@@ -75,7 +75,7 @@ test('each lifecycle action asks once and cancellation leaves the revision uncha
   await page.goto(`${localD1.origin}/admin/posts/${post.id}`);
   for (const [label, expectedState] of [
     ['발행', 'published'],
-    ['공개 취소', 'archived'],
+    ['보관', 'archived'],
     ['재발행', 'published'],
     ['삭제', 'published'],
     ['복구', 'published'],
