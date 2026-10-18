@@ -58,6 +58,7 @@
   </header>
   <main
     class="admin-shell mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-8 md:px-5 md:py-12"
+    data-sveltekit-preload-data="off"
   >
     <div class="admin-workspace contents" inert={processing.exclusive}>
       {#if !data.adminContext.writable}

@@ -8,6 +8,32 @@ test.beforeEach(async ({ page, localD1 }) => {
   });
 });
 
+test('opening a previously hovered detail after list publication reads its new state', async ({
+  page,
+  api,
+  localD1,
+}) => {
+  const post = await (
+    await api.post('/api/admin/posts', {
+      data: { title: 'Fresh detail', body: 'Body' },
+    })
+  ).json();
+  await page.goto(`${localD1.origin}/admin/posts`);
+  const title = page.getByRole('link', { name: post.title, exact: true });
+  await title.hover();
+  // Let any hover preload finish before performing the mutation.
+  await page.waitForLoadState('networkidle');
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: /작업 메뉴/ }).click();
+  await page.getByRole('button', { name: '발행', exact: true }).click();
+  await expect(page.locator('.feedback-summary')).toHaveText('발행되었습니다.');
+  await title.click();
+  await expect(
+    page.getByRole('button', { name: '보관', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.post-metadata')).toContainText('발행');
+});
+
 test('lifecycle confirmations, pending copy and results use the approved state-specific wording', async ({
   page,
   api,
