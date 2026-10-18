@@ -23,6 +23,12 @@ Korean display time. Updated Preview and physical-device acceptance remain separ
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
 
+The v0.2.2 status and list-flow slice is tracked in
+[Issue #70](https://github.com/herokwon/blog/issues/70) and its
+[implementation record](../operations/v0.2.2-admin-status-flow.md).
+The UI labels `draft`, `published` and `archived` as `초안`, `발행` and `보관`.
+The `archive` API and persisted state values retain their existing meaning.
+
 [ADR 0002](../adr/0002-use-a-single-content-entity.md) records the model
 decision; [ADR 0003](../adr/0003-use-explicit-save-and-publication.md)
 records the explicit save and publication decision.
@@ -197,8 +203,8 @@ triangle. Icons are decorative; retain the accessible status label and
 `role="status"`. A close button sits outside the announced text.
 Confirmed success uses only a bold result summary, without the post title or
 secondary details: `초안이 생성되었습니다.`, `저장되었습니다.`,
-`발행되었습니다.`, `재발행되었습니다.`, `공개가 취소되었습니다.`,
-`삭제되었습니다.` or `복구되었습니다.`. Distinguish publication from
+`발행되었습니다.`, `재발행되었습니다.`, `보관되었습니다.`,
+`휴지통으로 이동했습니다.` or `복구되었습니다.`. Distinguish publication from
 republication using the state before the command.
 Success expires after five seconds; pointer hover or focus within pauses the
 remaining time. Every new result gets a fresh timer, including identical text.
@@ -222,6 +228,8 @@ secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
 Logout and neutral navigation/actions share bordered buttons.
 Save/publish/republish use blue text and a light blue border on a white resting background, with
 subtle hover like danger actions; menu items retain their borderless treatment.
+List overflow publish/republish actions use neutral text; only delete retains
+danger emphasis. Form/detail action emphasis is unchanged by this exception.
 Hover applies only on hover-capable devices and enabled controls; keyboard
 focus remains visible. Exclusive logout makes both header and main controls inert.
 Detail reading has no outer Milkdown/ProseMirror padding; preserve Markdown
@@ -323,6 +331,17 @@ Before save, creation/publication, manual retry, publication/republication,
 archive, soft deletion and restoration, use the native `confirm` dialog.
 New draft creation asks `현재 내용으로 초안을 생성할까요?` and reports
 `초안 생성 중…` while pending; existing editing retains its save wording.
+Lifecycle confirmations use these exact sentences, separated by a newline:
+
+| Operation             | Confirmation                                                                          | Pending             |
+| --------------------- | ------------------------------------------------------------------------------------- | ------------------- |
+| Publish               | 게시글을 발행할까요?<br>공개 목록과 상세 페이지에 표시됩니다.                         | 발행 중…            |
+| Republish             | 게시글을 다시 발행할까요?<br>다시 공개되며 최초 발행일은 유지됩니다.                  | 재발행 중…          |
+| Archive               | 게시글을 보관할까요?<br>더 이상 공개되지 않습니다.                                    | 보관 중…            |
+| Delete published      | 게시글을 휴지통으로 이동할까요?<br>더 이상 공개되지 않으며, 복구하면 다시 공개됩니다. | 휴지통으로 이동 중… |
+| Delete draft/archived | 게시글을 휴지통으로 이동할까요?                                                       | 휴지통으로 이동 중… |
+
+The delete button remains `삭제`; restore confirmation/progress is unchanged.
 Cancellation must not send a mutation or discard input/recovery. A dirty
 application departure has one confirmation; the successful operation's own
 navigation must not ask again.
@@ -356,8 +375,21 @@ After confirmed mutation outcomes, use the following navigation:
 | New post created and published                 | `/admin/posts/[id]`                                                 |
 | New post created but publication failed        | Its edit page, with publication failure and retry guidance          |
 | Existing post saved, in any non-deleted status | `/admin/posts/[id]`                                                 |
-| Existing post published or republished         | `/admin/posts/[id]`                                                 |
+| List lifecycle operation                       | Revalidate the originating list, preserving filter and valid page   |
+| Detail lifecycle operation                     | Revalidate the same detail, including deletion and restoration      |
 | Creation outcome remains unknown               | Keep the creation page and input; offer manual post-list inspection |
+
+Lifecycle revalidation does not reload the whole browser page. Remove items
+outside the active scope/filter and correct an empty last page to a valid
+preceding page. A restored trash item disappears while remaining in trash;
+restored detail removes deletion metadata and updates its actions and list link.
+Show confirmed success after revalidation/page correction. If a confirmed
+operation's revalidation fails, report that the operation completed and latest
+state could not be loaded; do not claim mutation failure or retry automatically.
+Lifecycle reads update the mounted view only after validated API reads succeed.
+Read failures retain the prior view. Corrected pagination replaces the current
+history URL after its data is available. Admin main-content links disable hover
+data preloading so a detail or list opened after a mutation reads current state.
 
 During saving and new-post creation/publication, disable title/body input,
 formatting controls, and duplicate mutation actions. Keep the editor locked

@@ -1,5 +1,22 @@
 # Admin validation
 
+## v0.2.2 Status and List Flow
+
+Follow [Issue #70 implementation](v0.2.2-admin-status-flow.md) for this slice.
+Verify exact state-dependent lifecycle confirmation/progress/success copy in
+[Content domain](../architecture/content-domain.md), including newline-separated
+sentences, cancellation without revision changes, preserved public URL/first
+publication date and neutral list publish/republish actions.
+
+At desktop/mobile widths, verify normal/trash operations retain their originating
+list, filters and valid page. Cover filtered-out rows, empty final-page correction
+and success notices surviving row removal/navigation. Detail stays on the same
+post through delete/restore; restored metadata, actions and list link update.
+Distinguish confirmed mutation plus failed revalidation from uncertain mutation;
+verify no automatic replay, retained input, pending locks and read-only boundaries.
+Existing new-post creation/publication detail navigation and recovery tests remain
+required. Historical acceptance records below are not new-candidate evidence.
+
 ## Admin UI Refinement Checks
 
 Follow [Admin UI refinement](v0.2.1-admin-ui.md) for the current task status.
