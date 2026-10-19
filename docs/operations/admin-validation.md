@@ -19,6 +19,22 @@ required. Historical acceptance records below are not new-candidate evidence.
 
 ## Admin UI Refinement Checks
 
+For [Issue #72](https://github.com/herokwon/blog/issues/72), measure adjacent
+글쓰기/휴지통 controls at 390px and 1280px: both have a 42px minimum outer
+height at the default root font size, with at most 1px rounding difference.
+The trash control is square with a centered 20px SVG. Preserve compact menu
+items, 36px pagination controls and 14px arrows. New-post 초안 생성 is neutral;
+new-post 발행 and editing 저장 retain the blue text/light-blue border treatment.
+Check enabled, condition-disabled and processing cursors separately. For inert
+content, inspect `elementFromPoint` at the control's center, not only the child's
+computed cursor. Confirm session/header, form, list/detail and exclusive logout
+lock boundaries. Hold a request pending to verify no duplicate activation or
+navigation, then release it with success, rejection, conflict and uncertain
+responses. Temporary progress clears while read-only/unchanged/boundary controls
+retain `not-allowed`. Verify hover suppression, keyboard focus, input retention
+and loading/logout failure recovery. Browser fixtures simulate timing and
+failures; they do not establish remote or physical-device acceptance.
+
 Follow [Admin UI refinement](v0.2.1-admin-ui.md) for the current task status.
 Check session header/main landmarks, full-height empty pages, neutral and
 colored-text controls, hover-capable-only feedback, keyboard focus and disabled
@@ -91,8 +107,13 @@ production Worker and creates a Wrangler `--dry-run` bundle without deploying.
 The fixture in `tests/admin/local-d1.ts` runs that bundle in Miniflare using
 the same version already selected by Wrangler, an isolated test-only D1 ID,
 and a fresh persistence directory under `.wrangler/admin-api-tests` per worker.
-It applies the checked-in local migrations, resets only its own `posts` table
-between tests, and removes its scoped directory after disposal or setup failure.
+It applies the checked-in local migrations and removes its scoped directory
+after disposal or setup failure. The API suite resets only its own `posts` table
+in its per-test hook; the shared fixture itself does not reset records between
+tests. Browser suites must reset explicitly or give retained fixtures distinct
+identities across their complete parameter matrix. See the
+[shared-worker fixture learning](../solutions/test-failures/worker-scoped-d1-fixtures-can-hide-viewport-title-collisions.md)
+for how a worker restart after failure can hide later collisions.
 It never configures remote bindings or uses the production database ID.
 
 Requests use an exact loopback HTTP origin and freshly signed RS256 JWTs.

@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head><title>{trash ? '휴지통' : '게시글'} · Admin</title></svelte:head>
-<div class="admin-heading">
+<div class="admin-heading" class:admin-busy={actionState.busy}>
   <h1 class="admin-title">{trash ? '휴지통' : '게시글'}</h1>
   <div
     class="heading-actions flex flex-wrap items-center gap-3"
@@ -93,12 +93,12 @@
     {:else}
       <a class="admin-button" href={resolve('/admin/posts/new')}>글쓰기</a>
       <a
-        class="admin-button trash-link"
+        class="admin-button admin-button-icon trash-link"
         href={resolve('/admin/posts/trash')}
         aria-label="휴지통"
       >
         <svg
-          class="size-5 fill-none stroke-current stroke-[1.5]"
+          class="fill-none stroke-current stroke-[1.5]"
           aria-hidden="true"
           viewBox="0 0 24 24"
           ><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7" /></svg
@@ -109,6 +109,7 @@
 </div>
 <section
   class="admin-content flex-1 pt-6"
+  class:admin-busy={actionState.busy}
   aria-label={trash ? '삭제한 게시글' : '게시글 목록'}
 >
   <ProcessingIndicator

@@ -58,6 +58,19 @@ for (const width of [390, 1280]) {
         .click();
       const overlay = page.locator('[data-processing="region"]');
       await expect(overlay).toBeVisible();
+      await expect(overlay).toHaveCSS('cursor', 'progress');
+      await expect(page.locator('.post-form')).toHaveCSS('cursor', 'progress');
+      const sessionCursor = await page
+        .locator('.admin-session a')
+        .evaluate(link => {
+          const box = link.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            box.x + box.width / 2,
+            box.y + box.height / 2,
+          );
+          return hit && getComputedStyle(hit).cursor;
+        });
+      expect(sessionCursor).toBe('progress');
       await expect(overlay.getByRole('status')).toContainText(
         editing ? '저장 중' : '초안 생성 중',
       );
@@ -86,6 +99,10 @@ for (const width of [390, 1280]) {
       finish();
       await expect(overlay).toHaveCount(0);
       await expect(page.locator('header')).not.toHaveAttribute('inert', '');
+      await expect(page.locator('.admin-session a')).toHaveCSS(
+        'cursor',
+        'pointer',
+      );
       await expect(page.getByLabel('제목', { exact: true })).toBeEnabled();
       await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
         'Local input',
@@ -120,6 +137,11 @@ test('detail mutations retain a local status without an overlay', async ({
   });
   await page.getByRole('button', { name: '발행', exact: true }).click();
   await expect(page.locator('[data-processing="local"]')).toBeVisible();
+  const edit = page.getByRole('link', { name: '수정', exact: true });
+  await expect(edit).toHaveAttribute('aria-disabled', 'true');
+  await expect(edit).toHaveCSS('cursor', 'progress');
+  await edit.hover();
+  await expect(edit).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(page.locator('[data-processing="local"] svg')).toBeVisible();
   await expect(
     page.locator('[data-processing="region"], [data-processing="global"]'),
@@ -132,4 +154,5 @@ test('detail mutations retain a local status without an overlay', async ({
   await page.screenshot({ path: testInfo.outputPath('local-loading.png') });
   finish();
   await expect(page.locator('[data-processing="local"]')).toHaveCount(0);
+  await expect(edit).toHaveCSS('cursor', 'pointer');
 });

@@ -41,19 +41,19 @@
     aria-label="페이지"
   >
     {#if current > 1}<a
-        class="admin-button size-9 border-0 p-0"
+        class="admin-button admin-button-page"
         href={resolve(`${path}${queryString(current - 1)}`)}
         aria-label="이전 페이지">{@render arrow('previous')}</a
       >
     {:else}<button
-        class="admin-button size-9 border-0 p-0"
+        class="admin-button admin-button-page"
         disabled
         aria-label="이전 페이지">{@render arrow('previous')}</button
       >{/if}
     <div class="page-numbers flex">
       {#each pageNumbers(current, total) as number (number)}
         <a
-          class="admin-button size-9 border-0 p-0 aria-[current=page]:bg-admin-selected aria-[current=page]:font-bold"
+          class="admin-button admin-button-page aria-[current=page]:bg-admin-selected aria-[current=page]:font-bold"
           href={resolve(`${path}${queryString(number)}`)}
           aria-label={`${number} 페이지`}
           aria-current={number === current ? 'page' : undefined}>{number}</a
@@ -61,12 +61,12 @@
       {/each}
     </div>
     {#if current < total}<a
-        class="admin-button size-9 border-0 p-0"
+        class="admin-button admin-button-page"
         href={resolve(`${path}${queryString(current + 1)}`)}
         aria-label="다음 페이지">{@render arrow('next')}</a
       >
     {:else}<button
-        class="admin-button size-9 border-0 p-0"
+        class="admin-button admin-button-page"
         disabled
         aria-label="다음 페이지">{@render arrow('next')}</button
       >{/if}

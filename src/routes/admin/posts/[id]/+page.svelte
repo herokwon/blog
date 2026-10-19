@@ -2,11 +2,13 @@
   import { readAdminPost } from '#lib/admin/mutations.ts';
   import PostActions from '#lib/admin/PostActions.svelte';
   import { displayTime, statusLabels } from '#lib/admin/presentation.ts';
+  import { useProcessing } from '#lib/admin/processing.svelte.ts';
   import PostBody from '#lib/editor/PostBody.svelte';
   import { resolve } from '$app/paths';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
+  const processing = useProcessing();
   async function refresh() {
     const post = await readAdminPost(data.post.id, fetch);
     data = { ...data, post };
@@ -14,9 +16,10 @@
 </script>
 
 <svelte:head><title>{data.post.title} · Admin</title></svelte:head>
-<div class="admin-heading">
+<div class="admin-heading" class:admin-busy={processing.busy}>
   <a
     class="admin-button"
+    aria-disabled={processing.busy}
     href={resolve(data.post.deleted_at ? '/admin/posts/trash' : '/admin/posts')}
     >목록</a
   >

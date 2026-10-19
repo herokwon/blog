@@ -144,6 +144,7 @@
   {#if post.deleted_at === null}
     <a
       class="admin-button"
+      class:admin-button-menu={overflow}
       href={resolve('/admin/posts/[id]/edit', { id: post.id })}
       aria-disabled={action.busy}
       onclick={event => {
@@ -153,6 +154,7 @@
     {#if post.status !== 'published'}
       <button
         class="admin-button"
+        class:admin-button-menu={overflow}
         class:action-publish={!overflow}
         disabled={action.busy || !writable}
         onclick={() => command('publish')}
@@ -161,18 +163,21 @@
     {:else}
       <button
         class="admin-button"
+        class:admin-button-menu={overflow}
         disabled={action.busy || !writable}
         onclick={() => command('archive')}>보관</button
       >
     {/if}
     <button
       class="admin-button action-danger"
+      class:admin-button-menu={overflow}
       disabled={action.busy || !writable}
       onclick={() => command('delete')}>삭제</button
     >
   {:else}
     <button
       class="admin-button"
+      class:admin-button-menu={overflow}
       disabled={action.busy || !writable}
       onclick={() => command('restore')}>복구</button
     >
@@ -182,11 +187,12 @@
 <div
   class="post-actions relative flex flex-wrap items-center gap-3 [&>.admin-feedback]:max-w-136 [&>.admin-feedback]:basis-full [&>.admin-feedback]:text-sm [&>.admin-feedback]:leading-[inherit]"
   aria-busy={action.busy}
+  class:admin-busy={action.busy}
 >
   {#if overflow}
     <div class="post-menu-container relative" bind:this={menuContainer}>
       <button
-        class="admin-button post-menu-trigger border-0 bg-transparent p-2 text-[1.4rem] leading-none"
+        class="admin-button admin-button-trigger post-menu-trigger"
         aria-label={`${post.title} 작업 메뉴`}
         aria-expanded={menuOpen}
         onclick={() => (menuOpen = !menuOpen)}
