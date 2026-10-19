@@ -187,6 +187,7 @@
 <div
   class="post-actions relative flex flex-wrap items-center gap-3 [&>.admin-feedback]:max-w-136 [&>.admin-feedback]:basis-full [&>.admin-feedback]:text-sm [&>.admin-feedback]:leading-[inherit]"
   aria-busy={action.busy}
+  class:admin-busy={action.busy}
 >
   {#if overflow}
     <div class="post-menu-container relative" bind:this={menuContainer}>

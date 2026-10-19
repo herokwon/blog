@@ -1,6 +1,19 @@
-import { expect } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
 import { acceptMutationConfirmations } from '../../../tests/admin/confirmation';
 import { test } from '../../../tests/admin/local-d1';
+
+// Inert descendants are skipped by hit testing; their own computed cursor
+// cannot prove what a user sees at the same location.
+async function hitCursor(control: Locator) {
+  return control.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(
+      box.x + box.width / 2,
+      box.y + box.height / 2,
+    );
+    return hit && getComputedStyle(hit).cursor;
+  });
+}
 
 test.beforeEach(async ({ page, localD1 }) => {
   acceptMutationConfirmations(page);
@@ -78,4 +91,83 @@ for (const width of [390, 1280]) {
     await expect(save).toBeFocused();
     await expect(save).toHaveCSS('outline-style', 'solid');
   });
+
+  for (const outcome of [
+    'success',
+    'rejected',
+    'conflict',
+    'uncertain',
+  ] as const) {
+    test(`${width}px list ${outcome} clears only temporary cursors`, async ({
+      page,
+      api,
+      localD1,
+    }) => {
+      const post = await (
+        await api.post('/api/admin/posts', {
+          data: { title: `Cursor ${width} ${outcome}`, body: 'Body' },
+        })
+      ).json();
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${localD1.origin}/admin/posts`);
+      const item = page
+        .locator(width === 390 ? '.post-cards article' : '.post-table tbody tr')
+        .filter({ hasText: post.title });
+      await item.getByRole('button', { name: /작업 메뉴/ }).click();
+      let release!: () => void;
+      const held = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      let requests = 0;
+      await page.route(`**/api/admin/posts/${post.id}/publish`, async route => {
+        requests++;
+        await held;
+        if (outcome === 'success') await route.continue();
+        else if (outcome === 'uncertain') await route.abort();
+        else
+          await route.fulfill({
+            status: outcome === 'conflict' ? 409 : 403,
+            json: {
+              error: {
+                code: outcome === 'conflict' ? 'CONFLICT' : 'FORBIDDEN',
+                message: 'Controlled outcome',
+              },
+            },
+          });
+      });
+      await item.getByRole('button', { name: '발행', exact: true }).click();
+      const write = page.getByRole('link', {
+        name: '글쓰기',
+        exact: true,
+        includeHidden: true,
+      });
+      const logout = page.locator('.admin-session a');
+      try {
+        await expect.poll(() => hitCursor(write)).toBe('progress');
+        await expect.poll(() => hitCursor(logout)).toBe('progress');
+        await expect(item).toHaveCSS('cursor', 'progress');
+        await item.hover();
+        await expect(item.locator('a').first()).toHaveCSS(
+          'text-decoration-line',
+          'none',
+        );
+        await write.click({ force: true });
+        await page.keyboard.press('Enter');
+        expect(requests).toBe(1);
+        await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
+      } finally {
+        release();
+      }
+      await expect(page.locator('.admin-content')).not.toHaveClass(
+        /admin-busy/,
+      );
+      await expect(write).toHaveCSS('cursor', 'pointer');
+      await expect(logout).toHaveCSS('cursor', 'pointer');
+      await expect(page.getByRole('button', { name: '이전 페이지' })).toHaveCSS(
+        'cursor',
+        'not-allowed',
+      );
+      await expect(item).toHaveCSS('cursor', 'pointer');
+    });
+  }
 }

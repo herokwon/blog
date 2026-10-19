@@ -304,6 +304,7 @@
 
 <form
   class="post-form flex min-h-0 flex-1 flex-col"
+  class:admin-busy={form.pending || loading}
   onsubmit={event => {
     event.preventDefault();
     void submit('save');

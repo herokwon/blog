@@ -151,3 +151,22 @@
     @apply outline-2 -outline-offset-2 outline-admin-focus outline-solid;
   }
 }
+
+@layer utilities {
+  /* Inert children are skipped by hit testing: their non-inert region must
+     receive the cursor too. Override descendant cursor utilities while busy. */
+  .admin-page.admin-busy,
+  .admin-page.admin-busy *,
+  .admin-page .admin-busy,
+  .admin-page .admin-busy * {
+    @apply cursor-progress;
+  }
+  /* An inert header passes hits to the page. Main resets this inherited
+     cursor so usable content outside local locks keeps its normal cursor. */
+  .admin-page.admin-session-busy {
+    @apply cursor-progress;
+  }
+  .admin-page .admin-busy .group a {
+    @apply no-underline;
+  }
+}

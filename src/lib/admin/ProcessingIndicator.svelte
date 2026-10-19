@@ -37,6 +37,7 @@
 
 {#if active && visible}
   <div
+    class:admin-busy={active}
     data-processing={scope}
     class={scope === 'global'
       ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/65 text-white'

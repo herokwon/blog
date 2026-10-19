@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head><title>{trash ? '휴지통' : '게시글'} · Admin</title></svelte:head>
-<div class="admin-heading">
+<div class="admin-heading" class:admin-busy={actionState.busy}>
   <h1 class="admin-title">{trash ? '휴지통' : '게시글'}</h1>
   <div
     class="heading-actions flex flex-wrap items-center gap-3"
@@ -109,6 +109,7 @@
 </div>
 <section
   class="admin-content flex-1 pt-6"
+  class:admin-busy={actionState.busy}
   aria-label={trash ? '삭제한 게시글' : '게시글 목록'}
 >
   <ProcessingIndicator
