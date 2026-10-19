@@ -319,7 +319,8 @@
           onclick={() => submit('publish')}>발행</button
         >{/if}
       <button
-        class="admin-button action-save"
+        class="admin-button"
+        class:action-save={!creating}
         type="submit"
         disabled={locked || !supported || !controller || !writable || !hasEdits}
         >{creating ? '초안 생성' : '저장'}</button

@@ -46,11 +46,23 @@
     @apply flex flex-wrap items-start justify-between gap-4 border-b border-admin-border pb-6 md:flex-nowrap md:items-center;
   }
   .admin-button {
-    @apply inline-flex cursor-pointer items-center justify-center rounded-md border border-admin-border bg-white px-3 py-2 no-underline;
+    @apply inline-flex min-h-[2.625rem] cursor-pointer items-center justify-center rounded-md border border-admin-border bg-white px-3 py-2 text-center text-base leading-6 wrap-anywhere no-underline;
+  }
+  .admin-button-icon {
+    @apply min-w-[2.625rem] shrink-0 p-0;
+  }
+  .admin-button-icon svg {
+    @apply size-5 shrink-0;
+  }
+  .admin-button-page {
+    @apply size-9 min-h-0 border-0 p-0;
+  }
+  .admin-button-trigger {
+    @apply min-h-0 border-0 bg-transparent p-2 text-[1.4rem] leading-none;
   }
   .admin-button:disabled,
   .admin-page [aria-disabled='true'] {
-    @apply cursor-default opacity-50;
+    @apply cursor-not-allowed opacity-50;
   }
   .admin-page :focus-visible {
     @apply outline-2 outline-offset-3 outline-admin-focus outline-solid;
@@ -65,23 +77,31 @@
   .admin-button.action-danger {
     @apply border-admin-danger-border text-admin-danger;
   }
-  .post-menu .admin-button {
-    @apply justify-start border-0 text-left;
+  .admin-button-menu {
+    @apply min-h-0 justify-start border-0 text-left;
   }
   @media (hover: hover) {
-    .admin-button:not(:disabled):not([aria-disabled='true']):not(
-        [inert] *
+    .admin-button:not(:disabled):not([aria-disabled='true']):not([inert] *):not(
+        .admin-busy *
       ):hover {
       @apply bg-admin-surface;
     }
-    .admin-button.action-primary:not(:disabled):not([inert] *):hover {
+    .admin-button.action-primary:not(:disabled):not([aria-disabled='true']):not(
+        [inert] *
+      ):not(.admin-busy *):hover {
       @apply bg-admin-info;
     }
-    .admin-button.action-save:not(:disabled):not([inert] *):hover,
-    .admin-button.action-publish:not(:disabled):not([inert] *):hover {
+    .admin-button.action-save:not(:disabled):not([aria-disabled='true']):not(
+        [inert] *
+      ):not(.admin-busy *):hover,
+    .admin-button.action-publish:not(:disabled):not([aria-disabled='true']):not(
+        [inert] *
+      ):not(.admin-busy *):hover {
       @apply bg-admin-action-hover;
     }
-    .admin-button.action-danger:not(:disabled):not([inert] *):hover {
+    .admin-button.action-danger:not(:disabled):not([aria-disabled='true']):not(
+        [inert] *
+      ):not(.admin-busy *):hover {
       @apply bg-admin-danger-hover;
     }
   }
