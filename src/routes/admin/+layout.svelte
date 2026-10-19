@@ -23,6 +23,8 @@
 
 <div
   class="admin-page flex min-h-screen flex-col text-admin-ink has-[.post-form]:h-dvh has-[.post-form]:min-h-128 supports-[height:100dvh]:min-h-dvh"
+  class:admin-busy={processing.exclusive}
+  class:admin-session-busy={processing.busy}
 >
   <header class="shrink-0" inert={processing.busy}>
     <nav
@@ -57,7 +59,7 @@
     </nav>
   </header>
   <main
-    class="admin-shell mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-8 md:px-5 md:py-12"
+    class="admin-shell mx-auto flex min-h-0 w-full max-w-5xl flex-1 cursor-auto flex-col px-4 py-8 md:px-5 md:py-12"
     data-sveltekit-preload-data="off"
   >
     <div class="admin-workspace contents" inert={processing.exclusive}>

@@ -222,7 +222,8 @@ remain distinct; an observed outcome must not be announced as confirmed success.
 A confirmed retry of an older snapshot must not announce generic save completion
 while the visible form still contains unsaved edits.
 
-Save and publish have equal emphasis. Restore uses the neutral Edit treatment;
+Edit Save and publish have equal emphasis. New-post draft creation uses the
+neutral bordered treatment, leaving publish emphasized. Restore uses the neutral Edit treatment;
 soft deletion uses the danger treatment. Status remains more prominent than
 secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
 Logout and neutral navigation/actions share bordered buttons.
@@ -232,6 +233,19 @@ List overflow publish/republish actions use neutral text; only delete retains
 danger emphasis. Form/detail action emphasis is unchanged by this exception.
 Hover applies only on hover-capable devices and enabled controls; keyboard
 focus remains visible. Exclusive logout makes both header and main controls inert.
+Shared standard buttons use 1rem text, 1.5rem line height, 0.5rem vertical and
+0.75rem horizontal padding, a 1px border and a 2.625rem minimum height. The
+icon variant has the same minimum square dimensions and a centered 1.25rem SVG.
+Menu items and overflow triggers retain explicit compact variants; pagination
+retains 2.25rem square controls and 0.875rem arrows. Labels may wrap without clipping.
+Condition-disabled controls use `not-allowed`; temporary processing locks use
+`progress`, taking precedence inside the locked region until the operation ends.
+Apply processing presentation to the non-inert hit target around inert content,
+including the session header; exclusive logout covers the whole Admin surface.
+Keep existing click/keyboard/navigation guards and processing ownership. Cursor
+styling does not itself disable a control. Locked rows/cards lose actionable hover
+feedback, and completion recomputes the current cursor without removing read-only,
+conflict or uncertain-result restrictions.
 Detail reading has no outer Milkdown/ProseMirror padding; preserve Markdown
 indentation and the editing surface's 12px padding.
 

@@ -624,6 +624,10 @@ test('Preview read-only UI retains input and disables mutations while reads rema
       await expect(
         page.getByRole('button', { name, exact: true }),
       ).toBeDisabled();
+      await expect(page.getByRole('button', { name, exact: true })).toHaveCSS(
+        'cursor',
+        'not-allowed',
+      );
     }
     await page.goto(`${localD1.origin}/admin/posts/new`);
     await page
