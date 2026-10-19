@@ -107,8 +107,13 @@ production Worker and creates a Wrangler `--dry-run` bundle without deploying.
 The fixture in `tests/admin/local-d1.ts` runs that bundle in Miniflare using
 the same version already selected by Wrangler, an isolated test-only D1 ID,
 and a fresh persistence directory under `.wrangler/admin-api-tests` per worker.
-It applies the checked-in local migrations, resets only its own `posts` table
-between tests, and removes its scoped directory after disposal or setup failure.
+It applies the checked-in local migrations and removes its scoped directory
+after disposal or setup failure. The API suite resets only its own `posts` table
+in its per-test hook; the shared fixture itself does not reset records between
+tests. Browser suites must reset explicitly or give retained fixtures distinct
+identities across their complete parameter matrix. See the
+[shared-worker fixture learning](../solutions/test-failures/worker-scoped-d1-fixtures-can-hide-viewport-title-collisions.md)
+for how a worker restart after failure can hide later collisions.
 It never configures remote bindings or uses the production database ID.
 
 Requests use an exact loopback HTTP origin and freshly signed RS256 JWTs.
