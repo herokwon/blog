@@ -171,3 +171,91 @@ for (const width of [390, 1280]) {
     });
   }
 }
+
+for (const width of [390, 1280]) {
+  for (const command of ['publish', 'archive', 'delete', 'restore'] as const) {
+    for (const outcome of ['success', 'rejected'] as const) {
+      test(`${width}px detail ${command} ${outcome} restores list navigation cursor`, async ({
+        page,
+        api,
+        localD1,
+      }) => {
+        const post = await (
+          await api.post('/api/admin/posts', {
+            data: {
+              title: `Detail cursor ${width} ${command} ${outcome}`,
+              body: 'Body',
+            },
+          })
+        ).json();
+        if (command === 'archive') {
+          await api.post(`/api/admin/posts/${post.id}/publish`, {
+            data: { expected_revision: post.revision },
+          });
+        } else if (command === 'restore') {
+          await api.delete(`/api/admin/posts/${post.id}`, {
+            data: { expected_revision: post.revision },
+          });
+        }
+        await page.setViewportSize({ width, height: 900 });
+        const detailURL = `${localD1.origin}/admin/posts/${post.id}`;
+        await page.goto(detailURL);
+        const list = page.getByRole('link', { name: '목록', exact: true });
+        await expect(list).toHaveCSS('cursor', 'pointer');
+        let release!: () => void;
+        const held = new Promise<void>(resolve => {
+          release = resolve;
+        });
+        await page.route(
+          `**/api/admin/posts/${post.id}${command === 'delete' ? '' : `/${command}`}`,
+          async route => {
+            if (route.request().method() === 'GET') return route.continue();
+            await held;
+            if (outcome === 'success') await route.continue();
+            else
+              await route.fulfill({
+                status: 403,
+                json: {
+                  error: { code: 'FORBIDDEN', message: 'Controlled rejection' },
+                },
+              });
+          },
+        );
+        page.on('dialog', dialog => dialog.accept());
+        await page
+          .getByRole('button', {
+            name: {
+              publish: '발행',
+              archive: '보관',
+              delete: '삭제',
+              restore: '복구',
+            }[command],
+            exact: true,
+          })
+          .click();
+        try {
+          await expect(list).toHaveAttribute('aria-disabled', 'true');
+          await expect.poll(() => hitCursor(list)).toBe('progress');
+          await list.hover();
+          await expect(list).toHaveCSS(
+            'background-color',
+            'rgb(255, 255, 255)',
+          );
+          await list.click({ force: true });
+          await expect(page).toHaveURL(detailURL);
+          await list.focus();
+          await page.keyboard.press('Enter');
+          await expect(page).toHaveURL(detailURL);
+        } finally {
+          release();
+        }
+        await expect(list).not.toHaveAttribute('aria-disabled', 'true');
+        await expect(list).toHaveCSS('cursor', 'pointer');
+        await list.click();
+        await expect(page).toHaveURL(
+          `${localD1.origin}/admin/posts${(command === 'delete' && outcome === 'success') || (command === 'restore' && outcome === 'rejected') ? '/trash' : ''}`,
+        );
+      });
+    }
+  }
+}
