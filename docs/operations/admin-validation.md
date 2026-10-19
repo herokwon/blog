@@ -1,5 +1,26 @@
 # Admin validation
 
+## v0.2.2 List Height and Placement
+
+For [Issue #75](https://github.com/herokwon/blog/issues/75), check normal and
+trash lists at 1280px and 390px widths, including short viewports. Empty messages
+center in the remaining list region. Short lists keep natural item heights and
+pagination above the shared bottom padding. Long lists and wrapped titles grow
+the document, with pagination after the items and no nested list scrollbar.
+Trash reserves no filter slot. Check notices appearing/dismissing, read-only
+guidance, delete/restore refresh, keyboard focus and overflow menus without
+clipping. Preserve existing filters, pagination correction and processing locks.
+
+The focused browser spec is `src/routes/admin/list-layout.e2e.ts`. It uses an
+isolated local D1 fixture; this is not remote or physical-device acceptance.
+
+Local implementation evidence (2026-10-20): the original eight empty/short-list
+geometry cases failed against the previous layout and passed after the change.
+The final suite passed 82 workflow, 461 unit/component and 182 browser tests,
+including 12 list-layout cases. `pnpm check` reported zero errors/warnings;
+`pnpm lint` passed. Existing browser coverage also passed menu/navigation,
+read-only, feedback dismissal, processing and delete/restore regressions.
+
 ## v0.2.2 Status and List Flow
 
 Follow [Issue #70 implementation](v0.2.2-admin-status-flow.md) for this slice.
