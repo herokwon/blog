@@ -108,7 +108,7 @@
   </div>
 </div>
 <section
-  class="admin-content flex-1 pt-6"
+  class="admin-content flex flex-1 flex-col pt-6"
   class:admin-busy={actionState.busy}
   aria-label={trash ? '삭제한 게시글' : '게시글 목록'}
 >
@@ -138,116 +138,132 @@
       {/each}
     </nav>
   {/if}
-  {#if posts.items.length === 0}
-    <p class="admin-empty py-12 text-center text-admin-muted">
-      {trash ? '휴지통이 비어 있습니다.' : '게시글이 없습니다.'}
-    </p>
-  {:else}
-    <table
-      class="post-table hidden w-full border-collapse text-left text-sm leading-[inherit] md:table"
-    >
-      <thead
-        ><tr
-          ><th class="border-b border-admin-divider px-2 py-3">제목</th><th
-            class="border-b border-admin-divider px-2 py-3">상태</th
-          ><th class="border-b border-admin-divider px-2 py-3">작성</th><th
-            class="border-b border-admin-divider px-2 py-3">발행</th
-          ><th class="border-b border-admin-divider px-2 py-3"
-            >{trash ? '삭제' : '수정'}</th
-          ><th class="border-b border-admin-divider px-2 py-3"
-            ><span class="sr-only">작업</span></th
-          ></tr
-        ></thead
+  <div class="post-list-region flex flex-1 flex-col">
+    {#if posts.items.length === 0}
+      <p
+        class="admin-empty flex flex-1 items-center justify-center py-12 text-center text-admin-muted"
       >
-      <tbody>
+        {trash ? '휴지통이 비어 있습니다.' : '게시글이 없습니다.'}
+      </p>
+    {:else}
+      <table
+        class="post-table hidden w-full border-collapse text-left text-sm leading-[inherit] md:table"
+      >
+        <thead
+          ><tr
+            ><th class="border-b border-admin-divider px-2 py-3">제목</th><th
+              class="border-b border-admin-divider px-2 py-3">상태</th
+            ><th class="border-b border-admin-divider px-2 py-3">작성</th><th
+              class="border-b border-admin-divider px-2 py-3">발행</th
+            ><th class="border-b border-admin-divider px-2 py-3"
+              >{trash ? '삭제' : '수정'}</th
+            ><th class="border-b border-admin-divider px-2 py-3"
+              ><span class="sr-only">작업</span></th
+            ></tr
+          ></thead
+        >
+        <tbody>
+          {#each posts.items as post (post.id)}
+            <!-- Real title anchors provide keyboard and native link navigation. -->
+            <tr
+              class="group cursor-pointer"
+              onclick={event => openItem(event, post.id)}
+            >
+              <td
+                class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
+                ><a
+                  class="focus-visible:underline [@media(hover:hover)]:group-hover:underline"
+                  href={resolve('/admin/posts/[id]', { id: post.id })}
+                  >{post.title}</a
+                ></td
+              >
+              <td
+                class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
+                >{statusLabels[post.status]}</td
+              >
+              <td
+                class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
+                ><time
+                  class="text-xs leading-[inherit] text-admin-muted"
+                  datetime={post.created_at}
+                  >{displayTime(post.created_at)}</time
+                ></td
+              >
+              <td
+                class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
+                ><time
+                  class="text-xs leading-[inherit] text-admin-muted"
+                  datetime={post.published_at ?? undefined}
+                  >{displayTime(post.published_at)}</time
+                ></td
+              >
+              <td
+                class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
+                ><time
+                  class="text-xs leading-[inherit] text-admin-muted"
+                  datetime={(trash ? post.deleted_at : post.updated_at) ??
+                    undefined}
+                  >{displayTime(
+                    trash ? post.deleted_at : post.updated_at,
+                  )}</time
+                ></td
+              >
+              <td
+                class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
+                ><PostActions
+                  {post}
+                  {refresh}
+                  state={actionState}
+                  overflow
+                /></td
+              >
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+      <div class="post-cards grid gap-4 md:hidden">
         {#each posts.items as post (post.id)}
           <!-- Real title anchors provide keyboard and native link navigation. -->
-          <tr
-            class="group cursor-pointer"
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+          <article
+            class="group min-w-0 cursor-pointer rounded-lg border border-admin-card p-4"
             onclick={event => openItem(event, post.id)}
           >
-            <td
-              class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
-              ><a
-                class="focus-visible:underline [@media(hover:hover)]:group-hover:underline"
+            <div class="card-heading flex items-start justify-between gap-3">
+              <a
+                class="min-w-0 font-semibold wrap-anywhere focus-visible:underline [@media(hover:hover)]:group-hover:underline"
                 href={resolve('/admin/posts/[id]', { id: post.id })}
                 >{post.title}</a
-              ></td
+              ><PostActions {post} {refresh} state={actionState} overflow />
+            </div>
+            <dl
+              class="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs leading-[inherit] text-admin-muted"
             >
-            <td
-              class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
-              >{statusLabels[post.status]}</td
-            >
-            <td
-              class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
-              ><time
-                class="text-xs leading-[inherit] text-admin-muted"
-                datetime={post.created_at}>{displayTime(post.created_at)}</time
-              ></td
-            >
-            <td
-              class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
-              ><time
-                class="text-xs leading-[inherit] text-admin-muted"
-                datetime={post.published_at ?? undefined}
-                >{displayTime(post.published_at)}</time
-              ></td
-            >
-            <td
-              class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
-              ><time
-                class="text-xs leading-[inherit] text-admin-muted"
-                datetime={(trash ? post.deleted_at : post.updated_at) ??
-                  undefined}
-                >{displayTime(trash ? post.deleted_at : post.updated_at)}</time
-              ></td
-            >
-            <td
-              class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
-              ><PostActions {post} {refresh} state={actionState} overflow /></td
-            >
-          </tr>
+              <dt
+                class="post-status font-semibold wrap-anywhere text-admin-ink"
+              >
+                상태
+              </dt>
+              <dd
+                class="post-status font-semibold wrap-anywhere text-admin-ink"
+              >
+                {statusLabels[post.status]}
+              </dd>
+              <dt>작성</dt>
+              <dd class="wrap-anywhere">{displayTime(post.created_at)}</dd>
+              <dt>발행</dt>
+              <dd class="wrap-anywhere">{displayTime(post.published_at)}</dd>
+              <dt>{trash ? '삭제' : '수정'}</dt>
+              <dd class="wrap-anywhere">
+                {displayTime(trash ? post.deleted_at : post.updated_at)}
+              </dd>
+            </dl>
+          </article>
         {/each}
-      </tbody>
-    </table>
-    <div class="post-cards grid gap-4 md:hidden">
-      {#each posts.items as post (post.id)}
-        <!-- Real title anchors provide keyboard and native link navigation. -->
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-        <article
-          class="group min-w-0 cursor-pointer rounded-lg border border-admin-card p-4"
-          onclick={event => openItem(event, post.id)}
-        >
-          <div class="card-heading flex items-start justify-between gap-3">
-            <a
-              class="min-w-0 font-semibold wrap-anywhere focus-visible:underline [@media(hover:hover)]:group-hover:underline"
-              href={resolve('/admin/posts/[id]', { id: post.id })}
-              >{post.title}</a
-            ><PostActions {post} {refresh} state={actionState} overflow />
-          </div>
-          <dl
-            class="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs leading-[inherit] text-admin-muted"
-          >
-            <dt class="post-status font-semibold wrap-anywhere text-admin-ink">
-              상태
-            </dt>
-            <dd class="post-status font-semibold wrap-anywhere text-admin-ink">
-              {statusLabels[post.status]}
-            </dd>
-            <dt>작성</dt>
-            <dd class="wrap-anywhere">{displayTime(post.created_at)}</dd>
-            <dt>발행</dt>
-            <dd class="wrap-anywhere">{displayTime(post.published_at)}</dd>
-            <dt>{trash ? '삭제' : '수정'}</dt>
-            <dd class="wrap-anywhere">
-              {displayTime(trash ? post.deleted_at : post.updated_at)}
-            </dd>
-          </dl>
-        </article>
-      {/each}
-    </div>
-  {/if}
-  <div inert={actionState.busy}>
+      </div>
+    {/if}
+  </div>
+  <div class="shrink-0" inert={actionState.busy}>
     <Pagination current={posts.page} total={posts.totalPages} {trash} />
   </div>
 </section>
