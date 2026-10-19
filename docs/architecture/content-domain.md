@@ -1,5 +1,17 @@
 # Content Domain
 
+## Admin List Height and Placement
+
+Normal post lists and trash share a vertical layout: optional status filters,
+a list region that fills spare viewport height, then pagination in document
+flow. Items remain top-aligned at their natural content height; long titles
+wrap. Empty-list copy centers horizontally and vertically in the available list
+region. Short lists place pagination above the shared bottom padding; long
+content expands the page and scrolls the document rather than a nested list.
+Trash does not reserve space for absent filters. Notices consume their natural
+height, reducing spare list space before the page grows. The same rules apply
+to desktop tables and mobile cards. No fixed/sticky pagination is introduced.
+
 ## Status and Entity
 
 The v0.2.0 Admin domain is implemented and locally verified. Post persistence, lifecycle operations, and
