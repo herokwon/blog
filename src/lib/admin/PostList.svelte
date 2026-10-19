@@ -1,9 +1,11 @@
 <script lang="ts">
   import { SvelteURLSearchParams } from 'svelte/reactivity';
-  import { beforeNavigate, goto, refreshAll } from '$app/navigation';
+  import { beforeNavigate, goto, replaceState } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import type { AdminPostPage, PostStatus } from './contracts';
   import type { FeedbackTone } from './feedback';
+  import { readAdminPostPage } from './mutations';
   import { pageAfterMutation } from './pagination';
   import Pagination from './Pagination.svelte';
   import PostActions from './PostActions.svelte';
@@ -24,7 +26,6 @@
     tone: 'success' as FeedbackTone,
     details: '',
   });
-  let correction: string | undefined;
   function openItem(event: MouseEvent, id: string) {
     if (actionState.busy) {
       event.preventDefault();
@@ -44,12 +45,7 @@
     void goto(resolve('/admin/posts/[id]', { id }));
   }
   beforeNavigate(navigation => {
-    const destination = navigation.to?.url;
-    if (
-      actionState.busy &&
-      (!destination || destination.pathname + destination.search !== correction)
-    )
-      navigation.cancel();
+    if (actionState.busy) navigation.cancel();
   });
   let path = $derived(
     trash ? ('/admin/posts/trash' as const) : ('/admin/posts' as const),
@@ -64,20 +60,23 @@
     query.set('limit', String(posts.limit));
     return `?${query}`;
   }
-  async function refresh(publishedId?: string) {
-    await refreshAll();
-    const number = pageAfterMutation(posts.page, posts.totalPages);
-    if (publishedId || number !== posts.page) {
-      const destination = publishedId
-        ? resolve('/admin/posts/[id]', { id: publishedId })
-        : resolve(`${path}${queryString(status, number)}`);
-      correction = destination;
-      try {
-        await goto(destination);
-      } finally {
-        correction = undefined;
-      }
+  async function refresh() {
+    const scope = trash ? 'trash' : 'normal';
+    const query = { page: posts.page, limit: posts.limit, status };
+    let latest = await readAdminPostPage(scope, query, fetch);
+    const number = pageAfterMutation(latest.page, latest.totalPages);
+    if (number !== posts.page) {
+      latest = await readAdminPostPage(
+        scope,
+        { ...query, page: number },
+        fetch,
+      );
+      replaceState(
+        resolve(`${path}${queryString(status, number)}`),
+        page.state,
+      );
     }
+    posts = latest;
   }
 </script>
 

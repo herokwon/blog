@@ -450,16 +450,14 @@ for (const viewport of [
         page.getByRole('button', { name: '발행', exact: true }),
       ).toHaveCount(0);
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeVisible();
-      await page
-        .getByRole('button', { name: '공개 취소', exact: true })
-        .click();
+      await page.getByRole('button', { name: '보관', exact: true }).click();
       await page.getByRole('button', { name: '재발행', exact: true }).click();
       page.once('dialog', dialog => dialog.dismiss());
       await page.getByRole('button', { name: '삭제', exact: true }).click();
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeVisible();
       page.once('dialog', async dialog => {
         expect(dialog.message()).toContain('공개');
@@ -486,7 +484,7 @@ for (const viewport of [
       page.once('dialog', dialog => dialog.accept());
       await page.getByRole('button', { name: '복구', exact: true }).click();
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeVisible();
     });
 
@@ -633,11 +631,13 @@ for (const viewport of [
         .dispatchEvent('click', { button: 0 });
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
       release();
-      await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
+      await expect(page.locator('.feedback-summary')).toHaveText(
+        '발행되었습니다.',
+      );
+      await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
       expect(
         await (await api.get(`/api/admin/posts/${post.id}`)).json(),
       ).toMatchObject({ status: 'published', revision: 2 });
-      await page.getByRole('link', { name: '목록', exact: true }).click();
       await page.getByRole('link', { name: '휴지통', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/trash`);
     });
@@ -700,7 +700,7 @@ for (const viewport of [
       });
       await page.getByRole('button', { name: '발행', exact: true }).click();
       await expect(
-        page.getByRole('button', { name: '공개 취소', exact: true }),
+        page.getByRole('button', { name: '보관', exact: true }),
       ).toBeEnabled();
       await expect(page.getByRole('status')).toHaveCount(0);
       expect(attempts).toBe(2);

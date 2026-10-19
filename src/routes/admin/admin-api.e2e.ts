@@ -616,7 +616,7 @@ test('Preview read-only UI retains input and disables mutations while reads rema
       page.getByRole('button', { name: '삭제', exact: true }),
     ).toBeDisabled();
     for (const [id, name] of [
-      [published.id, '공개 취소'],
+      [published.id, '보관'],
       [archived.id, '재발행'],
       [deleted.id, '복구'],
     ]) {
