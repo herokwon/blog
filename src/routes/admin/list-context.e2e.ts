@@ -233,13 +233,18 @@ test('failed saves and failed new-post publication retain context and publicatio
   await expect(
     page.getByRole('link', { name: '목록', exact: true }),
   ).toHaveAttribute('href', origin);
-  page.once('dialog', dialog => dialog.dismiss());
+  const cancelled = page
+    .waitForEvent('dialog')
+    .then(dialog => dialog.dismiss());
   await page.getByRole('link', { name: '목록', exact: true }).click();
+  await cancelled;
   await expect(page).toHaveURL(
     `${localD1.origin}/admin/posts/${post.id}/edit?${query}`,
   );
-  page.once('dialog', dialog => dialog.accept());
+  const discarded = page.waitForEvent('dialog').then(dialog => dialog.accept());
   await page.getByRole('link', { name: '목록', exact: true }).click();
+  await discarded;
+  await expect(page).toHaveURL(localD1.origin + origin);
   await page.getByRole('link', { name: '글쓰기', exact: true }).click();
   await page
     .getByLabel('제목', { exact: true })
@@ -275,10 +280,17 @@ test('publish, archive and republish keep the origin and return fresh filtered d
   const origin = '/admin/posts?status=draft&page=1&limit=1';
   await page.goto(localD1.origin + origin);
   await page.locator('.post-table tbody a').first().click();
-  for (const action of ['발행', '보관', '재발행']) {
+  for (const [action, success, next] of [
+    ['발행', '발행되었습니다.', '보관'],
+    ['보관', '보관되었습니다.', '재발행'],
+    ['재발행', '재발행되었습니다.', '보관'],
+  ]) {
     page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: action, exact: true }).click();
-    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(page.locator('.feedback-summary')).toHaveText(success);
+    await expect(
+      page.getByRole('button', { name: next, exact: true }),
+    ).toBeEnabled();
     await expect(
       page.getByRole('link', { name: '목록', exact: true }),
     ).toHaveAttribute('href', origin);
