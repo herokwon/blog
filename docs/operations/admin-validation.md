@@ -1,5 +1,41 @@
 # Admin validation
 
+## v0.2.2 Authoring Overflow and Feedback Geometry
+
+For [Issue #77](https://github.com/herokwon/blog/issues/77), the focused spec is
+`src/routes/admin/authoring-overflow.e2e.ts`. Check new/edit routes at 1280px and
+390px: long URLs, unbroken paragraphs, code lines and real editor paste handling;
+measure document/body/nested-code scroll width and confirm source/caret visibility.
+CodeMirror mounts code blocks lazily, so scroll a block into view before measuring
+its editable scroller. Keep the existing authoring-layout CSP, recovery, keyboard
+and body-scrolling regressions.
+
+Check heading-to-notice separation, compact one-line notices, multiple notices,
+three validation/dismiss cycles, retained input and short viewport access. Record
+notice/editor/page bounds; real content can require page growth on short screens,
+but repeated transitions must not accumulate blank height.
+
+Baseline evidence (2026-10-20): all eight initial new/edit notice/long-input cases
+failed before the fix. Heading-to-notice gap was 0px; a 42px minimum dismiss button
+inflated a one-line notice to 66px. Nested code scroller content reached 6574px
+inside a 918px client area. The existing paragraphs already wrapped, so no broad
+overflow-hiding or extra width rules were needed. Repeated single-notice cycles
+did not demonstrate a separate cumulative page-height bug. The reproduced notice
+inflation is fixed; the original report does not establish any additional growth
+trigger beyond that measured cause.
+
+These checks use isolated local D1 and Chromium. They do not establish deployed
+Preview or physical-device keyboard acceptance.
+
+Local implementation evidence (2026-10-20): 82 workflow, 461 unit/component and
+192 browser tests passed with `pnpm test --workers=1`. The 10 focused cases also
+passed after adding actual wrapped-code editing, caret-bound checks and comparison
+of the saved code source. The original eight failures became green; existing
+authoring layout/CSP/recovery tests remained green. `pnpm check` reported zero
+errors/warnings and `pnpm lint` passed. Desktop/mobile captures show a 48px
+one-line notice with separation above and below. Fresh code review identified no
+production defect; its code-caret/source coverage gap was addressed.
+
 ## v0.2.2 List Height and Placement
 
 For [Issue #75](https://github.com/herokwon/blog/issues/75), check normal and
