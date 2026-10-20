@@ -69,12 +69,43 @@ At desktop/mobile widths, verify normal/trash operations retain their originatin
 list, filters and valid page. Cover filtered-out rows, empty final-page correction
 and success notices surviving row removal/navigation. Detail stays on the same
 post through delete/restore; restored metadata, actions and list link update.
+When valid return context exists, keep that list link unchanged through state
+changes; only direct entry without context follows the current deletion state.
 Distinguish confirmed mutation plus failed revalidation from uncertain mutation;
 verify no automatic replay, retained input, pending locks and read-only boundaries.
 Existing new-post creation/publication detail navigation and recovery tests remain
 required. Historical acceptance records below are not new-candidate evidence.
 
 ## Admin UI Refinement Checks
+
+For [Issue #79](https://github.com/herokwon/blog/issues/79), run
+`pnpm exec playwright test src/routes/admin/list-context.e2e.ts --workers=1`.
+Cover normal/trash filter/page/page-size retention through detail, direct menu
+edit, cancel, save, draft creation and immediate publication. Verify URL-based
+context survives refresh, independent tabs, rejection and publication failure;
+publication feedback must coexist with `returnTo`. Test deletion/restoration,
+publish/archive/republish, fresh filtered data, removed last pages and empty lists.
+Unit tests in `src/lib/admin/list-context.spec.ts` cover allowed destinations,
+malformed/external/unsupported/repeated queries and state-dependent fallbacks.
+At 1280px and 390px, inspect Primary write-button default/hover/focus and equal
+height with trash. Keep existing processing/read-only and unsaved-change tests.
+The focused suite writes screenshots to `.wrangler/list-context-1280.png` and
+`.wrangler/list-context-390.png`; these are local browser evidence.
+
+Local evidence (2026-10-20): workflow 82 and unit/component 481 passed. The
+initial six navigation/style browser cases failed on the previous behavior.
+The final full browser run passed 201/202; the remaining existing new-post
+overflow test matched `/new` as though it were a saved detail and read its API
+before creation completed. Its URL wait now requires the persisted UUID detail.
+The completed build then passed all 20 focused list-context/authoring-overflow
+cases with `.wrangler/list-context-recheck.config.ts`, including that failure,
+all 10 new context cases and unknown-creation inspection. This was a focused
+rerun after the test-only correction, not another full-suite pass. One earlier
+overlapping test invocation also removed shared trace artifacts; the final
+focused run used a separate output directory. Type checking reported zero
+errors/warnings; lint/diff checks passed. Independent code review found no
+required changes. Desktop/mobile screenshots were inspected. These records do
+not establish deployed Preview or physical-device acceptance.
 
 For [Issue #72](https://github.com/herokwon/blog/issues/72), measure adjacent
 글쓰기/휴지통 controls at 390px and 1280px: both have a 42px minimum outer

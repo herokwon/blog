@@ -426,7 +426,8 @@ After confirmed mutation outcomes, use the following navigation:
 Lifecycle revalidation does not reload the whole browser page. Remove items
 outside the active scope/filter and correct an empty last page to a valid
 preceding page. A restored trash item disappears while remaining in trash;
-restored detail removes deletion metadata and updates its actions and list link.
+restored detail removes deletion metadata and updates its actions. Its list link
+retains the originating list when valid return context is present.
 Show confirmed success after revalidation/page correction. If a confirmed
 operation's revalidation fails, report that the operation completed and latest
 state could not be loaded; do not claim mutation failure or retry automatically.
@@ -434,6 +435,42 @@ Lifecycle reads update the mounted view only after validated API reads succeed.
 Read failures retain the prior view. Corrected pagination replaces the current
 history URL after its data is available. Admin main-content links disable hover
 data preloading so a detail or list opened after a mutation reads current state.
+
+### List Return Context
+
+List title links, row/card background navigation, direct menu editing and
+`글쓰기` carry a `returnTo` query value through detail and authoring routes.
+It contains the originating normal-list/trash path, status filter (normal
+only), page and page size. Detail/edit/create/save/publish transitions preserve
+this value, including publication-failure edit URLs and existing-post outcome-check
+links. New-post `목록`/`취소` return to the list; edit `취소` returns to detail
+with the same context. Refresh and new tabs retain context independently;
+there is no shared last-list storage.
+
+The unresolved-creation `글 목록 확인` inspection link opens the unfiltered normal
+list so a possibly created draft is visible even when authoring started from a
+published or archived filter. This inspection does not replace the normal
+return context.
+
+Delete, restore, publish, republish and archive do not change a valid origin.
+A restored post can therefore return to trash, and a published post can return
+to its original draft filter without appearing there. Return navigation loads
+current data. List page loaders redirect a now-out-of-range page to the last
+valid page (or page 1 when empty), preserving the other query values. The API
+pagination contract is unchanged.
+
+`list-context.ts` accepts only literal `/admin/posts` and `/admin/posts/trash`
+paths and non-repeated queries accepted by the existing list schemas. External
+destinations, fragments, unsupported paths/queries and repeated `returnTo`
+values are rejected. Missing/invalid context uses the default normal list for
+non-deleted posts and default trash for deleted posts. Unsaved-change prompts,
+processing locks and read-only restrictions still govern navigation.
+
+The normal-list `글쓰기` action reuses the existing Primary blue background
+and white text, darker hover and visible focus outline. Adjacent trash control
+alignment and all other action styles remain unchanged. Scroll restoration,
+tab-specific authoring recovery and an unsaved-state indicator are outside this
+change.
 
 During saving and new-post creation/publication, disable title/body input,
 formatting controls, and duplicate mutation actions. Keep the editor locked
