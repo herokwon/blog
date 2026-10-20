@@ -1,5 +1,37 @@
 # Admin validation
 
+## v0.2.2 Field Errors and Focus
+
+For [Issue #81](https://github.com/herokwon/blog/issues/81), run
+`src/routes/admin/authoring-validation.e2e.ts` against the built Worker. Cover
+new/edit screens at 1280px and 390px: no errors on initial entry/blur, individual
+and simultaneous errors after submission, title-first focus, actual body focus,
+red borders/outlines, normal blue toolbar focus, description association and
+error removal without selection loss. Invalid submissions must not open a
+confirmation or send a mutation. Valid input must still reach confirmation,
+including immediate publish and supported Markdown without prose.
+
+The overflow suite now uses a rejected server request to exercise dismissible
+upper-notice geometry. Client field validation has inline errors instead of a
+dismissible common notice. Retain short-viewport publication-notice/field-error
+coexistence, editor scrolling and width checks, plus existing recovery,
+conflict/uncertainty/retry, processing and read-only regressions.
+
+These are local Chromium checks; they do not prove physical-device keyboard
+acceptance or a deployed Preview/Production result.
+
+Local evidence (2026-10-20): the first new browser regression failed because
+invalid submission did not focus the title. The final six validation cases pass,
+including actual horizontal-rule source preservation and immediate publish.
+Original-request retry also succeeds while newer invalid input is preserved.
+All 82 workflow and 481 unit/component checks passed. The first full browser run
+had 204 passes and four outdated notice-height assertions: server rejection adds
+details, so the bound now measures the complete status content instead of the
+summary alone. All ten focused overflow cases then passed, followed by a fresh
+208/208 full E2E run with a Production build. Type checking reports zero
+errors/warnings, lint passes, and independent review found no remaining findings.
+New/edit captures at 1280px and 390px are under `.wrangler/issue-81/`.
+
 ## v0.2.2 Authoring Overflow and Feedback Geometry
 
 For [Issue #77](https://github.com/herokwon/blog/issues/77), the focused spec is
@@ -10,8 +42,9 @@ CodeMirror mounts code blocks lazily, so scroll a block into view before measuri
 its editable scroller. Keep the existing authoring-layout CSP, recovery, keyboard
 and body-scrolling regressions.
 
-Check heading-to-notice separation, compact one-line notices, multiple notices,
-three validation/dismiss cycles, retained input and short viewport access. Record
+Check heading-to-notice separation, compact one-line notices, publication notice
+and field-error coexistence, three server-rejection/dismiss cycles, retained
+input and short viewport access. Record
 notice/editor/page bounds; real content can require page growth on short screens,
 but repeated transitions must not accumulate blank height.
 
