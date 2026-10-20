@@ -265,7 +265,8 @@ for (const width of [1280, 390]) {
           exact: true,
         })
         .click();
-      await expect(page).toHaveURL(/\/admin\/posts\/[^/]+$/);
+      // `/new` also matches a generic final path segment. Wait for persisted detail.
+      await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
       const saved = (await (
         await api.get(
           `/api/admin/posts/${new URL(page.url()).pathname.split('/').pop()}`,

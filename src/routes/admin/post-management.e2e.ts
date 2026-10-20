@@ -192,7 +192,7 @@ for (const viewport of [
         await expect(page).toHaveURL(`${localD1.origin}${path}`);
         await target.click();
         await expect(page).toHaveURL(
-          `${localD1.origin}/admin/posts/${post.id}`,
+          `${localD1.origin}/admin/posts/${post.id}?${new URLSearchParams({ returnTo: `${path}?page=1&limit=20` })}`,
         );
       }
     });

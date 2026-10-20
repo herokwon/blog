@@ -55,10 +55,12 @@ test('confirmed results use the summary, cross navigation once and expire or dis
   // SvelteKit link navigation waits for a frame and a timer before routing.
   await page.clock.resume();
   await page.getByRole('link', { name: 'Private title', exact: true }).click();
-  await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
+  await expect(page).toHaveURL(
+    `${localD1.origin}/admin/posts/${post.id}?returnTo=%2Fadmin%2Fposts%3Fpage%3D1%26limit%3D20`,
+  );
   await expect(notice).toHaveCount(0);
   await page.getByRole('link', { name: '목록', exact: true }).click();
-  await expect(page).toHaveURL(`${localD1.origin}/admin/posts`);
+  await expect(page).toHaveURL(`${localD1.origin}/admin/posts?page=1&limit=20`);
   await expect(notice).toHaveCount(0);
 });
 
