@@ -166,6 +166,27 @@ editor/page geometry to its previous state. Repeated validation must not
 accumulate height. Keep the existing fixed toolbar and body scrolling, allowing
 the document to scroll naturally when a short viewport requires it.
 
+### v0.2.2 Authoring Validation Feedback
+
+New/edit forms show field errors only after an ordinary draft/save/publish
+attempt. Validate using the existing create schema: whitespace-only titles are
+invalid; body validity follows the existing serialized Markdown rule. Do not
+introduce a requirement for visible prose. Original-request retry keeps its
+immutable request contract rather than validating unrelated current input.
+
+Show `제목을 입력하세요.` below the title and `본문을 입력하세요.` below the
+editor. Display all errors, block confirmation/network mutation and preserve
+input. Focus the first invalid field in title/body order; body focus targets the
+actual editing surface and brings it into view. Do not remount the editor or
+move selection while clearing errors during input.
+
+Invalid fields retain red borders and descriptions after blur; their focused
+outline is red. Valid fields return to existing styling and blue focus. Toolbar
+focus remains blue. Connect each description to its actual input via
+`aria-describedby` and expose `aria-invalid` only while invalid. Keep the title's
+accessible name `제목` separate from its error description. Server rejection,
+conflict and uncertain outcomes remain dismissible upper notices.
+
 ### v0.2.1 Authoring Layout
 
 Status: `Locally implemented; real-device keyboard and deployed acceptance pending`.

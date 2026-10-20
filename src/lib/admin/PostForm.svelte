@@ -50,6 +50,23 @@
   let currentEditorMarkdown = $state('');
   let permittedDestination: string | null = null;
   let titleInput: HTMLInputElement;
+  let submittedForValidation = $state(false);
+  const validation = $derived(
+    createPostSchema.safeParse({
+      title: form.input.title,
+      body: bodyChanged ? currentEditorMarkdown : form.input.body,
+    }),
+  );
+  const titleError = $derived(
+    submittedForValidation &&
+      !validation.success &&
+      validation.error.issues.some(issue => issue.path[0] === 'title'),
+  );
+  const bodyError = $derived(
+    submittedForValidation &&
+      !validation.success &&
+      validation.error.issues.some(issue => issue.path[0] === 'body'),
+  );
   const supported = $derived(inspectMarkdown(editorSource).supported);
   const creating = $derived(!form.base && !form.created);
   const hasEdits = $derived(
@@ -187,11 +204,14 @@
     if (locked || !supported || !controller) return;
     if (intent === 'save' && !hasEdits) return;
     serialize();
-    if (intent !== 'retry' && !createPostSchema.safeParse(form.input).success) {
-      message = '제목과 본문을 입력하세요.';
-      messageDetails = '';
-      messageTone = 'error';
-      return;
+    if (intent !== 'retry') {
+      submittedForValidation = true;
+      if (!validation.success) {
+        await tick();
+        if (titleError) titleInput.focus();
+        else controller.focus();
+        return;
+      }
     }
     const warning =
       form.result?.kind === 'unresolved' && form.request?.kind === 'create'
@@ -294,6 +314,7 @@
       if (latest.id !== form.base.id || latest.deleted_at !== null)
         throw new Error('Unavailable');
       form = createAuthoringState(latest);
+      submittedForValidation = false;
       editorSource = latest.body;
       controller = undefined;
       bodyChanged = false;
@@ -408,20 +429,26 @@
       inert={locked}
       aria-busy={form.pending || loading}
     >
-      <label class="post-title my-4 block shrink-0" for="post-title"
-        ><span class="sr-only">제목</span><input
-          class="block w-full rounded border border-current p-3 text-base leading-[inherit]"
+      <div class="post-title my-4 shrink-0">
+        <label class="sr-only" for="post-title">제목</label><input
+          class="block w-full rounded border p-3 text-base leading-[inherit]"
           id="post-title"
+          aria-invalid={titleError ? 'true' : undefined}
+          aria-describedby={titleError ? 'post-title-error' : undefined}
           placeholder="제목"
           bind:this={titleInput}
           bind:value={form.input.title}
           disabled={locked}
           oninput={() => changed()}
-        /></label
-      >
+        />{#if titleError}<span id="post-title-error" class="field-error"
+            >제목을 입력하세요.</span
+          >{/if}
+      </div>
       {#key editorKey}<Editor
           source={editorSource}
           {locked}
+          invalid={bodyError}
+          describedby={bodyError ? 'post-body-error' : undefined}
           onchange={() => changed(true)}
           onready={mounted => {
             controller = mounted;
@@ -430,6 +457,9 @@
             currentEditorMarkdown = editorBaselineMarkdown;
           }}
         />{/key}
+      {#if bodyError}<p id="post-body-error" class="field-error">
+          본문을 입력하세요.
+        </p>{/if}
     </div>
     <ProcessingIndicator
       active={form.pending || loading}

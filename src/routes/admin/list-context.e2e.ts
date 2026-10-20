@@ -173,13 +173,13 @@ test('new tabs keep independent origins and malformed context falls back safely'
   const href = await page
     .locator('.post-table tbody a')
     .first()
-    .getAttribute('href');
+    .evaluate((anchor: HTMLAnchorElement) => anchor.href);
   const other = await context.newPage();
   try {
     await other.setExtraHTTPHeaders({
       'Cf-Access-Jwt-Assertion': await localD1.token(),
     });
-    await other.goto(localD1.origin + href);
+    await other.goto(href);
     await page.goto(localD1.origin + '/admin/posts?page=1&limit=5');
     await page.locator('.post-table tbody a').first().click();
     await expect(
