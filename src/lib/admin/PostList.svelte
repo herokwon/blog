@@ -96,7 +96,7 @@
       >
     {:else}
       <a
-        class="admin-button"
+        class="admin-button action-primary"
         href={withListContext(resolve('/admin/posts/new'), context)}>글쓰기</a
       >
       <a
