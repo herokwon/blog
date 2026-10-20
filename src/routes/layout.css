@@ -153,6 +153,17 @@
   .post-form .milkdown :focus-visible {
     @apply outline-2 -outline-offset-2 outline-admin-focus outline-solid;
   }
+  .post-form .field-error {
+    @apply mt-2 block shrink-0 text-sm text-admin-error;
+  }
+  .post-form #post-title[aria-invalid='true'],
+  .post-form .admin-editor.editor-invalid .milkdown {
+    @apply border-admin-danger;
+  }
+  .post-form #post-title[aria-invalid='true']:focus,
+  .post-form .admin-editor .ProseMirror[aria-invalid='true']:focus {
+    @apply outline-2 outline-admin-danger outline-solid;
+  }
 }
 
 @layer utilities {
