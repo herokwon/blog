@@ -138,6 +138,9 @@
   .post-form > :not(.post-inputs) {
     @apply shrink-0;
   }
+  .post-form > .admin-feedback {
+    @apply mt-4;
+  }
   .post-form .admin-editor .milkdown {
     @apply flex min-h-0 flex-1 flex-col rounded-md border border-admin-border;
   }
