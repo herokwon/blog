@@ -630,7 +630,9 @@ for (const width of [1280, 390]) {
             await page.clock.runFor(50);
             return page.url();
           })
-          .toBe(`${localD1.origin}/admin/posts/new`);
+          .toBe(
+            `${localD1.origin}/admin/posts/new?returnTo=%2Fadmin%2Fposts%3Fpage%3D1%26limit%3D20`,
+          );
         await expect(page.getByLabel('제목', { exact: true })).toBeEnabled();
         await expect(page.getByLabel('제목', { exact: true })).toHaveValue('');
         await expect(page.getByRole('dialog')).toHaveCount(0);

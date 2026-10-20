@@ -5,6 +5,7 @@
   import { page } from '$app/state';
   import type { AdminPostPage, PostStatus } from './contracts';
   import type { FeedbackTone } from './feedback';
+  import { listContext, withListContext } from './list-context';
   import { readAdminPostPage } from './mutations';
   import { pageAfterMutation } from './pagination';
   import Pagination from './Pagination.svelte';
@@ -42,7 +43,7 @@
       window.getSelection()?.toString()
     )
       return;
-    void goto(resolve('/admin/posts/[id]', { id }));
+    void goto(withListContext(resolve('/admin/posts/[id]', { id }), context));
   }
   beforeNavigate(navigation => {
     if (actionState.busy) navigation.cancel();
@@ -60,6 +61,9 @@
     query.set('limit', String(posts.limit));
     return `?${query}`;
   }
+  const context = $derived(
+    listContext(`${path}${queryString(status, posts.page)}`),
+  );
   async function refresh() {
     const scope = trash ? 'trash' : 'normal';
     const query = { page: posts.page, limit: posts.limit, status };
@@ -91,7 +95,10 @@
         >게시글 목록</a
       >
     {:else}
-      <a class="admin-button" href={resolve('/admin/posts/new')}>글쓰기</a>
+      <a
+        class="admin-button action-primary"
+        href={withListContext(resolve('/admin/posts/new'), context)}>글쓰기</a
+      >
       <a
         class="admin-button admin-button-icon trash-link"
         href={resolve('/admin/posts/trash')}
@@ -173,8 +180,10 @@
                 class="border-b border-admin-divider px-2 py-3 first:w-[30%] first:wrap-anywhere"
                 ><a
                   class="focus-visible:underline [@media(hover:hover)]:group-hover:underline"
-                  href={resolve('/admin/posts/[id]', { id: post.id })}
-                  >{post.title}</a
+                  href={withListContext(
+                    resolve('/admin/posts/[id]', { id: post.id }),
+                    context,
+                  )}>{post.title}</a
                 ></td
               >
               <td
@@ -214,6 +223,7 @@
                   {post}
                   {refresh}
                   state={actionState}
+                  returnTo={context}
                   overflow
                 /></td
               >
@@ -232,9 +242,17 @@
             <div class="card-heading flex items-start justify-between gap-3">
               <a
                 class="min-w-0 font-semibold wrap-anywhere focus-visible:underline [@media(hover:hover)]:group-hover:underline"
-                href={resolve('/admin/posts/[id]', { id: post.id })}
-                >{post.title}</a
-              ><PostActions {post} {refresh} state={actionState} overflow />
+                href={withListContext(
+                  resolve('/admin/posts/[id]', { id: post.id }),
+                  context,
+                )}>{post.title}</a
+              ><PostActions
+                {post}
+                {refresh}
+                state={actionState}
+                returnTo={context}
+                overflow
+              />
             </div>
             <dl
               class="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs leading-[inherit] text-admin-muted"

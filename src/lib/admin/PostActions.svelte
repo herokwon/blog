@@ -4,6 +4,7 @@
   import { page } from '$app/state';
   import type { AdminPostListItem, PostCommand } from './contracts';
   import { successMessage, type FeedbackTone } from './feedback';
+  import { withListContext } from './list-context';
   import { runMutation } from './mutations';
   import { useNotices } from './notices.svelte';
   import { useProcessing } from './processing.svelte';
@@ -14,11 +15,13 @@
     post,
     overflow = false,
     refresh,
+    returnTo = null,
     state: actionState,
   }: {
     post: AdminPostListItem;
     overflow?: boolean;
     refresh: () => Promise<void>;
+    returnTo?: string | null;
     state?: {
       busy: boolean;
       message: string;
@@ -145,7 +148,10 @@
     <a
       class="admin-button"
       class:admin-button-menu={overflow}
-      href={resolve('/admin/posts/[id]/edit', { id: post.id })}
+      href={withListContext(
+        resolve('/admin/posts/[id]/edit', { id: post.id }),
+        returnTo,
+      )}
       aria-disabled={action.busy}
       onclick={event => {
         if (action.busy) event.preventDefault();
