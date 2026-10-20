@@ -9,6 +9,7 @@
   import { createAuthoringState, submitAuthoring } from './authoring';
   import { createPostSchema, type AdminPost } from './contracts';
   import { successMessage, type FeedbackTone } from './feedback';
+  import { returnContext, returnList, withListContext } from './list-context';
   import { readAdminPost } from './mutations';
   import { useNotices } from './notices.svelte';
   import { useProcessing } from './processing.svelte';
@@ -59,6 +60,10 @@
           (form.base.body === editorBaselineSource
             ? editorBaselineMarkdown
             : form.base.body)),
+  );
+  const context = $derived(returnContext(page.url.searchParams));
+  const list = $derived(
+    returnList(page.url.searchParams, !!form.base?.deleted_at),
   );
   const locked = $derived(form.pending || loading || recovery !== null);
   const processing = useProcessing();
@@ -249,8 +254,11 @@
           ? 'uncertain'
           : 'error';
     if (form.destination) {
-      const destination = resolve(
-        `admin/posts/${form.destination.slice('/admin/posts/'.length)}`,
+      const destination = withListContext(
+        resolve(
+          `admin/posts/${form.destination.slice('/admin/posts/'.length)}`,
+        ),
+        context,
       );
       permittedDestination = destination;
       try {
@@ -311,7 +319,7 @@
   }}
 >
   <div class="admin-heading" inert={form.pending || loading}>
-    <a class="admin-button" href={resolve('/admin/posts')}>목록</a>
+    <a class="admin-button" href={resolve(list)}>목록</a>
     <div class="post-actions flex flex-wrap items-center gap-3">
       {#if !form.base}<button
           class="admin-button action-publish"
@@ -329,8 +337,11 @@
       <a
         class="admin-button"
         href={form.base
-          ? resolve('/admin/posts/[id]', { id: form.base.id })
-          : resolve('/admin/posts')}>취소</a
+          ? withListContext(
+              resolve('/admin/posts/[id]', { id: form.base.id }),
+              context,
+            )
+          : resolve(list)}>취소</a
       >
     </div>
   </div>
@@ -370,7 +381,10 @@
     >
       <a
         class="admin-button"
-        href={resolve('/admin/posts/[id]', { id: form.base.id })}
+        href={withListContext(
+          resolve('/admin/posts/[id]', { id: form.base.id }),
+          context,
+        )}
         target="_blank"
         rel="noopener noreferrer">최신 글 확인</a
       >

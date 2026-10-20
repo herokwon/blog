@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { returnContext, returnList } from '#lib/admin/list-context.ts';
   import { readAdminPost } from '#lib/admin/mutations.ts';
   import PostActions from '#lib/admin/PostActions.svelte';
   import { displayTime, statusLabels } from '#lib/admin/presentation.ts';
   import { useProcessing } from '#lib/admin/processing.svelte.ts';
   import PostBody from '#lib/editor/PostBody.svelte';
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -20,10 +22,14 @@
   <a
     class="admin-button"
     aria-disabled={processing.busy}
-    href={resolve(data.post.deleted_at ? '/admin/posts/trash' : '/admin/posts')}
+    href={resolve(returnList(page.url.searchParams, !!data.post.deleted_at))}
     >목록</a
   >
-  {#key data.post.id}<PostActions post={data.post} {refresh} />{/key}
+  {#key data.post.id}<PostActions
+      post={data.post}
+      {refresh}
+      returnTo={returnContext(page.url.searchParams)}
+    />{/key}
 </div>
 <article class="admin-content post-detail pt-6">
   <h1 class="admin-title">{data.post.title}</h1>
