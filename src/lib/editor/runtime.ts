@@ -149,6 +149,7 @@ export async function mountEditor(options: {
       [Crepe.Feature.CodeMirror]: {
         extensions: [
           CodeView.cspNonce.of(options.styleNonce),
+          CodeView.lineWrapping,
           codeEditable.of(
             Prec.highest([
               EditorState.readOnly.compute([], () => locked),

@@ -108,7 +108,7 @@
       </div>{/if}
   </div>
   {#if ondismiss}<button
-      class="admin-button shrink-0 border-0 bg-transparent p-1"
+      class="admin-button size-6 min-h-0 shrink-0 border-0 bg-transparent p-1"
       type="button"
       aria-label="안내 닫기"
       onclick={ondismiss}

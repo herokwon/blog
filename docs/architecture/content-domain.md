@@ -148,6 +148,24 @@ adjustable during implementation. Preserve the agreed organization and
 clear separation between top controls and content; numerical gaps in the
 mockup are provisional rather than fixed acceptance criteria.
 
+### v0.2.2 Authoring Overflow and Feedback Geometry
+
+New/edit authoring keeps feedback separated from the heading divider and from
+adjacent notices by the shared 1rem spacing. Title spacing below feedback retains
+the existing 1rem margin. Feedback dismiss controls use a 1.5rem square target,
+without inheriting the standard action button's 2.625rem minimum height; a short
+message therefore does not acquire an unrelated action-row height.
+
+Long URLs and unbroken paragraphs wrap in the existing body region. Nested
+CodeMirror editors enable the supported `EditorView.lineWrapping` extension,
+retaining source, selection measurement and CSP nonce propagation. Do not hide
+horizontal overflow to conceal clipped source or a caret.
+
+Feedback appearance consumes natural content space; dismissal returns the
+editor/page geometry to its previous state. Repeated validation must not
+accumulate height. Keep the existing fixed toolbar and body scrolling, allowing
+the document to scroll naturally when a short viewport requires it.
+
 ### v0.2.1 Authoring Layout
 
 Status: `Locally implemented; real-device keyboard and deployed acceptance pending`.
