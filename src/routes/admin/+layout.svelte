@@ -5,10 +5,16 @@
   import ResultNotice from '#lib/admin/ResultNotice.svelte';
   import { beforeNavigate } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { navigating } from '$app/state';
 
   let { children, data } = $props();
   const processing = provideProcessing();
   const notices = provideNotices();
+  const routePending = $derived(
+    Boolean(navigating.to?.url.pathname.startsWith('/admin/')) &&
+      navigating.type !== 'leave' &&
+      !processing.busy,
+  );
   beforeNavigate(navigation => {
     if (
       processing.exclusive &&
@@ -24,9 +30,9 @@
 <div
   class="admin-page flex min-h-screen flex-col text-admin-ink has-[.post-form]:h-dvh has-[.post-form]:min-h-128 supports-[height:100dvh]:min-h-dvh"
   class:admin-busy={processing.exclusive}
-  class:admin-session-busy={processing.busy}
+  class:admin-session-busy={processing.busy || routePending}
 >
-  <header class="shrink-0" inert={processing.busy}>
+  <header class="shrink-0" inert={processing.busy || routePending}>
     <nav
       class="admin-session mx-auto flex w-full max-w-5xl items-center justify-end gap-3 px-4 py-4 md:px-5"
       aria-label="세션"
@@ -50,19 +56,24 @@
       <a
         class="admin-button"
         href={resolve('/admin/logout')}
-        aria-disabled={processing.busy}
-        tabindex={processing.busy ? -1 : undefined}
+        aria-disabled={processing.busy || routePending}
+        tabindex={processing.busy || routePending ? -1 : undefined}
         onclick={event => {
-          if (processing.busy) event.preventDefault();
+          if (processing.busy || routePending) event.preventDefault();
         }}>로그아웃</a
       >
     </nav>
   </header>
   <main
-    class="admin-shell mx-auto flex min-h-0 w-full max-w-5xl flex-1 cursor-auto flex-col px-4 py-8 md:px-5 md:py-12"
+    class="admin-shell relative mx-auto flex min-h-0 w-full max-w-5xl flex-1 cursor-auto flex-col px-4 py-8 md:px-5 md:py-12"
+    class:admin-busy={routePending}
     data-sveltekit-preload-data="off"
   >
-    <div class="admin-workspace contents" inert={processing.exclusive}>
+    <div
+      class="admin-workspace contents"
+      inert={processing.exclusive || routePending}
+      aria-busy={routePending}
+    >
       {#if !data.adminContext.writable}
         <aside
           inert={processing.busy}
@@ -99,8 +110,9 @@
           {@const notice = notices.current}
           <div class="mb-4 shrink-0">
             <ResultNotice
-              tone="success"
+              tone={notice.tone}
               message={notice.message}
+              details={notice.details}
               ondismiss={() => notices.dismiss(notice.id)}
             />
           </div>
@@ -108,6 +120,11 @@
       {/if}
       {@render children()}
     </div>
+    <ProcessingIndicator
+      active={routePending}
+      scope="region"
+      message="화면 불러오는 중…"
+    />
   </main>
   <ProcessingIndicator
     active={processing.exclusive}
