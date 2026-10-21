@@ -137,7 +137,7 @@ for (const width of [1280, 390]) {
         fullPage: true,
       });
     });
-    test('locks title, formatting, nested code and navigation through automatic retry and recovery read, observes silently', async ({
+    test('locks inputs and navigation through retry and recovery, then explains observed state without claiming success', async ({
       page,
       api,
       localD1,
@@ -212,7 +212,17 @@ for (const width of [1280, 390]) {
         'contenteditable',
         'true',
       );
-      await expect(page.locator('.post-form [role="status"]')).toHaveCount(0);
+      await expect(page.locator('.post-form [data-processing]')).toHaveCount(0);
+      const result = page.locator(
+        '.post-form .admin-feedback[data-tone="uncertain"]',
+      );
+      await expect(result).toContainText('최신 상태를 확인했습니다.');
+      await expect(result).toContainText(
+        '요청의 처리 여부는 확인할 수 없습니다.',
+      );
+      await expect(
+        page.locator('.admin-feedback[data-tone="success"]'),
+      ).toHaveCount(0);
       await expect(page).toHaveURL(
         `${localD1.origin}/admin/posts/${post.id}/edit`,
       );

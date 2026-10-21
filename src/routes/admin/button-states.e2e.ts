@@ -146,7 +146,14 @@ for (const width of [390, 1280]) {
         await expect.poll(() => hitCursor(write)).toBe('progress');
         await expect.poll(() => hitCursor(logout)).toBe('progress');
         await expect(item).toHaveCSS('cursor', 'progress');
-        await item.hover();
+        // The list region is now intentionally inert under an overlay. Move
+        // the real pointer instead of waiting to hover an excluded child.
+        const itemBounds = await item.boundingBox();
+        await page.mouse.move(
+          itemBounds!.x + itemBounds!.width / 2,
+          itemBounds!.y + itemBounds!.height / 2,
+        );
+        await expect.poll(() => hitCursor(item)).toBe('progress');
         await expect(item.locator('a').first()).toHaveCSS(
           'text-decoration-line',
           'none',

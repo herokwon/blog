@@ -105,7 +105,7 @@
         result.kind === 'confirmed'
           ? ''
           : result.kind === 'observed'
-            ? ''
+            ? '최신 상태를 확인했습니다.'
             : result.kind === 'conflict'
               ? '다른 화면에서 변경된 글입니다.'
               : result.kind === 'rejected'
@@ -118,7 +118,9 @@
             ? result.error.message
             : result.kind === 'unresolved'
               ? '최신 상태에서 변경 여부를 확인하세요.'
-              : '';
+              : result.kind === 'observed'
+                ? '요청의 처리 여부는 확인할 수 없습니다.'
+                : '';
       action.message = message ? `${title}: ${message}` : '';
       action.tone =
         result.kind === 'confirmed'

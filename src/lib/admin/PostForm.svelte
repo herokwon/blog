@@ -38,6 +38,8 @@
   let messageTone = $state<FeedbackTone>('error');
   let dismissedPublication = $state<string | null>(null);
   let loading = $state(false);
+  let submitting = $state(false);
+  const busy = $derived(form.pending || loading || submitting);
   let client = false;
   let recordingDisabled = false;
   let discarded = false;
@@ -82,12 +84,12 @@
   const list = $derived(
     returnList(page.url.searchParams, !!form.base?.deleted_at),
   );
-  const locked = $derived(form.pending || loading || recovery !== null);
+  const locked = $derived(busy || recovery !== null);
   const processing = useProcessing();
   const notices = useNotices();
   const processingOwner = Symbol();
   $effect(() => {
-    processing.update(processingOwner, form.pending || loading);
+    processing.update(processingOwner, busy);
     return () => processing.update(processingOwner, false);
   });
   const dirty = $derived(
@@ -186,7 +188,7 @@
       });
     const unload = (event: BeforeUnloadEvent) => {
       record();
-      if (!discarded && (form.pending || loading || dirty)) {
+      if (!discarded && (busy || dirty)) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -230,75 +232,88 @@
     notices.dismiss();
     const wasNew = !form.base && !form.created;
     const wasArchived = form.base?.status === 'archived';
-    await submitAuthoring(form, intent, fetch);
-    const completion = () =>
-      successMessage(
-        form.request?.kind === 'publish'
-          ? 'publish'
-          : wasNew
-            ? 'create'
-            : 'save',
-        wasArchived,
-      );
-    if (form.created) {
-      cancelTimers();
-      storage(store => {
-        const copy = readRecovery(store, Date.now());
-        if (
-          copy &&
-          copy.title === form.submitted?.title &&
-          copy.body === form.submitted?.body
-        )
-          clearRecovery(store);
-      });
-    }
-    if (form.result?.kind === 'conflict') {
-      message = '다른 화면에서 글이 변경되었습니다.';
-    } else if (form.result?.kind === 'rejected') {
-      message = '저장하지 못했습니다.';
-      messageDetails = form.result.error.message;
-    } else if (form.result?.kind === 'unresolved') {
-      message =
-        form.request?.kind === 'create'
-          ? '생성 결과를 확인할 수 없습니다.'
-          : '저장 결과를 확인할 수 없습니다.';
-      messageDetails =
-        form.request?.kind === 'create'
-          ? '글 목록에서 생성 여부를 확인하세요.'
-          : '최신 글에서 저장 여부를 확인하세요.';
-    }
-    messageTone =
-      form.result?.kind === 'conflict'
-        ? 'conflict'
-        : form.result?.kind === 'unresolved'
-          ? 'uncertain'
-          : 'error';
-    if (form.destination) {
-      const destination = withListContext(
-        resolve(
-          `admin/posts/${form.destination.slice('/admin/posts/'.length)}`,
-        ),
-        context,
-      );
-      permittedDestination = destination;
-      try {
-        await goto(destination);
-        if (form.result?.kind === 'confirmed') notices.show(completion());
-      } catch {
-        message = '화면을 이동하지 못했습니다.';
-        messageDetails = '저장된 글을 확인하세요.';
-        messageTone = 'uncertain';
-      } finally {
-        permittedDestination = null;
+    submitting = true;
+    try {
+      await submitAuthoring(form, intent, fetch);
+      const completion = () =>
+        successMessage(
+          form.request?.kind === 'publish'
+            ? 'publish'
+            : wasNew
+              ? 'create'
+              : 'save',
+          wasArchived,
+        );
+      if (form.created) {
+        cancelTimers();
+        storage(store => {
+          const copy = readRecovery(store, Date.now());
+          if (
+            copy &&
+            copy.title === form.submitted?.title &&
+            copy.body === form.submitted?.body
+          )
+            clearRecovery(store);
+        });
       }
-    } else if (
-      form.result?.kind === 'confirmed' ||
-      form.result?.kind === 'observed'
-    ) {
-      bodyChanged = form.input.body !== form.base?.body;
-      if (form.result?.kind === 'confirmed' && !dirty) {
-        notices.show(completion());
+      if (form.result?.kind === 'conflict') {
+        message = '다른 화면에서 글이 변경되었습니다.';
+      } else if (form.result?.kind === 'rejected') {
+        message = '저장하지 못했습니다.';
+        messageDetails = form.result.error.message;
+      } else if (form.result?.kind === 'observed') {
+        message = '최신 상태를 확인했습니다.';
+        messageDetails = '요청의 처리 여부는 확인할 수 없습니다.';
+      } else if (form.result?.kind === 'unresolved') {
+        message =
+          form.request?.kind === 'create'
+            ? '생성 결과를 확인할 수 없습니다.'
+            : '저장 결과를 확인할 수 없습니다.';
+        messageDetails =
+          form.request?.kind === 'create'
+            ? '글 목록에서 생성 여부를 확인하세요.'
+            : '최신 글에서 저장 여부를 확인하세요.';
       }
+      messageTone =
+        form.result?.kind === 'conflict'
+          ? 'conflict'
+          : form.result?.kind === 'unresolved' ||
+              form.result?.kind === 'observed'
+            ? 'uncertain'
+            : 'error';
+      if (form.destination) {
+        const destination = withListContext(
+          resolve(
+            `admin/posts/${form.destination.slice('/admin/posts/'.length)}`,
+          ),
+          context,
+        );
+        permittedDestination = destination;
+        try {
+          await goto(destination);
+          if (form.result?.kind === 'confirmed') notices.show(completion());
+          else if (form.result?.kind === 'observed' && message) {
+            notices.show(message, 'uncertain', messageDetails);
+            message = '';
+          }
+        } catch {
+          message = '화면을 이동하지 못했습니다.';
+          messageDetails = '저장된 글을 확인하세요.';
+          messageTone = 'uncertain';
+        } finally {
+          permittedDestination = null;
+        }
+      } else if (
+        form.result?.kind === 'confirmed' ||
+        form.result?.kind === 'observed'
+      ) {
+        bodyChanged = form.input.body !== form.base?.body;
+        if (form.result?.kind === 'confirmed' && !dirty) {
+          notices.show(completion());
+        }
+      }
+    } finally {
+      submitting = false;
     }
   }
   async function reloadLatest() {
@@ -309,6 +324,9 @@
     )
       return;
     loading = true;
+    message = '';
+    messageDetails = '';
+    notices.dismiss();
     try {
       const latest = await readAdminPost(form.base.id, fetch);
       if (latest.id !== form.base.id || latest.deleted_at !== null)
@@ -321,6 +339,7 @@
       editorKey++;
       message = '';
       messageDetails = '';
+      notices.show('최신 내용을 불러왔습니다.');
     } catch {
       message = '최신 내용을 불러오지 못했습니다.';
       messageDetails = '';
@@ -333,13 +352,13 @@
 
 <form
   class="post-form flex min-h-0 flex-1 flex-col"
-  class:admin-busy={form.pending || loading}
+  class:admin-busy={busy}
   onsubmit={event => {
     event.preventDefault();
     void submit('save');
   }}
 >
-  <div class="admin-heading" inert={form.pending || loading}>
+  <div class="admin-heading" inert={busy}>
     <a class="admin-button" href={resolve(list)}>목록</a>
     <div class="post-actions flex flex-wrap items-center gap-3">
       {#if !form.base}<button
@@ -398,7 +417,7 @@
   {#if form.base && ['conflict', 'unresolved'].includes(form.result?.kind ?? '')}
     <div
       class="authoring-feedback my-4 flex flex-wrap items-center gap-3"
-      inert={form.pending || loading}
+      inert={busy}
     >
       <a
         class="admin-button"
@@ -424,11 +443,7 @@
     </div>
   {/if}
   <div class="post-inputs relative flex min-h-0 flex-1 flex-col">
-    <div
-      class="flex min-h-0 flex-1 flex-col"
-      inert={locked}
-      aria-busy={form.pending || loading}
-    >
+    <div class="flex min-h-0 flex-1 flex-col" inert={locked} aria-busy={busy}>
       <div class="post-title my-4 shrink-0">
         <label class="sr-only" for="post-title">제목</label><input
           class="block w-full rounded border p-3 text-base leading-[inherit]"
@@ -462,7 +477,7 @@
         </p>{/if}
     </div>
     <ProcessingIndicator
-      active={form.pending || loading}
+      active={busy}
       scope="region"
       message={loading
         ? '최신 내용 불러오는 중…'

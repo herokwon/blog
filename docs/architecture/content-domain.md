@@ -418,16 +418,47 @@ the inert region. Failure releases the lock and focuses retry. Verified
 logout must be able to return home without the navigation lock blocking its
 own departure.
 
-Use three processing presentations: a viewport overlay for logout; an overlay
+Use scoped processing presentations: a viewport overlay for logout; an overlay
 covering title, formatting tools and body for create/save/publish/latest-content
-reload; and a local bordered status block for list/detail lifecycle actions.
+reload; an overlay covering `section.admin-content` (filters, items and
+pagination) for list/trash lifecycle actions; and a local status block for detail
+lifecycle actions. Ordinary in-app Admin navigation uses an overlay over the
+workspace, excluding the session header. Navigation is read directly from the
+existing SvelteKit navigation state, not a separate navigation coordinator.
 Keep the form's dimensions and body-only scrolling stable. While the input
 overlay applies, make the session header, upper navigation/actions and inputs
 inert immediately; failures unlock them without discarding input. Processing
-status remains outside inert content. Delay visual feedback by 180ms to avoid
-flashing on short requests, cancel the delay on completion/unmount, and remove
-feedback immediately when settled. All presentations share a one-second linear
+status remains outside inert content. Delay visual feedback by 200ms to avoid
+showing a loader for short requests. Message changes within one processing
+interval do not restart that delay. Cancel it on completion/unmount and remove
+pending feedback immediately when settled; never retain a spinner, blocking
+overlay or processing-only lock just to meet a visibility timer. A confirmed
+result uses the existing five-second, hover/focus-paused notice; non-success
+guidance persists until dismissal/navigation. These result lifecycles exceed the
+400ms feedback-visibility comparison target without adding artificial wait time
+or shortening existing notices. Explicit dismissal and navigation remain allowed.
+Do not add duplicate notices. All presentations share a one-second linear
 rotating spinner, static when reduced motion is requested.
+
+Keep a region overlay's status block sticky within that region around the
+viewport center so long lists still explain the pending state while scrolled.
+The overlay itself continues to cover its entire region.
+
+Keep a list's mutation and required refresh/page correction in one busy interval.
+Authoring retains its input overlay and processing guards through the destination
+load after a confirmed save/create; the permitted destination must not be blocked
+by those guards. A latest-content reload clears the previous result when started
+and announces `최신 내용을 불러왔습니다.` after successful replacement. Observing
+the desired state after an uncertain mutation is not confirmed request success:
+show `최신 상태를 확인했습니다.` with `요청의 처리 여부는 확인할 수 없습니다.`
+as nonblocking uncertain guidance, including across authoring navigation.
+If that guidance is dismissed while the destination is still loading, the
+destination handoff must not recreate it or publish an empty-summary notice.
+
+Logout shares the 200ms display delay but has no minimum spinner/departure time:
+verified completion immediately leaves for home, and failures unlock retry.
+See [loading coverage and verification](../operations/v0.2.2-admin-loading-feedback.md)
+for the inventory, timing comparison and acceptance limits.
 
 List/trash overflow menus close on an outside pointer press and on a second
 press of their trigger; interacting inside must preserve action execution.
