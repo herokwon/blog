@@ -452,6 +452,8 @@ and announces `최신 내용을 불러왔습니다.` after successful replacemen
 the desired state after an uncertain mutation is not confirmed request success:
 show `최신 상태를 확인했습니다.` with `요청의 처리 여부는 확인할 수 없습니다.`
 as nonblocking uncertain guidance, including across authoring navigation.
+If that guidance is dismissed while the destination is still loading, the
+destination handoff must not recreate it or publish an empty-summary notice.
 
 Logout shares the 200ms display delay but has no minimum spinner/departure time:
 verified completion immediately leaves for home, and failures unlock retry.

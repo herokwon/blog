@@ -54,13 +54,13 @@ This inventory records source inspection, not completed browser acceptance. Veri
 
 **Interfaces:** Keep `active: boolean`, `message: string`, and `scope?: 'global' | 'region' | 'local'`. Add `delay?: number` only if global feedback intentionally uses a different delay. Existing notice `show(message)`/`dismiss(id)` remains the single confirmed-success channel; persistent local notices retain their tone and details.
 
-- [ ] Add controlled-time component cases: completion before the delay produces no late indicator; appearance occurs at the candidate delay; completion immediately removes pending visuals; retry and disposal cancel previous delays. Verify an active operation's message change does not unnecessarily restart its display delay.
-- [ ] Run `pnpm test:unit --run src/lib/admin/ProcessingIndicator.svelte.spec.ts` and confirm new assertions fail on current behavior before changing production code.
-- [ ] Implement visual timing independently of processing. Use existing result-notice persistence to exceed the candidate 400ms feedback interval; do not add a minimum spinner timer or duplicate results.
-- [ ] Add browser assertions for just-before/at/just-after threshold completion, slow work, rejection and consecutive actions. Assert accurate result visibility and prompt unlock after completion, plus that older expiry/dismissal cannot clear a newer notice.
-- [ ] For an `observed` outcome lacking any completion feedback, retain its non-confirmed semantics and provide state-confirmation guidance through an existing nonblocking notice. Assert no confirmed-success wording is introduced.
-- [ ] Compare candidate timings at 1280px/390px and with reduced motion; record actual appearance/result times and the chosen global-scope policy in Task 4.
-- [ ] Re-run focused component and result-feedback checks. Prepare the timing implementation as a focused commit with `Refs #83` after verification and the review gate.
+- [x] Add controlled-time component cases: completion before the delay produces no late indicator; appearance occurs at the candidate delay; completion immediately removes pending visuals; retry and disposal cancel previous delays. Verify an active operation's message change does not unnecessarily restart its display delay.
+- [x] Run `pnpm test:unit --run src/lib/admin/ProcessingIndicator.svelte.spec.ts` and confirm new assertions fail on current behavior before changing production code.
+- [x] Implement visual timing independently of processing. Use existing result-notice persistence to exceed the candidate 400ms feedback interval; do not add a minimum spinner timer or duplicate results.
+- [x] Add browser assertions for just-before/at/just-after threshold completion, slow work, rejection and consecutive actions. Assert accurate result visibility and prompt unlock after completion, plus that older expiry/dismissal cannot clear a newer notice.
+- [x] For an `observed` outcome lacking any completion feedback, retain its non-confirmed semantics and provide state-confirmation guidance through an existing nonblocking notice. Assert no confirmed-success wording is introduced.
+- [x] Compare candidate timings at 1280px/390px and with reduced motion; record actual appearance/result times and the chosen global-scope policy in Task 4.
+- [x] Re-run focused component and result-feedback checks. Prepare the timing implementation as a focused commit with `Refs #83` after verification and the review gate.
 
 ## Task 2: List and Trash Region Feedback
 
@@ -70,13 +70,13 @@ Execution audit addition: `src/routes/admin/loading-viewport.e2e.ts` reproduces 
 
 **Interfaces:** Continue sharing `actionState` between list and row actions. Preserve `refresh(): Promise<void>`, its valid-page correction and return context. The list owns the region container and status; row unmount must not end the list's pending interval.
 
-- [ ] Add parameterized browser cases for normal-list publish/republish/archive/delete and trash restore at 1280px and 390px. Use unique fixture identities containing operation/viewport/outcome and release held routes in `finally`.
-- [ ] Hold mutation and refresh separately. Assert one region indicator is inside `section.admin-content`, covers its bounds, excludes the heading, remains outside inert content and stays present while the refresh is held.
-- [ ] Assert filter/list/pagination interaction exclusion, heading/session guards, keyboard routes and actual pointer-hit cursors via `elementFromPoint`. Assert confirmation cancellation sends no mutation.
-- [ ] Add filtered-out-item, empty-final-page correction and empty-trash cases. On every outcome, assert overlay removal and lock release; distinguish confirmed mutation plus failed refresh from failed mutation.
-- [ ] Run the focused cases and observe failures for missing region coverage before implementation.
-- [ ] Make the section the positioned overlay container, use `scope="region"` and keep its status as a sibling of inert content. Preserve existing flex height, mobile/table layouts, notices and native links.
-- [ ] Re-run coverage, list-layout and post-management checks with `--workers=1`; inspect screenshots and the row-unmount invariant. Prepare the region implementation as a focused commit with `Refs #83`.
+- [x] Add parameterized browser cases for normal-list publish/republish/archive/delete and trash restore at 1280px and 390px. Use unique fixture identities containing operation/viewport/outcome and release held routes in `finally`.
+- [x] Hold mutation and refresh separately. Assert one region indicator is inside `section.admin-content`, covers its bounds, excludes the heading, remains outside inert content and stays present while the refresh is held.
+- [x] Assert filter/list/pagination interaction exclusion, heading/session guards, keyboard routes and actual pointer-hit cursors via `elementFromPoint`. Assert confirmation cancellation sends no mutation.
+- [x] Add filtered-out-item, empty-final-page correction and empty-trash cases. On every outcome, assert overlay removal and lock release; distinguish confirmed mutation plus failed refresh from failed mutation.
+- [x] Run the focused cases and observe failures for missing region coverage before implementation.
+- [x] Make the section the positioned overlay container, use `scope="region"` and keep its status as a sibling of inert content. Preserve existing flex height, mobile/table layouts, notices and native links.
+- [x] Re-run coverage, list-layout and post-management checks with `--workers=1`; inspect screenshots and the row-unmount invariant. Prepare the region implementation as a focused commit with `Refs #83`.
 
 ## Task 3: Close Existing-Structure Coverage Gaps
 
@@ -84,21 +84,21 @@ Execution audit addition: `src/routes/admin/loading-viewport.e2e.ts` reproduces 
 
 **Interfaces:** Keep `submitAuthoring(state, intent, fetcher)` mutation semantics unchanged. If pending must cover destination loading, add caller-owned navigation state to `locked`, processing registration, heading/input inert state and the existing indicator together. Any list-navigation pending presentation must remain separate from mutation state and must not cancel its own intended navigation.
 
-- [ ] Hold the destination route load after a confirmed save/create and assert no premature processing unlock before destination readiness. Confirm permitted navigation and destination result notices still work; assert navigation failure unlocks and reports accurately.
-- [ ] Hold latest-content reads; assert region feedback, retained local input on failure and readable completion on success, with no stale previous result. Add successful reload wording using an existing notice, without marking an unconfirmed mutation successful.
-- [ ] Exercise filter/page and list/detail/new/edit/cancel navigation under controlled delay, plus recovery/editor readiness and logout. Record actual coverage and appropriate scope for every audited action.
-- [ ] For demonstrated gaps resolvable using existing `ProcessingIndicator`/processing state, write failing tests and implement minimal presentation/state changes. Keep dirty-navigation confirmation, modifier/new-tab links, page-size/filter context and retry rules.
-- [ ] Document any case needing a new cross-page system as follow-up; do not implement a new navigation subsystem. A deferral must name the action, observed gap and structural reason.
-- [ ] Re-run focused authoring, navigation, processing and logout regressions. Prepare focused test commits with `Refs #83`.
+- [x] Hold the destination route load after a confirmed save/create and assert no premature processing unlock before destination readiness. Confirm permitted navigation and destination result notices still work. Preserve existing `goto` rejection handling and framework route-error behavior; review those boundaries alongside existing loader-error regressions rather than adding a new navigation failure subsystem.
+- [x] Hold latest-content reads; assert region feedback, retained local input on failure and readable completion on success, with no stale previous result. Add successful reload wording using an existing notice, without marking an unconfirmed mutation successful.
+- [x] Exercise filter/page and list/detail/new/trash navigation under controlled delay. Verify edit/cancel and recovery/editor readiness through existing authoring/list-context regressions and verify logout through its existing controlled checks. Record actual coverage and appropriate scope for every audited action.
+- [x] For demonstrated gaps resolvable using existing `ProcessingIndicator`/processing state, write failing tests and implement minimal presentation/state changes. Keep dirty-navigation confirmation, modifier/new-tab links, page-size/filter context and retry rules.
+- [x] Document any case needing a new cross-page system as follow-up; do not implement a new navigation subsystem. A deferral must name the action, observed gap and structural reason.
+- [x] Re-run focused authoring, navigation, processing and logout regressions. Prepare focused test commits with `Refs #83`.
 
 ## Task 4: Policy, Evidence and Whole-Branch Verification
 
 **Files:** Update `docs/architecture/content-domain.md`, `docs/operations/admin-validation.md`; create `docs/operations/v0.2.2-admin-loading-feedback.md` with the completed inventory, timing comparison and limitations. Update this plan's checkboxes with actual evidence.
 
-- [ ] Record final display/minimum-feedback decisions, the existing notice lifecycle used to satisfy readability, the global-scope decision and operation-specific result wording. Distinguish local browser evidence from physical-device/Access acceptance.
-- [ ] Verify desktop/mobile screenshots for list/trash, detail, create/edit, latest reload and logout where behavior changed. Check overlay geometry, focus and reduced motion.
-- [ ] Run `pnpm check`, `pnpm lint`, `git diff --check`, and `pnpm test --workers=1` (workflow, unit/component and build-based E2E). Fix failures by diagnosing their cause; do not claim a passing baseline from a partial run.
-- [ ] Review the complete diff against Issue #83, especially the five Review Focus invariants and inventory completeness. Keep focused implementation/test/docs commits; do not create or merge a PR without the applicable delivery instruction.
+- [x] Record final display/minimum-feedback decisions, the existing notice lifecycle used to satisfy readability, the global-scope decision and operation-specific result wording. Distinguish local browser evidence from physical-device/Access acceptance.
+- [x] Verify desktop/mobile screenshots for list/trash, detail, create/edit, latest reload and logout where behavior changed. Check overlay geometry, focus and reduced motion.
+- [x] Run `pnpm check`, `pnpm lint`, `git diff --check`, and `pnpm test --workers=1` (workflow, unit/component and build-based E2E). Fix failures by diagnosing their cause; do not claim a passing baseline from a partial run.
+- [x] Review the complete diff against Issue #83, especially the five Review Focus invariants and inventory completeness. Keep focused implementation/test/docs commits; do not create or merge a PR without the applicable delivery instruction.
 
 ## Preparation Evidence
 
