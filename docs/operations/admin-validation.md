@@ -445,7 +445,8 @@ E2E tests, and the production build) as required by the implementation scope
 and existing CI. Document test setup and evidence on the corresponding PR.
 
 For processing feedback, hold requests open to inspect the global logout
-overlay, input-only authoring overlay and local lifecycle block. At desktop
+overlay, input-only authoring overlay, list/trash `section.admin-content`
+overlay, workspace navigation overlay and detail-local lifecycle block. At desktop
 and mobile widths, verify stable input geometry, header/action keyboard and
 pointer locks, visible status outside inert regions, and input preservation
 after rejection. Check delayed display, cancellation of short-operation timers,
@@ -453,6 +454,16 @@ immediate completion/removal, retry and reduced-motion behavior. Also verify
 outside-click/trigger menu dismissal and Save activation/reversion without a
 database revision change for untouched content. These local checks do not
 replace protected Preview or physical-device acceptance.
+
+For Issue #83, follow the [loading feedback record](v0.2.2-admin-loading-feedback.md).
+Check 100/199/200/201/800/2000ms controlled completion, actual result application
+without advancing a minimum timer, and at least 400ms of nonblocking result
+visibility. The existing five-second success lifecycle and persistent non-success
+guidance must not be shortened. Verify two-stage mutation/refresh, empty-list and
+last-page correction, saved-post destination loading, latest-content reload and
+consecutive operations. Gate new-post code-module loading as well as route data:
+the new-post page does not have its own server loader. Release held requests in
+`finally`; use unique fixture identities and bounded request-start assertions.
 
 ## Local Authentication Configuration
 
