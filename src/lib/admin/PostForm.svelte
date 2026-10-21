@@ -292,7 +292,7 @@
         try {
           await goto(destination);
           if (form.result?.kind === 'confirmed') notices.show(completion());
-          else if (form.result?.kind === 'observed') {
+          else if (form.result?.kind === 'observed' && message) {
             notices.show(message, 'uncertain', messageDetails);
             message = '';
           }
