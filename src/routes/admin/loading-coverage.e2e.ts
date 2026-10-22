@@ -1,6 +1,10 @@
 import { expect } from '@playwright/test';
 import type { AdminPost } from '#lib/admin/contracts.ts';
 import { test } from '../../../tests/admin/local-d1';
+import {
+  newPostModuleURL,
+  waitForPostListReady,
+} from '../../../tests/admin/navigation';
 
 function gate() {
   let release!: () => void;
@@ -79,70 +83,125 @@ for (const width of [1280, 390]) {
     'new',
     'trash',
   ] as const) {
-    test(`${width}px ${destination} navigation has scoped feedback while its route data is pending`, async ({
-      page,
-      api,
-      localD1,
-    }, testInfo) => {
-      await page.setViewportSize({ width, height: 900 });
-      for (let number = 0; number < 2; number++)
-        await api.post('/api/admin/posts', {
-          data: { title: `Navigation ${width} ${number}`, body: 'Body' },
-        });
-      await page.goto(`${localD1.origin}/admin/posts?page=1&limit=1`);
-      const load = gate();
-      const started = gate();
-      await page.route(
-        /(?:\/__data\.json\?|\/_app\/immutable\/nodes\/[^/]+\.js)/,
-        async route => {
-          started.release();
-          await load.promise;
-          await route.continue();
-        },
-      );
-      const target =
-        destination === 'filter'
-          ? page.getByRole('link', { name: '초안', exact: true })
-          : destination === 'page'
-            ? page.getByRole('link', { name: '다음 페이지' })
-            : destination === 'detail'
-              ? page.getByRole('link', { name: /Navigation/ })
-              : page.getByRole('link', {
-                  name: destination === 'new' ? '글쓰기' : '휴지통',
-                  exact: true,
-                });
-      try {
-        await target.click();
-        await expect.poll(() => started.released).toBe(true);
-        const overlay = page.locator(
-          '.admin-shell > [data-processing="region"]',
-        );
-        await expect(overlay).toBeVisible();
-        await expect(overlay.getByRole('status')).toHaveText(
-          '화면 불러오는 중…',
-        );
-        expect(await overlay.evaluate(el => !!el.closest('[inert]'))).toBe(
-          false,
-        );
-        await expect(page.locator('header')).toHaveAttribute('inert', '');
-        await page.screenshot({
-          path: testInfo.outputPath('navigation-region.png'),
-        });
-        load.release();
-        await expect(overlay).toHaveCount(0);
-        await expect(page.locator('header')).not.toHaveAttribute('inert', '');
-        if (destination === 'filter')
-          await expect(page).toHaveURL(/status=draft/);
-        if (destination === 'page') await expect(page).toHaveURL(/page=2/);
-        if (destination === 'detail')
-          await expect(page.locator('.post-detail')).toBeVisible();
-        if (destination === 'new')
-          await expect(page.locator('.post-form')).toBeVisible();
-        if (destination === 'trash') await expect(page).toHaveURL(/\/trash$/);
-      } finally {
-        load.release();
-      }
-    });
+    for (const delayedBootstrap of destination === 'page' ||
+    destination === 'trash'
+      ? [false, true]
+      : [false]) {
+      test(`${width}px ${destination} navigation has scoped feedback while its route data is pending${delayedBootstrap ? ' with delayed bootstrap' : ''}`, async ({
+        page,
+        api,
+        localD1,
+      }, testInfo) => {
+        await page.setViewportSize({ width, height: 900 });
+        for (let number = 0; number < 2; number++)
+          await api.post('/api/admin/posts', {
+            data: { title: `Navigation ${width} ${number}`, body: 'Body' },
+          });
+        const bootstrap = gate();
+        const bootstrapStarted = gate();
+        if (delayedBootstrap)
+          await page.route(
+            /\/_app\/immutable\/entry\/app\.[^/]+\.js/,
+            async route => {
+              bootstrapStarted.release();
+              await bootstrap.promise;
+              await route.continue();
+            },
+          );
+        await page.goto(`${localD1.origin}/admin/posts?page=1&limit=1`);
+        const load = gate();
+        const started = gate();
+        const target =
+          destination === 'filter'
+            ? page.getByRole('link', { name: '초안', exact: true })
+            : destination === 'page'
+              ? page.getByRole('link', { name: '다음 페이지' })
+              : destination === 'detail'
+                ? page.getByRole('link', { name: /Navigation/ })
+                : page.getByRole('link', {
+                    name: destination === 'new' ? '글쓰기' : '휴지통',
+                    exact: true,
+                  });
+        try {
+          if (delayedBootstrap)
+            await expect.poll(() => bootstrapStarted.released).toBe(true);
+          bootstrap.release();
+          await waitForPostListReady(page);
+          const href = await target.evaluate(
+            (anchor: HTMLAnchorElement) => anchor.href,
+          );
+          const destinationURL = new URL(href);
+          const codeURL =
+            destination === 'new'
+              ? await newPostModuleURL(localD1.origin)
+              : null;
+          const documentRequests: string[] = [];
+          page.on('request', request => {
+            if (
+              request.isNavigationRequest() &&
+              request.resourceType() === 'document'
+            )
+              documentRequests.push(request.url());
+          });
+          await page.route(
+            url =>
+              codeURL
+                ? url.href === codeURL
+                : url.origin === destinationURL.origin &&
+                  url.pathname === `${destinationURL.pathname}/__data.json` &&
+                  [...destinationURL.searchParams].every(
+                    ([key, value]) => url.searchParams.get(key) === value,
+                  ),
+            async route => {
+              expect(route.request().resourceType()).toBe(
+                codeURL ? 'script' : 'fetch',
+              );
+              started.release();
+              await load.promise;
+              await route.continue();
+            },
+          );
+          await target.click();
+          await expect.poll(() => started.released).toBe(true);
+          expect(
+            documentRequests,
+            'Navigation must stay inside the hydrated app',
+          ).toEqual([]);
+          const overlay = page.locator(
+            '.admin-shell > [data-processing="region"]',
+          );
+          await expect(overlay).toBeVisible();
+          await expect(overlay.getByRole('status')).toHaveText(
+            '화면 불러오는 중…',
+          );
+          expect(await overlay.evaluate(el => !!el.closest('[inert]'))).toBe(
+            false,
+          );
+          await expect(page.locator('header')).toHaveAttribute('inert', '');
+          await page.screenshot({
+            path: testInfo.outputPath('navigation-region.png'),
+          });
+          load.release();
+          await expect(overlay).toHaveCount(0);
+          await expect(page.locator('header')).not.toHaveAttribute('inert', '');
+          if (destination === 'filter')
+            await expect(page).toHaveURL(/status=draft/);
+          if (destination === 'page') await expect(page).toHaveURL(/page=2/);
+          if (destination === 'detail')
+            await expect(page.locator('.post-detail')).toBeVisible();
+          if (destination === 'new')
+            await expect(page.locator('.post-form')).toBeVisible();
+          if (destination === 'trash') await expect(page).toHaveURL(/\/trash$/);
+          expect(
+            documentRequests,
+            'Navigation must not reload the document',
+          ).toEqual([]);
+        } finally {
+          bootstrap.release();
+          load.release();
+        }
+      });
+    }
   }
   for (const [operation, label, summary] of [
     ['publish', '발행', '발행되었습니다.'],
