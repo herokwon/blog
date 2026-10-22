@@ -9,10 +9,11 @@
     scope?: 'global' | 'region' | 'local';
   } = $props();
   let visible = $state(false);
+  const pending = $derived(Boolean(active));
   $effect(() => {
     visible = false;
-    if (!active) return;
-    const timer = setTimeout(() => (visible = true), 180);
+    if (!pending) return;
+    const timer = setTimeout(() => (visible = true), 200);
     return () => clearTimeout(timer);
   });
 </script>
@@ -37,17 +38,20 @@
 
 {#if active && visible}
   <div
+    class:admin-busy={active}
     data-processing={scope}
     class={scope === 'global'
       ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/65 text-white'
       : scope === 'region'
-        ? 'absolute inset-0 z-20 flex items-center justify-center rounded-md bg-white/80 text-admin-ink'
+        ? 'absolute inset-0 z-20 flex items-start justify-center rounded-md bg-white/80 text-admin-ink'
         : 'admin-processing flex items-center gap-3'}
   >
     <div
       class={scope === 'local'
         ? 'contents'
-        : 'flex flex-col items-center gap-4 p-4 text-center'}
+        : scope === 'region'
+          ? 'sticky top-[calc(50dvh_-_4rem)] flex flex-col items-center gap-4 p-4 text-center'
+          : 'flex flex-col items-center gap-4 p-4 text-center'}
     >
       {@render spinner()}
       <p role="status">{message}</p>

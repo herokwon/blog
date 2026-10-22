@@ -7,11 +7,15 @@
   let {
     source,
     locked = false,
+    invalid = false,
+    describedby,
     onchange = () => {},
     onready = () => {},
   }: {
     source: string;
     locked?: boolean;
+    invalid?: boolean;
+    describedby?: string;
     onchange?: () => void;
     onready?: (controller: EditorController) => void;
   } = $props();
@@ -23,6 +27,9 @@
   let error = $state('');
   $effect(() => {
     controller?.setReadonly(locked);
+  });
+  $effect(() => {
+    controller?.setValidation(invalid, describedby);
   });
   onMount(() => {
     if (!inspection.supported) return;
@@ -65,5 +72,6 @@
 <div
   class="admin-editor flex min-h-32 flex-1 flex-col"
   class:pointer-events-none={locked}
+  class:editor-invalid={invalid}
   bind:this={root}
 ></div>

@@ -222,7 +222,8 @@ for (const width of [1280, 390]) {
       await expect(
         page.getByRole('button', { name: '원래 요청 다시 시도' }),
       ).toBeVisible();
-      await page.getByLabel('제목', { exact: true }).fill('Newer input');
+      // A retry belongs to the original request even if newer input is invalid.
+      await page.getByLabel('제목', { exact: true }).fill('');
       await page.unroute(`**/api/admin/posts/${post.id}`);
       await page.getByRole('button', { name: '원래 요청 다시 시도' }).click();
       await expect
@@ -234,15 +235,14 @@ for (const width of [1280, 390]) {
       await expect(page).toHaveURL(
         `${localD1.origin}/admin/posts/${post.id}/edit`,
       );
-      await expect(page.getByLabel('제목', { exact: true })).toHaveValue(
-        'Newer input',
-      );
+      await expect(page.getByLabel('제목', { exact: true })).toHaveValue('');
       await expect(
         page.getByRole('button', { name: '원래 요청 다시 시도' }),
       ).toHaveCount(0);
       await expect(
         page.getByText('저장되었습니다.', { exact: true }),
       ).toHaveCount(0);
+      await page.getByLabel('제목', { exact: true }).fill('Newer input');
       await page.getByRole('button', { name: '저장', exact: true }).click();
       await expect(page).toHaveURL(`${localD1.origin}/admin/posts/${post.id}`);
       expect(
@@ -630,7 +630,9 @@ for (const width of [1280, 390]) {
             await page.clock.runFor(50);
             return page.url();
           })
-          .toBe(`${localD1.origin}/admin/posts/new`);
+          .toBe(
+            `${localD1.origin}/admin/posts/new?returnTo=%2Fadmin%2Fposts%3Fpage%3D1%26limit%3D20`,
+          );
         await expect(page.getByLabel('제목', { exact: true })).toBeEnabled();
         await expect(page.getByLabel('제목', { exact: true })).toHaveValue('');
         await expect(page.getByRole('dialog')).toHaveCount(0);

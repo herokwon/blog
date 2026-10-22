@@ -28,6 +28,7 @@ test('pending logout locks Admin controls while its status remains accessible, t
   await expect(page.getByRole('status')).toContainText('로그아웃');
   const overlay = page.locator('[data-processing="global"]');
   await expect(overlay).toBeVisible();
+  await expect(overlay).toHaveCSS('cursor', 'progress');
   const bounds = await overlay.boundingBox();
   expect(bounds).toEqual({ x: 0, y: 0, ...page.viewportSize() });
   await page.screenshot({ path: testInfo.outputPath('global-loading.png') });
@@ -48,6 +49,11 @@ test('pending logout locks Admin controls while its status remains accessible, t
   );
   await expect(page.getByRole('button', { name: '다시 시도' })).toBeFocused();
   await expect(overlay).toHaveCount(0);
+  await expect(page.locator('.admin-page')).not.toHaveClass(/admin-busy/);
+  await expect(page.getByRole('button', { name: '다시 시도' })).toHaveCSS(
+    'cursor',
+    'pointer',
+  );
 });
 
 test('verified logout returns home after both checks', async ({

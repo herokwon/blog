@@ -12,6 +12,8 @@ import { validatedTransferHtml } from './transfer-html';
 export type EditorController = {
   getMarkdown(normalized?: boolean): string;
   setReadonly(value: boolean): void;
+  setValidation(invalid: boolean, describedby?: string): void;
+  focus(): void;
   destroy(): Promise<void>;
 };
 
@@ -68,6 +70,7 @@ export async function mountEditor(options: {
   let locked = options.readonly;
   let ready = false;
   let dirty = false;
+  let validationAttributes: Record<string, string> = {};
   const notice = document.createElement('p');
   notice.setAttribute('role', 'alert');
   notice.hidden = true;
@@ -149,6 +152,7 @@ export async function mountEditor(options: {
       [Crepe.Feature.CodeMirror]: {
         extensions: [
           CodeView.cspNonce.of(options.styleNonce),
+          CodeView.lineWrapping,
           codeEditable.of(
             Prec.highest([
               EditorState.readOnly.compute([], () => locked),
@@ -185,6 +189,7 @@ export async function mountEditor(options: {
             return true;
           },
           props: {
+            attributes: () => validationAttributes,
             transformPastedHTML(html) {
               return validatedTransferHtml(html) ?? '';
             },
@@ -253,6 +258,24 @@ export async function mountEditor(options: {
   return {
     getMarkdown: (normalized = false) =>
       normalized || dirty ? crepe.getMarkdown() : options.body,
+    setValidation(invalid, describedby) {
+      validationAttributes = {
+        ...(invalid ? { 'aria-invalid': 'true' } : {}),
+        ...(describedby ? { 'aria-describedby': describedby } : {}),
+      };
+      crepe.editor.action(ctx => {
+        const view = ctx.get(editorViewCtx);
+        view.dispatch(view.state.tr);
+      });
+    },
+    focus() {
+      if (locked) return;
+      crepe.editor.action(ctx => {
+        const view = ctx.get(editorViewCtx);
+        view.focus();
+        view.dom.scrollIntoView({ block: 'nearest' });
+      });
+    },
     setReadonly(value) {
       locked = options.readonly || value;
       crepe.setReadonly(locked);

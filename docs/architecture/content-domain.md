@@ -1,5 +1,17 @@
 # Content Domain
 
+## Admin List Height and Placement
+
+Normal post lists and trash share a vertical layout: optional status filters,
+a list region that fills spare viewport height, then pagination in document
+flow. Items remain top-aligned at their natural content height; long titles
+wrap. Empty-list copy centers horizontally and vertically in the available list
+region. Short lists place pagination above the shared bottom padding; long
+content expands the page and scrolls the document rather than a nested list.
+Trash does not reserve space for absent filters. Notices consume their natural
+height, reducing spare list space before the page grows. The same rules apply
+to desktop tables and mobile cards. No fixed/sticky pagination is introduced.
+
 ## Status and Entity
 
 The v0.2.0 Admin domain is implemented and locally verified. Post persistence, lifecycle operations, and
@@ -22,6 +34,12 @@ Korean display time. Updated Preview and physical-device acceptance remain separ
 
 The `Post` model represents a blog article. All states use one entity with no
 separate working copy.
+
+The v0.2.2 status and list-flow slice is tracked in
+[Issue #70](https://github.com/herokwon/blog/issues/70) and its
+[implementation record](../operations/v0.2.2-admin-status-flow.md).
+The UI labels `draft`, `published` and `archived` as `초안`, `발행` and `보관`.
+The `archive` API and persisted state values retain their existing meaning.
 
 [ADR 0002](../adr/0002-use-a-single-content-entity.md) records the model
 decision; [ADR 0003](../adr/0003-use-explicit-save-and-publication.md)
@@ -130,6 +148,45 @@ adjustable during implementation. Preserve the agreed organization and
 clear separation between top controls and content; numerical gaps in the
 mockup are provisional rather than fixed acceptance criteria.
 
+### v0.2.2 Authoring Overflow and Feedback Geometry
+
+New/edit authoring keeps feedback separated from the heading divider and from
+adjacent notices by the shared 1rem spacing. Title spacing below feedback retains
+the existing 1rem margin. Feedback dismiss controls use a 1.5rem square target,
+without inheriting the standard action button's 2.625rem minimum height; a short
+message therefore does not acquire an unrelated action-row height.
+
+Long URLs and unbroken paragraphs wrap in the existing body region. Nested
+CodeMirror editors enable the supported `EditorView.lineWrapping` extension,
+retaining source, selection measurement and CSP nonce propagation. Do not hide
+horizontal overflow to conceal clipped source or a caret.
+
+Feedback appearance consumes natural content space; dismissal returns the
+editor/page geometry to its previous state. Repeated validation must not
+accumulate height. Keep the existing fixed toolbar and body scrolling, allowing
+the document to scroll naturally when a short viewport requires it.
+
+### v0.2.2 Authoring Validation Feedback
+
+New/edit forms show field errors only after an ordinary draft/save/publish
+attempt. Validate using the existing create schema: whitespace-only titles are
+invalid; body validity follows the existing serialized Markdown rule. Do not
+introduce a requirement for visible prose. Original-request retry keeps its
+immutable request contract rather than validating unrelated current input.
+
+Show `제목을 입력하세요.` below the title and `본문을 입력하세요.` below the
+editor. Display all errors, block confirmation/network mutation and preserve
+input. Focus the first invalid field in title/body order; body focus targets the
+actual editing surface and brings it into view. Do not remount the editor or
+move selection while clearing errors during input.
+
+Invalid fields retain red borders and descriptions after blur; their focused
+outline is red. Valid fields return to existing styling and blue focus. Toolbar
+focus remains blue. Connect each description to its actual input via
+`aria-describedby` and expose `aria-invalid` only while invalid. Keep the title's
+accessible name `제목` separate from its error description. Server rejection,
+conflict and uncertain outcomes remain dismissible upper notices.
+
 ### v0.2.1 Authoring Layout
 
 Status: `Locally implemented; real-device keyboard and deployed acceptance pending`.
@@ -197,8 +254,8 @@ triangle. Icons are decorative; retain the accessible status label and
 `role="status"`. A close button sits outside the announced text.
 Confirmed success uses only a bold result summary, without the post title or
 secondary details: `초안이 생성되었습니다.`, `저장되었습니다.`,
-`발행되었습니다.`, `재발행되었습니다.`, `공개가 취소되었습니다.`,
-`삭제되었습니다.` or `복구되었습니다.`. Distinguish publication from
+`발행되었습니다.`, `재발행되었습니다.`, `보관되었습니다.`,
+`휴지통으로 이동했습니다.` or `복구되었습니다.`. Distinguish publication from
 republication using the state before the command.
 Success expires after five seconds; pointer hover or focus within pauses the
 remaining time. Every new result gets a fresh timer, including identical text.
@@ -216,14 +273,30 @@ remain distinct; an observed outcome must not be announced as confirmed success.
 A confirmed retry of an older snapshot must not announce generic save completion
 while the visible form still contains unsaved edits.
 
-Save and publish have equal emphasis. Restore uses the neutral Edit treatment;
+Edit Save and publish have equal emphasis. New-post draft creation uses the
+neutral bordered treatment, leaving publish emphasized. Restore uses the neutral Edit treatment;
 soft deletion uses the danger treatment. Status remains more prominent than
 secondary timestamps; the recovery timestamp uses `text-sm opacity-70`.
 Logout and neutral navigation/actions share bordered buttons.
 Save/publish/republish use blue text and a light blue border on a white resting background, with
 subtle hover like danger actions; menu items retain their borderless treatment.
+List overflow publish/republish actions use neutral text; only delete retains
+danger emphasis. Form/detail action emphasis is unchanged by this exception.
 Hover applies only on hover-capable devices and enabled controls; keyboard
 focus remains visible. Exclusive logout makes both header and main controls inert.
+Shared standard buttons use 1rem text, 1.5rem line height, 0.5rem vertical and
+0.75rem horizontal padding, a 1px border and a 2.625rem minimum height. The
+icon variant has the same minimum square dimensions and a centered 1.25rem SVG.
+Menu items and overflow triggers retain explicit compact variants; pagination
+retains 2.25rem square controls and 0.875rem arrows. Labels may wrap without clipping.
+Condition-disabled controls use `not-allowed`; temporary processing locks use
+`progress`, taking precedence inside the locked region until the operation ends.
+Apply processing presentation to the non-inert hit target around inert content,
+including the session header; exclusive logout covers the whole Admin surface.
+Keep existing click/keyboard/navigation guards and processing ownership. Cursor
+styling does not itself disable a control. Locked rows/cards lose actionable hover
+feedback, and completion recomputes the current cursor without removing read-only,
+conflict or uncertain-result restrictions.
 Detail reading has no outer Milkdown/ProseMirror padding; preserve Markdown
 indentation and the editing surface's 12px padding.
 
@@ -323,6 +396,17 @@ Before save, creation/publication, manual retry, publication/republication,
 archive, soft deletion and restoration, use the native `confirm` dialog.
 New draft creation asks `현재 내용으로 초안을 생성할까요?` and reports
 `초안 생성 중…` while pending; existing editing retains its save wording.
+Lifecycle confirmations use these exact sentences, separated by a newline:
+
+| Operation             | Confirmation                                                                          | Pending             |
+| --------------------- | ------------------------------------------------------------------------------------- | ------------------- |
+| Publish               | 게시글을 발행할까요?<br>공개 목록과 상세 페이지에 표시됩니다.                         | 발행 중…            |
+| Republish             | 게시글을 다시 발행할까요?<br>다시 공개되며 최초 발행일은 유지됩니다.                  | 재발행 중…          |
+| Archive               | 게시글을 보관할까요?<br>더 이상 공개되지 않습니다.                                    | 보관 중…            |
+| Delete published      | 게시글을 휴지통으로 이동할까요?<br>더 이상 공개되지 않으며, 복구하면 다시 공개됩니다. | 휴지통으로 이동 중… |
+| Delete draft/archived | 게시글을 휴지통으로 이동할까요?                                                       | 휴지통으로 이동 중… |
+
+The delete button remains `삭제`; restore confirmation/progress is unchanged.
 Cancellation must not send a mutation or discard input/recovery. A dirty
 application departure has one confirmation; the successful operation's own
 navigation must not ask again.
@@ -334,16 +418,47 @@ the inert region. Failure releases the lock and focuses retry. Verified
 logout must be able to return home without the navigation lock blocking its
 own departure.
 
-Use three processing presentations: a viewport overlay for logout; an overlay
+Use scoped processing presentations: a viewport overlay for logout; an overlay
 covering title, formatting tools and body for create/save/publish/latest-content
-reload; and a local bordered status block for list/detail lifecycle actions.
+reload; an overlay covering `section.admin-content` (filters, items and
+pagination) for list/trash lifecycle actions; and a local status block for detail
+lifecycle actions. Ordinary in-app Admin navigation uses an overlay over the
+workspace, excluding the session header. Navigation is read directly from the
+existing SvelteKit navigation state, not a separate navigation coordinator.
 Keep the form's dimensions and body-only scrolling stable. While the input
 overlay applies, make the session header, upper navigation/actions and inputs
 inert immediately; failures unlock them without discarding input. Processing
-status remains outside inert content. Delay visual feedback by 180ms to avoid
-flashing on short requests, cancel the delay on completion/unmount, and remove
-feedback immediately when settled. All presentations share a one-second linear
+status remains outside inert content. Delay visual feedback by 200ms to avoid
+showing a loader for short requests. Message changes within one processing
+interval do not restart that delay. Cancel it on completion/unmount and remove
+pending feedback immediately when settled; never retain a spinner, blocking
+overlay or processing-only lock just to meet a visibility timer. A confirmed
+result uses the existing five-second, hover/focus-paused notice; non-success
+guidance persists until dismissal/navigation. These result lifecycles exceed the
+400ms feedback-visibility comparison target without adding artificial wait time
+or shortening existing notices. Explicit dismissal and navigation remain allowed.
+Do not add duplicate notices. All presentations share a one-second linear
 rotating spinner, static when reduced motion is requested.
+
+Keep a region overlay's status block sticky within that region around the
+viewport center so long lists still explain the pending state while scrolled.
+The overlay itself continues to cover its entire region.
+
+Keep a list's mutation and required refresh/page correction in one busy interval.
+Authoring retains its input overlay and processing guards through the destination
+load after a confirmed save/create; the permitted destination must not be blocked
+by those guards. A latest-content reload clears the previous result when started
+and announces `최신 내용을 불러왔습니다.` after successful replacement. Observing
+the desired state after an uncertain mutation is not confirmed request success:
+show `최신 상태를 확인했습니다.` with `요청의 처리 여부는 확인할 수 없습니다.`
+as nonblocking uncertain guidance, including across authoring navigation.
+If that guidance is dismissed while the destination is still loading, the
+destination handoff must not recreate it or publish an empty-summary notice.
+
+Logout shares the 200ms display delay but has no minimum spinner/departure time:
+verified completion immediately leaves for home, and failures unlock retry.
+See [loading coverage and verification](../operations/v0.2.2-admin-loading-feedback.md)
+for the inventory, timing comparison and acceptance limits.
 
 List/trash overflow menus close on an outside pointer press and on a second
 press of their trigger; interacting inside must preserve action execution.
@@ -356,8 +471,58 @@ After confirmed mutation outcomes, use the following navigation:
 | New post created and published                 | `/admin/posts/[id]`                                                 |
 | New post created but publication failed        | Its edit page, with publication failure and retry guidance          |
 | Existing post saved, in any non-deleted status | `/admin/posts/[id]`                                                 |
-| Existing post published or republished         | `/admin/posts/[id]`                                                 |
+| List lifecycle operation                       | Revalidate the originating list, preserving filter and valid page   |
+| Detail lifecycle operation                     | Revalidate the same detail, including deletion and restoration      |
 | Creation outcome remains unknown               | Keep the creation page and input; offer manual post-list inspection |
+
+Lifecycle revalidation does not reload the whole browser page. Remove items
+outside the active scope/filter and correct an empty last page to a valid
+preceding page. A restored trash item disappears while remaining in trash;
+restored detail removes deletion metadata and updates its actions. Its list link
+retains the originating list when valid return context is present.
+Show confirmed success after revalidation/page correction. If a confirmed
+operation's revalidation fails, report that the operation completed and latest
+state could not be loaded; do not claim mutation failure or retry automatically.
+Lifecycle reads update the mounted view only after validated API reads succeed.
+Read failures retain the prior view. Corrected pagination replaces the current
+history URL after its data is available. Admin main-content links disable hover
+data preloading so a detail or list opened after a mutation reads current state.
+
+### List Return Context
+
+List title links, row/card background navigation, direct menu editing and
+`글쓰기` carry a `returnTo` query value through detail and authoring routes.
+It contains the originating normal-list/trash path, status filter (normal
+only), page and page size. Detail/edit/create/save/publish transitions preserve
+this value, including publication-failure edit URLs and existing-post outcome-check
+links. New-post `목록`/`취소` return to the list; edit `취소` returns to detail
+with the same context. Refresh and new tabs retain context independently;
+there is no shared last-list storage.
+
+The unresolved-creation `글 목록 확인` inspection link opens the unfiltered normal
+list so a possibly created draft is visible even when authoring started from a
+published or archived filter. This inspection does not replace the normal
+return context.
+
+Delete, restore, publish, republish and archive do not change a valid origin.
+A restored post can therefore return to trash, and a published post can return
+to its original draft filter without appearing there. Return navigation loads
+current data. List page loaders redirect a now-out-of-range page to the last
+valid page (or page 1 when empty), preserving the other query values. The API
+pagination contract is unchanged.
+
+`list-context.ts` accepts only literal `/admin/posts` and `/admin/posts/trash`
+paths and non-repeated queries accepted by the existing list schemas. External
+destinations, fragments, unsupported paths/queries and repeated `returnTo`
+values are rejected. Missing/invalid context uses the default normal list for
+non-deleted posts and default trash for deleted posts. Unsaved-change prompts,
+processing locks and read-only restrictions still govern navigation.
+
+The normal-list `글쓰기` action reuses the existing Primary blue background
+and white text, darker hover and visible focus outline. Adjacent trash control
+alignment and all other action styles remain unchanged. Scroll restoration,
+tab-specific authoring recovery and an unsaved-state indicator are outside this
+change.
 
 During saving and new-post creation/publication, disable title/body input,
 formatting controls, and duplicate mutation actions. Keep the editor locked

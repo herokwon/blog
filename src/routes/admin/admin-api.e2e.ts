@@ -616,7 +616,7 @@ test('Preview read-only UI retains input and disables mutations while reads rema
       page.getByRole('button', { name: '삭제', exact: true }),
     ).toBeDisabled();
     for (const [id, name] of [
-      [published.id, '공개 취소'],
+      [published.id, '보관'],
       [archived.id, '재발행'],
       [deleted.id, '복구'],
     ]) {
@@ -624,6 +624,10 @@ test('Preview read-only UI retains input and disables mutations while reads rema
       await expect(
         page.getByRole('button', { name, exact: true }),
       ).toBeDisabled();
+      await expect(page.getByRole('button', { name, exact: true })).toHaveCSS(
+        'cursor',
+        'not-allowed',
+      );
     }
     await page.goto(`${localD1.origin}/admin/posts/new`);
     await page

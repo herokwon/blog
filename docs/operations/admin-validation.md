@@ -1,6 +1,160 @@
 # Admin validation
 
+## v0.2.2 Field Errors and Focus
+
+For [Issue #81](https://github.com/herokwon/blog/issues/81), run
+`src/routes/admin/authoring-validation.e2e.ts` against the built Worker. Cover
+new/edit screens at 1280px and 390px: no errors on initial entry/blur, individual
+and simultaneous errors after submission, title-first focus, actual body focus,
+red borders/outlines, normal blue toolbar focus, description association and
+error removal without selection loss. Invalid submissions must not open a
+confirmation or send a mutation. Valid input must still reach confirmation,
+including immediate publish and supported Markdown without prose.
+
+The overflow suite now uses a rejected server request to exercise dismissible
+upper-notice geometry. Client field validation has inline errors instead of a
+dismissible common notice. Retain short-viewport publication-notice/field-error
+coexistence, editor scrolling and width checks, plus existing recovery,
+conflict/uncertainty/retry, processing and read-only regressions.
+
+These are local Chromium checks; they do not prove physical-device keyboard
+acceptance or a deployed Preview/Production result.
+
+Local evidence (2026-10-20): the first new browser regression failed because
+invalid submission did not focus the title. The final six validation cases pass,
+including actual horizontal-rule source preservation and immediate publish.
+Original-request retry also succeeds while newer invalid input is preserved.
+All 82 workflow and 481 unit/component checks passed. The first full browser run
+had 204 passes and four outdated notice-height assertions: server rejection adds
+details, so the bound now measures the complete status content instead of the
+summary alone. All ten focused overflow cases then passed, followed by a fresh
+208/208 full E2E run with a Production build. Type checking reports zero
+errors/warnings, lint passes, and independent review found no remaining findings.
+New/edit captures at 1280px and 390px are under `.wrangler/issue-81/`.
+
+## v0.2.2 Authoring Overflow and Feedback Geometry
+
+For [Issue #77](https://github.com/herokwon/blog/issues/77), the focused spec is
+`src/routes/admin/authoring-overflow.e2e.ts`. Check new/edit routes at 1280px and
+390px: long URLs, unbroken paragraphs, code lines and real editor paste handling;
+measure document/body/nested-code scroll width and confirm source/caret visibility.
+CodeMirror mounts code blocks lazily, so scroll a block into view before measuring
+its editable scroller. Keep the existing authoring-layout CSP, recovery, keyboard
+and body-scrolling regressions.
+
+Check heading-to-notice separation, compact one-line notices, publication notice
+and field-error coexistence, three server-rejection/dismiss cycles, retained
+input and short viewport access. Record
+notice/editor/page bounds; real content can require page growth on short screens,
+but repeated transitions must not accumulate blank height.
+
+Baseline evidence (2026-10-20): all eight initial new/edit notice/long-input cases
+failed before the fix. Heading-to-notice gap was 0px; a 42px minimum dismiss button
+inflated a one-line notice to 66px. Nested code scroller content reached 6574px
+inside a 918px client area. The existing paragraphs already wrapped, so no broad
+overflow-hiding or extra width rules were needed. Repeated single-notice cycles
+did not demonstrate a separate cumulative page-height bug. The reproduced notice
+inflation is fixed; the original report does not establish any additional growth
+trigger beyond that measured cause.
+
+These checks use isolated local D1 and Chromium. They do not establish deployed
+Preview or physical-device keyboard acceptance.
+
+Local implementation evidence (2026-10-20): 82 workflow, 461 unit/component and
+192 browser tests passed with `pnpm test --workers=1`. The 10 focused cases also
+passed after adding actual wrapped-code editing, caret-bound checks and comparison
+of the saved code source. The original eight failures became green; existing
+authoring layout/CSP/recovery tests remained green. `pnpm check` reported zero
+errors/warnings and `pnpm lint` passed. Desktop/mobile captures show a 48px
+one-line notice with separation above and below. Fresh code review identified no
+production defect; its code-caret/source coverage gap was addressed.
+
+## v0.2.2 List Height and Placement
+
+For [Issue #75](https://github.com/herokwon/blog/issues/75), check normal and
+trash lists at 1280px and 390px widths, including short viewports. Empty messages
+center in the remaining list region. Short lists keep natural item heights and
+pagination above the shared bottom padding. Long lists and wrapped titles grow
+the document, with pagination after the items and no nested list scrollbar.
+Trash reserves no filter slot. Check notices appearing/dismissing, read-only
+guidance, delete/restore refresh, keyboard focus and overflow menus without
+clipping. Preserve existing filters, pagination correction and processing locks.
+
+The focused browser spec is `src/routes/admin/list-layout.e2e.ts`. It uses an
+isolated local D1 fixture; this is not remote or physical-device acceptance.
+
+Local implementation evidence (2026-10-20): the original eight empty/short-list
+geometry cases failed against the previous layout and passed after the change.
+The final suite passed 82 workflow, 461 unit/component and 182 browser tests,
+including 12 list-layout cases. `pnpm check` reported zero errors/warnings;
+`pnpm lint` passed. Existing browser coverage also passed menu/navigation,
+read-only, feedback dismissal, processing and delete/restore regressions.
+
+## v0.2.2 Status and List Flow
+
+Follow [Issue #70 implementation](v0.2.2-admin-status-flow.md) for this slice.
+Verify exact state-dependent lifecycle confirmation/progress/success copy in
+[Content domain](../architecture/content-domain.md), including newline-separated
+sentences, cancellation without revision changes, preserved public URL/first
+publication date and neutral list publish/republish actions.
+
+At desktop/mobile widths, verify normal/trash operations retain their originating
+list, filters and valid page. Cover filtered-out rows, empty final-page correction
+and success notices surviving row removal/navigation. Detail stays on the same
+post through delete/restore; restored metadata, actions and list link update.
+When valid return context exists, keep that list link unchanged through state
+changes; only direct entry without context follows the current deletion state.
+Distinguish confirmed mutation plus failed revalidation from uncertain mutation;
+verify no automatic replay, retained input, pending locks and read-only boundaries.
+Existing new-post creation/publication detail navigation and recovery tests remain
+required. Historical acceptance records below are not new-candidate evidence.
+
 ## Admin UI Refinement Checks
+
+For [Issue #79](https://github.com/herokwon/blog/issues/79), run
+`pnpm exec playwright test src/routes/admin/list-context.e2e.ts --workers=1`.
+Cover normal/trash filter/page/page-size retention through detail, direct menu
+edit, cancel, save, draft creation and immediate publication. Verify URL-based
+context survives refresh, independent tabs, rejection and publication failure;
+publication feedback must coexist with `returnTo`. Test deletion/restoration,
+publish/archive/republish, fresh filtered data, removed last pages and empty lists.
+Unit tests in `src/lib/admin/list-context.spec.ts` cover allowed destinations,
+malformed/external/unsupported/repeated queries and state-dependent fallbacks.
+At 1280px and 390px, inspect Primary write-button default/hover/focus and equal
+height with trash. Keep existing processing/read-only and unsaved-change tests.
+The focused suite writes screenshots to `.wrangler/list-context-1280.png` and
+`.wrangler/list-context-390.png`; these are local browser evidence.
+
+Local evidence (2026-10-20): workflow 82 and unit/component 481 passed. The
+initial six navigation/style browser cases failed on the previous behavior.
+The final full browser run passed 201/202; the remaining existing new-post
+overflow test matched `/new` as though it were a saved detail and read its API
+before creation completed. Its URL wait now requires the persisted UUID detail.
+The completed build then passed all 20 focused list-context/authoring-overflow
+cases with `.wrangler/list-context-recheck.config.ts`, including that failure,
+all 10 new context cases and unknown-creation inspection. This was a focused
+rerun after the test-only correction, not another full-suite pass. One earlier
+overlapping test invocation also removed shared trace artifacts; the final
+focused run used a separate output directory. Type checking reported zero
+errors/warnings; lint/diff checks passed. Independent code review found no
+required changes. Desktop/mobile screenshots were inspected. These records do
+not establish deployed Preview or physical-device acceptance.
+
+For [Issue #72](https://github.com/herokwon/blog/issues/72), measure adjacent
+글쓰기/휴지통 controls at 390px and 1280px: both have a 42px minimum outer
+height at the default root font size, with at most 1px rounding difference.
+The trash control is square with a centered 20px SVG. Preserve compact menu
+items, 36px pagination controls and 14px arrows. New-post 초안 생성 is neutral;
+new-post 발행 and editing 저장 retain the blue text/light-blue border treatment.
+Check enabled, condition-disabled and processing cursors separately. For inert
+content, inspect `elementFromPoint` at the control's center, not only the child's
+computed cursor. Confirm session/header, form, list/detail and exclusive logout
+lock boundaries. Hold a request pending to verify no duplicate activation or
+navigation, then release it with success, rejection, conflict and uncertain
+responses. Temporary progress clears while read-only/unchanged/boundary controls
+retain `not-allowed`. Verify hover suppression, keyboard focus, input retention
+and loading/logout failure recovery. Browser fixtures simulate timing and
+failures; they do not establish remote or physical-device acceptance.
 
 Follow [Admin UI refinement](v0.2.1-admin-ui.md) for the current task status.
 Check session header/main landmarks, full-height empty pages, neutral and
@@ -74,8 +228,13 @@ production Worker and creates a Wrangler `--dry-run` bundle without deploying.
 The fixture in `tests/admin/local-d1.ts` runs that bundle in Miniflare using
 the same version already selected by Wrangler, an isolated test-only D1 ID,
 and a fresh persistence directory under `.wrangler/admin-api-tests` per worker.
-It applies the checked-in local migrations, resets only its own `posts` table
-between tests, and removes its scoped directory after disposal or setup failure.
+It applies the checked-in local migrations and removes its scoped directory
+after disposal or setup failure. The API suite resets only its own `posts` table
+in its per-test hook; the shared fixture itself does not reset records between
+tests. Browser suites must reset explicitly or give retained fixtures distinct
+identities across their complete parameter matrix. See the
+[shared-worker fixture learning](../solutions/test-failures/worker-scoped-d1-fixtures-can-hide-viewport-title-collisions.md)
+for how a worker restart after failure can hide later collisions.
 It never configures remote bindings or uses the production database ID.
 
 Requests use an exact loopback HTTP origin and freshly signed RS256 JWTs.
@@ -286,7 +445,8 @@ E2E tests, and the production build) as required by the implementation scope
 and existing CI. Document test setup and evidence on the corresponding PR.
 
 For processing feedback, hold requests open to inspect the global logout
-overlay, input-only authoring overlay and local lifecycle block. At desktop
+overlay, input-only authoring overlay, list/trash `section.admin-content`
+overlay, workspace navigation overlay and detail-local lifecycle block. At desktop
 and mobile widths, verify stable input geometry, header/action keyboard and
 pointer locks, visible status outside inert regions, and input preservation
 after rejection. Check delayed display, cancellation of short-operation timers,
@@ -294,6 +454,16 @@ immediate completion/removal, retry and reduced-motion behavior. Also verify
 outside-click/trigger menu dismissal and Save activation/reversion without a
 database revision change for untouched content. These local checks do not
 replace protected Preview or physical-device acceptance.
+
+For Issue #83, follow the [loading feedback record](v0.2.2-admin-loading-feedback.md).
+Check 100/199/200/201/800/2000ms controlled completion, actual result application
+without advancing a minimum timer, and at least 400ms of nonblocking result
+visibility. The existing five-second success lifecycle and persistent non-success
+guidance must not be shortened. Verify two-stage mutation/refresh, empty-list and
+last-page correction, saved-post destination loading, latest-content reload and
+consecutive operations. Gate new-post code-module loading as well as route data:
+the new-post page does not have its own server loader. Release held requests in
+`finally`; use unique fixture identities and bounded request-start assertions.
 
 ## Local Authentication Configuration
 
