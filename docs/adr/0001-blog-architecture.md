@@ -59,4 +59,3 @@ Do not create domain tables, remote D1 databases or R2 buckets, authentication/a
 - Required CI checks and actual PR review results remain the merge criteria.
 - Future remote configuration and deployment require their own concrete design and verified acceptance criteria.
 - Recurring development commands and collaboration rules belong in `AGENTS.md`; exact tool options belong in their configuration files.
-
