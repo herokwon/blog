@@ -74,6 +74,7 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 ## Project Metadata and Version Milestones
 
 - Priority options: `p0`, `p1`, `p2`.
+- Priority is the relative execution order for this project: `p0 > p1 > p2` (highest to lowest). Assess it independently of size, difficulty, or estimated hours; foundational prerequisite work can be `p0`.
 - Size options: `xs`, `s`, `m`, `l`, `xl`.
 - Estimate: a numeric number of hours for implementation plus verification.
 - Use actual project options when available. Distinguish assigned field values from recommendations.
