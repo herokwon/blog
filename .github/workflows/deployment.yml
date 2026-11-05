@@ -1,0 +1,241 @@
+name: 🚀 Deployment
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, 'release/*']
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Merged PR number to recover on its target branch
+        required: true
+        type: string
+      mode:
+        description: Redeploy or recover GitHub publication only
+        required: true
+        type: choice
+        default: deploy
+        options: [deploy, publish]
+
+permissions:
+  contents: read
+
+env:
+  GH_REPO: ${{ github.repository }}
+  PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr-number }}
+
+jobs:
+  resolve-deployment:
+    name: Resolve Deployment
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      active: ${{ steps.resolve.outputs.active }}
+      target: ${{ steps.resolve.outputs.target }}
+      environment: ${{ steps.resolve.outputs.environment }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      url: ${{ steps.resolve.outputs.url }}
+    steps:
+      - name: Checkout Merged Automation
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+      - name: Resolve Actual Merged Target
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_MODE: ${{ inputs.mode || 'deploy' }}
+        run: node .github/scripts/delivery/deployment.ts resolve
+
+  deploy-worker:
+    name: Deploy Worker
+    needs: resolve-deployment
+    if: needs.resolve-deployment.outputs.active == 'true' && inputs.mode != 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: worker-${{ needs.resolve-deployment.outputs.environment }}
+      cancel-in-progress: false
+    environment:
+      name: ${{ needs.resolve-deployment.outputs.environment }}
+      url: ${{ needs.resolve-deployment.outputs.url }}
+    permissions:
+      contents: read
+      pull-requests: read
+      deployments: write
+    outputs:
+      failed-stage: ${{ steps.result.outputs.failed-stage }}
+    env:
+      DEPLOY_TARGET: ${{ needs.resolve-deployment.outputs.target }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout Deployment Commit
+        id: checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-deployment.outputs.sha }}
+          persist-credentials: false
+      - name: Setup Environment
+        id: setup
+        uses: ./.github/actions/setup-env
+      - name: Build
+        id: build
+        run: pnpm build
+      - name: Reject Superseded Deployment
+        id: current
+        run: node .github/scripts/delivery/deployment.ts assert-current
+      - name: Deploy Worker and Configured Triggers
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          command: deploy --env ${{ needs.resolve-deployment.outputs.environment }} --tag ${{ needs.resolve-deployment.outputs.sha }}
+      - name: Verify HTTP Response
+        id: http
+        run: node .github/scripts/delivery/deployment.ts verify-http
+      - name: Record Failure Stage
+        id: result
+        if: always()
+        env:
+          CHECKOUT: ${{ steps.checkout.outcome }}
+          SETUP: ${{ steps.setup.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          CURRENT: ${{ steps.current.outcome }}
+          DEPLOY: ${{ steps.deploy.outcome }}
+          HTTP: ${{ steps.http.outcome }}
+        run: |
+          STAGE=Deployment
+          if [[ "$CHECKOUT" != success ]]; then STAGE=Checkout
+          elif [[ "$SETUP" != success ]]; then STAGE=Setup
+          elif [[ "$BUILD" != success ]]; then STAGE=Build
+          elif [[ "$CURRENT" != success ]]; then STAGE='Target validation'
+          elif [[ "$DEPLOY" != success ]]; then STAGE='Cloudflare deployment'
+          elif [[ "$HTTP" != success ]]; then STAGE='HTTP verification'
+          fi
+          echo "failed-stage=$STAGE" >> "$GITHUB_OUTPUT"
+
+  release-github:
+    name: Publish GitHub Release
+    needs: [resolve-deployment, deploy-worker]
+    if: >-
+      always() && needs.resolve-deployment.outputs.active == 'true' &&
+      needs.resolve-deployment.outputs.environment == 'production' &&
+      (needs.deploy-worker.result == 'success' || inputs.mode == 'publish')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: read
+      deployments: read
+    outputs:
+      worker-verified: ${{ steps.verify.outputs.worker-verified }}
+      release-url: ${{ steps.publish.outputs.release-url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DEPLOY_TARGET: ${{ needs.resolve-deployment.outputs.target }}
+    steps:
+      - name: Checkout Deployed Commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-deployment.outputs.sha }}
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+      - name: Verify Successful Production Delivery
+        id: verify
+        run: node .github/scripts/delivery/deployment.ts verify-publication
+      - name: Create or Recover Tag and Release
+        id: publish
+        run: node .github/scripts/delivery/deployment.ts publish
+
+  comment-pr:
+    name: Comment Deployment Result
+    needs: [resolve-deployment, deploy-worker, release-github]
+    if: always() && needs.resolve-deployment.outputs.active == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout Comment Automation
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-deployment.outputs.sha }}
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+      - name: Upsert Minimal Result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_TARGET: ${{ needs.resolve-deployment.outputs.target }}
+          WORKER_SUCCEEDED: ${{ needs.deploy-worker.result == 'success' || needs.release-github.outputs.worker-verified == 'true' }}
+          PUBLICATION_SUCCEEDED: ${{ needs.release-github.result == 'success' }}
+          RELEASE_URL: ${{ needs.release-github.outputs.release-url }}
+          FAILED_STAGE: ${{ needs.deploy-worker.outputs.failed-stage || 'Release publication' }}
+        run: node .github/scripts/delivery/deployment.ts comment
+
+  cleanup:
+    name: Cleanup Delivered Branch
+    needs: [resolve-deployment, deploy-worker, release-github]
+    if: >-
+      always() && needs.resolve-deployment.outputs.active == 'true' &&
+      ((needs.resolve-deployment.outputs.environment == 'preview' && needs.deploy-worker.result == 'success') ||
+      (needs.resolve-deployment.outputs.environment == 'production' && needs.release-github.result == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Delivered Automation
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-deployment.outputs.sha }}
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+      - name: Create Cleanup Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BLOG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BLOG_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: read
+          permission-actions: write
+          permission-deployments: read
+      - name: Cleanup and Resume Deferred Dependencies
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          DEPLOY_TARGET: ${{ needs.resolve-deployment.outputs.target }}
+        run: node .github/scripts/delivery/deployment.ts cleanup

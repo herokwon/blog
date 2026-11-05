@@ -139,12 +139,19 @@ export function readReviewEvidence(comments: unknown[], headSha: string) {
   return null;
 }
 
-export function selectRelease(branches: string[], frozen: string[]) {
+export function selectRelease(
+  branches: string[],
+  frozen: string[],
+  productionVersion?: string | null,
+) {
   if (frozen.length) return { state: 'deferred' as const };
   const eligible = branches.filter(branch => {
     try {
-      parseReleaseBranch(branch);
-      return true;
+      const release = parseReleaseBranch(branch);
+      return (
+        !productionVersion ||
+        compareVersions(release.version, productionVersion) > 0
+      );
     } catch {
       return false;
     }

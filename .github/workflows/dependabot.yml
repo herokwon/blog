@@ -1,0 +1,88 @@
+name: 🤖 Dependabot PRs
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+    branches: [main, 'release/*']
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Dependabot PR number to resume after verified intake
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: dependabot-${{ github.event.pull_request.number || inputs.pr-number }}
+  cancel-in-progress: false
+
+jobs:
+  dependencies:
+    name: Route and Merge Dependencies
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr-number }}
+    steps:
+      - name: Checkout Trusted Automation
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+      - name: Create GitHub App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BLOG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BLOG_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-actions: read
+          permission-deployments: read
+          permission-workflows: write
+      - name: Resolve App Identity
+        id: identity
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+      - name: Inspect Current PR
+        id: inspect
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_BOT_ID: ${{ steps.identity.outputs.id }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .github/scripts/delivery/dependabot.ts inspect
+      - name: Fetch Signed Dependabot Metadata
+        id: metadata
+        if: steps.inspect.outputs.active == 'true' && steps.inspect.outputs.needs-metadata == 'true'
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ github.token }}
+      - name: Route Synchronize and Conditionally Merge
+        if: steps.inspect.outputs.active == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_BOT_ID: ${{ steps.identity.outputs.id }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+          METADATA_SHA: ${{ steps.inspect.outputs.head-sha }}
+          DEPENDABOT_METADATA: ${{ steps.metadata.outputs.updated-dependencies-json }}
+        run: node .github/scripts/delivery/dependabot.ts run

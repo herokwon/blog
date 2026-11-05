@@ -347,6 +347,7 @@ export async function waitForMergeReadiness(
   number: number,
   guard: () => Promise<boolean> = () => Promise.resolve(true),
   deadline = Date.now() + 30 * 60_000,
+  afterSync?: (previous: PullRequest) => Promise<void>,
 ) {
   while (Date.now() < deadline) {
     const pull = await repo.pull(number);
@@ -359,6 +360,7 @@ export async function waitForMergeReadiness(
       } as const;
     if (await repo.synchronize(pull)) {
       await sleep(10_000);
+      if (afterSync) await afterSync(pull);
       continue;
     }
     const runs = await repo.api.paginate<Run>(
@@ -420,8 +422,15 @@ export async function mergeReady(
   repo: Repository,
   number: number,
   guard?: () => Promise<boolean>,
+  afterSync?: (previous: PullRequest) => Promise<void>,
 ) {
-  const result = await waitForMergeReadiness(repo, number, guard);
+  const result = await waitForMergeReadiness(
+    repo,
+    number,
+    guard,
+    undefined,
+    afterSync,
+  );
   if (result.state !== 'ready') {
     summary(result.reason);
     return result;

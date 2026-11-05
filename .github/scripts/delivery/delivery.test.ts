@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/require-await -- Fetch test doubles resolve without real I/O. */
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
-import { GitHubClient } from './github.ts';
+import { readIntake, validSynchronization } from './dependabot.ts';
+import { publishRelease, renderComment, verifyHttp } from './deployment.ts';
+import { GitHubClient, Repository } from './github.ts';
 import {
   ciPassed,
   classifyUpdates,
@@ -10,6 +16,11 @@ import {
   resolveTarget,
   selectRelease,
 } from './policy.ts';
+import {
+  prepareReleaseVersion,
+  releaseInput,
+  validateVersionChange,
+} from './release-version.ts';
 
 const sha = 'a'.repeat(40);
 const update = {
@@ -128,6 +139,7 @@ await test('release selection excludes frozen branches and blocks ambiguity', ()
   );
   assert.throws(() => selectRelease(['release/1.2.3', 'release/1.3.0'], []));
   assert.equal(selectRelease([], []).state, 'create');
+  assert.equal(selectRelease(['release/1.2.3'], [], '1.2.3').state, 'create');
 });
 
 const pull = {
@@ -254,4 +266,285 @@ await test('GitHub mutations are not blindly retried after an uncertain network 
     client.request('POST', '/repos/herokwon/blog/issues', {}),
   );
   assert.equal(calls, 1);
+});
+
+await test('Dependabot receipts cannot authorize a different head, author, PR, or arbitrary descendant', () => {
+  const receipt = { pr: 3, headSha: sha, originalSha: sha, updates: [update] };
+  const comment = {
+    id: 1,
+    user: { id: 123, login: 'blog-bot[bot]', type: 'Bot' },
+    body: `<!-- dependabot-intake:v1 ${JSON.stringify(receipt)} -->`,
+  };
+  assert.deepEqual(readIntake([comment], 3, sha, 123, 'blog-bot'), receipt);
+  assert.equal(readIntake([comment], 4, sha, 123, 'blog-bot'), null);
+  assert.equal(readIntake([comment], 3, 'b'.repeat(40), 123, 'blog-bot'), null);
+  assert.equal(readIntake([comment], 3, sha, 999, 'blog-bot'), null);
+  const commit = {
+    author: { id: 123 },
+    parents: [{ sha }, { sha: 'b'.repeat(40) }],
+    commit: { verification: { verified: true } },
+  };
+  assert.equal(validSynchronization(commit, sha, 'b'.repeat(40), 123), true);
+  assert.equal(
+    validSynchronization(
+      { ...commit, parents: [{ sha }] },
+      sha,
+      'b'.repeat(40),
+      123,
+    ),
+    false,
+  );
+  assert.equal(
+    validSynchronization(
+      { ...commit, commit: { verification: { verified: false } } },
+      sha,
+      'b'.repeat(40),
+      123,
+    ),
+    false,
+  );
+});
+
+await test('release preparation rejects forks, drafts, downgrades, and unrelated package edits', () => {
+  const releasePull = {
+    ...pull,
+    state: 'open',
+    merged: false,
+    head: { ...pull.head, ref: 'release/0.1.0' },
+    base: { ...pull.base, ref: 'main' },
+  };
+  assert.equal(
+    releaseInput(releasePull, 'herokwon/blog', null).version,
+    '0.1.0',
+  );
+  assert.throws(() =>
+    releaseInput({ ...releasePull, draft: true }, 'herokwon/blog', null),
+  );
+  assert.throws(() =>
+    releaseInput(
+      {
+        ...releasePull,
+        head: { ...releasePull.head, repo: { full_name: 'someone/blog' } },
+      },
+      'herokwon/blog',
+      null,
+    ),
+  );
+  assert.throws(() => releaseInput(releasePull, 'herokwon/blog', '0.1.0'));
+  assert.equal(
+    validateVersionChange(
+      { version: '0.0.1', private: true },
+      { version: '0.1.0', private: true },
+      '0.1.0',
+    ),
+    true,
+  );
+  assert.equal(
+    validateVersionChange(
+      { version: '0.0.1', private: true },
+      { version: '0.1.0', private: false },
+      '0.1.0',
+    ),
+    false,
+  );
+});
+
+await test('an unchanged existing version PR remains resumable for CI and review', async () => {
+  const fixture = mkdtempSync(path.join(tmpdir(), 'blog-delivery-'));
+  const originalCwd = process.cwd();
+  const originalEnv = {
+    output: process.env.GITHUB_OUTPUT,
+    id: process.env.APP_BOT_ID,
+    slug: process.env.APP_SLUG,
+  };
+  const git = (...args: string[]) =>
+    execFileSync('git', args, {
+      cwd: fixture,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  try {
+    git('init', '--initial-branch=release/0.1.0');
+    git('config', 'user.name', 'Test');
+    git('config', 'user.email', 'test@example.com');
+    writeFileSync(
+      path.join(fixture, 'package.json'),
+      '{"version":"0.0.1","private":true}',
+    );
+    writeFileSync(path.join(fixture, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n');
+    git('add', '.');
+    git('commit', '-m', 'initial');
+    const source = git('rev-parse', 'HEAD');
+    git('switch', '-c', 'automation/release/0.1.0');
+    writeFileSync(
+      path.join(fixture, 'package.json'),
+      '{"version":"0.1.0","private":true}',
+    );
+    git('commit', '-am', 'version');
+    const child = git('rev-parse', 'HEAD');
+    git('switch', 'release/0.1.0');
+    git('remote', 'add', 'origin', fixture);
+    const original = {
+      ...pull,
+      state: 'open',
+      merged: false,
+      head: { ...pull.head, ref: 'release/0.1.0', sha: source },
+      base: { ...pull.base, ref: 'main' },
+    };
+    const api = new GitHubClient('token', async input => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.includes('/pulls/3')) return Response.json(original);
+      if (url.includes('/git/ref/heads/'))
+        return Response.json({ object: { sha: source } });
+      if (url.includes('/contents/package.json'))
+        return Response.json({
+          content: Buffer.from('{"version":"0.0.1","private":true}').toString(
+            'base64',
+          ),
+        });
+      if (url.includes('/pulls?'))
+        return Response.json([
+          {
+            ...original,
+            number: 4,
+            user: { id: 123, login: 'blog-bot[bot]' },
+            head: {
+              ...original.head,
+              ref: 'automation/release/0.1.0',
+              sha: child,
+            },
+          },
+        ]);
+      throw new Error(`Unexpected fixture request: ${url}`);
+    });
+    process.env.GITHUB_OUTPUT = path.join(fixture, 'outputs');
+    process.env.APP_BOT_ID = '123';
+    process.env.APP_SLUG = 'blog-bot';
+    process.chdir(fixture);
+    await prepareReleaseVersion(
+      new Repository('herokwon/blog', 'token', api),
+      3,
+    );
+    assert.match(
+      readFileSync(process.env.GITHUB_OUTPUT, 'utf8'),
+      /needs-pr=true/,
+    );
+    assert.match(
+      readFileSync(process.env.GITHUB_OUTPUT, 'utf8'),
+      /changed=false/,
+    );
+  } finally {
+    process.chdir(originalCwd);
+    for (const [key, value] of Object.entries({
+      GITHUB_OUTPUT: originalEnv.output,
+      APP_BOT_ID: originalEnv.id,
+      APP_SLUG: originalEnv.slug,
+    })) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    assert.ok(fixture.startsWith(path.join(tmpdir(), 'blog-delivery-')));
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+const production = {
+  prNumber: 3,
+  environment: 'production' as const,
+  branch: 'main',
+  sha,
+  workerName: 'blog',
+  url: 'https://blog.herokwon.dev',
+  version: '0.1.0',
+};
+
+await test('HTTP verification retries transient errors but fails on a non-HTML or wrong homepage', async () => {
+  let attempts = 0;
+  await verifyHttp(
+    production,
+    Date.now() + 1000,
+    async () => {
+      attempts++;
+      return attempts === 1
+        ? new Response('', { status: 503 })
+        : new Response('<title>Personal Blog</title>', {
+            headers: { 'content-type': 'text/html' },
+          });
+    },
+    async () => {},
+  );
+  assert.equal(attempts, 2);
+  await assert.rejects(
+    verifyHttp(
+      production,
+      Date.now() - 1,
+      async () => new Response('wrong'),
+      async () => {},
+    ),
+    /HTTP verification/,
+  );
+});
+
+await test('publication reuses exact-SHA tags and releases and never moves a conflicting tag', async () => {
+  const requests: string[] = [];
+  const repository = (tagSha: string) =>
+    new Repository(
+      'herokwon/blog',
+      'token',
+      new GitHubClient('token', async (input, init) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        requests.push(`${init?.method} ${url}`);
+        if (url.includes('/contents/package.json'))
+          return Response.json({
+            content: Buffer.from('{"version":"0.1.0"}').toString('base64'),
+          });
+        if (url.includes('/git/ref/tags/'))
+          return Response.json({ object: { type: 'commit', sha: tagSha } });
+        if (url.includes('/releases/tags/'))
+          return Response.json({
+            id: 1,
+            tag_name: 'v0.1.0',
+            draft: false,
+            prerelease: false,
+            html_url: 'https://github.com/herokwon/blog/releases/tag/v0.1.0',
+          });
+        throw new Error(`Unexpected publication mutation: ${url}`);
+      }),
+    );
+  assert.match(await publishRelease(repository(sha), production), /v0\.1\.0/);
+  assert.ok(requests.every(request => request.startsWith('GET ')));
+  await assert.rejects(
+    publishRelease(repository('b'.repeat(40)), production),
+    /different commit/,
+  );
+});
+
+await test('deployment comments distinguish successful delivery from publication failure with minimal content', () => {
+  const partial = renderComment(
+    production,
+    'herokwon/blog',
+    'https://github.com/herokwon/blog/actions/runs/1',
+    { worker: true, publication: false, stage: 'Release publication' },
+  );
+  assert.match(partial, /Production deployed; release publication failed/);
+  assert.match(partial, /<!-- deployment-result:production -->/);
+  assert.doesNotMatch(partial, /avatar|Author|Dashboard|\|/);
+  const failure = renderComment(
+    production,
+    'herokwon/blog',
+    'https://github.com/herokwon/blog/actions/runs/1',
+    { worker: false, publication: false, stage: 'HTTP verification' },
+  );
+  assert.match(failure, /HTTP verification/);
+  assert.doesNotMatch(failure, /Open site/);
 });

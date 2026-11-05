@@ -26,6 +26,9 @@
   "env": {
     "preview": {
       "name": "blog-preview",
+      "routes": [
+        { "pattern": "blog-preview.herokwon.dev", "custom_domain": true }
+      ],
       "observability": {
         "logs": {
           "enabled": true,
@@ -42,6 +45,7 @@
     },
     "production": {
       "name": "blog",
+      "routes": [{ "pattern": "blog.herokwon.dev", "custom_domain": true }],
       "observability": {
         "logs": {
           "enabled": true,
