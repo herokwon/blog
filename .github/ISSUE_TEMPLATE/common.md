@@ -1,7 +1,7 @@
 ---
-name: 📑 General
-about: Track general work, maintenance, documentation, or discussions.
-title: '[General] '
+name: 📑 Common
+about: Track maintenance, tooling, documentation, and other non-bug/non-feature work.
+title: '[Common] '
 ---
 
 ## 📌 Summary

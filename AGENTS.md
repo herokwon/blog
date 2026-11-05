@@ -17,9 +17,10 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Use pnpm for commands and nested package scripts. Do not introduce npm/yarn lockfiles or npm-run script calls.
 - Read the exact pnpm version from `packageManager` and Node version from `devEngines.runtime` in `package.json`.
 - Keep runtime declarations and `pnpm-lock.yaml` synchronized. Do not add a separate Node version file.
+- Keep the package version independent of target-version milestones. Version updates belong to future release automation after the target-version work is complete; do not bump it during ordinary implementation work.
 - Use `pnpm install --frozen-lockfile` to verify reproducible installation.
 - Dependency installation generates SvelteKit and Cloudflare types through `prepare`. Generated output stays ignored.
-- When Wrangler configuration changes, run `pnpm gen`; never invent binding types or remote resource IDs.
+- When Wrangler configuration changes, run `pnpm gen` to regenerate and format the declaration file; never invent binding types or remote resource IDs.
 - Commit dependency build approvals only for packages actually needed by the project.
 
 ## Development Commands
@@ -36,11 +37,12 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Preview the actual Workers build on port 4173: `pnpm preview`.
 - Run E2E: `pnpm test:e2e`. Locally this builds and previews; CI must restore Build output first.
 - Run the complete test suite: `pnpm test`.
-- Check staging packaging without publishing: `pnpm exec wrangler deploy --dry-run --env staging`.
+- Check preview packaging without publishing: `pnpm exec wrangler deploy --dry-run --env preview`.
 
 ## Formatting, Lint, and Tests
 
 - Treat tool configuration files as the source of exact options; do not duplicate their full contents in documentation.
+- After completing changes and before creating a commit, run `pnpm format`, review the resulting diff, and run the applicable validation. Use the existing formatter command rather than adding a separate commit-hook framework.
 - Preserve side-effect import positions and use the configured import order without extra group separators.
 - Keep ESLint's type-aware recommended rules and Prettier compatibility. Scope justified exceptions narrowly.
 - Use the fewest meaningful tests covering required behavior, critical failures, and regression risks. Do not add tests that only mirror configuration or manufacture unused production code for a test.
@@ -56,8 +58,9 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Commit SQL and Drizzle snapshots/metadata together. Never rename or edit an already applied migration; add a new migration.
 - Wrangler is the sole future migration application/history tool. Align its migration directory with Drizzle output.
 - Remote migration application belongs to CD after validation. Do not use schema push or mix migration history tools.
-- Keep staging and production data/bindings separate when they are introduced.
-- Persist invocation logs at 100% in both environments; persist traces at 100% in staging and 5% in production.
+- Keep preview and production data/bindings separate when they are introduced. The preview Worker is named `blog-preview`.
+- Persist invocation logs at 100% in both environments; persist traces at 100% in preview and 5% in production.
+- Keep workers.dev and preview URLs disabled; public routes and domains require separate deployment work.
 - Log useful structured operational context; exclude credentials, session tokens, and draft bodies.
 
 ## CI and Review
@@ -94,7 +97,7 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 4. Run automated checks and Codex review, assess findings, and address valid findings.
 5. Merge only after required checks and review requirements are satisfied.
 6. Close the issue explicitly only after release-branch integration and applicable release-stage release, deployment, and verification succeed. Do not wait for main when those conditions are satisfied; keep the issue open for pending, failed, or unverified requirements.
-7. Integrate `release/* -> main` through a reviewed PR summarizing included work and actual verification. Staging is associated with release branches and production with main.
+7. Integrate `release/* -> main` through a reviewed PR summarizing included work and actual verification. The preview environment is associated with release branches and production with main.
 8. After confirming merge, check the head has no unmerged or active dependent work, delete local/remote head branches, and fast-forward the local base. Preserve local changes and report blockers without forcing synchronization.
 
 Use Conventional Commits 1.0.0 for commits and PR titles. Keep commits coherent and independently understandable. Use English for documentation, issues, PRs, and commits. Avoid automatic issue-closing keywords in commit messages and PR descriptions.

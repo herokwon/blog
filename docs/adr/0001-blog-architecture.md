@@ -34,8 +34,8 @@ The first implementation establishes a working development environment and CI, r
 - Show Vitest results in the GitHub Actions job summary without uploading Vitest reports. Upload Playwright HTML and failure evidence only when tests fail.
 - Reuse `pnpm/setup@v3` in a composite action for runtime/package-manager installation, cache, and frozen dependency installation.
 - Use PR-integrated Codex code review and link issues through Development metadata. Disable repository issue auto-closing so closure follows verified release-stage results.
-- Integrate work through `work branch -> release/* -> main`. Release branches are for staging verification; main represents production integration.
-- Configure persisted invocation logs at 100% in both environments; trace sampling is 100% for staging and 5% for production.
+- Integrate work through `work branch -> release/* -> main`. Release branches are for preview verification; main represents production integration.
+- Configure persisted invocation logs at 100% in both environments; trace sampling is 100% for preview and 5% for production.
 
 ### Initial implementation boundary
 

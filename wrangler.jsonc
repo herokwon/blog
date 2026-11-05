@@ -8,8 +8,8 @@
     "binding": "ASSETS",
     "directory": ".svelte-kit/cloudflare"
   },
-  "workers_dev": true,
-  "preview_urls": true,
+  "workers_dev": false,
+  "preview_urls": false,
   "observability": {
     "logs": {
       "enabled": true,
@@ -24,8 +24,8 @@
     }
   },
   "env": {
-    "staging": {
-      "name": "blog-staging",
+    "preview": {
+      "name": "blog-preview",
       "observability": {
         "logs": {
           "enabled": true,

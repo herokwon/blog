@@ -1,21 +1,21 @@
 {
   "name": "blog",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
-    "prepare": "svelte-kit sync && wrangler types",
-    "check": "wrangler types && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "prepare": "svelte-kit sync && pnpm gen",
+    "check": "pnpm gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test:unit": "vitest",
     "test": "pnpm run test:unit --run --coverage && pnpm run test:e2e",
     "test:e2e": "playwright test",
     "lint": "prettier --check . && eslint . --max-warnings 0",
     "format": "prettier --write .",
-    "gen": "wrangler types",
+    "gen": "wrangler types && prettier --write worker-configuration.d.ts --ignore-path .prettierignore",
     "db:generate": "drizzle-kit generate"
   },
   "devDependencies": {
