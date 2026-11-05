@@ -1,0 +1,16 @@
+{
+  "extends": "$app/tsconfig",
+  "compilerOptions": {
+    "checkJs": false,
+    "strict": true,
+    "types": ["$app/types", "node", "./worker-configuration.d.ts"]
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "playwright.config.ts",
+    "eslint.config.ts",
+    "prettier.config.ts",
+    "drizzle.config.ts"
+  ]
+}
