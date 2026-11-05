@@ -192,28 +192,40 @@ export class Repository {
     return this.api.paginate<Comment>(`${this.path}/issues/${number}/comments`);
   }
   async milestone(version: string) {
-    const milestones = await this.api.paginate<{
-      number: number;
-      title: string;
-      state: string;
-    }>(`${this.path}/milestones?state=all`);
-    const found = milestones.find(item => item.title === version);
-    if (found) {
-      if (found.state === 'closed')
+    const find = async () =>
+      (
+        await this.api.paginate<{
+          number: number;
+          title: string;
+          state: string;
+        }>(`${this.path}/milestones?state=all`)
+      ).find(item => item.title === version);
+    const use = async (item: { number: number; state: string }) => {
+      if (item.state === 'closed')
         await this.api.request(
           'PATCH',
-          `${this.path}/milestones/${found.number}`,
+          `${this.path}/milestones/${item.number}`,
           { state: 'open' },
         );
-      return found.number;
+      return item.number;
+    };
+    const found = await find();
+    if (found) return use(found);
+    try {
+      return (
+        await this.api.request<{ number: number }>(
+          'POST',
+          `${this.path}/milestones`,
+          { title: version },
+        )
+      ).number;
+    } catch (error) {
+      if (error instanceof GitHubError && error.status === 422) {
+        const raced = await find();
+        if (raced) return use(raced);
+      }
+      throw error;
     }
-    return (
-      await this.api.request<{ number: number }>(
-        'POST',
-        `${this.path}/milestones`,
-        { title: version },
-      )
-    ).number;
   }
   async assignMilestone(number: number, branch: string) {
     const milestone = await this.milestone(parseReleaseBranch(branch).version);
@@ -262,48 +274,67 @@ export class Repository {
     const deployments = await this.api.paginate<Deployment>(
       `${this.path}/deployments?sha=${sha}&environment=${environment}`,
     );
-    for (const deployment of deployments) {
-      if (
-        deployment.sha !== sha ||
-        deployment.environment !== environment ||
-        deployment.creator.id !== 41898282
-      )
-        continue;
-      const statuses = await this.api.request<DeploymentStatus[]>(
-        'GET',
-        `${this.path}/deployments/${deployment.id}/statuses?per_page=1`,
+    const deployment = deployments
+      .filter(item => item.sha === sha && item.environment === environment)
+      .sort((a, b) => b.id - a.id)[0];
+    if (!deployment || deployment.creator.id !== 41898282) return null;
+    const statuses = await this.api.request<DeploymentStatus[]>(
+      'GET',
+      `${this.path}/deployments/${deployment.id}/statuses?per_page=1`,
+    );
+    const status = statuses[0];
+    if (status?.state !== 'success' || status.creator.id !== 41898282)
+      return null;
+    const prefix = `https://github.com/${this.name}/actions/runs/`;
+    if (!status.log_url.startsWith(prefix)) return null;
+    const runId = Number(status.log_url.slice(prefix.length).split('/')[0]);
+    if (!Number.isSafeInteger(runId) || runId <= 0) return null;
+    const run = await this.api.request<Run>(
+      'GET',
+      `${this.path}/actions/runs/${runId}`,
+    );
+    if (
+      run.path.split('@')[0] !== '.github/workflows/deployment.yml' ||
+      !['pull_request', 'workflow_dispatch'].includes(run.event)
+    )
+      return null;
+    if (run.head_sha !== sha) {
+      if (run.event !== 'pull_request') return null;
+      const related = await this.api.paginate<PullRequest>(
+        `${this.path}/commits/${sha}/pulls`,
       );
-      const status = statuses[0];
-      if (status?.state !== 'success' || status.creator.id !== 41898282)
-        continue;
-      const prefix = `https://github.com/${this.name}/actions/runs/`;
-      if (!status.log_url.startsWith(prefix)) continue;
-      const runId = Number(status.log_url.slice(prefix.length).split('/')[0]);
-      if (!Number.isSafeInteger(runId) || runId <= 0) continue;
-      const run = await this.api.request<Run>(
-        'GET',
-        `${this.path}/actions/runs/${runId}`,
-      );
-      if (
-        run.head_sha !== sha ||
-        run.path.split('@')[0] !== '.github/workflows/deployment.yml' ||
-        !['pull_request', 'workflow_dispatch'].includes(run.event)
-      )
-        continue;
-      const jobs = await this.api.paginate<Job>(
-        `${this.path}/actions/runs/${runId}/jobs?filter=latest`,
-        'jobs',
-      );
-      if (
-        jobs.some(
-          job =>
-            job.name === 'Deploy Worker' &&
-            job.status === 'completed' &&
-            job.conclusion === 'success',
+      const matches = related.some(pull => {
+        if (
+          !(pull.merged || pull.merged_at) ||
+          pull.merge_commit_sha !== sha ||
+          pull.head.sha !== run.head_sha ||
+          pull.head.repo?.full_name !== this.name ||
+          pull.base.repo.full_name !== this.name
         )
-      )
-        return { deploymentId: deployment.id, runId };
+          return false;
+        if (environment === 'production') return pull.base.ref === 'main';
+        try {
+          parseReleaseBranch(pull.base.ref);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+      if (!matches) return null;
     }
+    const jobs = await this.api.paginate<Job>(
+      `${this.path}/actions/runs/${runId}/jobs?filter=latest`,
+      'jobs',
+    );
+    if (
+      jobs.some(
+        job =>
+          job.name === 'Deploy Worker' &&
+          job.status === 'completed' &&
+          job.conclusion === 'success',
+      )
+    )
+      return { deploymentId: deployment.id, runId };
     return null;
   }
   async productionComplete(sha = '') {

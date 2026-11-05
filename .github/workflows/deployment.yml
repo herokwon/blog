@@ -238,4 +238,6 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           DEPLOY_TARGET: ${{ needs.resolve-deployment.outputs.target }}
-        run: node .github/scripts/delivery/deployment.ts cleanup
+        run: |
+          gh auth setup-git
+          node .github/scripts/delivery/deployment.ts cleanup

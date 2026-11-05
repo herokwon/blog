@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import {
   env,
   main,
@@ -180,7 +181,25 @@ async function comment(repo: Repository, target: DeploymentTarget) {
     );
 }
 
-async function cleanup(repo: Repository, target: DeploymentTarget) {
+function deleteWithLease(branch: string, sha: string): Promise<void> {
+  execFileSync(
+    'git',
+    [
+      'push',
+      `--force-with-lease=refs/heads/${branch}:${sha}`,
+      'origin',
+      `:refs/heads/${branch}`,
+    ],
+    { stdio: 'inherit' },
+  );
+  return Promise.resolve();
+}
+
+export async function cleanup(
+  repo: Repository,
+  target: DeploymentTarget,
+  remove: (branch: string, sha: string) => Promise<void> = deleteWithLease,
+) {
   await assertCurrent(repo, target);
   if (
     target.environment === 'production' &&
@@ -203,19 +222,13 @@ async function cleanup(repo: Repository, target: DeploymentTarget) {
     const dependent = open.some(
       item => item.base.ref === source || item.head.ref === source,
     );
-    const comparison = await repo.api.request<{ ahead_by: number }>(
-      'GET',
-      `${repo.path}/compare/${target.sha}...${sourceRef.object.sha}`,
-    );
     if (
+      pull.merged &&
+      pull.merge_commit_sha === target.sha &&
       sourceRef.object.sha === pull.head.sha &&
-      !dependent &&
-      comparison.ahead_by === 0
+      !dependent
     )
-      await repo.api.request(
-        'DELETE',
-        `${repo.path}/git/refs/heads/${encodeURIComponent(source)}`,
-      );
+      await remove(source, sourceRef.object.sha);
     else
       summary(
         'Source branch retained because it changed or has remaining/dependent work',

@@ -5,8 +5,18 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { readIntake, validSynchronization } from './dependabot.ts';
-import { publishRelease, renderComment, verifyHttp } from './deployment.ts';
+import {
+  authenticateNativeHead,
+  readIntake,
+  runDependabotPullRequest,
+  validSynchronization,
+} from './dependabot.ts';
+import {
+  cleanup,
+  publishRelease,
+  renderComment,
+  verifyHttp,
+} from './deployment.ts';
 import { GitHubClient, Repository } from './github.ts';
 import {
   ciPassed,
@@ -21,6 +31,12 @@ import {
   releaseInput,
   validateVersionChange,
 } from './release-version.ts';
+
+function requestBody(init?: RequestInit): string {
+  if (typeof init?.body !== 'string')
+    throw new Error('Expected serialized GitHub request body');
+  return init.body;
+}
 
 const sha = 'a'.repeat(40);
 const update = {
@@ -547,4 +563,359 @@ await test('deployment comments distinguish successful delivery from publication
   );
   assert.match(failure, /HTTP verification/);
   assert.doesNotMatch(failure, /Open site/);
+});
+
+async function withEnvironment(
+  values: Record<string, string | undefined>,
+  run: () => Promise<void>,
+) {
+  const previous = Object.fromEntries(
+    Object.keys(values).map(key => [key, process.env[key]]),
+  );
+  try {
+    for (const [key, value] of Object.entries(values)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    await run();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
+await test('fresh metadata cannot authorize extra commits beyond the signed Dependabot update', async () => {
+  const native = {
+    ...pull,
+    state: 'open',
+    merged: false,
+    head: { ...pull.head, ref: 'dependabot/npm/test' },
+  };
+  const signed = {
+    sha: native.head.sha,
+    author: { login: 'dependabot[bot]' },
+    commit: { verification: { verified: true } },
+  };
+  const repository = (commits: unknown[]) => {
+    const repo = new Repository(
+      'herokwon/blog',
+      'token',
+      new GitHubClient('token', async input => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        return Response.json(url.includes('/pulls/') ? commits : commits[0]);
+      }),
+    );
+    repo.pull = async () => native;
+    return repo;
+  };
+  await assert.rejects(
+    authenticateNativeHead(
+      repository([signed, { ...signed, sha }]),
+      native,
+      native.head.sha,
+    ),
+    /single signed Dependabot/,
+  );
+  await authenticateNativeHead(repository([signed]), native, native.head.sha);
+});
+
+await test('a waiting Dependabot run cannot merge a new head under its old intake classification', async () => {
+  await withEnvironment(
+    {
+      APP_BOT_ID: '123',
+      APP_SLUG: 'blog-bot',
+      DEPENDABOT_METADATA: undefined,
+      GITHUB_STEP_SUMMARY: undefined,
+    },
+    async () => {
+      const next = 'b'.repeat(40),
+        mergedHeads: string[] = [];
+      const native = {
+        ...pull,
+        state: 'open',
+        merged: false,
+        head: { ...pull.head, ref: 'dependabot/npm/test', sha },
+        base: { ...pull.base, ref: 'release/1.3.0' },
+      };
+      const advanced = { ...native, head: { ...native.head, sha: next } };
+      const api = new GitHubClient('token', async (input, init) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        if (url.includes('/branches'))
+          return Response.json([{ name: 'release/1.3.0' }]);
+        if (url.includes('/actions/workflows/ci.yml/runs'))
+          return Response.json({
+            workflow_runs: [
+              {
+                id: 5,
+                head_sha: next,
+                run_attempt: 1,
+                status: 'completed',
+                conclusion: 'success',
+              },
+            ],
+          });
+        if (url.includes('/actions/runs/5/jobs'))
+          return Response.json({
+            jobs: ['Lint', 'Type Check', 'Build', 'Test'].map(name => ({
+              name,
+              status: 'completed',
+              conclusion: 'success',
+            })),
+          });
+        if (url.endsWith('/pulls/3/merge')) {
+          mergedHeads.push(
+            (JSON.parse(requestBody(init)) as { sha: string }).sha,
+          );
+          return Response.json({ merged: true });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const repo = new Repository('herokwon/blog', 'token', api);
+      let reads = 0;
+      repo.pull = async () => (++reads === 1 ? native : advanced);
+      repo.comments = async () => [
+        {
+          id: 1,
+          user: { id: 123, login: 'blog-bot[bot]', type: 'Bot' },
+          body: `<!-- dependabot-intake:v1 ${JSON.stringify({ pr: 3, headSha: sha, originalSha: sha, updates: [update] })} -->`,
+        },
+        { ...review(next), id: 2 },
+      ];
+      repo.frozenReleases = async () => [];
+      repo.version = async () => '1.2.0';
+      repo.ref = async () => sha;
+      repo.assignMilestone = async () => {};
+      repo.synchronize = async () => false;
+      repo.behind = async () => false;
+      await runDependabotPullRequest(repo, 3);
+      assert.deepEqual(mergedHeads, []);
+    },
+  );
+});
+
+await test('new failed delivery blocks older success and native PR-head runs need merged-SHA association', async () => {
+  let failed = true,
+    head = sha;
+  const repo = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async input => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.includes('/deployments?'))
+        return Response.json(
+          (failed ? [20, 10] : [10]).map(id => ({
+            id,
+            sha,
+            environment: 'production',
+            creator: { id: 41898282 },
+          })),
+        );
+      if (url.includes('/deployments/') && url.includes('/statuses'))
+        return Response.json([
+          {
+            state: url.includes('/20/') ? 'failure' : 'success',
+            log_url: 'https://github.com/herokwon/blog/actions/runs/5/job/7',
+            environment_url: production.url,
+            creator: { id: 41898282 },
+          },
+        ]);
+      if (url.endsWith('/actions/runs/5'))
+        return Response.json({
+          id: 5,
+          head_sha: head,
+          head_branch: 'release/0.1.0',
+          path: '.github/workflows/deployment.yml',
+          event: 'pull_request',
+        });
+      if (url.includes('/actions/runs/5/jobs'))
+        return Response.json({
+          jobs: [
+            {
+              id: 7,
+              name: 'Deploy Worker',
+              status: 'completed',
+              conclusion: 'success',
+            },
+          ],
+        });
+      if (url.includes('/commits/') && url.includes('/pulls'))
+        return Response.json([
+          {
+            ...pull,
+            merged_at: '2026-11-06T00:00:00Z',
+            head: { ...pull.head, ref: 'release/0.1.0', sha: 'b'.repeat(40) },
+            base: { ...pull.base, ref: 'main' },
+          },
+        ]);
+      throw new Error(`Unexpected evidence request: ${url}`);
+    }),
+  );
+  assert.equal(await repo.verifiedDeployment(sha, 'production'), null);
+  failed = false;
+  head = 'b'.repeat(40);
+  assert.deepEqual(await repo.verifiedDeployment(sha, 'production'), {
+    deploymentId: 10,
+    runId: 5,
+  });
+  head = 'c'.repeat(40);
+  assert.equal(await repo.verifiedDeployment(sha, 'production'), null);
+});
+
+await test('cleanup recognizes an unchanged squash-merged head while preserving dependent work', async () => {
+  await withEnvironment(
+    { GITHUB_REF_NAME: 'release/0.1.0', GITHUB_STEP_SUMMARY: undefined },
+    async () => {
+      const source = 'work/squash',
+        sourceSha = 'b'.repeat(40);
+      const branches = new Map([[source, sourceSha]]);
+      let dependent = false;
+      const native = {
+        ...pull,
+        head: { ...pull.head, ref: source, sha: sourceSha },
+      };
+      const repo = new Repository(
+        'herokwon/blog',
+        'token',
+        new GitHubClient('token', async input => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          if (url.includes('/git/ref/heads/'))
+            return Response.json({ object: { sha: branches.get(source) } });
+          if (url.includes('/pulls?'))
+            return Response.json(
+              dependent
+                ? [
+                    {
+                      ...native,
+                      state: 'open',
+                      base: { ...native.base, ref: source },
+                    },
+                  ]
+                : [],
+            );
+          if (url.includes('/compare/')) return Response.json({ ahead_by: 1 }); // Squash deliberately preserves no head ancestry.
+          throw new Error(`Unexpected cleanup request: ${url}`);
+        }),
+      );
+      repo.pull = async () => native;
+      repo.ref = async () => sha;
+      const target = resolveTarget(native, 'herokwon/blog', sha);
+      assert.ok(target);
+      const remove = async (branch: string, expected: string) => {
+        if (branches.get(branch) !== expected) throw new Error('Head changed');
+        branches.delete(branch);
+      };
+      await cleanup(repo, target, remove);
+      assert.equal(branches.has(source), false);
+      branches.set(source, sourceSha);
+      dependent = true;
+      await cleanup(repo, target, remove);
+      assert.equal(branches.has(source), true);
+      dependent = false;
+      branches.set(source, 'c'.repeat(40));
+      await cleanup(repo, target, remove);
+      assert.equal(branches.get(source), 'c'.repeat(40));
+    },
+  );
+});
+
+await test('concurrent milestone and release creation reuse the winner without overwriting its ref', async () => {
+  let milestoneExists = false;
+  const milestones = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async (_input, init) => {
+      if (init?.method === 'POST') {
+        milestoneExists = true;
+        return new Response('', { status: 422 });
+      }
+      return Response.json(
+        milestoneExists ? [{ number: 1, title: '1.2.1', state: 'open' }] : [],
+      );
+    }),
+  );
+  assert.equal(await milestones.milestone('1.2.1'), 1);
+  await withEnvironment(
+    {
+      APP_BOT_ID: '123',
+      APP_SLUG: 'blog-bot',
+      DEPENDABOT_METADATA: undefined,
+      GITHUB_STEP_SUMMARY: undefined,
+    },
+    async () => {
+      let refExists = false,
+        routed = '';
+      const native = {
+        ...pull,
+        state: 'open',
+        merged: false,
+        head: { ...pull.head, ref: 'dependabot/npm/test', sha },
+        base: { ...pull.base, ref: 'main' },
+      };
+      const repo = new Repository(
+        'herokwon/blog',
+        'token',
+        new GitHubClient('token', async (input, init) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          if (url.endsWith('/git/refs') && init?.method === 'POST') {
+            refExists = true;
+            return new Response('', { status: 422 });
+          }
+          if (url.includes('/git/ref/heads/'))
+            return refExists
+              ? Response.json({ object: { sha } })
+              : new Response('', { status: 404 });
+          if (url.includes('/branches')) return Response.json([]);
+          if (url.endsWith('/pulls/3') && init?.method === 'PATCH') {
+            routed = (JSON.parse(requestBody(init)) as { base: string }).base;
+            native.base.ref = routed;
+            return Response.json(native);
+          }
+          throw new Error(`Unexpected creation request: ${url}`);
+        }),
+      );
+      repo.pull = async () => native;
+      repo.ref = async () => sha;
+      repo.version = async () => '1.2.0';
+      repo.frozenReleases = async () => [];
+      repo.milestone = async () => 1;
+      repo.assignMilestone = async () => {};
+      repo.synchronize = async () => false;
+      repo.comments = async () => [
+        {
+          id: 1,
+          user: { id: 123, login: 'blog-bot[bot]', type: 'Bot' },
+          body: `<!-- dependabot-intake:v1 ${JSON.stringify({ pr: 3, headSha: sha, originalSha: sha, updates: [{ ...update, updateType: 'version-update:semver-major', newVersion: '2.0.0' }] })} -->`,
+        },
+      ];
+      await runDependabotPullRequest(repo, 3);
+      assert.equal(routed, 'release/1.2.1');
+    },
+  );
 });

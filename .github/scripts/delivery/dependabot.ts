@@ -1,5 +1,6 @@
 import {
   env,
+  GitHubError,
   main,
   mergeReady,
   output,
@@ -24,6 +25,36 @@ type Intake = {
   originalSha: string;
   updates: DependencyUpdate[];
 };
+
+export async function authenticateNativeHead(
+  repo: Repository,
+  pull: PullRequest,
+  metadataSha: string,
+): Promise<void> {
+  const commits = await repo.api.paginate<{ sha: string }>(
+    `${repo.path}/pulls/${pull.number}/commits`,
+  );
+  if (
+    commits.length !== 1 ||
+    commits[0].sha !== metadataSha ||
+    pull.head.sha !== metadataSha
+  )
+    throw new Error(
+      'Fresh intake requires a single signed Dependabot commit accounting for the complete head',
+    );
+  const commit = await repo.api.request<{
+    author: { login: string } | null;
+    commit: { verification: { verified: boolean } };
+  }>('GET', `${repo.path}/commits/${metadataSha}`);
+  if (
+    commit.author?.login !== 'dependabot[bot]' ||
+    commit.commit.verification.verified !== true ||
+    (await repo.pull(pull.number)).head.sha !== metadataSha
+  )
+    throw new Error(
+      'Fresh intake requires a single signed Dependabot commit at the unchanged head',
+    );
+}
 
 function updates(value: unknown): DependencyUpdate[] {
   if (
@@ -166,6 +197,7 @@ async function intake(repo: Repository, pull: PullRequest) {
   if (process.env.DEPENDABOT_METADATA) {
     if (env('METADATA_SHA') !== pull.head.sha)
       throw new Error('Metadata is for a stale Dependabot head');
+    await authenticateNativeHead(repo, pull, env('METADATA_SHA'));
     const receipt = {
       pr: pull.number,
       headSha: pull.head.sha,
@@ -217,11 +249,25 @@ export async function runDependabotPullRequest(
     const existing = await repo.api.optional<{ object: { sha: string } }>(
       `${repo.path}/git/ref/heads/${encodeURIComponent(branch)}`,
     );
-    if (!existing)
-      await repo.api.request('POST', `${repo.path}/git/refs`, {
-        ref: `refs/heads/${branch}`,
-        sha: head,
-      });
+    if (existing && existing.object.sha !== head)
+      throw new Error(
+        'Release branch appeared with a different head; restart routing',
+      );
+    if (!existing) {
+      try {
+        await repo.api.request('POST', `${repo.path}/git/refs`, {
+          ref: `refs/heads/${branch}`,
+          sha: head,
+        });
+      } catch (error) {
+        if (!(
+          error instanceof GitHubError &&
+          error.status === 422 &&
+          (await repo.ref(branch)) === head
+        ))
+          throw error;
+      }
+    }
     await repo.milestone(parseReleaseBranch(branch).version);
   }
   if (!branch) throw new Error('No release branch selected');
@@ -231,6 +277,10 @@ export async function runDependabotPullRequest(
       base: branch,
     });
   const afterSync = async (previous: PullRequest) => {
+    if (previous.head.sha !== receipt.headSha)
+      throw new Error(
+        'Synchronization no longer starts at the authenticated intake head',
+      );
     const fresh = await repo.pull(number);
     const commit = await repo.api.request<unknown>(
       'GET',
@@ -266,9 +316,28 @@ export async function runDependabotPullRequest(
   await mergeReady(
     repo,
     number,
-    async () =>
-      (await repo.pull(number)).base.ref === branch &&
-      (await repo.frozenReleases()).length === 0,
+    async () => {
+      const current = await inspectDependabotPullRequest(repo, number);
+      if (
+        !current ||
+        current.base.ref !== branch ||
+        current.head.sha !== receipt.headSha
+      )
+        return false;
+      const authenticated = readIntake(
+        await repo.comments(number),
+        number,
+        current.head.sha,
+        positiveInteger(env('APP_BOT_ID')),
+        env('APP_SLUG'),
+      );
+      return (
+        authenticated?.originalSha === receipt.originalSha &&
+        JSON.stringify(authenticated.updates) ===
+          JSON.stringify(receipt.updates) &&
+        (await repo.frozenReleases()).length === 0
+      );
+    },
     afterSync,
   );
 }
