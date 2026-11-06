@@ -1000,12 +1000,14 @@ await test('concurrent milestone and release creation reuse the winner without o
     async () => {
       let refExists = false,
         routed = '';
+      const synchronizedHead = 'b'.repeat(40);
+      let synchronizedCheck: unknown = null;
       const native = {
         ...pull,
         state: 'open',
         merged: false,
         head: { ...pull.head, ref: 'dependabot/npm/test', sha },
-        base: { ...pull.base, ref: 'main' },
+        base: { ...pull.base, ref: 'main', sha: 'd'.repeat(40) },
       };
       const repo = new Repository(
         'herokwon/blog',
@@ -1017,6 +1019,18 @@ await test('concurrent milestone and release creation reuse the winner without o
               : input instanceof URL
                 ? input.href
                 : input.url;
+          if (url.includes('/check-runs') && init?.method === 'POST') {
+            synchronizedCheck = {
+              ...(JSON.parse(requestBody(init)) as object),
+              id: 10,
+              app: { id: 456, slug: 'blog-bot' },
+            };
+            return Response.json(synchronizedCheck);
+          }
+          if (url.includes(`/commits/${synchronizedHead}/check-runs`))
+            return Response.json({
+              check_runs: synchronizedCheck ? [synchronizedCheck] : [],
+            });
           if (url.includes('/check-runs'))
             return Response.json({
               check_runs: [
@@ -1033,6 +1047,12 @@ await test('concurrent milestone and release creation reuse the winner without o
                   ],
                 }),
               ],
+            });
+          if (url.endsWith(`/commits/${synchronizedHead}`))
+            return Response.json({
+              author: { id: 123 },
+              commit: { verification: { verified: true } },
+              parents: [{ sha }, { sha }],
             });
           if (url.endsWith('/git/refs') && init?.method === 'POST') {
             refExists = true;
@@ -1051,16 +1071,20 @@ await test('concurrent milestone and release creation reuse the winner without o
           throw new Error(`Unexpected creation request: ${url}`);
         }),
       );
-      repo.pull = async () => native;
+      repo.pull = async () => structuredClone(native);
       repo.ref = async () => sha;
       repo.version = async () => '1.2.0';
       repo.frozenReleases = async () => [];
       repo.milestone = async () => 1;
       repo.assignMilestone = async () => {};
-      repo.synchronize = async () => false;
+      repo.synchronize = async () => {
+        native.head.sha = synchronizedHead;
+        return true;
+      };
       repo.comments = async () => [];
       await runDependabotPullRequest(repo, 3);
       assert.equal(routed, 'release/1.2.1');
+      assert.ok(synchronizedCheck);
     },
   );
 });
@@ -1085,8 +1109,11 @@ await test('push deployment resolves only the exact merged PR on the pushed prot
   assert.equal(await mergedPullForPush(repo, sha, 'release/0.1.0'), null);
 });
 
-await test('native environment evidence accepts the human actor through its authenticated GitHub Actions App', async () => {
-  let appId = 15368;
+await test('native environment evidence correlates absent App attribution with the run actor and environment branch', async () => {
+  let appId: number | null = null,
+    actorId = 171362987,
+    branch = 'release/0.1.1',
+    workerResult = 'success';
   const repo = new Repository(
     'herokwon/blog',
     'token',
@@ -1104,7 +1131,7 @@ await test('native environment evidence accepts the human actor through its auth
             sha,
             environment: 'preview',
             creator: { id: 171362987 },
-            performed_via_github_app: { id: appId },
+            performed_via_github_app: appId === null ? null : { id: appId },
           },
         ]);
       if (url.includes('/statuses'))
@@ -1121,6 +1148,8 @@ await test('native environment evidence accepts the human actor through its auth
           head_sha: sha,
           event: 'push',
           path: '.github/workflows/deployment.yml',
+          head_branch: branch,
+          actor: { id: actorId },
         });
       if (url.includes('/jobs'))
         return Response.json({
@@ -1129,13 +1158,27 @@ await test('native environment evidence accepts the human actor through its auth
               id: 3,
               name: 'Deploy Worker',
               status: 'completed',
-              conclusion: 'success',
+              conclusion: workerResult,
             },
           ],
         });
       throw new Error(`Unexpected native evidence request: ${url}`);
     }),
   );
+  assert.deepEqual(await repo.verifiedDeployment(sha, 'preview'), {
+    deploymentId: 1,
+    runId: 2,
+  });
+  actorId = 999;
+  assert.equal(await repo.verifiedDeployment(sha, 'preview'), null);
+  actorId = 171362987;
+  branch = 'main';
+  assert.equal(await repo.verifiedDeployment(sha, 'preview'), null);
+  branch = 'release/0.1.1';
+  workerResult = 'failure';
+  assert.equal(await repo.verifiedDeployment(sha, 'preview'), null);
+  workerResult = 'success';
+  appId = 15368;
   assert.deepEqual(await repo.verifiedDeployment(sha, 'preview'), {
     deploymentId: 1,
     runId: 2,
