@@ -49,7 +49,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Resolve Actual Merged Target
@@ -161,7 +161,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Verify Successful Production Delivery
@@ -190,7 +190,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Upsert Minimal Result
@@ -222,7 +222,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Create Cleanup Token
