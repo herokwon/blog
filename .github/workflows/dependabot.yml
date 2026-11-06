@@ -42,7 +42,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Create GitHub App Token
@@ -57,17 +57,21 @@ jobs:
           permission-actions: read
           permission-deployments: read
           permission-workflows: write
+          permission-checks: write
       - name: Resolve App Identity
         id: identity
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           APP_SLUG: ${{ steps.app.outputs.app-slug }}
-        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+          echo "app-id=$(gh api "/apps/${APP_SLUG}" --jq .id)" >> "$GITHUB_OUTPUT"
       - name: Inspect Current PR
         id: inspect
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           APP_BOT_ID: ${{ steps.identity.outputs.id }}
+          APP_ID: ${{ steps.identity.outputs.app-id }}
           APP_SLUG: ${{ steps.app.outputs.app-slug }}
           EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node .github/scripts/delivery/dependabot.ts inspect
@@ -82,6 +86,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           APP_BOT_ID: ${{ steps.identity.outputs.id }}
+          APP_ID: ${{ steps.identity.outputs.app-id }}
           APP_SLUG: ${{ steps.app.outputs.app-slug }}
           METADATA_SHA: ${{ steps.inspect.outputs.head-sha }}
           DEPENDABOT_METADATA: ${{ steps.metadata.outputs.updated-dependencies-json }}

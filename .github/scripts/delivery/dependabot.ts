@@ -76,7 +76,23 @@ function updates(value: unknown): DependencyUpdate[] {
     })
   )
     throw new Error('Invalid verified dependency metadata');
-  return value as DependencyUpdate[];
+  return (value as DependencyUpdate[]).map(
+    ({
+      dependencyName,
+      dependencyType,
+      packageEcosystem,
+      updateType,
+      prevVersion,
+      newVersion,
+    }) => ({
+      dependencyName,
+      dependencyType,
+      packageEcosystem,
+      updateType,
+      prevVersion,
+      newVersion,
+    }),
+  );
 }
 
 export function readIntake(
@@ -100,26 +116,31 @@ export function readIntake(
       comment.body,
     );
     if (!match) continue;
-    try {
-      const receipt = object(JSON.parse(match[1]));
-      if (
-        receipt?.pr !== pr ||
-        receipt.headSha !== sha ||
-        typeof receipt.originalSha !== 'string' ||
-        !/^[a-f0-9]{40}$/.test(receipt.originalSha)
-      )
-        continue;
-      return {
-        pr,
-        headSha: sha,
-        originalSha: receipt.originalSha,
-        updates: updates(receipt.updates),
-      };
-    } catch {
-      return null;
-    }
+    const receipt = parseReceipt(match[1], pr, sha);
+    if (receipt) return receipt;
   }
   return null;
+}
+
+function parseReceipt(text: string, pr: number, sha: string): Intake | null {
+  try {
+    const receipt = object(JSON.parse(text));
+    if (
+      receipt?.pr !== pr ||
+      receipt.headSha !== sha ||
+      typeof receipt.originalSha !== 'string' ||
+      !/^[a-f0-9]{40}$/.test(receipt.originalSha)
+    )
+      return null;
+    return {
+      pr,
+      headSha: sha,
+      originalSha: receipt.originalSha,
+      updates: updates(receipt.updates),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function validSynchronization(
@@ -159,41 +180,165 @@ export async function inspectDependabotPullRequest(
   return pull;
 }
 
-async function saveIntake(repo: Repository, receipt: Intake) {
-  if ((await repo.pull(receipt.pr)).head.sha !== receipt.headSha)
-    throw new Error('Dependabot head changed during intake');
-  const id = positiveInteger(env('APP_BOT_ID')),
-    slug = env('APP_SLUG');
-  const comments = await repo.comments(receipt.pr);
-  const existing = comments.find(
-    comment =>
-      comment.user.id === id &&
-      comment.user.login === `${slug}[bot]` &&
-      comment.body.startsWith('<!-- dependabot-intake:v1 '),
-  );
-  const body = `<!-- dependabot-intake:v1 ${JSON.stringify(receipt)} -->`;
-  if (existing)
-    await repo.api.request(
-      'PATCH',
-      `${repo.path}/issues/comments/${existing.id}`,
-      { body },
-    );
-  else
-    await repo.api.request(
-      'POST',
-      `${repo.path}/issues/${receipt.pr}/comments`,
-      { body },
-    );
+export function readCheckIntake(
+  checks: unknown[],
+  pr: number,
+  sha: string,
+  appId: number,
+  slug: string,
+): Intake | null {
+  for (const raw of checks) {
+    const check = object(raw),
+      app = object(check?.app),
+      detail = object(check?.output);
+    if (
+      check?.name !== 'Dependabot Intake' ||
+      app?.id !== appId ||
+      app.slug !== slug ||
+      check.head_sha !== sha ||
+      check.external_id !== `dependabot-intake:v1:${pr}` ||
+      check.status !== 'completed' ||
+      check.conclusion !== 'neutral' ||
+      typeof detail?.text !== 'string'
+    )
+      continue;
+    const receipt = parseReceipt(detail.text, pr, sha);
+    if (receipt) return receipt;
+  }
+  return null;
 }
 
-async function intake(repo: Repository, pull: PullRequest) {
-  const previous = readIntake(
-    await repo.comments(pull.number),
-    pull.number,
-    pull.head.sha,
-    positiveInteger(env('APP_BOT_ID')),
+async function checkIntake(repo: Repository, pr: number, sha: string) {
+  const checks = await repo.api.paginate<unknown>(
+    `${repo.path}/commits/${sha}/check-runs?filter=all`,
+    'check_runs',
+  );
+  return readCheckIntake(
+    checks,
+    pr,
+    sha,
+    positiveInteger(env('APP_ID')),
     env('APP_SLUG'),
   );
+}
+
+export async function saveIntake(repo: Repository, receipt: Intake) {
+  const normalized = { ...receipt, updates: updates(receipt.updates) };
+  const existing = await checkIntake(repo, receipt.pr, receipt.headSha);
+  if (existing && JSON.stringify(existing) !== JSON.stringify(normalized))
+    throw new Error('Conflicting authenticated intake check');
+  if (!existing)
+    await repo.api.request('POST', `${repo.path}/check-runs`, {
+      name: 'Dependabot Intake',
+      head_sha: receipt.headSha,
+      external_id: `dependabot-intake:v1:${receipt.pr}`,
+      status: 'completed',
+      conclusion: 'neutral',
+      output: {
+        title: 'Verified Dependabot intake',
+        summary:
+          'Provenance only; CI and review are required separately. Synchronization is App-only.',
+        text: JSON.stringify(normalized),
+      },
+    });
+  if (
+    JSON.stringify(await checkIntake(repo, receipt.pr, receipt.headSha)) !==
+    JSON.stringify(normalized)
+  )
+    throw new Error('Intake check read-back failed; legacy comments retained');
+}
+
+export async function migrateIntake(repo: Repository, number: number) {
+  const id = positiveInteger(env('APP_BOT_ID')),
+    slug = env('APP_SLUG');
+  for (const comment of await repo.comments(number)) {
+    const match = /^<!-- dependabot-intake:v1 (\{[^\r\n]*\}) -->$/.exec(
+      comment.body,
+    );
+    if (!match) continue;
+    let value: Record<string, unknown> | null;
+    try {
+      value = object(JSON.parse(match[1]));
+    } catch {
+      continue;
+    }
+    if (
+      typeof value?.headSha !== 'string' ||
+      !/^[a-f0-9]{40}$/.test(value.headSha)
+    )
+      continue;
+    const receipt = readIntake([comment], number, value.headSha, id, slug);
+    if (!receipt) continue;
+    await saveIntake(repo, receipt);
+    const current = await repo.api.request<{
+      body: string;
+      user: { id: number; login: string; type: string };
+    }>('GET', `${repo.path}/issues/comments/${comment.id}`);
+    if (
+      current.body === comment.body &&
+      readIntake([current], number, receipt.headSha, id, slug)
+    )
+      await repo.api.request(
+        'DELETE',
+        `${repo.path}/issues/comments/${comment.id}`,
+      );
+  }
+}
+
+export async function resolveIntake(repo: Repository, pull: PullRequest) {
+  await migrateIntake(repo, pull.number);
+  const exact = await checkIntake(repo, pull.number, pull.head.sha);
+  if (exact) return exact;
+  // Recover a write interrupted after an App synchronization, never a human merge.
+  const commit = await repo.api.request<unknown>(
+    'GET',
+    `${repo.path}/commits/${pull.head.sha}`,
+  );
+  const parents = object(commit)?.parents;
+  const parent = Array.isArray(parents) ? object(parents[0])?.sha : null;
+  const mergedBase = Array.isArray(parents) ? object(parents[1])?.sha : null;
+  if (
+    typeof parent === 'string' &&
+    /^[a-f0-9]{40}$/.test(parent) &&
+    typeof mergedBase === 'string' &&
+    /^[a-f0-9]{40}$/.test(mergedBase) &&
+    validSynchronization(
+      commit,
+      parent,
+      mergedBase,
+      positiveInteger(env('APP_BOT_ID')),
+    )
+  ) {
+    if (mergedBase !== pull.base.sha) {
+      const comparison = await repo.api.request<{ status: string }>(
+        'GET',
+        `${repo.path}/compare/${mergedBase}...${pull.base.sha}`,
+      );
+      if (!['ahead', 'identical'].includes(comparison.status)) return null;
+    }
+    const previous = await checkIntake(repo, pull.number, parent);
+    if (previous) {
+      const next = { ...previous, headSha: pull.head.sha };
+      await saveIntake(repo, next);
+      return next;
+    }
+  }
+  return null;
+}
+
+export async function nativeIntakeAllowed(repo: Repository, pull: PullRequest) {
+  const commits = await repo.api.paginate<{ sha: string }>(
+    `${repo.path}/pulls/${pull.number}/commits`,
+  );
+  return commits.length === 1 && commits[0].sha === pull.head.sha;
+}
+
+const recovery =
+  'Dependabot head has no authenticated intake. Only App synchronization is supported. Obtain a fresh native Dependabot update (for example, request Dependabot to recreate the PR), then resume routing; alternatively review and merge manually under repository policy. Do not copy old receipts to the new SHA.';
+
+async function intake(repo: Repository, pull: PullRequest) {
+  const previous = await resolveIntake(repo, pull);
+  if (previous) return previous;
   if (process.env.DEPENDABOT_METADATA) {
     if (env('METADATA_SHA') !== pull.head.sha)
       throw new Error('Metadata is for a stale Dependabot head');
@@ -207,11 +352,7 @@ async function intake(repo: Repository, pull: PullRequest) {
     await saveIntake(repo, receipt);
     return receipt;
   }
-  if (!previous)
-    throw new Error(
-      'Verified intake missing; trigger a fresh Dependabot update before manual resumption',
-    );
-  return previous;
+  throw new Error(recovery);
 }
 
 export async function runDependabotPullRequest(
@@ -290,7 +431,7 @@ export async function runDependabotPullRequest(
       !validSynchronization(
         commit,
         previous.head.sha,
-        previous.base.sha,
+        await repo.ref(previous.base.ref),
         positiveInteger(env('APP_BOT_ID')),
       )
     )
@@ -324,13 +465,7 @@ export async function runDependabotPullRequest(
         current.head.sha !== receipt.headSha
       )
         return false;
-      const authenticated = readIntake(
-        await repo.comments(number),
-        number,
-        current.head.sha,
-        positiveInteger(env('APP_BOT_ID')),
-        env('APP_SLUG'),
-      );
+      const authenticated = await checkIntake(repo, number, current.head.sha);
       return (
         authenticated?.originalSha === receipt.originalSha &&
         JSON.stringify(authenticated.updates) ===
@@ -350,13 +485,9 @@ if (import.meta.main)
       const pull = await inspectDependabotPullRequest(repo, number);
       output('active', Boolean(pull));
       if (!pull) return;
-      const receipt = readIntake(
-        await repo.comments(number),
-        number,
-        pull.head.sha,
-        positiveInteger(env('APP_BOT_ID')),
-        env('APP_SLUG'),
-      );
+      const receipt = await resolveIntake(repo, pull);
+      if (!receipt && !(await nativeIntakeAllowed(repo, pull)))
+        throw new Error(recovery);
       if (
         !receipt &&
         (process.env.GITHUB_EVENT_NAME !== 'pull_request_target' ||

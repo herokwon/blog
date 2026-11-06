@@ -26,7 +26,11 @@ env:
 jobs:
   resolve-release-version:
     name: Resolve Release Version
-    if: github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.user.login != 'dependabot[bot]' &&
+      startsWith(github.head_ref, 'release/') &&
+      !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -59,7 +63,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Create Metadata Token
@@ -134,7 +138,12 @@ jobs:
   verify-release-version:
     name: Release Readiness
     needs: [resolve-release-version, prepare-version-bump]
-    if: always() && (github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft)
+    if: >-
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.user.login != 'dependabot[bot]' &&
+      startsWith(github.head_ref, 'release/') &&
+      !github.event.pull_request.draft))
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -157,7 +166,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Verify Current Release Version and Preview

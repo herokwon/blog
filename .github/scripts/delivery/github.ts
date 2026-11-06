@@ -118,6 +118,7 @@ export type Run = {
   run_attempt: number;
   path: string;
   event: string;
+  actor?: { id: number };
 };
 export type Job = {
   id: number;
@@ -289,7 +290,11 @@ export class Repository {
     const deployment = deployments
       .filter(item => item.sha === sha && item.environment === environment)
       .sort((a, b) => b.id - a.id)[0];
-    if (!deployment || deployment.performed_via_github_app?.id !== 15368)
+    if (
+      !deployment ||
+      (deployment.performed_via_github_app !== null &&
+        deployment.performed_via_github_app?.id !== 15368)
+    )
       return null;
     const statuses = await this.api.request<DeploymentStatus[]>(
       'GET',
@@ -312,7 +317,16 @@ export class Repository {
     if (
       run.head_sha !== sha ||
       run.path.split('@')[0] !== '.github/workflows/deployment.yml' ||
-      !['push', 'workflow_dispatch'].includes(run.event)
+      !['push', 'workflow_dispatch'].includes(run.event) ||
+      !(
+        (environment === 'production' && run.head_branch === 'main') ||
+        (environment === 'preview' &&
+          /^release\/(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(
+            run.head_branch,
+          ))
+      ) ||
+      (deployment.performed_via_github_app === null &&
+        deployment.creator.id !== run.actor?.id)
     )
       return null;
     const jobs = await this.api.paginate<Job>(
