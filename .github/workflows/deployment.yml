@@ -1,8 +1,7 @@
 name: 🚀 Deployment
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches: [main, 'release/*']
   workflow_dispatch:
     inputs:
@@ -22,15 +21,14 @@ permissions:
 
 env:
   GH_REPO: ${{ github.repository }}
-  PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr-number }}
+  PR_NUMBER: ${{ inputs.pr-number }}
 
 jobs:
   resolve-deployment:
     name: Resolve Deployment
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.merged == true &&
-      github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'push' && !github.event.created)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -199,7 +197,7 @@ jobs:
           WORKER_SUCCEEDED: ${{ needs.deploy-worker.result == 'success' || needs.release-github.outputs.worker-verified == 'true' }}
           PUBLICATION_SUCCEEDED: ${{ needs.release-github.result == 'success' }}
           RELEASE_URL: ${{ needs.release-github.outputs.release-url }}
-          FAILED_STAGE: ${{ needs.deploy-worker.outputs.failed-stage || 'Release publication' }}
+          FAILED_STAGE: ${{ needs.deploy-worker.outputs.failed-stage || (inputs.mode == 'publish' && 'Release publication' || 'Deployment setup') }}
         run: node .github/scripts/delivery/deployment.ts comment
 
   cleanup:

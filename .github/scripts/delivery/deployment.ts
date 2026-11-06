@@ -10,6 +10,7 @@ import {
   type Release,
 } from './github.ts';
 import {
+  parseReleaseBranch,
   resolveTarget,
   type DeploymentTarget,
   type PullRequest,
@@ -24,6 +25,30 @@ export async function resolveDeployment(repo: Repository, number: number) {
   )
     return null;
   return resolveTarget(pull, repo.name, await repo.ref(pull.base.ref));
+}
+
+export async function mergedPullForPush(
+  repo: Repository,
+  sha: string,
+  branch: string,
+): Promise<number | null> {
+  if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('Invalid pushed commit');
+  if (branch !== 'main') parseReleaseBranch(branch);
+  const related = await repo.api.paginate<PullRequest>(
+    `${repo.path}/commits/${sha}/pulls`,
+  );
+  const matching = related.filter(
+    pull =>
+      pull.state === 'closed' &&
+      (pull.merged || pull.merged_at) &&
+      pull.merge_commit_sha === sha &&
+      pull.base.ref === branch &&
+      pull.base.repo.full_name === repo.name &&
+      pull.head.repo?.full_name === repo.name,
+  );
+  if (matching.length > 1)
+    throw new Error('Ambiguous merged PR for pushed commit');
+  return matching[0]?.number ?? null;
 }
 
 async function assertCurrent(repo: Repository, target: DeploymentTarget) {
@@ -256,7 +281,22 @@ if (import.meta.main)
   await main(async () => {
     const repo = new Repository();
     if (process.argv[2] === 'resolve') {
-      const target = await resolveDeployment(repo, prNumber());
+      let number: number | null;
+      if (process.env.GITHUB_EVENT_NAME === 'push') {
+        const sha = env('GITHUB_SHA'),
+          branch = env('GITHUB_REF_NAME');
+        number = await mergedPullForPush(repo, sha, branch);
+        const deadline = Date.now() + 60_000;
+        while (
+          !number &&
+          Date.now() < deadline &&
+          (await repo.ref(branch)) === sha
+        ) {
+          await sleep(10_000);
+          number = await mergedPullForPush(repo, sha, branch);
+        }
+      } else number = prNumber();
+      const target = number ? await resolveDeployment(repo, number) : null;
       output('active', Boolean(target));
       if (!target) {
         summary(

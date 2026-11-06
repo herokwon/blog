@@ -13,6 +13,7 @@ import {
 } from './dependabot.ts';
 import {
   cleanup,
+  mergedPullForPush,
   publishRelease,
   renderComment,
   verifyHttp,
@@ -725,6 +726,7 @@ await test('new failed delivery blocks older success and native PR-head runs nee
             sha,
             environment: 'production',
             creator: { id: 41898282 },
+            performed_via_github_app: { id: 15368 },
           })),
         );
       if (url.includes('/deployments/') && url.includes('/statuses'))
@@ -918,4 +920,83 @@ await test('concurrent milestone and release creation reuse the winner without o
       assert.equal(routed, 'release/1.2.1');
     },
   );
+});
+
+await test('push deployment resolves only the exact merged PR on the pushed protected branch', async () => {
+  let associated = [pull];
+  const repo = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async () => Response.json(associated)),
+  );
+  assert.equal(await mergedPullForPush(repo, sha, 'release/0.1.0'), 3);
+  associated = [{ ...pull, merge_commit_sha: 'b'.repeat(40) }];
+  assert.equal(await mergedPullForPush(repo, sha, 'release/0.1.0'), null);
+  associated = [{ ...pull, base: { ...pull.base, ref: 'main' } }];
+  assert.equal(await mergedPullForPush(repo, sha, 'release/0.1.0'), null);
+  associated = [{ ...pull, merged: false, state: 'open' }];
+  assert.equal(await mergedPullForPush(repo, sha, 'release/0.1.0'), null);
+  associated = [
+    { ...pull, head: { ...pull.head, repo: { full_name: 'someone/blog' } } },
+  ];
+  assert.equal(await mergedPullForPush(repo, sha, 'release/0.1.0'), null);
+});
+
+await test('native environment evidence accepts the human actor through its authenticated GitHub Actions App', async () => {
+  let appId = 15368;
+  const repo = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async input => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.includes('/deployments?'))
+        return Response.json([
+          {
+            id: 1,
+            sha,
+            environment: 'preview',
+            creator: { id: 171362987 },
+            performed_via_github_app: { id: appId },
+          },
+        ]);
+      if (url.includes('/statuses'))
+        return Response.json([
+          {
+            state: 'success',
+            creator: { id: 171362987 },
+            log_url: 'https://github.com/herokwon/blog/actions/runs/2/job/3',
+          },
+        ]);
+      if (url.endsWith('/actions/runs/2'))
+        return Response.json({
+          id: 2,
+          head_sha: sha,
+          event: 'push',
+          path: '.github/workflows/deployment.yml',
+        });
+      if (url.includes('/jobs'))
+        return Response.json({
+          jobs: [
+            {
+              id: 3,
+              name: 'Deploy Worker',
+              status: 'completed',
+              conclusion: 'success',
+            },
+          ],
+        });
+      throw new Error(`Unexpected native evidence request: ${url}`);
+    }),
+  );
+  assert.deepEqual(await repo.verifiedDeployment(sha, 'preview'), {
+    deploymentId: 1,
+    runId: 2,
+  });
+  appId = 999;
+  assert.equal(await repo.verifiedDeployment(sha, 'preview'), null);
 });
