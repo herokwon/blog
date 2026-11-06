@@ -35,7 +35,7 @@ Keep the existing GitHub Actions baseline. Separate merge validation from deploy
 - Use stable release branches named `release/X.Y.Z`, package versions `X.Y.Z`, and Git tags `vX.Y.Z`. Ordinary implementation work does not bump the package version.
 - When a same-repository, non-draft release PR targets `main`, prepare or reuse an App-owned `automation/release/X.Y.Z` PR targeting the release branch. Update the package version and any affected lockfile without creating a tag. Synchronize the preparation branch without force pushing.
 - Merge the preparation PR only after its current-head CI and Codex review satisfy automatic-merge policy. A required release-version check on the original PR verifies the actual release branch version; opening the preparation PR does not make the release ready.
-- Require successful preview deployment and HTTP verification for the latest release head before production integration. Integrate `release/* -> main` through a reviewed merge-commit PR; fixes follow the same release path.
+- Require successful preview deployment and active-version/commit verification for the latest release head before production integration. Integrate `release/* -> main` through a reviewed merge-commit PR; fixes follow the same release path.
 - Freeze a release after production integration and retain it for recovery. Queue dependency routing while production completion is pending. After successful deployment, publication, and verification, perform verified branch cleanup and resume dependency routing.
 
 ### Independent deployment
@@ -51,9 +51,9 @@ Keep the existing GitHub Actions baseline. Separate merge validation from deploy
 ### Verification, publication, and recovery
 
 - Use the deployment job's GitHub Environment integration for native Deployment records and statuses. Do not create a duplicate Deployment record in a separate job.
-- After deployment, require the environment's root URL to return HTTP 200 and the expected HTML within a bounded verification period. A build, deployment, or HTTP verification failure fails the deployment job. Do not add a dedicated application health endpoint solely for this pipeline.
-- Preserve Cloudflare Bot Fight Mode. When it challenges a plain HTTP probe, use the existing Playwright dependency and the hosted runner's Chrome to verify the real page in a fresh browser context. Require the final same-origin root document to return HTTP 200 with the expected title. Do not weaken zone protections or solve interactive challenges; a persistent challenge remains a failed verification.
-- Only after verified production deployment, create `vX.Y.Z` and its GitHub Release at the exact deployed SHA. Reuse an existing matching tag or release and finish missing publication steps; fail on a tag pointing to another commit rather than moving it.
+- After deployment, require the Cloudflare API to confirm a version receiving 100% of traffic whose `workers/tag` annotation matches the actual merged commit. Build, deployment, or activation-proof failure fails the deployment job.
+- Preserve Bot Fight Mode. Public HTTP responses are advisory and do not determine deployment success: both plain and fresh-browser probes were challenged in the first live rollout. Keep one short public HTTP request for diagnostics; remove browser verification and do not add a health endpoint or weaken zone protections.
+- Only after activation-verified production deployment, create `vX.Y.Z` and its GitHub Release at the exact deployed SHA. Reuse an existing matching tag or release and finish missing publication steps; fail on a tag pointing to another commit rather than moving it.
 - Keep Worker deployment success separate from publication success. If release publication fails, recover the missing tag/release operation without requiring another successful Worker deployment. Retry installation/build, deployment, and HTTP verification according to the failed stage; do not perform automatic rollback initially.
 - Maintain one automation-owned PR comment per environment. Success shows the environment, site URL, commit, and run logs, plus the Release link for production. Failure shows the failed stage, a short reason, commit, and logs. Report publication failure as `Production deployed; release publication failed`.
 - Preserve explicit issue and milestone closure rules from `AGENTS.md`. Pending or failed deployment, publication, or required verification does not count as completion.
@@ -67,8 +67,8 @@ Keep the existing GitHub Actions baseline. Separate merge validation from deploy
 
 ## Consequences
 
-- Deployment rebuilds code validated before merging; its output is not the same artifact exercised by CI E2E. Locked dependencies and pinned runtimes reduce variation, while HTTP verification checks the deployed service.
+- Deployment rebuilds code validated before merging; its output is not the same artifact exercised by CI E2E. Locked dependencies and pinned runtimes reduce variation. Activation proof confirms the running Worker version, not public URL availability or application health.
 - The pipeline remains dependent on repository rulesets, App installation permissions, environment credentials, and native Codex review availability. Missing review evidence may require a manual request and another automation run.
-- A failed HTTP check may occur after a new Worker version is already serving traffic. Recovery remains an explicit owner action; automatic rollback is deferred.
+- Activation-proof failure may occur after a new Worker version is already serving traffic. Inspect actual state before recovery; automatic rollback is deferred. Bot-protection challenges are reported without treating a successful activation as a deployment failure.
 - Successful Worker delivery can coexist with failed GitHub publication. Retry and cleanup logic must preserve this distinction and existing immutable release references.
 - Keep workflow mechanics and exact configuration in their implementation files, and recurring operating instructions in `AGENTS.md`. Commit this ADR before implementing the delivery changes.
