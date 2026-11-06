@@ -1,0 +1,166 @@
+name: 🔖 Release Version Bump
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Release PR number to resume
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: release-version-${{ github.event.pull_request.number || inputs.pr-number }}
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr-number }}
+
+jobs:
+  resolve-release-version:
+    name: Resolve Release Version
+    if: github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      branch: ${{ steps.resolve.outputs.branch }}
+      version: ${{ steps.resolve.outputs.version }}
+      app-slug: ${{ steps.app.outputs.app-slug }}
+      app-id: ${{ steps.identity.outputs.id }}
+    steps:
+      - name: Validate Protected Release Source
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GH_REPO/pulls/$PR_NUMBER" > "$RUNNER_TEMP/release-pr.json"
+          jq -e --arg repo "$GH_REPO" '.state == "open" and .draft == false and .base.ref == "main" and .head.repo.full_name == $repo and .base.repo.full_name == $repo' "$RUNNER_TEMP/release-pr.json" > /dev/null
+          BRANCH=$(jq -r '.head.ref' "$RUNNER_TEMP/release-pr.json")
+          [[ "$BRANCH" =~ ^release/(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          ENCODED=$(jq -rn --arg ref "$BRANCH" '$ref | @uri')
+          gh api "repos/$GH_REPO/branches/$ENCODED" --jq '.protected' | grep -qx true
+          echo "sha=$(jq -r '.head.sha' "$RUNNER_TEMP/release-pr.json")" >> "$GITHUB_OUTPUT"
+      - name: Checkout Protected Release Automation
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+      - name: Create Metadata Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BLOG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BLOG_BOT_PRIVATE_KEY }}
+          permission-contents: read
+          permission-pull-requests: write
+          permission-issues: write
+      - name: Resolve App Identity
+        id: identity
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+      - name: Resolve Version and Milestone
+        id: resolve
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: node .github/scripts/delivery/release-version.ts resolve
+
+  prepare-version-bump:
+    name: Prepare Version Bump
+    needs: resolve-release-version
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Release Commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-release-version.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Environment
+        uses: ./.github/actions/setup-env
+      - name: Prepare Changes Without Mutation Credentials
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_BOT_ID: ${{ needs.resolve-release-version.outputs.app-id }}
+          APP_SLUG: ${{ needs.resolve-release-version.outputs.app-slug }}
+        run: node .github/scripts/delivery/release-version.ts prepare
+      - name: Create Mutation Token
+        if: steps.prepare.outputs.needs-pr == 'true'
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BLOG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BLOG_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-actions: read
+          permission-deployments: read
+      - name: Configure Authenticated Git
+        if: steps.prepare.outputs.needs-pr == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh auth setup-git
+      - name: Publish and Conditionally Merge Preparation
+        if: steps.prepare.outputs.needs-pr == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_BOT_ID: ${{ needs.resolve-release-version.outputs.app-id }}
+          APP_SLUG: ${{ needs.resolve-release-version.outputs.app-slug }}
+          VERSION_BRANCH: ${{ steps.prepare.outputs.branch }}
+          PREPARED_SHA: ${{ steps.prepare.outputs.head-sha }}
+        run: node .github/scripts/delivery/release-version.ts publish
+
+  verify-release-version:
+    name: Release Readiness
+    needs: [resolve-release-version, prepare-version-bump]
+    if: always() && (github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      pull-requests: read
+      deployments: read
+      actions: read
+    steps:
+      - name: Require Successful Preparation
+        env:
+          RESOLVE_RESULT: ${{ needs.resolve-release-version.result }}
+          PREPARE_RESULT: ${{ needs.prepare-version-bump.result }}
+        run: test "$RESOLVE_RESULT" = success && test "$PREPARE_RESULT" = success
+      - name: Checkout Release Automation
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-release-version.outputs.sha }}
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+      - name: Verify Current Release Version and Preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/delivery/release-version.ts verify

@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+node_modules/
+.svelte-kit/
+.wrangler/
+coverage/
+test-results/
+playwright-report/
+drizzle/
+.superpowers/
+static/
