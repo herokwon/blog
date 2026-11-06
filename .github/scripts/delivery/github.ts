@@ -300,34 +300,11 @@ export class Repository {
       `${this.path}/actions/runs/${runId}`,
     );
     if (
+      run.head_sha !== sha ||
       run.path.split('@')[0] !== '.github/workflows/deployment.yml' ||
-      !['push', 'pull_request', 'workflow_dispatch'].includes(run.event)
+      !['push', 'workflow_dispatch'].includes(run.event)
     )
       return null;
-    if (run.head_sha !== sha) {
-      if (run.event !== 'pull_request') return null;
-      const related = await this.api.paginate<PullRequest>(
-        `${this.path}/commits/${sha}/pulls`,
-      );
-      const matches = related.some(pull => {
-        if (
-          !(pull.merged || pull.merged_at) ||
-          pull.merge_commit_sha !== sha ||
-          pull.head.sha !== run.head_sha ||
-          pull.head.repo?.full_name !== this.name ||
-          pull.base.repo.full_name !== this.name
-        )
-          return false;
-        if (environment === 'production') return pull.base.ref === 'main';
-        try {
-          parseReleaseBranch(pull.base.ref);
-          return true;
-        } catch {
-          return false;
-        }
-      });
-      if (!matches) return null;
-    }
     const jobs = await this.api.paginate<Job>(
       `${this.path}/actions/runs/${runId}/jobs?filter=latest`,
       'jobs',

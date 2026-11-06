@@ -104,9 +104,18 @@ jobs:
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
           command: deploy --env ${{ needs.resolve-deployment.outputs.environment }} --tag ${{ needs.resolve-deployment.outputs.sha }}
-      - name: Verify HTTP Response
-        id: http
-        run: node .github/scripts/delivery/deployment.ts verify-http
+      - name: Verify Active Worker Version
+        id: activation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: node .github/scripts/delivery/deployment.ts verify-worker
+      - name: Observe Public HTTP Status
+        continue-on-error: true
+        env:
+          PUBLIC_URL: ${{ needs.resolve-deployment.outputs.url }}
+        run: |
+          curl --silent --show-error --max-time 10 --output /dev/null --write-out 'Advisory public HTTP status (may be challenged): %{http_code}\n' "$PUBLIC_URL" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Record Failure Stage
         id: result
         if: always()
@@ -116,7 +125,7 @@ jobs:
           BUILD: ${{ steps.build.outcome }}
           CURRENT: ${{ steps.current.outcome }}
           DEPLOY: ${{ steps.deploy.outcome }}
-          HTTP: ${{ steps.http.outcome }}
+          ACTIVATION: ${{ steps.activation.outcome }}
         run: |
           STAGE=Deployment
           if [[ "$CHECKOUT" != success ]]; then STAGE=Checkout
@@ -124,7 +133,7 @@ jobs:
           elif [[ "$BUILD" != success ]]; then STAGE=Build
           elif [[ "$CURRENT" != success ]]; then STAGE='Target validation'
           elif [[ "$DEPLOY" != success ]]; then STAGE='Cloudflare deployment'
-          elif [[ "$HTTP" != success ]]; then STAGE='HTTP verification'
+          elif [[ "$ACTIVATION" != success ]]; then STAGE='Worker activation verification'
           fi
           echo "failed-stage=$STAGE" >> "$GITHUB_OUTPUT"
 
