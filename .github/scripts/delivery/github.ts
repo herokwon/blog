@@ -248,11 +248,21 @@ export class Repository {
   }
   async synchronize(pull: PullRequest) {
     if (!(await this.behind(pull))) return false;
-    await this.api.request(
-      'PUT',
-      `${this.path}/pulls/${pull.number}/update-branch`,
-      { expected_head_sha: pull.head.sha },
-    );
+    try {
+      await this.api.request(
+        'PUT',
+        `${this.path}/pulls/${pull.number}/update-branch`,
+        { expected_head_sha: pull.head.sha },
+      );
+    } catch (error) {
+      // A just-pushed head can reach the update endpoint before PR reads.
+      // Revalidate the new head on the next pass; never retry a stale write.
+      if (
+        !(error instanceof GitHubError && error.status === 422) ||
+        (await this.pull(pull.number)).head.sha === pull.head.sha
+      )
+        throw error;
+    }
     return true;
   }
   async tagSha(tag: string) {
