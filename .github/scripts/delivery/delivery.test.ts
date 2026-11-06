@@ -20,6 +20,7 @@ import {
   cleanup,
   mergedPullForPush,
   publishRelease,
+  renderComment,
   verifyWorkerActivation,
 } from './deployment.ts';
 import { GitHubClient, GitHubError, Repository } from './github.ts';
@@ -499,6 +500,163 @@ const production = {
   url: 'https://blog.herokwon.dev',
   version: '0.1.0',
 };
+
+await test('deployment comments separate stage outcomes and show the URL only for verified delivery', () => {
+  const updatedAt = '2026-11-07T00:00:00.000Z';
+  const logs = 'https://github.com/herokwon/blog/actions/runs/123';
+  const releaseUrl = 'https://github.com/herokwon/blog/releases/tag/v0.1.0';
+  const cases = [
+    {
+      name: 'preview success',
+      preview: true,
+      worker: true,
+      publication: false,
+      publicationResult: 'skipped',
+      release: '',
+      failed: '',
+    },
+    {
+      name: 'preview failure',
+      preview: true,
+      worker: false,
+      publication: false,
+      publicationResult: 'skipped',
+      release: '',
+      failed: 'Build',
+    },
+    {
+      name: 'preview ignores publication',
+      preview: true,
+      worker: true,
+      publication: true,
+      publicationResult: 'success',
+      release: '',
+      failed: '',
+    },
+    {
+      name: 'production success or recovered publication',
+      preview: false,
+      worker: true,
+      publication: true,
+      publicationResult: 'success',
+      release: '✅ **Published** · [v0.1.0](' + releaseUrl + ')',
+      failed: '',
+    },
+    {
+      name: 'publication failure after deployment or verified recovery',
+      preview: false,
+      worker: true,
+      publication: false,
+      publicationResult: 'failure',
+      release: '❌ **Failed**',
+      failed: 'Release publication',
+    },
+    {
+      name: 'deployment activation failure skips publication',
+      preview: false,
+      worker: false,
+      publication: false,
+      publicationResult: 'skipped',
+      release: '⏭️ **Not run**',
+      failed: 'Worker activation verification',
+    },
+    {
+      name: 'publication recovery fails before delivery verification',
+      preview: false,
+      worker: false,
+      publication: false,
+      publicationResult: 'failure',
+      release: '❌ **Failed**',
+      failed: 'Release publication',
+    },
+    {
+      name: 'cancelled publication is not skipped',
+      preview: false,
+      worker: true,
+      publication: false,
+      publicationResult: 'cancelled',
+      release: '❌ **Failed**',
+      failed: 'Release publication',
+    },
+  ];
+  for (const item of cases) {
+    const target = item.preview
+      ? {
+          ...production,
+          environment: 'preview' as const,
+          url: 'https://blog-preview.herokwon.dev',
+        }
+      : production;
+    const body = renderComment(target, 'herokwon/blog', logs, {
+      worker: item.worker,
+      publication: item.publication,
+      publicationResult: item.publicationResult,
+      stage:
+        item.failed === 'Release publication' && item.worker
+          ? 'Deployment'
+          : item.failed,
+      updatedAt,
+      releaseUrl,
+    });
+    assert.ok(
+      body.startsWith(
+        '<!-- deployment-result:' + target.environment + ' -->\n',
+      ),
+      item.name,
+    );
+    assert.ok(
+      body.includes(
+        'Commit: [`aaaaaaa`](https://github.com/herokwon/blog/commit/' +
+          sha +
+          ')',
+      ),
+      item.name,
+    );
+    assert.ok(
+      body.includes(
+        'Updated: <relative-time datetime="' +
+          updatedAt +
+          '">' +
+          updatedAt +
+          '</relative-time>',
+      ),
+      item.name,
+    );
+    assert.equal(body.split('[View logs](' + logs + ')').length, 2, item.name);
+    assert.equal(body.split('Commit:').length, 2, item.name);
+    assert.equal(body.split('Updated:').length, 2, item.name);
+    const tableAt = body.indexOf('| Stage | Status |\n| --- | --- |');
+    assert.ok(tableAt >= 0, item.name);
+    const name = item.preview
+      ? '🔍 **Preview deployment**'
+      : '🚀 **Production deployment**';
+    assert.ok(
+      body.includes(
+        '| ' +
+          name +
+          ' | ' +
+          (item.worker ? '✅ **Deployed**' : '❌ **Failed**') +
+          ' |',
+      ),
+      item.name,
+    );
+    if (item.worker) {
+      const linkAt = body.indexOf('Link: [View URL](' + target.url + ')');
+      assert.ok(linkAt >= 0 && linkAt < tableAt, item.name);
+      assert.equal(body.split(target.url).length, 2, item.name);
+    } else assert.ok(!body.includes(target.url), item.name);
+    if (item.preview) assert.ok(!body.includes('GitHub Release'), item.name);
+    else
+      assert.ok(
+        body.includes('| 📦 **GitHub Release** | ' + item.release + ' |'),
+        item.name,
+      );
+    if (item.failed) {
+      const failureAt = body.indexOf('Failed stage: **' + item.failed + '**');
+      assert.ok(failureAt > tableAt, item.name);
+    } else assert.ok(!body.includes('Failed stage:'), item.name);
+  }
+});
 
 await test('publication reuses exact-SHA tags and releases and never moves a conflicting tag', async () => {
   const requests: string[] = [];
