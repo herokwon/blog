@@ -70,7 +70,7 @@ export async function verifyWorkerActivation(
   )
     throw new Error('Active Worker version does not match the deployed commit');
   summary(
-    `Worker activation verified: ${target.workerName}, version ${version.id}, commit ${target.sha}. Public HTTP availability is not part of this proof.`,
+    `Worker activation verified\n\nWorker: ${target.workerName}  \nVersion: ${version.id}  \nCommit: ${target.sha}`,
   );
 }
 

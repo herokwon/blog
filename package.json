@@ -17,7 +17,7 @@
     "test:e2e": "playwright test",
     "lint": "prettier --check . && eslint . --max-warnings 0",
     "format": "prettier --write .",
-    "gen": "wrangler types && prettier --write worker-configuration.d.ts --ignore-path .prettierignore",
+    "gen": "wrangler types",
     "db:generate": "drizzle-kit generate"
   },
   "devDependencies": {
