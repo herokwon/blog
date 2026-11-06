@@ -17,7 +17,7 @@ import {
   publishRelease,
   verifyWorkerActivation,
 } from './deployment.ts';
-import { GitHubClient, Repository } from './github.ts';
+import { GitHubClient, GitHubError, Repository } from './github.ts';
 import {
   ciPassed,
   classifyUpdates,
@@ -1039,5 +1039,34 @@ await test('Worker activation requires 100 percent active traffic and the deploy
   await assert.rejects(
     verifyWorkerActivation(production, 'a'.repeat(32), 'test-token', transport),
     /Cloudflare API/,
+  );
+});
+
+await test('synchronization tolerates only a changed-head 422 and preserves other failures', async () => {
+  let status = 422;
+  let current = { ...pull, head: { ...pull.head, sha: 'c'.repeat(40) } };
+  let writes = 0;
+  const repo = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async () => {
+      writes++;
+      return new Response('', { status });
+    }),
+  );
+  repo.behind = async () => true;
+  repo.pull = async () => current;
+  assert.equal(await repo.synchronize(pull), true);
+  assert.equal(writes, 1);
+  current = pull;
+  await assert.rejects(
+    repo.synchronize(pull),
+    (error: unknown) => error instanceof GitHubError && error.status === 422,
+  );
+  current = { ...pull, head: { ...pull.head, sha: 'c'.repeat(40) } };
+  status = 403;
+  await assert.rejects(
+    repo.synchronize(pull),
+    (error: unknown) => error instanceof GitHubError && error.status === 403,
   );
 });
