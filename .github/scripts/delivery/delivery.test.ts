@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/require-await -- Fetch test doubles resolve without real I/O. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { once } from 'node:events';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -17,9 +15,7 @@ import {
   cleanup,
   mergedPullForPush,
   publishRelease,
-  renderComment,
-  verifyHttp,
-  verifyInBrowser,
+  verifyWorkerActivation,
 } from './deployment.ts';
 import { GitHubClient, Repository } from './github.ts';
 import {
@@ -483,33 +479,6 @@ const production = {
   version: '0.1.0',
 };
 
-await test('HTTP verification retries transient errors but fails on a non-HTML or wrong homepage', async () => {
-  let attempts = 0;
-  await verifyHttp(
-    production,
-    Date.now() + 1000,
-    async () => {
-      attempts++;
-      return attempts === 1
-        ? new Response('', { status: 503 })
-        : new Response('<title>Personal Blog</title>', {
-            headers: { 'content-type': 'text/html' },
-          });
-    },
-    async () => {},
-  );
-  assert.equal(attempts, 2);
-  await assert.rejects(
-    verifyHttp(
-      production,
-      Date.now() - 1,
-      async () => new Response('wrong'),
-      async () => {},
-    ),
-    /HTTP verification/,
-  );
-});
-
 await test('publication reuses exact-SHA tags and releases and never moves a conflicting tag', async () => {
   const requests: string[] = [];
   const repository = (tagSha: string) =>
@@ -547,26 +516,6 @@ await test('publication reuses exact-SHA tags and releases and never moves a con
     publishRelease(repository('b'.repeat(40)), production),
     /different commit/,
   );
-});
-
-await test('deployment comments distinguish successful delivery from publication failure with minimal content', () => {
-  const partial = renderComment(
-    production,
-    'herokwon/blog',
-    'https://github.com/herokwon/blog/actions/runs/1',
-    { worker: true, publication: false, stage: 'Release publication' },
-  );
-  assert.match(partial, /Production deployed; release publication failed/);
-  assert.match(partial, /<!-- deployment-result:production -->/);
-  assert.doesNotMatch(partial, /avatar|Author|Dashboard|\|/);
-  const failure = renderComment(
-    production,
-    'herokwon/blog',
-    'https://github.com/herokwon/blog/actions/runs/1',
-    { worker: false, publication: false, stage: 'HTTP verification' },
-  );
-  assert.match(failure, /HTTP verification/);
-  assert.doesNotMatch(failure, /Open site/);
 });
 
 async function withEnvironment(
@@ -709,9 +658,10 @@ await test('a waiting Dependabot run cannot merge a new head under its old intak
   );
 });
 
-await test('new failed delivery blocks older success and native PR-head runs need merged-SHA association', async () => {
+await test('newest deployment proof requires the exact SHA and a supported branch event', async () => {
   let failed = true,
-    head = sha;
+    head = sha,
+    event = 'push';
   const repo = new Repository(
     'herokwon/blog',
     'token',
@@ -745,9 +695,9 @@ await test('new failed delivery blocks older success and native PR-head runs nee
         return Response.json({
           id: 5,
           head_sha: head,
-          head_branch: 'release/0.1.0',
+          head_branch: 'main',
           path: '.github/workflows/deployment.yml',
-          event: 'pull_request',
+          event,
         });
       if (url.includes('/actions/runs/5/jobs'))
         return Response.json({
@@ -760,26 +710,20 @@ await test('new failed delivery blocks older success and native PR-head runs nee
             },
           ],
         });
-      if (url.includes('/commits/') && url.includes('/pulls'))
-        return Response.json([
-          {
-            ...pull,
-            merged_at: '2026-11-06T00:00:00Z',
-            head: { ...pull.head, ref: 'release/0.1.0', sha: 'b'.repeat(40) },
-            base: { ...pull.base, ref: 'main' },
-          },
-        ]);
       throw new Error(`Unexpected evidence request: ${url}`);
     }),
   );
   assert.equal(await repo.verifiedDeployment(sha, 'production'), null);
   failed = false;
-  head = 'b'.repeat(40);
+  head = sha;
   assert.deepEqual(await repo.verifiedDeployment(sha, 'production'), {
     deploymentId: 10,
     runId: 5,
   });
   head = 'c'.repeat(40);
+  assert.equal(await repo.verifiedDeployment(sha, 'production'), null);
+  head = sha;
+  event = 'pull_request';
   assert.equal(await repo.verifiedDeployment(sha, 'production'), null);
 });
 
@@ -1004,75 +948,6 @@ await test('native environment evidence accepts the human actor through its auth
   assert.equal(await repo.verifiedDeployment(sha, 'preview'), null);
 });
 
-await test('only a Cloudflare challenge uses the fresh browser verifier within the same deadline', async () => {
-  let browserChecks = 0;
-  const deadline = Date.now() + 1000;
-  const browser = async (target: { url: string }, end: number) => {
-    assert.equal(target.url, production.url);
-    assert.equal(end, deadline);
-    browserChecks++;
-  };
-  await verifyHttp(
-    production,
-    deadline,
-    async () =>
-      new Response('', {
-        status: 403,
-        headers: { 'cf-mitigated': 'challenge' },
-      }),
-    async () => {},
-    browser,
-  );
-  assert.equal(browserChecks, 1);
-  await assert.rejects(
-    verifyHttp(
-      production,
-      Date.now() - 1,
-      async () => new Response('', { status: 403 }),
-      async () => {},
-      browser,
-    ),
-    /HTTP verification/,
-  );
-  assert.equal(browserChecks, 1);
-});
-
-await test('browser verification waits for the final root document and rejects a forbidden document with the right title', async () => {
-  let forbidden = false;
-  const server = createServer((request, response) => {
-    if (!forbidden && request.url?.includes('cleared=1')) {
-      response.writeHead(200, { 'content-type': 'text/html' });
-      response.end('<title>Personal Blog</title><main>Ready</main>');
-      return;
-    }
-    response.writeHead(403, {
-      'content-type': 'text/html',
-      'cf-mitigated': 'challenge',
-    });
-    response.end(
-      forbidden
-        ? '<title>Personal Blog</title>'
-        : `<title>Checking</title><script>setTimeout(() => location.replace('/?cleared=1'), 20)</script>`,
-    );
-  });
-  server.listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  const address = server.address();
-  assert.ok(address && typeof address !== 'string');
-  const target = { ...production, url: `http://127.0.0.1:${address.port}/` };
-  try {
-    await verifyInBrowser(target, Date.now() + 10_000);
-    forbidden = true;
-    await assert.rejects(
-      verifyInBrowser(target, Date.now() + 1500),
-      /Browser verification/,
-    );
-  } finally {
-    server.close();
-    await once(server, 'close');
-  }
-});
-
 await test('milestone assignment avoids writing a PR already assigned to the correct version', async () => {
   let assigned: number | null = 1,
     writes = 0;
@@ -1108,4 +983,61 @@ await test('milestone assignment avoids writing a PR already assigned to the cor
   await repo.assignMilestone(3, 'release/0.1.0');
   assert.equal(assigned, 1);
   assert.equal(writes, 1);
+});
+
+await test('Worker activation requires 100 percent active traffic and the deployed commit tag', async () => {
+  let percentage = 100,
+    tag = sha,
+    authorized = true;
+  const transport: typeof fetch = async (input, init) => {
+    if (
+      !authorized ||
+      new Headers(init?.headers).get('Authorization') !== 'Bearer test-token'
+    )
+      return Response.json({ success: false }, { status: 403 });
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    if (url.endsWith('/deployments'))
+      return Response.json({
+        success: true,
+        result: {
+          deployments: [
+            { versions: [{ version_id: 'version-1', percentage }] },
+          ],
+        },
+      });
+    if (url.endsWith('/versions/version-1'))
+      return Response.json({
+        success: true,
+        result: { id: 'version-1', annotations: { 'workers/tag': tag } },
+      });
+    throw new Error('Unexpected Worker API resource');
+  };
+  await verifyWorkerActivation(
+    production,
+    'a'.repeat(32),
+    'test-token',
+    transport,
+  );
+  percentage = 50;
+  await assert.rejects(
+    verifyWorkerActivation(production, 'a'.repeat(32), 'test-token', transport),
+    /100%/,
+  );
+  percentage = 100;
+  tag = 'b'.repeat(40);
+  await assert.rejects(
+    verifyWorkerActivation(production, 'a'.repeat(32), 'test-token', transport),
+    /commit/,
+  );
+  tag = sha;
+  authorized = false;
+  await assert.rejects(
+    verifyWorkerActivation(production, 'a'.repeat(32), 'test-token', transport),
+    /Cloudflare API/,
+  );
 });
