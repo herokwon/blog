@@ -120,6 +120,8 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 7. Integrate `release/* -> main` through a reviewed PR summarizing included work and actual verification. The preview environment is associated with release branches and production with main.
 8. After confirming merge, check the head has no unmerged or active dependent work, delete local/remote head branches, and fast-forward the local base. Preserve local changes and report blockers without forcing synchronization.
 
+For `release/X.Y.Z -> main` PRs, use `release: ` followed by the source branch version enclosed in backticks (for example, release: `0.1.0`). Omit the `v` prefix from the PR title; retain `vX.Y.Z` for release tags. Other PRs keep their existing title conventions.
+
 Use Conventional Commits 1.0.0 for commits and PR titles. Keep commits coherent and independently understandable. Use English for documentation, issues, PRs, and commits. Avoid automatic issue-closing keywords in commit messages and PR descriptions.
 
 Record significant architecture decisions in concise `docs/adr/NNNN-short-title.md` documents with context, decision, and consequences. Commit an ADR before implementing its decision. Maintain essential documentation and update existing files rather than duplicating them.
