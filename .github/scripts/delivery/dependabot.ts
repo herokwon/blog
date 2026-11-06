@@ -431,7 +431,7 @@ export async function runDependabotPullRequest(
       !validSynchronization(
         commit,
         previous.head.sha,
-        previous.base.sha,
+        await repo.ref(previous.base.ref),
         positiveInteger(env('APP_BOT_ID')),
       )
     )

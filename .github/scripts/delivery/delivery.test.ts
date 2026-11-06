@@ -1000,12 +1000,14 @@ await test('concurrent milestone and release creation reuse the winner without o
     async () => {
       let refExists = false,
         routed = '';
+      const synchronizedHead = 'b'.repeat(40);
+      let synchronizedCheck: unknown = null;
       const native = {
         ...pull,
         state: 'open',
         merged: false,
         head: { ...pull.head, ref: 'dependabot/npm/test', sha },
-        base: { ...pull.base, ref: 'main' },
+        base: { ...pull.base, ref: 'main', sha: 'd'.repeat(40) },
       };
       const repo = new Repository(
         'herokwon/blog',
@@ -1017,6 +1019,18 @@ await test('concurrent milestone and release creation reuse the winner without o
               : input instanceof URL
                 ? input.href
                 : input.url;
+          if (url.includes('/check-runs') && init?.method === 'POST') {
+            synchronizedCheck = {
+              ...(JSON.parse(requestBody(init)) as object),
+              id: 10,
+              app: { id: 456, slug: 'blog-bot' },
+            };
+            return Response.json(synchronizedCheck);
+          }
+          if (url.includes(`/commits/${synchronizedHead}/check-runs`))
+            return Response.json({
+              check_runs: synchronizedCheck ? [synchronizedCheck] : [],
+            });
           if (url.includes('/check-runs'))
             return Response.json({
               check_runs: [
@@ -1033,6 +1047,12 @@ await test('concurrent milestone and release creation reuse the winner without o
                   ],
                 }),
               ],
+            });
+          if (url.endsWith(`/commits/${synchronizedHead}`))
+            return Response.json({
+              author: { id: 123 },
+              commit: { verification: { verified: true } },
+              parents: [{ sha }, { sha }],
             });
           if (url.endsWith('/git/refs') && init?.method === 'POST') {
             refExists = true;
@@ -1051,16 +1071,20 @@ await test('concurrent milestone and release creation reuse the winner without o
           throw new Error(`Unexpected creation request: ${url}`);
         }),
       );
-      repo.pull = async () => native;
+      repo.pull = async () => structuredClone(native);
       repo.ref = async () => sha;
       repo.version = async () => '1.2.0';
       repo.frozenReleases = async () => [];
       repo.milestone = async () => 1;
       repo.assignMilestone = async () => {};
-      repo.synchronize = async () => false;
+      repo.synchronize = async () => {
+        native.head.sha = synchronizedHead;
+        return true;
+      };
       repo.comments = async () => [];
       await runDependabotPullRequest(repo, 3);
       assert.equal(routed, 'release/1.2.1');
+      assert.ok(synchronizedCheck);
     },
   );
 });
