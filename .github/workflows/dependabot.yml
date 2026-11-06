@@ -42,7 +42,7 @@ jobs:
         id: runtime
         run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.runtime.outputs.version }}
       - name: Create GitHub App Token
