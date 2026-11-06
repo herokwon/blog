@@ -1072,3 +1072,40 @@ await test('browser verification waits for the final root document and rejects a
     await once(server, 'close');
   }
 });
+
+await test('milestone assignment avoids writing a PR already assigned to the correct version', async () => {
+  let assigned: number | null = 1,
+    writes = 0;
+  const repo = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async (input, init) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.includes('/milestones?'))
+        return Response.json([{ number: 1, title: '0.1.0', state: 'open' }]);
+      if (url.endsWith('/pulls/3'))
+        return Response.json({
+          ...pull,
+          milestone: assigned ? { number: assigned } : null,
+        });
+      if (url.endsWith('/issues/3') && init?.method === 'PATCH') {
+        assigned = (JSON.parse(requestBody(init)) as { milestone: number })
+          .milestone;
+        writes++;
+        return Response.json({});
+      }
+      throw new Error(`Unexpected milestone request: ${url}`);
+    }),
+  );
+  await repo.assignMilestone(3, 'release/0.1.0');
+  assert.equal(writes, 0);
+  assigned = null;
+  await repo.assignMilestone(3, 'release/0.1.0');
+  assert.equal(assigned, 1);
+  assert.equal(writes, 1);
+});

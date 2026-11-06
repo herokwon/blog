@@ -69,7 +69,7 @@ jobs:
           client-id: ${{ vars.BLOG_BOT_CLIENT_ID }}
           private-key: ${{ secrets.BLOG_BOT_PRIVATE_KEY }}
           permission-contents: read
-          permission-pull-requests: read
+          permission-pull-requests: write
           permission-issues: write
       - name: Resolve App Identity
         id: identity

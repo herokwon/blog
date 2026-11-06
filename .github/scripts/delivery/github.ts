@@ -230,6 +230,7 @@ export class Repository {
   }
   async assignMilestone(number: number, branch: string) {
     const milestone = await this.milestone(parseReleaseBranch(branch).version);
+    if ((await this.pull(number)).milestone?.number === milestone) return;
     await this.api.request('PATCH', `${this.path}/issues/${number}`, {
       milestone,
     });
