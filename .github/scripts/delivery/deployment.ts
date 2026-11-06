@@ -160,6 +160,8 @@ export async function publishRelease(
 }
 
 type Result = {
+  updatedAt: string;
+  publicationResult: string;
   worker: boolean;
   publication: boolean;
   stage: string;
@@ -172,20 +174,41 @@ export function renderComment(
   logs: string,
   result: Result,
 ): string {
-  const production = target.environment === 'production',
-    name = production ? 'Production' : 'Preview';
-  const links = `[Commit \`${target.sha.slice(0, 7)}\`](https://github.com/${repo}/commit/${target.sha}) · [View logs](${logs})`;
-  const marker = `<!-- deployment-result:${target.environment} -->`;
-  if (result.worker && (!production || result.publication)) {
-    const release =
-      production && result.releaseUrl
-        ? ` · [Release v${target.version}](${result.releaseUrl})`
-        : '';
-    return `${marker}\n### ✅ ${name} deployed\n\n[${production ? 'Open site' : 'Open preview'}](${target.url}) · ${links}${release}`;
+  const production = target.environment === 'production';
+  const name = production
+    ? '🚀 **Production deployment**'
+    : '🔍 **Preview deployment**';
+  const lines = [
+    `<!-- deployment-result:${target.environment} -->`,
+    '',
+    `Commit: [\`${target.sha.slice(0, 7)}\`](https://github.com/${repo}/commit/${target.sha}) · Updated: <relative-time datetime="${result.updatedAt}">${result.updatedAt}</relative-time> · [View logs](${logs})`,
+  ];
+  if (result.worker) {
+    lines[2] += '  ';
+    lines.push(`Link: [View URL](${target.url})`);
   }
-  if (result.worker)
-    return `${marker}\n### ⚠️ Production deployed; release publication failed\n\n[Open site](${target.url}) · ${links}`;
-  return `${marker}\n### ❌ ${name} deployment failed\n\n**Stage:** ${result.stage}\n\nThe workflow could not complete this stage.\n\n${links}`;
+  lines.push(
+    '',
+    '| Stage | Status |',
+    '| --- | --- |',
+    `| ${name} | ${result.worker ? '✅ **Deployed**' : '❌ **Failed**'} |`,
+  );
+  if (production) {
+    const version = result.releaseUrl
+      ? ` · [v${target.version}](${result.releaseUrl})`
+      : '';
+    const status = result.publication
+      ? `✅ **Published**${version}`
+      : result.publicationResult === 'skipped'
+        ? '⏭️ **Not run**'
+        : '❌ **Failed**';
+    lines.push(`| 📦 **GitHub Release** | ${status} |`);
+  }
+  if (!result.worker || (production && !result.publication)) {
+    const stage = result.worker ? 'Release publication' : result.stage;
+    lines.push('', `Failed stage: **${stage}**`);
+  }
+  return lines.join('\n');
 }
 
 async function comment(repo: Repository, target: DeploymentTarget) {
@@ -194,6 +217,8 @@ async function comment(repo: Repository, target: DeploymentTarget) {
     repo.name,
     `https://github.com/${repo.name}/actions/runs/${env('GITHUB_RUN_ID')}`,
     {
+      updatedAt: new Date().toISOString(),
+      publicationResult: env('PUBLICATION_RESULT'),
       worker: process.env.WORKER_SUCCEEDED === 'true',
       publication: process.env.PUBLICATION_SUCCEEDED === 'true',
       stage: process.env.FAILED_STAGE || 'Deployment',

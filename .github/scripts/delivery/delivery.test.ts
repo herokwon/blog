@@ -7,14 +7,20 @@ import path from 'node:path';
 import { test } from 'node:test';
 import {
   authenticateNativeHead,
+  migrateIntake,
+  nativeIntakeAllowed,
+  readCheckIntake,
   readIntake,
+  resolveIntake,
   runDependabotPullRequest,
+  saveIntake,
   validSynchronization,
 } from './dependabot.ts';
 import {
   cleanup,
   mergedPullForPush,
   publishRelease,
+  renderComment,
   verifyWorkerActivation,
 } from './deployment.ts';
 import { GitHubClient, GitHubError, Repository } from './github.ts';
@@ -39,6 +45,19 @@ function requestBody(init?: RequestInit): string {
   if (typeof init?.body !== 'string')
     throw new Error('Expected serialized GitHub request body');
   return init.body;
+}
+
+function intakeCheck(receipt: unknown) {
+  return {
+    id: 9,
+    name: 'Dependabot Intake',
+    app: { id: 456, slug: 'blog-bot' },
+    head_sha: sha,
+    external_id: 'dependabot-intake:v1:3',
+    status: 'completed',
+    conclusion: 'neutral',
+    output: { text: JSON.stringify(receipt) },
+  };
 }
 
 const sha = 'a'.repeat(40);
@@ -482,6 +501,163 @@ const production = {
   version: '0.1.0',
 };
 
+await test('deployment comments separate stage outcomes and show the URL only for verified delivery', () => {
+  const updatedAt = '2026-11-07T00:00:00.000Z';
+  const logs = 'https://github.com/herokwon/blog/actions/runs/123';
+  const releaseUrl = 'https://github.com/herokwon/blog/releases/tag/v0.1.0';
+  const cases = [
+    {
+      name: 'preview success',
+      preview: true,
+      worker: true,
+      publication: false,
+      publicationResult: 'skipped',
+      release: '',
+      failed: '',
+    },
+    {
+      name: 'preview failure',
+      preview: true,
+      worker: false,
+      publication: false,
+      publicationResult: 'skipped',
+      release: '',
+      failed: 'Build',
+    },
+    {
+      name: 'preview ignores publication',
+      preview: true,
+      worker: true,
+      publication: true,
+      publicationResult: 'success',
+      release: '',
+      failed: '',
+    },
+    {
+      name: 'production success or recovered publication',
+      preview: false,
+      worker: true,
+      publication: true,
+      publicationResult: 'success',
+      release: '✅ **Published** · [v0.1.0](' + releaseUrl + ')',
+      failed: '',
+    },
+    {
+      name: 'publication failure after deployment or verified recovery',
+      preview: false,
+      worker: true,
+      publication: false,
+      publicationResult: 'failure',
+      release: '❌ **Failed**',
+      failed: 'Release publication',
+    },
+    {
+      name: 'deployment activation failure skips publication',
+      preview: false,
+      worker: false,
+      publication: false,
+      publicationResult: 'skipped',
+      release: '⏭️ **Not run**',
+      failed: 'Worker activation verification',
+    },
+    {
+      name: 'publication recovery fails before delivery verification',
+      preview: false,
+      worker: false,
+      publication: false,
+      publicationResult: 'failure',
+      release: '❌ **Failed**',
+      failed: 'Release publication',
+    },
+    {
+      name: 'cancelled publication is not skipped',
+      preview: false,
+      worker: true,
+      publication: false,
+      publicationResult: 'cancelled',
+      release: '❌ **Failed**',
+      failed: 'Release publication',
+    },
+  ];
+  for (const item of cases) {
+    const target = item.preview
+      ? {
+          ...production,
+          environment: 'preview' as const,
+          url: 'https://blog-preview.herokwon.dev',
+        }
+      : production;
+    const body = renderComment(target, 'herokwon/blog', logs, {
+      worker: item.worker,
+      publication: item.publication,
+      publicationResult: item.publicationResult,
+      stage:
+        item.failed === 'Release publication' && item.worker
+          ? 'Deployment'
+          : item.failed,
+      updatedAt,
+      releaseUrl,
+    });
+    assert.ok(
+      body.startsWith(
+        '<!-- deployment-result:' + target.environment + ' -->\n',
+      ),
+      item.name,
+    );
+    assert.ok(
+      body.includes(
+        'Commit: [`aaaaaaa`](https://github.com/herokwon/blog/commit/' +
+          sha +
+          ')',
+      ),
+      item.name,
+    );
+    assert.ok(
+      body.includes(
+        'Updated: <relative-time datetime="' +
+          updatedAt +
+          '">' +
+          updatedAt +
+          '</relative-time>',
+      ),
+      item.name,
+    );
+    assert.equal(body.split('[View logs](' + logs + ')').length, 2, item.name);
+    assert.equal(body.split('Commit:').length, 2, item.name);
+    assert.equal(body.split('Updated:').length, 2, item.name);
+    const tableAt = body.indexOf('| Stage | Status |\n| --- | --- |');
+    assert.ok(tableAt >= 0, item.name);
+    const name = item.preview
+      ? '🔍 **Preview deployment**'
+      : '🚀 **Production deployment**';
+    assert.ok(
+      body.includes(
+        '| ' +
+          name +
+          ' | ' +
+          (item.worker ? '✅ **Deployed**' : '❌ **Failed**') +
+          ' |',
+      ),
+      item.name,
+    );
+    if (item.worker) {
+      const linkAt = body.indexOf('Link: [View URL](' + target.url + ')');
+      assert.ok(linkAt >= 0 && linkAt < tableAt, item.name);
+      assert.equal(body.split(target.url).length, 2, item.name);
+    } else assert.ok(!body.includes(target.url), item.name);
+    if (item.preview) assert.ok(!body.includes('GitHub Release'), item.name);
+    else
+      assert.ok(
+        body.includes('| 📦 **GitHub Release** | ' + item.release + ' |'),
+        item.name,
+      );
+    if (item.failed) {
+      const failureAt = body.indexOf('Failed stage: **' + item.failed + '**');
+      assert.ok(failureAt > tableAt, item.name);
+    } else assert.ok(!body.includes('Failed stage:'), item.name);
+  }
+});
+
 await test('publication reuses exact-SHA tags and releases and never moves a conflicting tag', async () => {
   const requests: string[] = [];
   const repository = (tagSha: string) =>
@@ -586,6 +762,7 @@ await test('a waiting Dependabot run cannot merge a new head under its old intak
   await withEnvironment(
     {
       APP_BOT_ID: '123',
+      APP_ID: '456',
       APP_SLUG: 'blog-bot',
       DEPENDABOT_METADATA: undefined,
       GITHUB_STEP_SUMMARY: undefined,
@@ -608,6 +785,17 @@ await test('a waiting Dependabot run cannot merge a new head under its old intak
             : input instanceof URL
               ? input.href
               : input.url;
+        if (url.includes('/check-runs'))
+          return Response.json({
+            check_runs: [
+              intakeCheck({
+                pr: 3,
+                headSha: sha,
+                originalSha: sha,
+                updates: [update],
+              }),
+            ],
+          });
         if (url.includes('/branches'))
           return Response.json([{ name: 'release/1.3.0' }]);
         if (url.includes('/actions/workflows/ci.yml/runs'))
@@ -641,14 +829,7 @@ await test('a waiting Dependabot run cannot merge a new head under its old intak
       const repo = new Repository('herokwon/blog', 'token', api);
       let reads = 0;
       repo.pull = async () => (++reads === 1 ? native : advanced);
-      repo.comments = async () => [
-        {
-          id: 1,
-          user: { id: 123, login: 'blog-bot[bot]', type: 'Bot' },
-          body: `<!-- dependabot-intake:v1 ${JSON.stringify({ pr: 3, headSha: sha, originalSha: sha, updates: [update] })} -->`,
-        },
-        { ...review(next), id: 2 },
-      ];
+      repo.comments = async () => [{ ...review(next), id: 2 }];
       repo.frozenReleases = async () => [];
       repo.version = async () => '1.2.0';
       repo.ref = async () => sha;
@@ -811,6 +992,7 @@ await test('concurrent milestone and release creation reuse the winner without o
   await withEnvironment(
     {
       APP_BOT_ID: '123',
+      APP_ID: '456',
       APP_SLUG: 'blog-bot',
       DEPENDABOT_METADATA: undefined,
       GITHUB_STEP_SUMMARY: undefined,
@@ -835,6 +1017,23 @@ await test('concurrent milestone and release creation reuse the winner without o
               : input instanceof URL
                 ? input.href
                 : input.url;
+          if (url.includes('/check-runs'))
+            return Response.json({
+              check_runs: [
+                intakeCheck({
+                  pr: 3,
+                  headSha: sha,
+                  originalSha: sha,
+                  updates: [
+                    {
+                      ...update,
+                      updateType: 'version-update:semver-major',
+                      newVersion: '2.0.0',
+                    },
+                  ],
+                }),
+              ],
+            });
           if (url.endsWith('/git/refs') && init?.method === 'POST') {
             refExists = true;
             return new Response('', { status: 422 });
@@ -859,13 +1058,7 @@ await test('concurrent milestone and release creation reuse the winner without o
       repo.milestone = async () => 1;
       repo.assignMilestone = async () => {};
       repo.synchronize = async () => false;
-      repo.comments = async () => [
-        {
-          id: 1,
-          user: { id: 123, login: 'blog-bot[bot]', type: 'Bot' },
-          body: `<!-- dependabot-intake:v1 ${JSON.stringify({ pr: 3, headSha: sha, originalSha: sha, updates: [{ ...update, updateType: 'version-update:semver-major', newVersion: '2.0.0' }] })} -->`,
-        },
-      ];
+      repo.comments = async () => [];
       await runDependabotPullRequest(repo, 3);
       assert.equal(routed, 'release/1.2.1');
     },
@@ -1071,5 +1264,241 @@ await test('synchronization tolerates only a changed-head 422 and preserves othe
   await assert.rejects(
     repo.synchronize(pull),
     (error: unknown) => error instanceof GitHubError && error.status === 403,
+  );
+});
+
+await test('intake checks bind App identity, PR, exact head, and completed neutral provenance', () => {
+  const receipt = {
+    pr: 3,
+    headSha: 'a'.repeat(40),
+    originalSha: 'a'.repeat(40),
+    updates: [
+      {
+        dependencyName: 'vite',
+        dependencyType: 'direct:development',
+        packageEcosystem: 'npm_and_yarn',
+        updateType: 'version-update:semver-minor',
+        prevVersion: '1.0.0',
+        newVersion: '1.1.0',
+      },
+    ],
+  };
+  const check = {
+    id: 9,
+    name: 'Dependabot Intake',
+    app: { id: 456, slug: 'blog-bot' },
+    head_sha: receipt.headSha,
+    external_id: 'dependabot-intake:v1:3',
+    status: 'completed',
+    conclusion: 'neutral',
+    output: { text: JSON.stringify(receipt) },
+  };
+  assert.deepEqual(
+    readCheckIntake([check], 3, receipt.headSha, 456, 'blog-bot'),
+    receipt,
+  );
+  for (const changed of [
+    { app: { id: 999, slug: 'blog-bot' } },
+    { app: { id: 456, slug: 'other' } },
+    { head_sha: 'b'.repeat(40) },
+    { external_id: 'dependabot-intake:v1:4' },
+    { status: 'in_progress' },
+    { conclusion: 'success' },
+    { output: { text: '{bad' } },
+  ]) {
+    assert.equal(
+      readCheckIntake(
+        [{ ...check, ...changed }],
+        3,
+        receipt.headSha,
+        456,
+        'blog-bot',
+      ),
+      null,
+    );
+  }
+  assert.equal(
+    readCheckIntake([check], 4, receipt.headSha, 456, 'blog-bot'),
+    null,
+  );
+});
+
+await test('intake check writes require authenticated read-back and do not claim success on missing records', async () => {
+  await withEnvironment({ APP_ID: '456', APP_SLUG: 'blog-bot' }, async () => {
+    const receipt = {
+      pr: 3,
+      headSha: 'a'.repeat(40),
+      originalSha: 'a'.repeat(40),
+      updates: [update],
+    };
+    let stored: unknown = null;
+    const requests: string[] = [];
+    const repo = new Repository(
+      'herokwon/blog',
+      'token',
+      new GitHubClient('token', async (_input, init) => {
+        requests.push(init?.method || 'GET');
+        if (init?.method === 'POST') {
+          stored = {
+            ...(JSON.parse(requestBody(init)) as object),
+            id: 9,
+            app: { id: 456, slug: 'blog-bot' },
+          };
+          return Response.json(stored);
+        }
+        return Response.json({ check_runs: stored ? [stored] : [] });
+      }),
+    );
+    await saveIntake(repo, receipt);
+    await saveIntake(repo, receipt);
+    assert.equal(requests.filter(method => method === 'POST').length, 1);
+    const broken = new Repository(
+      'herokwon/blog',
+      'token',
+      new GitHubClient('token', async () => Response.json({ check_runs: [] })),
+    );
+    await assert.rejects(saveIntake(broken, receipt), /read-back/);
+  });
+});
+
+await test('legacy migration preserves exact old heads and deletes only after matching authenticated read-back', async () => {
+  await withEnvironment(
+    { APP_ID: '456', APP_BOT_ID: '123', APP_SLUG: 'blog-bot' },
+    async () => {
+      for (const mode of [
+        'ok',
+        'missing-read-back',
+        'write-failure',
+        'edited-comment',
+        'foreign-app',
+      ] as const) {
+        const events: string[] = [];
+        const receipt = {
+          pr: 3,
+          headSha: sha,
+          originalSha: sha,
+          updates: [{ ...update, unused: 'discard' }],
+        };
+        const comment = {
+          id: 7,
+          user: { id: 123, login: 'blog-bot[bot]', type: 'Bot' },
+          body: `<!-- dependabot-intake:v1 ${JSON.stringify(receipt)} -->`,
+        };
+        let stored: unknown = null;
+        const api = new GitHubClient('token', async (input, init) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          if (init?.method === 'POST') {
+            events.push('write');
+            if (mode === 'write-failure')
+              return new Response('', { status: 403 });
+            stored = {
+              ...(JSON.parse(requestBody(init)) as object),
+              id: 9,
+              app: { id: mode === 'foreign-app' ? 999 : 456, slug: 'blog-bot' },
+            };
+            return Response.json(stored);
+          }
+          if (url.includes('/check-runs')) {
+            events.push('read');
+            return Response.json({
+              check_runs:
+                stored && mode !== 'missing-read-back' ? [stored] : [],
+            });
+          }
+          if (init?.method === 'DELETE') {
+            events.push('delete');
+            return new Response(null, { status: 204 });
+          }
+          return Response.json(
+            mode === 'edited-comment'
+              ? { ...comment, body: 'changed' }
+              : comment,
+          );
+        });
+        const repo = new Repository('herokwon/blog', 'token', api);
+        repo.comments = async () => [comment];
+        if (['ok', 'edited-comment'].includes(mode))
+          await migrateIntake(repo, 3);
+        else await assert.rejects(migrateIntake(repo, 3));
+        assert.equal(events.includes('delete'), mode === 'ok');
+        if (mode === 'ok') {
+          const saved = readCheckIntake([stored], 3, sha, 456, 'blog-bot');
+          assert.ok(saved);
+          assert.deepEqual(saved.updates, [update]);
+          assert.equal(events.at(-1), 'delete');
+        }
+      }
+    },
+  );
+});
+
+await test('only signed App synchronization can carry an old check forward; human heads remain blocked', async () => {
+  await withEnvironment(
+    { APP_ID: '456', APP_BOT_ID: '123', APP_SLUG: 'blog-bot' },
+    async () => {
+      for (const [author, status] of [
+        [123, 'ahead'],
+        [123, 'diverged'],
+        [789, 'ahead'],
+      ] as const) {
+        const next = 'b'.repeat(40),
+          base = 'c'.repeat(40);
+        const receipt = {
+          pr: 3,
+          headSha: sha,
+          originalSha: sha,
+          updates: [update],
+        };
+        let stored: unknown = null;
+        const api = new GitHubClient('token', async (input, init) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          if (init?.method === 'POST') {
+            stored = {
+              ...(JSON.parse(requestBody(init)) as object),
+              id: 10,
+              app: { id: 456, slug: 'blog-bot' },
+            };
+            return Response.json(stored);
+          }
+          if (url.includes(`/commits/${sha}/check-runs`))
+            return Response.json({ check_runs: [intakeCheck(receipt)] });
+          if (url.includes('/check-runs'))
+            return Response.json({ check_runs: stored ? [stored] : [] });
+          if (url.includes('/compare/')) return Response.json({ status });
+          if (url.includes('/commits/'))
+            return Response.json({
+              author: { id: author },
+              commit: { verification: { verified: true } },
+              parents: [{ sha }, { sha: base }],
+            });
+          if (url.includes('/pulls/'))
+            return Response.json([{ sha }, { sha: next }]);
+          throw new Error(`Unexpected ${url}`);
+        });
+        const repo = new Repository('herokwon/blog', 'token', api);
+        repo.comments = async () => [];
+        const current = {
+          ...pull,
+          head: { ...pull.head, sha: next },
+          base: { ...pull.base, sha: 'd'.repeat(40) },
+        };
+        const resolved = await resolveIntake(repo, current);
+        assert.equal(
+          resolved?.headSha ?? null,
+          author === 123 && status === 'ahead' ? next : null,
+        );
+        assert.equal(await nativeIntakeAllowed(repo, current), false);
+      }
+    },
   );
 });
