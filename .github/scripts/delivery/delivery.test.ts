@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/require-await -- Fetch test doubles resolve without real I/O. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { once } from 'node:events';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -17,6 +19,7 @@ import {
   publishRelease,
   renderComment,
   verifyHttp,
+  verifyInBrowser,
 } from './deployment.ts';
 import { GitHubClient, Repository } from './github.ts';
 import {
@@ -999,4 +1002,73 @@ await test('native environment evidence accepts the human actor through its auth
   });
   appId = 999;
   assert.equal(await repo.verifiedDeployment(sha, 'preview'), null);
+});
+
+await test('only a Cloudflare challenge uses the fresh browser verifier within the same deadline', async () => {
+  let browserChecks = 0;
+  const deadline = Date.now() + 1000;
+  const browser = async (target: { url: string }, end: number) => {
+    assert.equal(target.url, production.url);
+    assert.equal(end, deadline);
+    browserChecks++;
+  };
+  await verifyHttp(
+    production,
+    deadline,
+    async () =>
+      new Response('', {
+        status: 403,
+        headers: { 'cf-mitigated': 'challenge' },
+      }),
+    async () => {},
+    browser,
+  );
+  assert.equal(browserChecks, 1);
+  await assert.rejects(
+    verifyHttp(
+      production,
+      Date.now() - 1,
+      async () => new Response('', { status: 403 }),
+      async () => {},
+      browser,
+    ),
+    /HTTP verification/,
+  );
+  assert.equal(browserChecks, 1);
+});
+
+await test('browser verification waits for the final root document and rejects a forbidden document with the right title', async () => {
+  let forbidden = false;
+  const server = createServer((request, response) => {
+    if (!forbidden && request.url?.includes('cleared=1')) {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end('<title>Personal Blog</title><main>Ready</main>');
+      return;
+    }
+    response.writeHead(403, {
+      'content-type': 'text/html',
+      'cf-mitigated': 'challenge',
+    });
+    response.end(
+      forbidden
+        ? '<title>Personal Blog</title>'
+        : `<title>Checking</title><script>setTimeout(() => location.replace('/?cleared=1'), 20)</script>`,
+    );
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const target = { ...production, url: `http://127.0.0.1:${address.port}/` };
+  try {
+    await verifyInBrowser(target, Date.now() + 10_000);
+    forbidden = true;
+    await assert.rejects(
+      verifyInBrowser(target, Date.now() + 1500),
+      /Browser verification/,
+    );
+  } finally {
+    server.close();
+    await once(server, 'close');
+  }
 });
