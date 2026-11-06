@@ -110,12 +110,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: node .github/scripts/delivery/deployment.ts verify-worker
-      - name: Observe Public HTTP Status
-        continue-on-error: true
-        env:
-          PUBLIC_URL: ${{ needs.resolve-deployment.outputs.url }}
-        run: |
-          curl --silent --show-error --max-time 10 --output /dev/null --write-out 'Advisory public HTTP status (may be challenged): %{http_code}\n' "$PUBLIC_URL" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Record Failure Stage
         id: result
         if: always()
