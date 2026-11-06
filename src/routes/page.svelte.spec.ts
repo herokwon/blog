@@ -5,7 +5,7 @@ import Page from './+page.svelte';
 
 describe('homepage component', () => {
   it('renders the homepage in the browser', async () => {
-    render(Page);
+    await render(Page);
     await expect
       .element(page.getByRole('heading', { level: 1 }))
       .toHaveTextContent('Personal Blog');
