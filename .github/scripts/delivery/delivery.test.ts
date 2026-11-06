@@ -32,6 +32,9 @@ import {
   validateVersionChange,
 } from './release-version.ts';
 
+// Test fixtures must not be published to the real Actions job summary.
+delete process.env.GITHUB_STEP_SUMMARY;
+
 function requestBody(init?: RequestInit): string {
   if (typeof init?.body !== 'string')
     throw new Error('Expected serialized GitHub request body');
