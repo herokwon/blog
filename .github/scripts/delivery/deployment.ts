@@ -74,6 +74,10 @@ export async function verifyHttp(
   deadline = Date.now() + 5 * 60_000,
   transport: typeof fetch = fetch,
   pause = sleep,
+  browserVerifier: (
+    target: DeploymentTarget,
+    deadline: number,
+  ) => Promise<void> = verifyInBrowser,
 ): Promise<void> {
   let reason: string;
   do {
@@ -89,9 +93,19 @@ export async function verifyHttp(
         /<title>\s*Personal Blog\s*<\/title>/i.test(await response.text())
       )
         return;
+      if (response.headers.get('cf-mitigated') === 'challenge') {
+        console.log(
+          'Cloudflare challenge detected; verifying in a fresh browser context.',
+        );
+        await browserVerifier(target, deadline);
+        return;
+      }
       reason = `Unexpected HTTP status or homepage content (${response.status})`;
-    } catch {
-      reason = 'Site request failed';
+    } catch (error) {
+      reason =
+        error instanceof Error
+          ? error.message.split('\n')[0]
+          : 'Site request failed';
     }
     if (Date.now() >= deadline) break;
     await pause(Math.min(10_000, deadline - Date.now()));
@@ -99,6 +113,74 @@ export async function verifyHttp(
   throw new Error(
     `HTTP verification failed: ${reason}. The uploaded Worker may already be serving traffic.`,
   );
+}
+
+export async function verifyInBrowser(
+  target: DeploymentTarget,
+  deadline: number,
+): Promise<void> {
+  if (Date.now() >= deadline)
+    throw new Error('Browser verification deadline expired');
+  const { chromium } = await import('playwright');
+  const browserEnv: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env))
+    if (value !== undefined && !/TOKEN|SECRET|PRIVATE_KEY|PASSWORD/i.test(name))
+      browserEnv[name] = value;
+  const browser = await chromium.launch({
+    headless: true,
+    channel: process.env.GITHUB_ACTIONS === 'true' ? 'chrome' : undefined,
+    timeout: Math.min(30_000, deadline - Date.now()),
+    env: browserEnv,
+  });
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    let documentStatus: number | null = null;
+    let documentType = '';
+    const origin = new URL(target.url).origin;
+    page.on('response', response => {
+      const url = new URL(response.url());
+      if (
+        response.request().isNavigationRequest() &&
+        response.frame() === page.mainFrame() &&
+        url.origin === origin &&
+        url.pathname === '/'
+      ) {
+        documentStatus = response.status();
+        documentType = response.headers()['content-type'] ?? '';
+      }
+    });
+    try {
+      await page.goto(target.url, {
+        waitUntil: 'domcontentloaded',
+        timeout: Math.max(1, deadline - Date.now()),
+      });
+    } catch {
+      /* A challenge may replace the initial navigation. Validate the final document below. */
+    }
+    while (Date.now() < deadline) {
+      const url = new URL(page.url());
+      const title = await page.title().catch(() => '');
+      if (
+        url.origin === origin &&
+        url.pathname === '/' &&
+        documentStatus === 200 &&
+        documentType.includes('text/html') &&
+        title.trim() === 'Personal Blog'
+      ) {
+        console.log(
+          'Fresh browser verified the same-origin root document: HTTP 200, expected HTML title.',
+        );
+        return;
+      }
+      await sleep(Math.min(500, Math.max(1, deadline - Date.now())));
+    }
+    throw new Error(
+      `Browser verification failed: expected root document was not ready (HTTP ${documentStatus ?? 'unknown'}); interactive challenges are not solved automatically`,
+    );
+  } finally {
+    await browser.close();
+  }
 }
 
 export async function publishRelease(
