@@ -130,6 +130,7 @@ type Deployment = {
   sha: string;
   environment: string;
   creator: { id: number };
+  performed_via_github_app: { id: number } | null;
 };
 type DeploymentStatus = {
   state: string;
@@ -277,13 +278,17 @@ export class Repository {
     const deployment = deployments
       .filter(item => item.sha === sha && item.environment === environment)
       .sort((a, b) => b.id - a.id)[0];
-    if (!deployment || deployment.creator.id !== 41898282) return null;
+    if (!deployment || deployment.performed_via_github_app?.id !== 15368)
+      return null;
     const statuses = await this.api.request<DeploymentStatus[]>(
       'GET',
       `${this.path}/deployments/${deployment.id}/statuses?per_page=1`,
     );
     const status = statuses[0];
-    if (status?.state !== 'success' || status.creator.id !== 41898282)
+    if (
+      status?.state !== 'success' ||
+      ![deployment.creator.id, 41898282].includes(status.creator.id)
+    )
       return null;
     const prefix = `https://github.com/${this.name}/actions/runs/`;
     if (!status.log_url.startsWith(prefix)) return null;
@@ -295,7 +300,7 @@ export class Repository {
     );
     if (
       run.path.split('@')[0] !== '.github/workflows/deployment.yml' ||
-      !['pull_request', 'workflow_dispatch'].includes(run.event)
+      !['push', 'pull_request', 'workflow_dispatch'].includes(run.event)
     )
       return null;
     if (run.head_sha !== sha) {
