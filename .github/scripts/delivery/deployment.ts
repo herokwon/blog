@@ -27,6 +27,53 @@ export async function resolveDeployment(repo: Repository, number: number) {
   return resolveTarget(pull, repo.name, await repo.ref(pull.base.ref));
 }
 
+export async function verifyWorkerActivation(
+  target: DeploymentTarget,
+  account: string,
+  token: string,
+  transport: typeof fetch = fetch,
+): Promise<void> {
+  if (!/^[a-f0-9]{32}$/i.test(account))
+    throw new Error('Invalid Cloudflare account ID');
+  const base = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${encodeURIComponent(target.workerName)}`;
+  const get = async <T>(path: string): Promise<T> => {
+    const response = await transport(`${base}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok)
+      throw new Error(
+        `Cloudflare API verification failed (HTTP ${response.status})`,
+      );
+    const data = (await response.json()) as { success: boolean; result: T };
+    if (data.success !== true)
+      throw new Error('Cloudflare API could not verify Worker activation');
+    return data.result;
+  };
+  const result = await get<{
+    deployments: { versions: { version_id: string; percentage: number }[] }[];
+  }>('/deployments');
+  const active = result.deployments[0]?.versions.filter(
+    version => version.percentage > 0,
+  );
+  if (!active || active.length !== 1 || active[0].percentage !== 100)
+    throw new Error(
+      'Worker must have one active version receiving 100% traffic',
+    );
+  const version = await get<{
+    id: string;
+    annotations?: Record<string, string>;
+  }>(`/versions/${encodeURIComponent(active[0].version_id)}`);
+  if (
+    version.id !== active[0].version_id ||
+    version.annotations?.['workers/tag'] !== target.sha
+  )
+    throw new Error('Active Worker version does not match the deployed commit');
+  summary(
+    `Worker activation verified: ${target.workerName}, version ${version.id}, commit ${target.sha}. Public HTTP availability is not part of this proof.`,
+  );
+}
+
 export async function mergedPullForPush(
   repo: Repository,
   sha: string,
@@ -67,120 +114,6 @@ async function assertCurrent(repo: Repository, target: DeploymentTarget) {
     process.env.GITHUB_REF_NAME !== target.branch
   )
     throw new Error(`Run this recovery workflow on ${target.branch}`);
-}
-
-export async function verifyHttp(
-  target: DeploymentTarget,
-  deadline = Date.now() + 5 * 60_000,
-  transport: typeof fetch = fetch,
-  pause = sleep,
-  browserVerifier: (
-    target: DeploymentTarget,
-    deadline: number,
-  ) => Promise<void> = verifyInBrowser,
-): Promise<void> {
-  let reason: string;
-  do {
-    try {
-      const response = await transport(target.url, {
-        signal: AbortSignal.timeout(10_000),
-        cache: 'no-store',
-        redirect: 'error',
-      });
-      if (
-        response.status === 200 &&
-        response.headers.get('content-type')?.includes('text/html') &&
-        /<title>\s*Personal Blog\s*<\/title>/i.test(await response.text())
-      )
-        return;
-      if (response.headers.get('cf-mitigated') === 'challenge') {
-        console.log(
-          'Cloudflare challenge detected; verifying in a fresh browser context.',
-        );
-        await browserVerifier(target, deadline);
-        return;
-      }
-      reason = `Unexpected HTTP status or homepage content (${response.status})`;
-    } catch (error) {
-      reason =
-        error instanceof Error
-          ? error.message.split('\n')[0]
-          : 'Site request failed';
-    }
-    if (Date.now() >= deadline) break;
-    await pause(Math.min(10_000, deadline - Date.now()));
-  } while (Date.now() < deadline);
-  throw new Error(
-    `HTTP verification failed: ${reason}. The uploaded Worker may already be serving traffic.`,
-  );
-}
-
-export async function verifyInBrowser(
-  target: DeploymentTarget,
-  deadline: number,
-): Promise<void> {
-  if (Date.now() >= deadline)
-    throw new Error('Browser verification deadline expired');
-  const { chromium } = await import('playwright');
-  const browserEnv: Record<string, string> = {};
-  for (const [name, value] of Object.entries(process.env))
-    if (value !== undefined && !/TOKEN|SECRET|PRIVATE_KEY|PASSWORD/i.test(name))
-      browserEnv[name] = value;
-  const browser = await chromium.launch({
-    headless: true,
-    channel: process.env.GITHUB_ACTIONS === 'true' ? 'chrome' : undefined,
-    timeout: Math.min(30_000, deadline - Date.now()),
-    env: browserEnv,
-  });
-  try {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    let documentStatus: number | null = null;
-    let documentType = '';
-    const origin = new URL(target.url).origin;
-    page.on('response', response => {
-      const url = new URL(response.url());
-      if (
-        response.request().isNavigationRequest() &&
-        response.frame() === page.mainFrame() &&
-        url.origin === origin &&
-        url.pathname === '/'
-      ) {
-        documentStatus = response.status();
-        documentType = response.headers()['content-type'] ?? '';
-      }
-    });
-    try {
-      await page.goto(target.url, {
-        waitUntil: 'domcontentloaded',
-        timeout: Math.max(1, deadline - Date.now()),
-      });
-    } catch {
-      /* A challenge may replace the initial navigation. Validate the final document below. */
-    }
-    while (Date.now() < deadline) {
-      const url = new URL(page.url());
-      const title = await page.title().catch(() => '');
-      if (
-        url.origin === origin &&
-        url.pathname === '/' &&
-        documentStatus === 200 &&
-        documentType.includes('text/html') &&
-        title.trim() === 'Personal Blog'
-      ) {
-        console.log(
-          'Fresh browser verified the same-origin root document: HTTP 200, expected HTML title.',
-        );
-        return;
-      }
-      await sleep(Math.min(500, Math.max(1, deadline - Date.now())));
-    }
-    throw new Error(
-      `Browser verification failed: expected root document was not ready (HTTP ${documentStatus ?? 'unknown'}); interactive challenges are not solved automatically`,
-    );
-  } finally {
-    await browser.close();
-  }
 }
 
 export async function publishRelease(
@@ -252,7 +185,7 @@ export function renderComment(
   }
   if (result.worker)
     return `${marker}\n### ⚠️ Production deployed; release publication failed\n\n[Open site](${target.url}) · ${links}`;
-  return `${marker}\n### ❌ ${name} deployment failed\n\n**Stage:** ${result.stage}\n\n${result.stage === 'HTTP verification' ? 'The site did not return the expected HTTP 200 HTML response within five minutes.' : 'The workflow could not complete this stage.'}\n\n${links}`;
+  return `${marker}\n### ❌ ${name} deployment failed\n\n**Stage:** ${result.stage}\n\nThe workflow could not complete this stage.\n\n${links}`;
 }
 
 async function comment(repo: Repository, target: DeploymentTarget) {
@@ -406,8 +339,12 @@ if (import.meta.main)
     switch (process.argv[2]) {
       case 'assert-current':
         break;
-      case 'verify-http':
-        await verifyHttp(target);
+      case 'verify-worker':
+        await verifyWorkerActivation(
+          target,
+          env('CLOUDFLARE_ACCOUNT_ID'),
+          env('CLOUDFLARE_API_TOKEN'),
+        );
         break;
       case 'verify-publication': {
         const deadline = Date.now() + 60_000;
