@@ -2,7 +2,7 @@
 
 ## Purpose and Architecture
 
-Build and operate a single-author personal blog while learning Svelte. Use the accepted architecture in [ADR 0001](docs/adr/0001-blog-architecture.md). Keep the initial environment separate from future domain features and remote deployment work.
+Build and operate a single-author personal blog while learning Svelte. Use the accepted architecture in [ADR 0001](docs/adr/0001-blog-architecture.md) and delivery policy in [ADR 0002](docs/adr/0002-delivery-pipeline.md). Keep domain features separate from delivery infrastructure.
 
 - Use the existing SvelteKit 3 / Svelte 5 TypeScript application and Cloudflare Workers adapter.
 - Author application and configuration code in TypeScript. Keep strict TypeScript/Svelte checks; compiled JavaScript imported by generated Workers declarations is not an authored source-check target.
@@ -10,14 +10,14 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Reuse existing capabilities and choose the smallest clear implementation. Avoid abstractions without a current need.
 - Store future post bodies as Markdown. Keep the browser-only editor out of public rendering bundles.
 - Public content and attachments must follow publication visibility; author operations require application-side authorization.
-- New domain models, remote D1/R2 resources, authentication, editor features, domains, and deployment require their own scoped work.
+- New domain models, remote D1/R2 resources, authentication, editor features, and changes outside the accepted delivery scope require their own scoped work.
 
 ## Runtime and Package Management
 
 - Use pnpm for commands and nested package scripts. Do not introduce npm/yarn lockfiles or npm-run script calls.
 - Read the exact pnpm version from `packageManager` and Node version from `devEngines.runtime` in `package.json`.
 - Keep runtime declarations and `pnpm-lock.yaml` synchronized. Do not add a separate Node version file.
-- Keep the package version independent of target-version milestones. Version updates belong to future release automation after the target-version work is complete; do not bump it during ordinary implementation work.
+- Keep the package version independent of target-version milestones. Release automation prepares it through a version PR after target-version work; do not bump it during ordinary implementation work.
 - Use `pnpm install --frozen-lockfile` to verify reproducible installation.
 - Dependency installation generates SvelteKit and Cloudflare types through `prepare`. Generated output stays ignored.
 - When Wrangler configuration changes, run `pnpm gen` to regenerate and format the declaration file; never invent binding types or remote resource IDs.
@@ -31,6 +31,8 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Format: `pnpm format`.
 - Lint, including format checks: `pnpm lint`. ESLint warnings fail.
 - Type-check: `pnpm check`.
+- Check delivery automation alone: `pnpm check:automation`.
+- Test delivery automation alone: `pnpm test:automation`.
 - Watch tests: `pnpm test:unit`.
 - Run unit/component tests once with coverage: `pnpm test:unit --run --coverage`.
 - Build for Workers: `pnpm build`.
@@ -60,7 +62,7 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Remote migration application belongs to CD after validation. Do not use schema push or mix migration history tools.
 - Keep preview and production data/bindings separate when they are introduced. The preview Worker is named `blog-preview`.
 - Persist invocation logs at 100% in both environments; persist traces at 100% in preview and 5% in production.
-- Keep workers.dev and preview URLs disabled; public routes and domains require separate deployment work.
+- Keep workers.dev and version preview URLs disabled. Preview uses `blog-preview.herokwon.dev`; production uses `blog.herokwon.dev`, each configured in its Wrangler environment.
 - Log useful structured operational context; exclude credentials, session tokens, and draft bodies.
 
 ## CI and Review
@@ -73,6 +75,24 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Keep the three issue templates and default PR template in English, preserving their emoji headings and `<br />` spacing.
 - Link work issues through Development metadata; include explicit issue references in the work record. Do not require a duplicate Related Issues body section.
 - Disable repository issue auto-closing. Issue closure is an explicit action based on verified outcomes.
+- Run CI on PR changes (including base-branch changes) and manual dispatch. Deployment builds the merged commit independently; CI artifacts are shared only within the CI run.
+
+## Delivery Automation
+
+- Keep Superpowers plans, execution ledgers, logs, and review artifacts under ignored `.superpowers/`. Commit architectural decisions in `docs/adr/`; do not commit execution scratch files.
+- Use stable `release/X.Y.Z` branches, `X.Y.Z` package versions, and immutable `vX.Y.Z` release tags. Integrate release PRs into `main` using a merge commit; implementation and bot PRs use the release branch.
+- `.github/workflows/dependabot.yml` routes native default-branch PRs to the unique active release. Majors, `0.x` minors, mixed unsafe groups, unclassifiable updates, conflicts, and missing current-head Codex evidence require owner intervention. Keep verified metadata bound to authenticated intake receipts and exact heads.
+- `.github/workflows/release-version-bump.yml` prepares App-owned version PRs. `Release Readiness` requires the actual target version and verified preview for the latest release head. Configure release branch protection before opening the first release PR.
+- Native Codex personal settings may omit bot/App PRs. Request `@codex review` manually when necessary, wait for a completed current-head review, and resume the appropriate workflow. Missing review is not successful review; owner-accepted findings do not enable automatic merging.
+- Store `BLOG_BOT_CLIENT_ID` as a repository variable and `BLOG_BOT_PRIVATE_KEY` as an Actions secret. App jobs request only their required permissions: Contents/Pull requests/Issues write for PR mutations; Actions and Deployments read for evidence; Workflows write for dependency changes to workflow files; Actions write only for dispatching deferred work. No permanent ruleset bypass is permitted.
+- Store `CLOUDFLARE_API_TOKEN` as an environment secret and `CLOUDFLARE_ACCOUNT_ID` as an environment variable in both `preview` and `production`. Restrict preview to `release/*` and production to `main`. No extra production reviewer is required initially. Never put secret values in files or chat.
+- `.github/workflows/deployment.yml` deploys valid merges, including bot merges, through standard environment-specific Wrangler deployment and native GitHub Environment records. Do not add CI polling, duplicate Deployment records, or a separate trigger/version promotion workflow.
+- Deployment verifies HTTPS root status 200, HTML content type, and the expected `Personal Blog` title for up to five minutes. Update the expectation when the homepage title changes. HTTP failure may follow a successful upload; inspect live state before manually fixing or rolling back. Automatic rollback is disabled.
+- For recovery, use Actions **Run workflow** on the PR's target branch. Before workflows reach `main`, rerun the original event-driven run from its Actions page; the manual-dispatch UI is unavailable during bootstrap. Deployment accepts `pr-number` and `mode`: `deploy` repeats delivery, while `publish` recovers production Tag/Release creation from trusted successful deployment evidence without redeploying. Superseded commits are rejected. Resume Dependabot/version workflows with their `pr-number`; Dependabot manual resumption requires a verified intake from a native PR event.
+- Keep one automation-owned deployment comment per PR/environment. Separate deployment failure from successful production delivery with publication failure. Preserve existing matching tags/releases and reject mismatched tags instead of moving them.
+- Serialize Worker deployment by environment without cancelling active work; concurrency is not a durable FIFO queue. Recheck target refs before remote deployment and publication. Frozen production transitions defer dependency routing; successful completion resumes eligible PRs.
+- Delete remote source branches only after successful applicable delivery and checks for changed heads, unmerged work, and open dependent PRs. Use the exact merged head as deletion evidence even after squash, and a Git deletion lease to abort if the remote head changes; never force-update branch commits. Agent-side cleanup must still preserve local work and fast-forward the base. Keep issue/milestone closure explicit.
+- Initial rollout order is work PR into release, verified preview, release version preparation/readiness, then release PR into main and verified production publication. Native Dependabot and its trusted default-branch automation start only after reaching main. Do not report rollout complete without actual remote evidence.
 
 ## Project Metadata and Version Milestones
 
@@ -109,3 +129,6 @@ Record significant architecture decisions in concise `docs/adr/NNNN-short-title.
 - Verify that local setup and CI require no remote credentials or fabricated D1/R2 resource IDs.
 - Verify Build output is restored after dependency setup and that CI E2E does not perform a second build.
 - Verify migrations retain a single application history and that publication/authorization boundaries are preserved as features are added.
+- Verify privileged PR jobs execute only trusted automation and validated version-only preparation branches; do not install or execute Dependabot head code with mutation credentials.
+- Verify automatic merging checks current-head CI and authenticated Codex review, and performs the actual merge with the App and an exact SHA.
+- Verify deployment, HTTP success, Tag, Release, and PR comments identify the same actual merged commit and that partial failures remain recoverable.
