@@ -5,6 +5,8 @@
   let { data, children }: LayoutProps = $props();
 </script>
 
+<svelte:head><meta name="robots" content="noindex, nofollow" /></svelte:head>
+
 <header>
   <strong>Administration</strong>
   <nav aria-label="Administrator navigation">
