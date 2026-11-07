@@ -52,7 +52,7 @@
 
 <form
   method="POST"
-  action="?/create"
+  action={`?/create&page=${data.page}`}
   aria-label="Create category"
   data-operation="create"
   use:enhance={submit}
@@ -79,7 +79,7 @@
       </p>
       <form
         method="POST"
-        action="?/rename"
+        action={`?/rename&page=${data.page}`}
         aria-label={`Rename ${category.name}`}
         use:enhance={submit}
       >
@@ -100,7 +100,7 @@
       </form>
       <form
         method="POST"
-        action="?/delete"
+        action={`?/delete&page=${data.page}`}
         data-operation="delete"
         aria-label={`Delete ${category.name}`}
         use:enhance={submit}

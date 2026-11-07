@@ -84,3 +84,58 @@ test('author manages categories with retained validation input and native deleti
   await edited.getByRole('button', { name: 'Delete category' }).click();
   await expect(edited).toHaveCount(0);
 });
+
+test('native rename failures retain input on later category pages', async ({
+  browser,
+  request,
+}) => {
+  const token = await (await request.get('http://127.0.0.1:4174/token')).text();
+  const headers = {
+    'cf-access-jwt-assertion': token,
+    origin: 'http://localhost:4173',
+  };
+  const prefix = `Native ${crypto.randomUUID().slice(0, 8)}`;
+  for (let index = 0; index < 21; index++) {
+    const response = await request.post('/admin/categories?/create', {
+      headers,
+      form: { name: `${prefix} ${String(index).padStart(2, '0')}` },
+    });
+    expect(response.status()).toBe(200);
+  }
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    extraHTTPHeaders: { 'cf-access-jwt-assertion': token },
+  });
+  const page = await context.newPage();
+  const ids: string[] = [];
+  try {
+    await page.goto('http://localhost:4173/admin/categories');
+    const target = page.getByRole('listitem').filter({
+      has: page.getByRole('heading', { name: `${prefix} 20`, exact: true }),
+    });
+    while (true) {
+      for (const row of await page.getByRole('listitem').all()) {
+        if ((await row.getByRole('heading').innerText()).startsWith(prefix))
+          ids.push(await row.locator('input[name="id"]').first().inputValue());
+      }
+      if (await target.count()) break;
+      await page.getByRole('link', { name: 'Next', exact: true }).click();
+    }
+    const currentPage = new URL(page.url()).searchParams.get('page');
+    expect(Number(currentPage)).toBeGreaterThan(1);
+    await target.getByLabel('Category name').fill('a'.repeat(21));
+    await target.getByRole('button', { name: 'Save name' }).click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    expect(new URL(page.url()).searchParams.get('page')).toBe(currentPage);
+    await expect(target.getByLabel('Category name')).toHaveValue(
+      'a'.repeat(21),
+    );
+  } finally {
+    for (const id of ids)
+      await request.post('/admin/categories?/delete', {
+        headers,
+        form: { id },
+      });
+    await context.close();
+  }
+});
