@@ -9,6 +9,7 @@
   <strong>Administration</strong>
   <nav aria-label="Administrator navigation">
     <a href={resolve('/admin/posts')}>Posts</a>
+    <a href={resolve('/admin/categories')}>Categories</a>
     <a href={resolve('/')}>View blog</a>
     <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- Access owns this root endpoint, outside SvelteKit routing. -->
     <a href="/cdn-cgi/access/logout" data-sveltekit-reload>Sign out of Access</a
