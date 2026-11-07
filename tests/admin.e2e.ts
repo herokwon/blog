@@ -9,6 +9,7 @@ test('public pages stay anonymous and the real Worker rejects unauthenticated ad
     '/admin/posts',
     '/%61dmin/posts',
     '/admin/media',
+    '/admin/slug-availability?slug=private-slug',
   ]) {
     const response = await request.get(path, {
       headers: { 'cf-access-authenticated-user-email': 'author@example.test' },
