@@ -61,5 +61,8 @@
       "version": "26.13.0",
       "onFail": "download"
     }
+  },
+  "dependencies": {
+    "jose": "^6.2.15"
   }
 }
