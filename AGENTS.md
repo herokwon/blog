@@ -33,6 +33,7 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Type-check: `pnpm check`.
 - Check delivery automation alone: `pnpm check:automation`.
 - Test delivery automation alone: `pnpm test:automation`.
+- Apply pending local D1 migrations: `pnpm db:migrate:local`.
 - Watch tests: `pnpm test:unit`.
 - Run unit/component tests once with coverage: `pnpm test:unit --run --coverage`.
 - Build for Workers: `pnpm build`.
@@ -60,6 +61,8 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Commit SQL and Drizzle snapshots/metadata together. Never rename or edit an already applied migration; add a new migration.
 - Wrangler is the sole future migration application/history tool. Align its migration directory with Drizzle output.
 - Remote migration application belongs to CD after validation. Do not use schema push or mix migration history tools.
+- Every D1 binding sets `migrations_dir` to `drizzle` and keeps Wrangler's default `d1_migrations` history. Use `pnpm exec wrangler d1 migrations apply DB --local` for local development; the default bindings use local emulation of preview resources. Add `--env preview` or `--env production` to select an explicit environment.
+- CD runs `pnpm exec wrangler d1 migrations apply DB --remote --env <environment>` after build and target validation, then rechecks the target before deployment. Wrangler applies only files missing from its history; do not add a custom SQL/history comparator. Migration failure blocks deployment. Publication-only recovery skips migrations and deployment.
 - Keep preview and production data/bindings separate when they are introduced. The preview Worker is named `blog-preview`.
 - Persist invocation logs at 100% in both environments; persist traces at 100% in preview and 5% in production.
 - Keep workers.dev and version preview URLs disabled. Preview uses `blog-preview.herokwon.dev`; production uses `blog.herokwon.dev`, each configured in its Wrangler environment.
