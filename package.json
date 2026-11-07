@@ -15,6 +15,7 @@
     "test": "pnpm run test:automation && pnpm run test:unit --run --coverage && pnpm run test:e2e",
     "test:automation": "node --test .github/scripts/delivery/delivery.test.ts",
     "test:e2e": "playwright test",
+    "test:preview": "node tests/auth-preview.ts",
     "lint": "prettier --check . && eslint . --max-warnings 0",
     "format": "prettier --write .",
     "gen": "wrangler types",
