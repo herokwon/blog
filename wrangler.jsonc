@@ -9,6 +9,17 @@
     "directory": ".svelte-kit/cloudflare"
   },
   "workers_dev": false,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blog-preview-content",
+      "database_id": "4da4f720-6091-4b2f-9114-b5ca28215ff0",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "ATTACHMENTS", "bucket_name": "blog-preview-attachments" }
+  ],
   "preview_urls": false,
   "observability": {
     "logs": {
@@ -26,6 +37,17 @@
   "env": {
     "preview": {
       "name": "blog-preview",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blog-preview-content",
+          "database_id": "4da4f720-6091-4b2f-9114-b5ca28215ff0",
+          "migrations_dir": "drizzle"
+        }
+      ],
+      "r2_buckets": [
+        { "binding": "ATTACHMENTS", "bucket_name": "blog-preview-attachments" }
+      ],
       "routes": [
         { "pattern": "blog-preview.herokwon.dev", "custom_domain": true }
       ],
@@ -45,6 +67,17 @@
     },
     "production": {
       "name": "blog",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blog-content",
+          "database_id": "aa026d93-f256-4f34-9d00-3a983e4f9b57",
+          "migrations_dir": "drizzle"
+        }
+      ],
+      "r2_buckets": [
+        { "binding": "ATTACHMENTS", "bucket_name": "blog-attachments" }
+      ],
       "routes": [{ "pattern": "blog.herokwon.dev", "custom_domain": true }],
       "observability": {
         "logs": {
