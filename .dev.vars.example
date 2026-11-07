@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local development. Values are not committed.
+ACCESS_ISSUER=""
+ACCESS_AUD=""
+AUTHOR_EMAIL=""

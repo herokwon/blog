@@ -16,11 +16,11 @@ export default defineConfig({
   },
   webServer: {
     command: process.env.CI
-      ? 'pnpm db:migrate:local && pnpm preview'
-      : 'pnpm build && pnpm db:migrate:local && pnpm preview',
+      ? 'pnpm db:migrate:local && pnpm test:preview'
+      : 'pnpm build && pnpm db:migrate:local && pnpm test:preview',
     url: 'http://localhost:4173',
     timeout: 120_000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
   testMatch: '**/*.e2e.{ts,js}',
 });

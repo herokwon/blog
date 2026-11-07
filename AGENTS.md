@@ -10,6 +10,8 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Reuse existing capabilities and choose the smallest clear implementation. Avoid abstractions without a current need.
 - Store future post bodies as Markdown. Keep the browser-only editor out of public rendering bundles.
 - Public content and attachments must follow publication visibility; author operations require application-side authorization.
+- Administrator requests are guarded in `src/hooks.server.ts` using the native `cloudflare:workers` environment. Set `ACCESS_ISSUER`, the environment-specific `ACCESS_AUD`, and `AUTHOR_EMAIL` as Worker secrets; absent or invalid configuration denies administrator access. Keep the author email and tokens out of committed files and logs. Copy `.dev.vars.example` to ignored `.dev.vars` for local configuration; no development authentication bypass is supported.
+- E2E uses `pnpm test:preview` to start a local JWKS issuer and the existing Workers build with fixture-only runtime values. It still verifies signed JWTs; HTTP issuers are accepted only when both issuer and request host are loopback. The fixture is outside the deployed application. CI restores Build output before local migration/preview and does not rebuild.
 - New domain models, remote D1/R2 resources, authentication, editor features, and changes outside the accepted delivery scope require their own scoped work.
 
 ## Runtime and Package Management
