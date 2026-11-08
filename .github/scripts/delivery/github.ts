@@ -419,35 +419,7 @@ async function latestCi(repo: Repository, pull: PullRequest) {
     `${repo.path}/actions/workflows/ci.yml/runs?event=pull_request&head_sha=${pull.head.sha}`,
     'workflow_runs',
   );
-  while (runs.length) {
-    const run = latestPullCi(runs, pull, repo.name);
-    if (!run) return undefined;
-    if (
-      run.status === 'completed' &&
-      ['success', 'skipped'].includes(run.conclusion ?? '')
-    ) {
-      const jobs = await repo.api.paginate<Job>(
-        `${repo.path}/actions/runs/${run.id}/jobs?filter=latest`,
-        'jobs',
-      );
-      if (
-        // GitHub can leave dynamic job names unevaluated for skipped jobs.
-        // Only ignore runs that did not publish any required check context.
-        jobs.length === 4 &&
-        jobs.every(
-          job =>
-            !['Lint', 'Type Check', 'Build', 'Test'].includes(job.name) &&
-            job.status === 'completed' &&
-            job.conclusion === 'skipped',
-        )
-      ) {
-        runs.splice(runs.indexOf(run), 1);
-        continue;
-      }
-    }
-    return run;
-  }
-  return undefined;
+  return latestPullCi(runs, pull, repo.name);
 }
 
 export async function waitForMergeReadiness(

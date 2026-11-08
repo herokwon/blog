@@ -1680,7 +1680,7 @@ await test('a newer CI attempt immediately before merging blocks the exact-head 
   assert.equal(mutations, 0);
 });
 
-await test('metadata-only skipped CI cannot displace successful validation for the same PR', async () => {
+await test('latest skipped validation cannot fall back to an older successful run', async () => {
   const current = { ...pull, state: 'open', merged: false };
   const run = {
     id: 10,
@@ -1736,11 +1736,9 @@ await test('metadata-only skipped CI cannot displace successful validation for t
   repo.comments = async () => [{ ...review(current.head.sha), id: 1 }];
   repo.synchronize = async () => false;
   repo.behind = async () => false;
-  // A bounded fixture makes selecting the skipped run fail immediately rather than waiting 30 minutes.
-  let guards = 0;
-  const result = await mergeReady(repo, 3, async () => ++guards < 4);
-  assert.equal(result.state, 'merged');
-  assert.equal(mutations, 1);
+  const result = await mergeReady(repo, 3);
+  assert.equal(result.state, 'blocked');
+  assert.equal(mutations, 0);
 });
 
 await test('readiness retries inconsistent snapshots but never accepts a stale or invalid release', async t => {

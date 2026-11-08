@@ -11,7 +11,7 @@ on:
       - edited
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from)) && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && (github.event.pull_request.state == 'open' && !github.event.pull_request.draft) && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: true
 
 permissions:
@@ -19,9 +19,9 @@ permissions:
 
 jobs:
   lint:
-    name: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))) && 'Lint' || 'Ignored · Lint' }}
+    name: Lint
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft)
     timeout-minutes: 5
     steps:
       - name: Checkout Code
@@ -32,9 +32,9 @@ jobs:
         run: pnpm lint
 
   type-check:
-    name: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))) && 'Type Check' || 'Ignored · Type Check' }}
+    name: Type Check
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft)
     timeout-minutes: 5
     steps:
       - name: Checkout Code
@@ -45,9 +45,9 @@ jobs:
         run: pnpm check
 
   build:
-    name: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))) && 'Build' || 'Ignored · Build' }}
+    name: Build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft)
     timeout-minutes: 10
     steps:
       - name: Checkout Code
@@ -67,10 +67,10 @@ jobs:
           retention-days: 1
 
   test:
-    name: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))) && 'Test' || 'Ignored · Test' }}
+    name: Test
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft)
     timeout-minutes: 10
     steps:
       - name: Checkout Code
