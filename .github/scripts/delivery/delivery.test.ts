@@ -1720,7 +1720,7 @@ await test('metadata-only skipped CI cannot displace successful validation for t
       if (url.includes('/jobs?'))
         return Response.json({
           jobs: ['Lint', 'Type Check', 'Build', 'Test'].map(name => ({
-            name,
+            name: url.includes('/11/') ? `Ignored · ${name}` : name,
             status: 'completed',
             conclusion: url.includes('/11/') ? 'skipped' : 'success',
           })),

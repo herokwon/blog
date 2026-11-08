@@ -434,7 +434,7 @@ async function latestCi(repo: Repository, pull: PullRequest) {
         ['Lint', 'Type Check', 'Build', 'Test'].every(name =>
           jobs.some(
             job =>
-              job.name === name &&
+              job.name === `Ignored · ${name}` &&
               job.status === 'completed' &&
               job.conclusion === 'skipped',
           ),
