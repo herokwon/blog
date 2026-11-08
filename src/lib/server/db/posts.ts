@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm';
+import { imageReferences, MediaError } from '../media.js';
 import { getDb } from './index.js';
 import { categories, posts, postTags, tags } from './schema.js';
 
@@ -172,6 +173,26 @@ export async function mutatePost(
     )
       return bad('Use at most 20 tags, each with 1–40 characters.');
   }
+  let imageIds: string[] = [];
+  if (writingContent && input) {
+    try {
+      imageIds = imageReferences(input.body);
+    } catch (cause) {
+      if (cause instanceof MediaError) return bad(cause.message);
+      throw cause;
+    }
+    if (imageIds.length) {
+      const count = await d1
+        .prepare(
+          'SELECT count(*) AS count FROM attachments WHERE id IN (SELECT value FROM json_each(?))',
+        )
+        .bind(JSON.stringify(imageIds))
+        .first<number>('count');
+      if (count !== imageIds.length)
+        return bad('One or more referenced images do not exist.');
+    }
+  }
+  const imageIdsJson = JSON.stringify(imageIds);
   const status =
     action === 'publish' || action === 'republish'
       ? 'published'
@@ -208,7 +229,7 @@ export async function mutatePost(
         ? null
         : (existing?.deletedAt ?? null);
   const constraints =
-    '(? IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = ?)) AND (? IS NULL OR NOT EXISTS (SELECT 1 FROM posts WHERE slug = ? AND id <> ?))';
+    '(? IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = ?)) AND (? IS NULL OR NOT EXISTS (SELECT 1 FROM posts WHERE slug = ? AND id <> ?)) AND NOT EXISTS (SELECT 1 FROM json_each(?) requested WHERE NOT EXISTS (SELECT 1 FROM attachments WHERE attachments.id = requested.value))';
   const values = [
     title,
     body,
@@ -224,7 +245,16 @@ export async function mutatePost(
         .prepare(
           `INSERT INTO posts (id, title, body, slug, category_id, status, published_at, deleted_at, revision) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${constraints} RETURNING id`,
         )
-        .bind(id, ...values, categoryId, categoryId, slug, slug, id)
+        .bind(
+          id,
+          ...values,
+          categoryId,
+          categoryId,
+          slug,
+          slug,
+          id,
+          imageIdsJson,
+        )
     : d1
         .prepare(
           `UPDATE posts SET title = ?, body = ?, slug = ?, category_id = ?, status = ?, published_at = ?, deleted_at = ?, revision = ?, updated_at = ? WHERE id = ? AND revision = ? AND ${constraints} RETURNING id`,
@@ -239,6 +269,7 @@ export async function mutatePost(
           slug,
           slug,
           id,
+          imageIdsJson,
         );
   const statements = [parent];
   if (writingContent) {
@@ -266,6 +297,18 @@ export async function mutatePost(
           )
           .bind(id, name, id, revision),
       );
+    statements.push(
+      d1
+        .prepare(`DELETE FROM post_attachments WHERE post_id = ? AND ${guard}`)
+        .bind(id, id, revision),
+    );
+    statements.push(
+      d1
+        .prepare(
+          `INSERT INTO post_attachments (post_id, attachment_id) SELECT ?, value FROM json_each(?) WHERE ${guard}`,
+        )
+        .bind(id, imageIdsJson, id, revision),
+    );
   }
   const results = await d1.batch<{ id: string }>(statements);
   return results[0].results.length ? { ok: true, id, revision } : conflict();
