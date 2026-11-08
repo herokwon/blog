@@ -64,6 +64,8 @@
     }
   },
   "dependencies": {
+    "@milkdown/crepe": "^7.23.0",
+    "@milkdown/kit": "7.23.0",
     "jose": "^6.2.15"
   }
 }
