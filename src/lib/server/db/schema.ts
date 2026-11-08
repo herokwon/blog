@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   check,
   index,
+  integer,
   primaryKey,
   sqliteTable,
   text,
@@ -111,5 +112,39 @@ export const postTags = sqliteTable(
   table => [
     primaryKey({ columns: [table.postId, table.tagId] }),
     index('post_tags_tag').on(table.tagId),
+  ],
+);
+
+export const attachments = sqliteTable(
+  'attachments',
+  {
+    id: text('id').primaryKey(),
+    objectKey: text('object_key').notNull().unique(),
+    contentType: text('content_type').notNull(),
+    size: integer('size').notNull(),
+    createdAt: text('created_at').notNull().default(now),
+  },
+  table => [
+    check(
+      'attachments_type',
+      sql`${table.contentType} IN ('image/jpeg', 'image/png', 'image/gif', 'image/webp')`,
+    ),
+    check('attachments_size', sql`${table.size} BETWEEN 1 AND 10485760`),
+  ],
+);
+
+export const postAttachments = sqliteTable(
+  'post_attachments',
+  {
+    postId: text('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'restrict' }),
+    attachmentId: text('attachment_id')
+      .notNull()
+      .references(() => attachments.id, { onDelete: 'restrict' }),
+  },
+  table => [
+    primaryKey({ columns: [table.postId, table.attachmentId] }),
+    index('post_attachments_attachment').on(table.attachmentId),
   ],
 );
