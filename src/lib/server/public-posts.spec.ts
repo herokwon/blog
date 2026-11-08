@@ -133,10 +133,25 @@ test('server Markdown preserves CommonMark/GFM structures and safe public image 
 
 test('server Markdown drops raw executable HTML and unsafe link/image protocols', async () => {
   const html = await renderMarkdown(
-    '<script>globalThis.pwned=true</script>\n\n<img src="x" onerror="alert(1)">\n\n<iframe srcdoc="bad"></iframe>\n\n[bad](javascript:alert%281%29) [encoded](java&#x73;cript:alert%281%29) [vb](vbscript:bad) [file](file:///secret) ![data](data:image/svg+xml;base64,PHN2Zz4=)\n\n[ok](/posts/safe)',
+    '<script>globalThis.pwned=true</script>\n\n<a id="location" name="document">Clobber</a>\n\n<img src="x" onerror="alert(1)">\n\n<iframe srcdoc="bad"></iframe>\n\n[bad](javascript:alert%281%29) [encoded](java&#x73;cript:alert%281%29) [vb](vbscript:bad) [file](file:///secret) ![data](data:image/svg+xml;base64,PHN2Zz4=)\n\n[ok](/posts/safe)',
   );
   expect(html).not.toMatch(
     /<script|<img[^>]*onerror|<iframe|globalThis\.pwned|(?:href|src)="(?:javascript|vbscript|file|data):/i,
   );
   expect(html).toContain('href="/posts/safe"');
+  expect(html).not.toMatch(/(?:id|name)="(?:location|document|constructor)"/);
+});
+
+test('sanitized GFM footnote navigation and return links resolve to actual IDs', async () => {
+  const html = await renderMarkdown(
+    'Text[^constructor]\n\n[^constructor]: Note',
+  );
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+  const fragments = [...html.matchAll(/href="#([^"]+)"/g)].map(match =>
+    decodeURIComponent(match[1]),
+  );
+  expect(fragments).toHaveLength(2);
+  for (const fragment of fragments) expect(ids).toContain(fragment);
+  for (const match of html.matchAll(/aria-describedby="([^"]+)"/g))
+    for (const id of match[1].split(/\s+/)) expect(ids).toContain(id);
 });

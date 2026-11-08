@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
@@ -18,8 +18,13 @@ const metadata = {
 const renderer = unified()
   .use(remarkParse)
   .use(remarkGfm)
-  .use(remarkRehype)
-  .use(rehypeSanitize)
+  // Raw authored HTML remains disabled. The bridge owns the generated ID
+  // namespace; applying a second sanitizer prefix would break fragment/ARIA refs.
+  .use(remarkRehype, {
+    allowDangerousHtml: false,
+    clobberPrefix: 'user-content-',
+  })
+  .use(rehypeSanitize, { ...defaultSchema, clobberPrefix: '' })
   .use(rehypeStringify);
 
 export async function renderMarkdown(body: string) {
