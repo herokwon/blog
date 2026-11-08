@@ -20,7 +20,12 @@ export const handle: Handle = async ({ event, resolve }) => {
       headers: { 'cache-control': 'private, no-store' },
     });
   }
-  if (!protectedPath) return resolve(event);
+  if (!protectedPath) {
+    const response = await resolve(event);
+    if (route === '/' || route === '/posts/[slug]')
+      response.headers.set('cache-control', 'no-store');
+    return response;
+  }
   try {
     event.locals.author = await authorizeAdminRequest(event.request, env);
   } catch (cause) {
