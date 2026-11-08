@@ -94,7 +94,7 @@ test('author manages categories with retained validation input and native deleti
   await expect(edited).toHaveCount(0);
 });
 
-test('native rename failures retain input on later category pages', async ({
+test('native category forms preserve rename input and disable unconfirmed deletion', async ({
   browser,
   request,
 }) => {
@@ -132,6 +132,9 @@ test('native rename failures retain input on later category pages', async ({
     }
     const currentPage = new URL(page.url()).searchParams.get('page');
     expect(Number(currentPage)).toBeGreaterThan(1);
+    await expect(
+      target.getByRole('button', { name: 'Delete category' }),
+    ).toBeDisabled();
     await target.getByLabel('Category name').fill('a'.repeat(21));
     await target.getByRole('button', { name: 'Save name' }).click();
     await expect(page.getByRole('alert')).toBeVisible();
