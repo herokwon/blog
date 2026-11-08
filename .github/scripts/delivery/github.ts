@@ -119,6 +119,12 @@ export type Run = {
   path: string;
   event: string;
   actor?: { id: number };
+  repository?: { id: number; full_name: string };
+  pull_requests?: {
+    number: number;
+    head: { sha: string; ref: string; repo: { id: number } };
+    base: { ref: string; repo: { id: number } };
+  }[];
 };
 export type Job = {
   id: number;
@@ -380,12 +386,76 @@ export class Repository {
   }
 }
 
+export function latestPullCi(
+  runs: Run[],
+  pull: PullRequest,
+  repository: string,
+) {
+  return runs
+    .filter(
+      run =>
+        run.event === 'pull_request' &&
+        run.path.split('@')[0] === '.github/workflows/ci.yml' &&
+        run.head_sha === pull.head.sha &&
+        run.head_branch === pull.head.ref &&
+        run.repository?.full_name === repository &&
+        Number.isSafeInteger(run.repository.id) &&
+        run.repository.id > 0 &&
+        run.pull_requests?.some(
+          item =>
+            item.number === pull.number &&
+            item.head.sha === pull.head.sha &&
+            item.head.ref === pull.head.ref &&
+            item.base.ref === pull.base.ref &&
+            item.head.repo.id === run.repository?.id &&
+            item.base.repo.id === run.repository.id,
+        ),
+    )
+    .sort((a, b) => b.id - a.id || b.run_attempt - a.run_attempt)[0];
+}
+
+async function latestCi(repo: Repository, pull: PullRequest) {
+  const runs = await repo.api.paginate<Run>(
+    `${repo.path}/actions/workflows/ci.yml/runs?event=pull_request&head_sha=${pull.head.sha}`,
+    'workflow_runs',
+  );
+  while (runs.length) {
+    const run = latestPullCi(runs, pull, repo.name);
+    if (!run) return undefined;
+    if (
+      run.status === 'completed' &&
+      ['success', 'skipped'].includes(run.conclusion ?? '')
+    ) {
+      const jobs = await repo.api.paginate<Job>(
+        `${repo.path}/actions/runs/${run.id}/jobs?filter=latest`,
+        'jobs',
+      );
+      if (
+        ['Lint', 'Type Check', 'Build', 'Test'].every(name =>
+          jobs.some(
+            job =>
+              job.name === name &&
+              job.status === 'completed' &&
+              job.conclusion === 'skipped',
+          ),
+        )
+      ) {
+        runs.splice(runs.indexOf(run), 1);
+        continue;
+      }
+    }
+    return run;
+  }
+  return undefined;
+}
+
 export async function waitForMergeReadiness(
   repo: Repository,
   number: number,
   guard: () => Promise<boolean> = () => Promise.resolve(true),
   deadline = Date.now() + 30 * 60_000,
   afterSync?: (previous: PullRequest) => Promise<void>,
+  beforeCheck?: (pull: PullRequest) => Promise<void>,
 ) {
   while (Date.now() < deadline) {
     const pull = await repo.pull(number);
@@ -401,13 +471,8 @@ export async function waitForMergeReadiness(
       if (afterSync) await afterSync(pull);
       continue;
     }
-    const runs = await repo.api.paginate<Run>(
-      `${repo.path}/actions/workflows/ci.yml/runs?event=pull_request&head_sha=${pull.head.sha}`,
-      'workflow_runs',
-    );
-    const run = runs
-      .filter(item => item.head_sha === pull.head.sha)
-      .sort((a, b) => b.id - a.id)[0];
+    if (beforeCheck) await beforeCheck(pull);
+    const run = await latestCi(repo, pull);
     if (run?.status === 'completed' && run.conclusion !== 'success')
       return {
         state: 'blocked',
@@ -428,11 +493,7 @@ export async function waitForMergeReadiness(
         'jobs',
       );
       const fresh = await repo.pull(number);
-      const latestRuns = await repo.api.paginate<Run>(
-        `${repo.path}/actions/workflows/ci.yml/runs?event=pull_request&head_sha=${pull.head.sha}`,
-        'workflow_runs',
-      );
-      const latest = latestRuns.sort((a, b) => b.id - a.id)[0];
+      const latest = await latestCi(repo, fresh);
       if (
         fresh.head.sha === pull.head.sha &&
         fresh.state === 'open' &&
@@ -445,7 +506,12 @@ export async function waitForMergeReadiness(
         latest.conclusion === 'success' &&
         ciPassed(run, jobs)
       )
-        return { state: 'ready', headSha: pull.head.sha } as const;
+        return {
+          state: 'ready',
+          headSha: pull.head.sha,
+          runId: run.id,
+          runAttempt: run.run_attempt,
+        } as const;
     }
     await sleep(10_000);
   }
@@ -461,6 +527,7 @@ export async function mergeReady(
   number: number,
   guard?: () => Promise<boolean>,
   afterSync?: (previous: PullRequest) => Promise<void>,
+  beforeCheck?: (pull: PullRequest) => Promise<void>,
 ) {
   const result = await waitForMergeReadiness(
     repo,
@@ -468,6 +535,7 @@ export async function mergeReady(
     guard,
     undefined,
     afterSync,
+    beforeCheck,
   );
   if (result.state !== 'ready') {
     summary(result.reason);
@@ -488,6 +556,21 @@ export async function mergeReady(
     (guard && !(await guard()))
   )
     throw new Error('PR changed before merge; resume validation');
+  const latest = await latestCi(repo, fresh);
+  if (
+    !latest ||
+    latest.id !== result.runId ||
+    latest.run_attempt !== result.runAttempt ||
+    latest.status !== 'completed' ||
+    latest.conclusion !== 'success'
+  )
+    throw new Error('CI changed before merge; resume validation');
+  const jobs = await repo.api.paginate<Job>(
+    `${repo.path}/actions/runs/${latest.id}/jobs?filter=latest`,
+    'jobs',
+  );
+  if (!ciPassed(latest, jobs))
+    throw new Error('CI changed before merge; resume validation');
   const merged = await repo.api.request<{ merged: boolean }>(
     'PUT',
     `${repo.path}/pulls/${number}/merge`,

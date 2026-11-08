@@ -16,6 +16,7 @@ import {
   compareVersions,
   object,
   parseReleaseBranch,
+  readReviewEvidence,
   type PullRequest,
 } from './policy.ts';
 
@@ -194,24 +195,95 @@ async function publishPreparation(repo: Repository, number: number) {
 This PR is merged only after current-head CI and Codex review satisfy repository policy.`,
     }));
   await repo.assignMilestone(child.number, release.branch);
-  await mergeReady(repo, child.number, async () => {
-    const original = await repo.pull(number);
-    return (
-      original.state === 'open' &&
-      !original.draft &&
-      original.head.ref === release.branch &&
-      original.base.ref === 'main'
-    );
-  });
+  await mergeReady(
+    repo,
+    child.number,
+    async () => {
+      const original = await repo.pull(number);
+      return (
+        original.state === 'open' &&
+        !original.draft &&
+        original.head.ref === release.branch &&
+        original.base.ref === 'main'
+      );
+    },
+    undefined,
+    current => requestVersionReview(repo, current, release.branch),
+  );
+}
+
+export async function requestVersionReview(
+  repo: Repository,
+  pull: PullRequest,
+  releaseBranch: string,
+) {
+  const { version } = parseReleaseBranch(releaseBranch);
+  const id = positiveInteger(env('APP_BOT_ID')),
+    slug = env('APP_SLUG');
+  const eligible = (current: PullRequest) =>
+    current.state === 'open' &&
+    !current.draft &&
+    current.user.id === id &&
+    current.user.login === `${slug}[bot]` &&
+    current.head.repo?.full_name === repo.name &&
+    current.base.repo.full_name === repo.name &&
+    current.head.ref === `automation/release/${version}` &&
+    current.base.ref === releaseBranch;
+  if (!eligible(pull))
+    throw new Error('Expected an App-owned version preparation PR');
+  const comments = await repo.comments(pull.number);
+  const evidence = readReviewEvidence(comments, pull.head.sha);
+  if (
+    evidence?.completed ||
+    ['queued', 'pending', 'in_progress'].includes(String(evidence?.status))
+  )
+    return;
+  const marker = `<!-- version-codex-review:v1 ${JSON.stringify({ pr: pull.number, headSha: pull.head.sha })} -->`;
+  if (
+    comments.some(
+      comment =>
+        comment.user.id === id &&
+        comment.user.login === `${slug}[bot]` &&
+        comment.user.type === 'Bot' &&
+        comment.body.startsWith(`${marker}\n`),
+    )
+  )
+    return;
+  const fresh = await repo.pull(pull.number);
+  if (!eligible(fresh) || fresh.head.sha !== pull.head.sha)
+    throw new Error('Version PR changed before review request');
+  await repo.api.request(
+    'POST',
+    `${repo.path}/issues/${pull.number}/comments`,
+    {
+      body: `${marker}\n@codex review\n\nReview requested for commit \`${pull.head.sha}\`.`,
+    },
+  );
 }
 
 export async function verifyReleaseReadiness(
   repo: Repository,
   number: number,
   deadline = Date.now() + 30 * 60_000,
+  pause: (ms: number) => Promise<void> = sleep,
 ) {
+  let expectedBranch: string | undefined;
   while (Date.now() < deadline) {
-    const { pull, release } = await currentRelease(repo, number);
+    const pull = await repo.pull(number);
+    const release = releaseInput(
+      pull,
+      repo.name,
+      await repo.version(await repo.ref('main')),
+    );
+    expectedBranch ??= release.branch;
+    if (release.branch !== expectedBranch)
+      throw new Error(
+        'Release PR source changed during readiness verification',
+      );
+    if ((await repo.ref(release.branch)) !== pull.head.sha) {
+      await pause(10_000);
+      continue;
+    }
     if (
       (await repo.version(pull.head.sha)) === release.version &&
       (await repo.verifiedDeployment(pull.head.sha, 'preview'))
@@ -219,6 +291,11 @@ export async function verifyReleaseReadiness(
       const latest = await repo.pull(number);
       if (
         latest.head.sha === pull.head.sha &&
+        latest.head.ref === release.branch &&
+        latest.base.ref === 'main' &&
+        latest.head.repo?.full_name === repo.name &&
+        latest.base.repo.full_name === repo.name &&
+        (await repo.ref(release.branch)) === pull.head.sha &&
         latest.state === 'open' &&
         !latest.draft &&
         !(await repo.behind(latest))
@@ -227,7 +304,7 @@ export async function verifyReleaseReadiness(
         return;
       }
     }
-    await sleep(10_000);
+    await pause(10_000);
   }
   throw new Error(
     'Release version or exact-head verified preview is missing after 30 minutes; resume readiness',

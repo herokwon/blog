@@ -11,7 +11,7 @@ on:
       - edited
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from)) && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: true
 
 permissions:
@@ -21,7 +21,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
     timeout-minutes: 5
     steps:
       - name: Checkout Code
@@ -34,7 +34,7 @@ jobs:
   type-check:
     name: Type Check
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
     timeout-minutes: 5
     steps:
       - name: Checkout Code
@@ -47,7 +47,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
     timeout-minutes: 10
     steps:
       - name: Checkout Code
@@ -70,7 +70,7 @@ jobs:
     name: Test
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || (github.event.pull_request.state == 'open' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base.ref.from))
     timeout-minutes: 10
     steps:
       - name: Checkout Code

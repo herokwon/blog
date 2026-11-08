@@ -23,7 +23,13 @@ import {
   renderComment,
   verifyWorkerActivation,
 } from './deployment.ts';
-import { GitHubClient, GitHubError, Repository } from './github.ts';
+import {
+  GitHubClient,
+  GitHubError,
+  latestPullCi,
+  mergeReady,
+  Repository,
+} from './github.ts';
 import {
   ciPassed,
   classifyUpdates,
@@ -35,7 +41,9 @@ import {
 import {
   prepareReleaseVersion,
   releaseInput,
+  requestVersionReview,
   validateVersionChange,
+  verifyReleaseReadiness,
 } from './release-version.ts';
 
 // Test fixtures must not be published to the real Actions job summary.
@@ -1542,6 +1550,373 @@ await test('only signed App synchronization can carry an old check forward; huma
         );
         assert.equal(await nativeIntakeAllowed(repo, current), false);
       }
+    },
+  );
+});
+
+await test('merge CI selection binds PR, repository, target and head before choosing latest attempt', () => {
+  const current = { ...pull, state: 'open', merged: false };
+  const run = {
+    id: 10,
+    head_sha: current.head.sha,
+    head_branch: current.head.ref,
+    path: '.github/workflows/ci.yml',
+    event: 'pull_request',
+    status: 'completed',
+    conclusion: 'success',
+    run_attempt: 2,
+    repository: { id: 1, full_name: 'herokwon/blog' },
+    pull_requests: [
+      {
+        number: current.number,
+        head: { sha: current.head.sha, ref: current.head.ref, repo: { id: 1 } },
+        base: { ref: current.base.ref, repo: { id: 1 } },
+      },
+    ],
+  };
+  assert.equal(latestPullCi([run], current, 'herokwon/blog')?.id, 10);
+  const unrelated = [
+    { ...run, id: 11, pull_requests: [] },
+    {
+      ...run,
+      id: 12,
+      pull_requests: [{ ...run.pull_requests[0], number: 999 }],
+    },
+    {
+      ...run,
+      id: 13,
+      pull_requests: [
+        { ...run.pull_requests[0], base: { ref: 'main', repo: { id: 1 } } },
+      ],
+    },
+    { ...run, id: 14, repository: { id: 2, full_name: 'someone/blog' } },
+    { ...run, id: 15, head_sha: sha },
+    { ...run, id: 16, event: 'workflow_dispatch' },
+    {
+      ...run,
+      id: 17,
+      pull_requests: [
+        {
+          ...run.pull_requests[0],
+          head: { ...run.pull_requests[0].head, repo: { id: 2 } },
+        },
+      ],
+    },
+  ];
+  assert.equal(latestPullCi(unrelated, current, 'herokwon/blog'), undefined);
+  assert.equal(
+    latestPullCi([...unrelated, run], current, 'herokwon/blog')?.id,
+    10,
+  );
+  assert.equal(
+    latestPullCi([{ ...run, run_attempt: 1 }, run], current, 'herokwon/blog')
+      ?.run_attempt,
+    2,
+  );
+});
+
+await test('a newer CI attempt immediately before merging blocks the exact-head mutation', async () => {
+  const current = { ...pull, state: 'open', merged: false };
+  let queries = 0,
+    mutations = 0;
+  const run = {
+    id: 10,
+    head_sha: current.head.sha,
+    head_branch: current.head.ref,
+    path: '.github/workflows/ci.yml',
+    event: 'pull_request',
+    status: 'completed',
+    conclusion: 'success',
+    run_attempt: 1,
+    repository: { id: 1, full_name: 'herokwon/blog' },
+    pull_requests: [
+      {
+        number: 3,
+        head: { sha: current.head.sha, ref: current.head.ref, repo: { id: 1 } },
+        base: { ref: current.base.ref, repo: { id: 1 } },
+      },
+    ],
+  };
+  const repo = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async (input, init) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (init?.method === 'PUT') {
+        mutations++;
+        return Response.json({ merged: true });
+      }
+      if (url.includes('/jobs?'))
+        return Response.json({
+          jobs: ['Lint', 'Type Check', 'Build', 'Test'].map(name => ({
+            name,
+            status: 'completed',
+            conclusion: 'success',
+          })),
+        });
+      if (url.includes('/ci.yml/runs'))
+        return Response.json({
+          workflow_runs: [
+            {
+              ...run,
+              run_attempt: ++queries >= 3 ? 2 : 1,
+              status: queries >= 3 ? 'in_progress' : 'completed',
+            },
+          ],
+        });
+      throw new Error(url);
+    }),
+  );
+  repo.pull = async () => current;
+  repo.comments = async () => [{ ...review(current.head.sha), id: 1 }];
+  repo.synchronize = async () => false;
+  repo.behind = async () => false;
+  await assert.rejects(mergeReady(repo, 3), /CI changed before merge/);
+  assert.equal(mutations, 0);
+});
+
+await test('metadata-only skipped CI cannot displace successful validation for the same PR', async () => {
+  const current = { ...pull, state: 'open', merged: false };
+  const run = {
+    id: 10,
+    head_sha: current.head.sha,
+    head_branch: current.head.ref,
+    path: '.github/workflows/ci.yml',
+    event: 'pull_request',
+    status: 'completed',
+    conclusion: 'success',
+    run_attempt: 1,
+    repository: { id: 1, full_name: 'herokwon/blog' },
+    pull_requests: [
+      {
+        number: 3,
+        head: { sha: current.head.sha, ref: current.head.ref, repo: { id: 1 } },
+        base: { ref: current.base.ref, repo: { id: 1 } },
+      },
+    ],
+  };
+  let mutations = 0;
+  const repo = new Repository(
+    'herokwon/blog',
+    'token',
+    new GitHubClient('token', async (input, init) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (init?.method === 'PUT') {
+        mutations++;
+        return Response.json({ merged: true });
+      }
+      if (url.includes('/ci.yml/runs'))
+        return Response.json({ workflow_runs: [{ ...run, id: 11 }, run] });
+      if (url.includes('/jobs?'))
+        return Response.json({
+          jobs: ['Lint', 'Type Check', 'Build', 'Test'].map(name => ({
+            name,
+            status: 'completed',
+            conclusion: url.includes('/11/') ? 'skipped' : 'success',
+          })),
+        });
+      throw new Error(url);
+    }),
+  );
+  repo.pull = async () => current;
+  repo.comments = async () => [{ ...review(current.head.sha), id: 1 }];
+  repo.synchronize = async () => false;
+  repo.behind = async () => false;
+  // A bounded fixture makes selecting the skipped run fail immediately rather than waiting 30 minutes.
+  let guards = 0;
+  const result = await mergeReady(repo, 3, async () => ++guards < 4);
+  assert.equal(result.state, 'merged');
+  assert.equal(mutations, 1);
+});
+
+await test('readiness retries inconsistent snapshots but never accepts a stale or invalid release', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100000 });
+  const fresh = 'c'.repeat(40);
+  let reads = 0,
+    sleeps = 0;
+  const original = {
+    ...pull,
+    number: 49,
+    state: 'open',
+    merged: false,
+    head: { ...pull.head, ref: 'release/0.2.1', sha },
+    base: { ...pull.base, ref: 'main' },
+  };
+  const repo = new Repository('herokwon/blog', 'token');
+  repo.pull = async () => ({
+    ...original,
+    head: { ...original.head, sha: ++reads === 1 ? sha : fresh },
+  });
+  repo.ref = async branch => (branch === 'main' ? sha : fresh);
+  repo.version = async head => (head === sha ? '0.2.0' : '0.2.1');
+  repo.verifiedDeployment = async () => ({ deploymentId: 1, runId: 1 });
+  repo.behind = async () => false;
+  const pause = async () => {
+    sleeps++;
+  };
+  await verifyReleaseReadiness(repo, 49, Date.now() + 1000, pause);
+  assert.equal(sleeps, 1);
+  repo.pull = async () => original;
+  await assert.rejects(
+    verifyReleaseReadiness(repo, 49, Date.now() + 1000, async () => {
+      t.mock.timers.tick(1000);
+    }),
+    /missing after 30 minutes/,
+  );
+  reads = 0;
+  repo.pull = async () =>
+    ++reads === 1
+      ? original
+      : { ...original, head: { ...original.head, ref: 'release/0.2.2' } };
+  await assert.rejects(
+    verifyReleaseReadiness(repo, 49, Date.now() + 1000, pause),
+    /source changed/,
+  );
+  repo.pull = async () => ({
+    ...original,
+    head: { ...original.head, sha: fresh },
+  });
+  repo.verifiedDeployment = async () => null;
+  await assert.rejects(
+    verifyReleaseReadiness(repo, 49, Date.now() + 1000, async () => {
+      t.mock.timers.tick(1000);
+    }),
+    /missing after 30 minutes/,
+  );
+  repo.pull = async () => ({ ...original, state: 'closed' });
+  await assert.rejects(
+    verifyReleaseReadiness(repo, 49, Date.now() + 1000, pause),
+    /open same-repository/,
+  );
+  repo.pull = async () => ({ ...original, draft: true });
+  await assert.rejects(
+    verifyReleaseReadiness(repo, 49, Date.now() + 1000, pause),
+    /open same-repository/,
+  );
+  repo.pull = async () => ({
+    ...original,
+    base: { ...original.base, ref: 'release/0.2.1' },
+  });
+  await assert.rejects(
+    verifyReleaseReadiness(repo, 49, Date.now() + 1000, pause),
+    /open same-repository/,
+  );
+  repo.pull = async () => {
+    throw new Error('API unavailable');
+  };
+  await assert.rejects(
+    verifyReleaseReadiness(repo, 49, Date.now() + 1000, pause),
+    /API unavailable/,
+  );
+});
+
+await test('publication proof unavailable is distinct from a failed Worker deployment', () => {
+  const body = renderComment(
+    production,
+    'herokwon/blog',
+    'https://example.com/logs',
+    {
+      updatedAt: '2026-11-08T00:00:00Z',
+      publicationResult: 'failure',
+      worker: 'unknown',
+      publication: false,
+      stage: 'Production delivery verification',
+    },
+  );
+  assert.match(
+    body,
+    /Production deployment\*\* \| ⚠️ \*\*Verification unavailable/,
+  );
+  assert.doesNotMatch(body, /Production deployment\*\* \| ❌/);
+  assert.doesNotMatch(body, /Link: /);
+  assert.match(body, /Production delivery verification/);
+});
+
+await test('version review requests are authenticated, once per SHA and restricted to App-owned preparation', async () => {
+  await withEnvironment(
+    { APP_BOT_ID: '123', APP_SLUG: 'blog-bot' },
+    async () => {
+      const current = {
+        ...pull,
+        state: 'open',
+        merged: false,
+        user: { login: 'blog-bot[bot]', id: 123 },
+        head: { ...pull.head, ref: 'automation/release/0.2.1' },
+        base: { ...pull.base, ref: 'release/0.2.1' },
+      };
+      let comments: {
+        id: number;
+        body: string;
+        user: { login: string; id: number; type: string };
+      }[] = [];
+      let posts = 0;
+      const repo = new Repository(
+        'herokwon/blog',
+        'token',
+        new GitHubClient('token', async (_input, init) => {
+          posts++;
+          const body = (JSON.parse(requestBody(init)) as { body: string }).body;
+          comments.push({
+            id: posts,
+            body,
+            user: { id: 123, login: 'blog-bot[bot]', type: 'Bot' },
+          });
+          return Response.json(comments.at(-1));
+        }),
+      );
+      repo.pull = async () => current;
+      repo.comments = async () => comments;
+      await requestVersionReview(repo, current, 'release/0.2.1');
+      await requestVersionReview(repo, current, 'release/0.2.1');
+      assert.equal(posts, 1);
+      assert.match(comments[0].body, /@codex review/);
+      const next = {
+        ...current,
+        head: { ...current.head, sha: 'd'.repeat(40) },
+      };
+      repo.pull = async () => next;
+      await requestVersionReview(repo, next, 'release/0.2.1');
+      assert.equal(posts, 2);
+      comments = comments.map(item => ({
+        ...item,
+        user: { ...item.user, id: 999 },
+      }));
+      await requestVersionReview(repo, next, 'release/0.2.1');
+      assert.equal(posts, 3);
+      comments = [{ ...review(next.head.sha), id: 99 }];
+      await requestVersionReview(repo, next, 'release/0.2.1');
+      assert.equal(posts, 3);
+      comments = [
+        { ...review(next.head.sha, { status: 'in_progress' }), id: 99 },
+      ];
+      await requestVersionReview(repo, next, 'release/0.2.1');
+      assert.equal(posts, 3);
+      await assert.rejects(
+        requestVersionReview(
+          repo,
+          { ...next, user: { login: 'someone', id: 1 } },
+          'release/0.2.1',
+        ),
+        /App-owned/,
+      );
+      comments = [];
+      repo.api = new GitHubClient('token', async () => {
+        throw new Error('request interrupted');
+      });
+      await assert.rejects(
+        requestVersionReview(repo, next, 'release/0.2.1'),
+        /interrupted/,
+      );
     },
   );
 });
