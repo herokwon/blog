@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import MarkdownEditor from '#lib/components/MarkdownEditor.svelte';
   import type {
     editorOptions,
     getPost,
@@ -7,6 +8,7 @@
   } from '#lib/server/db/posts.js';
   import type { PostFailure } from '#lib/server/posts-form.js';
   import { enhance, type SubmitFunction } from '$app/forms';
+  import { beforeNavigate } from '$app/navigation';
   import { resolve } from '$app/paths';
 
   let {
@@ -30,6 +32,51 @@
   }
   let values = $state(initialValues());
   let newTag = $state('');
+  let markdownEditor: { read(): string } | undefined = $state();
+  let savedNavigation = $state(false);
+  let submitError = $state('');
+  function snapshot(input: PostInput, pendingTag = '') {
+    return JSON.stringify([
+      input.title,
+      input.body,
+      input.slug,
+      input.categoryId,
+      input.tags,
+      pendingTag,
+    ]);
+  }
+  function baseline() {
+    return snapshot({
+      title: post?.title ?? '',
+      body: post?.body ?? '',
+      slug: post?.slug ?? '',
+      categoryId: post?.categoryId ?? '',
+      tags: post?.tags ?? [],
+    });
+  }
+  const dirty = $derived(
+    !post?.deletedAt && snapshot(values, newTag) !== baseline(),
+  );
+  beforeNavigate(navigation => {
+    if (
+      dirty &&
+      !savedNavigation &&
+      !navigation.willUnload &&
+      !window.confirm('Discard unsaved changes?')
+    )
+      navigation.cancel();
+  });
+  $effect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!savedNavigation) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  });
   let busy = $state(false);
   let hydrated = $state(false);
   onMount(() => {
@@ -91,7 +138,7 @@
       controller.abort();
     };
   });
-  const submit: SubmitFunction = ({ formElement, cancel }) => {
+  const submit: SubmitFunction = ({ formElement, formData, cancel }) => {
     if (busy) {
       cancel();
       return;
@@ -106,11 +153,23 @@
       cancel();
       return;
     }
+    if (formElement.dataset.operation === 'content') {
+      values.body = markdownEditor?.read() ?? values.body;
+      formData.set('body', values.body);
+    }
+    submitError = '';
     busy = true;
-    return async ({ update }) => {
+    return async ({ result, update }) => {
+      savedNavigation = result.type === 'redirect';
       try {
+        if (result.type === 'error') {
+          submitError =
+            'The request could not be completed. Your input has been kept. Please retry.';
+          return;
+        }
         await update({ reset: false });
       } finally {
+        savedNavigation = false;
         busy = false;
       }
     };
@@ -124,7 +183,7 @@
   }
 </script>
 
-{#if form}<p role="alert">{form.message}</p>{/if}
+{#if submitError || form}<p role="alert">{submitError || form?.message}</p>{/if}
 {#if post}
   <p>Status: {post.status}</p>
   {#if trashed}<p>Trash — read-only</p>{/if}
@@ -139,6 +198,7 @@
   method="POST"
   action={post ? '?/save' : '?/create'}
   aria-label="Post content"
+  data-operation="content"
   use:enhance={submit}
 >
   <input type="hidden" name="revision" value={revision} />
@@ -151,13 +211,18 @@
         readonly={busy}
       /></label
     >
-    <label
-      >Markdown <textarea
-        name="body"
-        rows="16"
-        bind:value={values.body}
-        readonly={busy}></textarea></label
-    >
+    {#if trashed}
+      <label
+        >Markdown <textarea name="body" rows="16" value={values.body} readonly
+        ></textarea></label
+      >
+    {:else}
+      {#key post?.id ?? 'new'}<MarkdownEditor
+          bind:this={markdownEditor}
+          bind:value={values.body}
+          readonly={busy}
+        />{/key}
+    {/if}
     <label
       >Slug <input
         name="slug"
