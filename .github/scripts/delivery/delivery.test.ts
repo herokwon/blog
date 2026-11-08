@@ -1716,11 +1716,15 @@ await test('metadata-only skipped CI cannot displace successful validation for t
         return Response.json({ merged: true });
       }
       if (url.includes('/ci.yml/runs'))
-        return Response.json({ workflow_runs: [{ ...run, id: 11 }, run] });
+        return Response.json({
+          workflow_runs: [{ ...run, id: 11, conclusion: 'skipped' }, run],
+        });
       if (url.includes('/jobs?'))
         return Response.json({
           jobs: ['Lint', 'Type Check', 'Build', 'Test'].map(name => ({
-            name: url.includes('/11/') ? `Ignored · ${name}` : name,
+            name: url.includes('/11/')
+              ? `(github.event.action != 'edited') && '${name}' || 'Ignored · ${name}'`
+              : name,
             status: 'completed',
             conclusion: url.includes('/11/') ? 'skipped' : 'success',
           })),

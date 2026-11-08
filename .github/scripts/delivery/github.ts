@@ -431,13 +431,14 @@ async function latestCi(repo: Repository, pull: PullRequest) {
         'jobs',
       );
       if (
-        ['Lint', 'Type Check', 'Build', 'Test'].every(name =>
-          jobs.some(
-            job =>
-              job.name === `Ignored · ${name}` &&
-              job.status === 'completed' &&
-              job.conclusion === 'skipped',
-          ),
+        // GitHub can leave dynamic job names unevaluated for skipped jobs.
+        // Only ignore runs that did not publish any required check context.
+        jobs.length === 4 &&
+        jobs.every(
+          job =>
+            !['Lint', 'Type Check', 'Build', 'Test'].includes(job.name) &&
+            job.status === 'completed' &&
+            job.conclusion === 'skipped',
         )
       ) {
         runs.splice(runs.indexOf(run), 1);
