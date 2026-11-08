@@ -52,6 +52,7 @@ test('Wrangler applies committed SQL once and preserves data on repeat applicati
     ) as { results: Record<string, unknown>[] }[];
     expect(result.flatMap(item => item.results)).toEqual([
       { name: '0000_post-classification-schema.sql' },
+      { name: '0001_private-post-attachments.sql' },
       { count: 1 },
     ]);
     const migrations = join(state, 'migrations');
@@ -61,8 +62,12 @@ test('Wrangler applies committed SQL once and preserves data on repeat applicati
       join(migrations, '0000_post-classification-schema.sql'),
     );
     writeFileSync(
-      join(migrations, '0001_invalid.sql'),
+      join(migrations, '0002_invalid.sql'),
       'CREATE TABLE partial_migration (id TEXT); INSERT INTO missing_table VALUES (1);',
+    );
+    copyFileSync(
+      resolve('drizzle/0001_private-post-attachments.sql'),
+      join(migrations, '0001_private-post-attachments.sql'),
     );
     const config = JSON.parse(
       readFileSync(resolve('wrangler.jsonc'), 'utf8'),
@@ -108,7 +113,10 @@ test('Wrangler applies committed SQL once and preserves data on repeat applicati
       ),
     ) as { results: Record<string, unknown>[] }[];
     expect(afterFailure.map(item => item.results)).toEqual([
-      [{ name: '0000_post-classification-schema.sql' }],
+      [
+        { name: '0000_post-classification-schema.sql' },
+        { name: '0001_private-post-attachments.sql' },
+      ],
       [],
       [{ count: 1 }],
     ]);

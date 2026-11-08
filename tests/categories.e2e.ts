@@ -11,6 +11,7 @@ test('author manages categories with retained validation input and native deleti
   await expect(
     page.getByRole('heading', { name: 'Categories', exact: true }),
   ).toBeVisible();
+  await page.waitForLoadState('networkidle');
   const name = `Test ${crypto.randomUUID().slice(0, 8)}`;
   const create = page.getByRole('form', { name: 'Create category' });
   const pending = Promise.withResolvers<void>();
@@ -32,6 +33,14 @@ test('author manages categories with retained validation input and native deleti
   const row = page
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { name, exact: true }) });
+  await expect(page.getByRole('status')).toContainText('created');
+  while (!(await row.count())) {
+    const next = await page
+      .getByRole('link', { name: 'Next', exact: true })
+      .getAttribute('href');
+    if (!next) throw new Error('Created category was not listed');
+    await page.goto(next);
+  }
   await expect(row).toBeVisible();
   await create.getByLabel('Category name').fill(name);
   await create.getByRole('button', { name: 'Create category' }).click();

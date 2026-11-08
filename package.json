@@ -29,6 +29,7 @@
     "@sveltejs/adapter-cloudflare": "^8.0.0",
     "@sveltejs/kit": "^3.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^26",
     "@vitest/browser-playwright": "^4.1.8",
     "@vitest/coverage-v8": "^4.1.8",
@@ -66,6 +67,10 @@
   "dependencies": {
     "@milkdown/crepe": "^7.23.0",
     "@milkdown/kit": "7.23.0",
-    "jose": "^6.2.15"
+    "jose": "^6.2.15",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.2.0"
   }
 }

@@ -175,6 +175,18 @@ importers:
       jose:
         specifier: ^6.2.15
         version: 6.2.15
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1(supports-color@10.2.2)
+      remark-parse:
+        specifier: ^11.0.0
+        version: 11.0.0(supports-color@10.2.2)
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+      unist-util-visit:
+        specifier: ^5.2.0
+        version: 5.2.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -194,6 +206,9 @@ importers:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^7.2.0
         version: 7.3.1(svelte@5.57.3(@typescript-eslint/types@8.72.1))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      '@types/mdast':
+        specifier: ^4.0.4
+        version: 4.0.4
       '@types/node':
         specifier: ^26
         version: 26.6.6
