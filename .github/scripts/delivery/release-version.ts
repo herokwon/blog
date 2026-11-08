@@ -235,7 +235,9 @@ export async function requestVersionReview(
   const evidence = readReviewEvidence(comments, pull.head.sha);
   if (
     evidence?.completed ||
-    ['queued', 'pending', 'in_progress'].includes(String(evidence?.status))
+    ['queued', 'pending', 'in_progress', 'running'].includes(
+      String(evidence?.status),
+    )
   )
     return;
   const marker = `<!-- version-codex-review:v1 ${JSON.stringify({ pr: pull.number, headSha: pull.head.sha })} -->`;

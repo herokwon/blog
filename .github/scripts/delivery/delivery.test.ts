@@ -1897,7 +1897,14 @@ await test('version review requests are authenticated, once per SHA and restrict
       await requestVersionReview(repo, next, 'release/0.2.1');
       assert.equal(posts, 3);
       comments = [
-        { ...review(next.head.sha, { status: 'in_progress' }), id: 99 },
+        {
+          ...review(next.head.sha, {
+            status: 'running',
+            has_any_findings: null,
+            has_unresolved_findings: null,
+          }),
+          id: 99,
+        },
       ];
       await requestVersionReview(repo, next, 'release/0.2.1');
       assert.equal(posts, 3);
