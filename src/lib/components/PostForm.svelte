@@ -34,6 +34,7 @@
   let newTag = $state('');
   let markdownEditor: { read(): string } | undefined = $state();
   let savedNavigation = $state(false);
+  let uploadingImages = $state(false);
   let submitError = $state('');
   function snapshot(input: PostInput, pendingTag = '') {
     return JSON.stringify([
@@ -55,7 +56,8 @@
     });
   }
   const dirty = $derived(
-    !post?.deletedAt && snapshot(values, newTag) !== baseline(),
+    !post?.deletedAt &&
+      (uploadingImages || snapshot(values, newTag) !== baseline()),
   );
   beforeNavigate(navigation => {
     if (
@@ -139,7 +141,7 @@
     };
   });
   const submit: SubmitFunction = ({ formElement, formData, cancel }) => {
-    if (busy) {
+    if (busy || uploadingImages) {
       cancel();
       return;
     }
@@ -220,6 +222,7 @@
       {#key post?.id ?? 'new'}<MarkdownEditor
           bind:this={markdownEditor}
           bind:value={values.body}
+          bind:uploading={uploadingImages}
           readonly={busy}
         />{/key}
     {/if}
@@ -241,7 +244,7 @@
         name="categoryId"
         aria-label="Category"
         bind:value={values.categoryId}
-        disabled={busy}
+        disabled={busy || uploadingImages}
       >
         <option value="">No category</option>
         {#each options.categories as category (category.id)}<option
@@ -264,7 +267,7 @@
           >
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || uploadingImages}
             onclick={() => values.tags.splice(index, 1)}
             >Remove {tag || 'empty tag'}</button
           >
@@ -281,7 +284,7 @@
         >
         <button
           type="button"
-          disabled={busy || values.tags.length >= 20}
+          disabled={busy || uploadingImages || values.tags.length >= 20}
           onclick={addTag}>Add tag</button
         >
       </div>
@@ -294,14 +297,16 @@
       </p>
     </fieldset>
     {#if !trashed}<div class="actions">
-        <button disabled={busy}>{post ? 'Save' : 'Create draft'}</button>
+        <button disabled={busy || uploadingImages}
+          >{post ? 'Save' : 'Create draft'}</button
+        >
         {#if !post || post.status === 'draft'}<button
             formaction="?/publish"
-            disabled={busy}>Publish</button
+            disabled={busy || uploadingImages}>Publish</button
           >
         {:else if post.status === 'archived'}<button
             formaction="?/republish"
-            disabled={busy}>Republish</button
+            disabled={busy || uploadingImages}>Republish</button
           >{/if}
       </div>{/if}
   </fieldset>
@@ -310,7 +315,7 @@
   <div class="actions">
     {#if trashed}<form method="POST" action="?/restore" use:enhance={submit}>
         <input type="hidden" name="revision" value={revision} /><button
-          disabled={busy}>Restore</button
+          disabled={busy || uploadingImages}>Restore</button
         >
       </form>
     {:else}
@@ -321,7 +326,7 @@
           use:enhance={submit}
         >
           <input type="hidden" name="revision" value={revision} /><button
-            disabled={busy || !hydrated}>Archive</button
+            disabled={busy || uploadingImages || !hydrated}>Archive</button
           >
         </form>{/if}
       <form
@@ -331,7 +336,7 @@
         use:enhance={submit}
       >
         <input type="hidden" name="revision" value={revision} /><button
-          disabled={busy || !hydrated}>Move to trash</button
+          disabled={busy || uploadingImages || !hydrated}>Move to trash</button
         >
       </form>
     {/if}
