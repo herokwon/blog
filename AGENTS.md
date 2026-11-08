@@ -10,6 +10,8 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Reuse existing capabilities and choose the smallest clear implementation. Avoid abstractions without a current need.
 - Store future post bodies as Markdown. Keep the browser-only editor out of public rendering bundles.
 - Public content and attachments must follow publication visibility; author operations require application-side authorization.
+- Administrator requests are guarded in `src/hooks.server.ts` using the native `cloudflare:workers` environment. Set `ACCESS_ISSUER`, the environment-specific `ACCESS_AUD`, and `AUTHOR_EMAIL` as Worker secrets; absent or invalid configuration denies administrator access. Keep the author email and tokens out of committed files and logs. Copy `.dev.vars.example` to ignored `.dev.vars` for local configuration; no development authentication bypass is supported.
+- E2E uses `pnpm test:preview` to start a local JWKS issuer and the existing Workers build with fixture-only runtime values. It still verifies signed JWTs; HTTP issuers are accepted only when both issuer and request host are loopback. The fixture is outside the deployed application. CI restores Build output before local migration/preview and does not rebuild.
 - New domain models, remote D1/R2 resources, authentication, editor features, and changes outside the accepted delivery scope require their own scoped work.
 
 ## Runtime and Package Management
@@ -33,6 +35,7 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Type-check: `pnpm check`.
 - Check delivery automation alone: `pnpm check:automation`.
 - Test delivery automation alone: `pnpm test:automation`.
+- Apply pending local D1 migrations: `pnpm db:migrate:local`.
 - Watch tests: `pnpm test:unit`.
 - Run unit/component tests once with coverage: `pnpm test:unit --run --coverage`.
 - Build for Workers: `pnpm build`.
@@ -60,6 +63,8 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Commit SQL and Drizzle snapshots/metadata together. Never rename or edit an already applied migration; add a new migration.
 - Wrangler is the sole future migration application/history tool. Align its migration directory with Drizzle output.
 - Remote migration application belongs to CD after validation. Do not use schema push or mix migration history tools.
+- Every D1 binding sets `migrations_dir` to `drizzle` and keeps Wrangler's default `d1_migrations` history. Use `pnpm exec wrangler d1 migrations apply DB --local` for local development; the default bindings use local emulation of preview resources. Add `--env preview` or `--env production` to select an explicit environment.
+- CD runs `pnpm exec wrangler d1 migrations apply DB --remote --env <environment>` after build and target validation, then rechecks the target before deployment. Wrangler applies only files missing from its history; do not add a custom SQL/history comparator. Migration failure blocks deployment. Publication-only recovery skips migrations and deployment.
 - Keep preview and production data/bindings separate when they are introduced. The preview Worker is named `blog-preview`.
 - Persist invocation logs at 100% in both environments; persist traces at 100% in preview and 5% in production.
 - Keep workers.dev and version preview URLs disabled. Preview uses `blog-preview.herokwon.dev`; production uses `blog.herokwon.dev`, each configured in its Wrangler environment.

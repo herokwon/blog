@@ -3,10 +3,18 @@
 declare global {
   namespace App {
     // interface Error {}
-    // interface Locals {}
+    interface Locals {
+      author?: import('#lib/server/auth/access.js').Author;
+    }
     // interface PageData {}
     // interface PageState {}
-    // interface Platform {}
+  }
+  namespace Cloudflare {
+    interface Env {
+      ACCESS_ISSUER?: string;
+      ACCESS_AUD?: string;
+      AUTHOR_EMAIL?: string;
+    }
   }
 }
 

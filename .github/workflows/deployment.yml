@@ -96,6 +96,17 @@ jobs:
       - name: Reject Superseded Deployment
         id: current
         run: node .github/scripts/delivery/deployment.ts assert-current
+      - name: Apply Pending Database Migrations
+        id: migrations
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          command: d1 migrations apply DB --remote --env ${{ needs.resolve-deployment.outputs.environment }}
+      - name: Recheck Target After Migrations
+        id: predeploy
+        run: node .github/scripts/delivery/deployment.ts assert-current
       - name: Deploy Worker and Configured Triggers
         id: deploy
         uses: cloudflare/wrangler-action@v4
@@ -118,6 +129,8 @@ jobs:
           SETUP: ${{ steps.setup.outcome }}
           BUILD: ${{ steps.build.outcome }}
           CURRENT: ${{ steps.current.outcome }}
+          MIGRATIONS: ${{ steps.migrations.outcome }}
+          PREDEPLOY: ${{ steps.predeploy.outcome }}
           DEPLOY: ${{ steps.deploy.outcome }}
           ACTIVATION: ${{ steps.activation.outcome }}
         run: |
@@ -126,6 +139,8 @@ jobs:
           elif [[ "$SETUP" != success ]]; then STAGE=Setup
           elif [[ "$BUILD" != success ]]; then STAGE=Build
           elif [[ "$CURRENT" != success ]]; then STAGE='Target validation'
+          elif [[ "$MIGRATIONS" != success ]]; then STAGE='Database migrations'
+          elif [[ "$PREDEPLOY" != success ]]; then STAGE='Target validation after migrations'
           elif [[ "$DEPLOY" != success ]]; then STAGE='Cloudflare deployment'
           elif [[ "$ACTIVATION" != success ]]; then STAGE='Worker activation verification'
           fi

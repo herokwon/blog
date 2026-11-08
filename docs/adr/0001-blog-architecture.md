@@ -19,7 +19,7 @@ The first implementation establishes a working development environment and CI, r
 - Render public content on the server so publication does not require rebuilding the application.
 - Build the authoring interface incrementally with Milkdown Crepe, loaded only in the browser on editing routes. Persist Markdown rather than executable MDX.
 - Use one representative flat category and multiple tags per post. Post URLs are independent of categories.
-- New posts start as drafts and are explicitly published. Saving an already published post immediately updates public content; no separate published snapshot is planned initially.
+- Follow [ADR 0004](0004-author-administration.md) for explicit draft creation or direct publication, archive/trash behavior, and immutable published addresses. Saving an already published post immediately updates public content; no separate published snapshot is planned initially.
 - Readers do not need accounts. Comments and other reader participation are outside the initial scope.
 - Plan D1 for content and metadata, and private R2 storage for attachments. Serve published attachments publicly through authorization-aware application routes.
 - Plan Cloudflare Access authentication with GitHub as the identity provider and an exact allowed email. Verify author authorization at the application boundary.
