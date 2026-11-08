@@ -28,7 +28,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Publication requires');
   await page.getByLabel('Title', { exact: true }).fill(title);
-  await page.getByLabel('Markdown', { exact: true }).fill('# Saved content');
+  await page
+    .getByRole('textbox', { name: 'Markdown editor', exact: true })
+    .fill('Saved content');
   await page.getByLabel('Slug', { exact: true }).fill(slug);
   await expect(
     page.getByRole('status', { name: 'Slug availability' }),
