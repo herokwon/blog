@@ -1,10 +1,15 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { enhance, type SubmitFunction } from '$app/forms';
   import { resolve } from '$app/paths';
   import type { PageProps } from './$types';
 
   let { data, form }: PageProps = $props();
   let busy = $state(false);
+  let hydrated = $state(false);
+  onMount(() => {
+    hydrated = true;
+  });
   const submit: SubmitFunction = ({ formElement, cancel }) => {
     if (busy) {
       cancel();
@@ -39,6 +44,9 @@
   Names must be unique and contain 1–20 characters. Surrounding whitespace is
   removed.
 </p>
+<noscript>
+  <p>JavaScript is required for category deletion confirmation.</p>
+</noscript>
 {#if form}
   {#if form.ok}<p role="status">
       Category {form.operation === 'create'
@@ -106,7 +114,7 @@
         use:enhance={submit}
       >
         <input type="hidden" name="id" value={category.id} />
-        <button disabled={busy}>Delete category</button>
+        <button disabled={busy || !hydrated}>Delete category</button>
       </form>
     </li>
   {/each}
