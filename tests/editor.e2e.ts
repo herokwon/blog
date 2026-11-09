@@ -184,3 +184,62 @@ test('failed editor download retains a usable native Markdown fallback', async (
     'Fallback body',
   );
 });
+
+test('save feedback reflects actual success and preserves fields after authentication and network failures', async ({
+  page,
+  request,
+}) => {
+  const token = await (await request.get('http://127.0.0.1:4174/token')).text();
+  await page.setExtraHTTPHeaders({ 'cf-access-jwt-assertion': token });
+  await page.goto('/admin/posts/new?saved=1');
+  const status = page.getByRole('status', { name: 'Save status' });
+  await expect(status).toHaveText('No changes.');
+  await page.getByLabel('Title', { exact: true }).fill('Feedback draft');
+  await expect(status).toHaveText('Unsaved changes.');
+  await page.getByRole('button', { name: 'Create draft', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]+$/);
+  await expect(status).toHaveText('Saved.');
+  await page.getByLabel('Title', { exact: true }).fill('Retained input');
+  await page.route(
+    '**/admin/posts/**',
+    route =>
+      route.fulfill({
+        status: 401,
+        contentType: 'text/plain',
+        body: 'Administrator access denied.',
+      }),
+    { times: 1 },
+  );
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Sign in again');
+  await expect(status).toHaveText('Save failed.');
+  await expect(page.getByLabel('Title', { exact: true })).toHaveValue(
+    'Retained input',
+  );
+  await page.route('**/admin/posts/**', route => route.abort(), { times: 1 });
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText(
+    'request could not be completed',
+  );
+  await expect(page.getByLabel('Title', { exact: true })).toHaveValue(
+    'Retained input',
+  );
+  await page.route(
+    '**/admin/posts/**',
+    route =>
+      route.fulfill({
+        json: {
+          type: 'redirect',
+          status: 303,
+          location: 'https://example.test/login',
+        },
+      }),
+    { times: 1 },
+  );
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Sign in again');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(status).toHaveText('Saved.');
+  await page.reload();
+  await expect(status).toHaveText('No changes.');
+});

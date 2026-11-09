@@ -16,7 +16,7 @@ test('author manages categories with retained validation input and native deleti
   const create = page.getByRole('form', { name: 'Create category' });
   const pending = Promise.withResolvers<void>();
   await page.route(
-    '**/admin/categories?*',
+    '**/admin/categories?**',
     route => pending.promise.then(() => route.continue()),
     { times: 1 },
   );
@@ -42,6 +42,7 @@ test('author manages categories with retained validation input and native deleti
     await page.goto(next);
   }
   await expect(row).toBeVisible();
+  await expect(create.getByLabel('Category name')).toBeEditable();
   await create.getByLabel('Category name').fill(name);
   await create.getByRole('button', { name: 'Create category' }).click();
   await expect(page.getByRole('alert')).toContainText('already exists');
@@ -150,4 +151,50 @@ test('native category forms preserve rename input and disable unconfirmed deleti
       });
     await context.close();
   }
+});
+
+test('category request failures preserve inline input and allow retry', async ({
+  page,
+  request,
+}) => {
+  const token = await (await request.get('http://127.0.0.1:4174/token')).text();
+  await page.setExtraHTTPHeaders({ 'cf-access-jwt-assertion': token });
+  await page.goto('/admin/categories');
+  await page.waitForLoadState('networkidle');
+  const form = page.getByRole('form', { name: 'Create category' });
+  const name = 'Retry ' + crypto.randomUUID().slice(0, 8);
+  await form.getByLabel('Category name').fill(name);
+  await page.route(
+    '**/admin/categories?**',
+    route =>
+      route.fulfill({ status: 403, contentType: 'text/plain', body: 'Denied' }),
+    { times: 1 },
+  );
+  await form.getByRole('button', { name: 'Create category' }).click();
+  await expect(page.getByRole('alert')).toContainText('Sign in again');
+  await expect(form.getByLabel('Category name')).toHaveValue(name);
+  await page.route('**/admin/categories?**', route => route.abort(), {
+    times: 1,
+  });
+  await form.getByRole('button', { name: 'Create category' }).click();
+  await expect(page.getByRole('alert')).toContainText(
+    'request could not be completed',
+  );
+  await expect(form.getByLabel('Category name')).toHaveValue(name);
+  await page.route(
+    '**/admin/categories?**',
+    route =>
+      route.fulfill({
+        json: {
+          type: 'redirect',
+          status: 303,
+          location: 'https://example.test/login',
+        },
+      }),
+    { times: 1 },
+  );
+  await form.getByRole('button', { name: 'Create category' }).click();
+  await expect(page.getByRole('alert')).toContainText('Sign in again');
+  await form.getByRole('button', { name: 'Create category' }).click();
+  await expect(page.getByRole('status')).toContainText('created');
 });

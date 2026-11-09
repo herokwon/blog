@@ -26,12 +26,25 @@ function categoryAction(
     const idValue = values.get('id');
     const name = typeof nameValue === 'string' ? nameValue : '';
     const id = typeof idValue === 'string' ? idValue : '';
-    const result =
-      operation === 'create'
-        ? await createCategory(env.DB, name)
-        : operation === 'rename'
-          ? await renameCategory(env.DB, id, name)
-          : await deleteCategory(env.DB, id);
+    let result;
+    try {
+      result =
+        operation === 'create'
+          ? await createCategory(env.DB, name)
+          : operation === 'rename'
+            ? await renameCategory(env.DB, id, name)
+            : await deleteCategory(env.DB, id);
+    } catch {
+      console.error('Category mutation failed', { operation });
+      return fail(503, {
+        operation,
+        id,
+        name,
+        ok: false as const,
+        message:
+          'The category could not be saved. Your input has been kept. Please retry.',
+      });
+    }
     const state = { operation, id, name, ...result };
     return result.ok ? state : fail(result.status, state);
   };

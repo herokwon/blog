@@ -17,7 +17,7 @@ export type PostFailure = {
 };
 
 export function postAction(action: PostAction, creating = false) {
-  return async ({ request, params, locals }: RequestEvent) => {
+  return async ({ request, params, locals, cookies }: RequestEvent) => {
     if (!locals.author) error(403, 'Administrator access denied.');
     const values = await request.formData();
     const text = (key: string) => {
@@ -65,6 +65,16 @@ export function postAction(action: PostAction, creating = false) {
         input: writing ? input : null,
         revision,
       } satisfies PostFailure);
+    cookies.set(
+      'post-notice',
+      JSON.stringify({ id: result.id, revision: result.revision, action }),
+      {
+        path: resolve('/admin/posts'),
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 60,
+      },
+    );
     redirect(303, resolve('/admin/posts/[id]', { id: result.id }));
   };
 }
