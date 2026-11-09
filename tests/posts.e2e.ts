@@ -234,3 +234,87 @@ test('stale editor input and tag selection survive a competing save; stale slug 
     await context.close();
   }
 });
+
+test('title and category filters persist across pages and browser history', async ({
+  page,
+  request,
+}) => {
+  const token = await (await request.get('http://127.0.0.1:4174/token')).text();
+  const headers = {
+    'cf-access-jwt-assertion': token,
+    origin: 'http://localhost:4173',
+  };
+  const category = 'Search ' + crypto.randomUUID().slice(0, 8);
+  await request.post('/admin/categories?/create', {
+    headers,
+    form: { name: category },
+  });
+  await page.setExtraHTTPHeaders({ 'cf-access-jwt-assertion': token });
+  await page.goto('/admin/posts/new');
+  await expect(
+    page.getByRole('textbox', { name: 'Markdown editor', exact: true }),
+  ).toBeVisible();
+  const categoryId = await page
+    .getByLabel('Category', { exact: true })
+    .locator('option')
+    .filter({ hasText: category })
+    .getAttribute('value');
+  expect(categoryId).toBeTruthy();
+  if (!categoryId) throw new Error('Created category has no ID');
+  const prefix = '검색%_' + crypto.randomUUID().slice(0, 8);
+  for (let i = 0; i < 21; i++)
+    await request.post('/admin/posts/new?/create', {
+      headers,
+      form: {
+        title: prefix + ' ' + i,
+        categoryId: categoryId,
+        body: '',
+        slug: '',
+        tags: '',
+      },
+    });
+  await page.goto('/admin/posts');
+  await page
+    .getByLabel('Search titles', { exact: true })
+    .fill('  ' + prefix + '  ');
+  await page
+    .getByLabel('Category filter', { exact: true })
+    .selectOption({ label: category });
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  await expect(page).toHaveURL(
+    url =>
+      url.searchParams.get('q')?.trim() === prefix &&
+      url.searchParams.get('categoryId') === categoryId,
+  );
+  await expect(
+    page.getByRole('link', { name: 'Next', exact: true }),
+  ).toBeVisible();
+  const firstUrl = page.url();
+  await page.getByRole('link', { name: 'Next', exact: true }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.getByLabel('Search titles', { exact: true })).toHaveValue(
+    prefix,
+  );
+  await expect(page.getByLabel('Category filter', { exact: true })).toHaveValue(
+    categoryId,
+  );
+  await page.goBack();
+  await expect(page).toHaveURL(firstUrl);
+  await page
+    .getByLabel('Search titles', { exact: true })
+    .fill('no matching ' + crypto.randomUUID());
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  await expect(
+    page.getByText('No posts match these filters.', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/posts$/);
+  expect(
+    (
+      await request.get(
+        '/admin/posts?q=' + encodeURIComponent('a'.repeat(201)),
+        { headers },
+      )
+    ).status(),
+  ).toBe(400);
+});
