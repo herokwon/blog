@@ -28,12 +28,36 @@
     margin: auto;
     padding: 1.5rem;
     font-family: system-ui, sans-serif;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   nav {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     margin-top: 1rem;
+  }
+  main :global(label) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  main :global(input),
+  main :global(select),
+  main :global(textarea),
+  main :global(button),
+  main :global(fieldset) {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
+  main :global(:focus-visible),
+  header :global(:focus-visible) {
+    outline: 3px solid #174e9e;
+    outline-offset: 3px;
+  }
+  main :global([role='alert']:focus) {
+    outline: 3px solid #174e9e;
+    outline-offset: 3px;
   }
   a {
     color: #174e9e;

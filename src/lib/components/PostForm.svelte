@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import MarkdownEditor from '#lib/components/MarkdownEditor.svelte';
   import { requestFailure } from '#lib/form-feedback.js';
   import type {
@@ -34,6 +34,16 @@
     return { ...input, tags: input.tags.filter(tag => tag.trim()) };
   }
   let values = $state(initialValues());
+  let appliedPost = $state(
+    untrack(() => (post ? post.id + ':' + post.revision : 'new')),
+  );
+  let alertElement = $state<HTMLParagraphElement>();
+  let categoryAlert = $state<HTMLParagraphElement>();
+  let categorySelect = $state<HTMLSelectElement>();
+  async function focusError() {
+    await tick();
+    alertElement?.focus();
+  }
   let categoryName = $state('');
   let categoryError = $state('');
   let categoryNotice = $state('');
@@ -55,7 +65,7 @@
     categoryError = '';
     categoryNotice = '';
     creatingCategory = true;
-    return ({ result }) => {
+    return async ({ result }) => {
       try {
         if (result.type === 'error')
           categoryError = requestFailure(result.status ?? result.error.status);
@@ -84,6 +94,12 @@
         }
       } finally {
         creatingCategory = false;
+        await tick();
+        if (categoryError) categoryAlert?.focus();
+        else {
+          if (categorySelect) categorySelect.value = values.categoryId;
+          categorySelect?.focus();
+        }
       }
     };
   };
@@ -139,6 +155,8 @@
   let hydrated = $state(false);
   onMount(() => {
     hydrated = true;
+    if (categorySelect) values.categoryId = categorySelect.value;
+    if (form) void focusError();
   });
   let slugMessage = $state('');
   const revision = $derived(form?.revision ?? post?.revision ?? '');
@@ -147,9 +165,13 @@
     const initial = initialValues();
     // Failed enhanced submissions keep the current fields and original revision.
     // A native failed submission initializes from the server-returned input.
-    if (!form) {
+    // Preserve native input entered before hydration; reset only for a new saved revision.
+    const postVersion = post ? post.id + ':' + post.revision : 'new';
+    if (!form && postVersion !== appliedPost) {
       values = initial;
       newTag = '';
+      appliedPost = postVersion;
+      if (categorySelect) categorySelect.value = initial.categoryId;
     }
   });
   $effect(() => {
@@ -232,13 +254,16 @@
       try {
         if (result.type === 'redirect' && !expectedRedirect) {
           submitError = requestFailure(401);
+          await focusError();
           return;
         }
         if (result.type === 'error') {
           submitError = requestFailure(result.status ?? result.error.status);
+          await focusError();
           return;
         }
         await update({ reset: false });
+        if (result.type === 'failure') await focusError();
       } finally {
         savedNavigation = false;
         busy = false;
@@ -266,6 +291,7 @@
     } catch {
       submitError =
         'Your input could not be exported. It has been kept. Please retry.';
+      void focusError();
     } finally {
       if (url) setTimeout(() => URL.revokeObjectURL(url!), 1000);
     }
@@ -298,7 +324,9 @@
         ? 'Unsaved changes.'
         : (notice ?? 'No changes.')}
 </p>
-{#if submitError || form}<p role="alert">{submitError || form?.message}</p>{/if}
+{#if submitError || form}<p role="alert" tabindex="-1" bind:this={alertElement}>
+    {submitError || form?.message}
+  </p>{/if}
 {#if post && form?.code === 'stale_revision'}
   <div class="actions" aria-label="Save conflict recovery">
     <a
@@ -369,9 +397,13 @@
     </p>
     <label
       >Category <select
+        bind:this={categorySelect}
         name="categoryId"
         aria-label="Category"
-        bind:value={values.categoryId}
+        defaultValue={values.categoryId}
+        onchange={event => {
+          values.categoryId = event.currentTarget.value;
+        }}
         disabled={busy || uploadingImages || creatingCategory}
       >
         <option value="">No category</option>
@@ -472,7 +504,13 @@
         disabled={!hydrated || busy || creatingCategory || uploadingImages}
         >Create category</button
       >
-      {#if categoryError}<p role="alert">{categoryError}</p>{/if}
+      {#if categoryError}<p
+          role="alert"
+          tabindex="-1"
+          bind:this={categoryAlert}
+        >
+          {categoryError}
+        </p>{/if}
       {#if categoryNotice}<p role="status">{categoryNotice}</p>{/if}
     </form>
     <noscript

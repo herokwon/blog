@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import { requestFailure } from '#lib/form-feedback.js';
   import { enhance, type SubmitFunction } from '$app/forms';
   import { resolve } from '$app/paths';
@@ -16,9 +16,21 @@
   let renameInputs = $state<Record<string, string>>({});
   let busy = $state(false);
   let submitError = $state('');
+  let alertElement = $state<HTMLParagraphElement>();
+  const errorMessage = $derived(
+    submitError ||
+      (form && !form.ok && typeof form.message === 'string'
+        ? form.message
+        : ''),
+  );
+  async function focusError() {
+    await tick();
+    alertElement?.focus();
+  }
   let hydrated = $state(false);
   onMount(() => {
     hydrated = true;
+    if (errorMessage) void focusError();
   });
   const submit: SubmitFunction = ({ formElement, cancel }) => {
     if (busy) {
@@ -59,6 +71,7 @@
         }
       } finally {
         busy = false;
+        if (submitError || result.type === 'failure') await focusError();
       }
     };
   };
@@ -73,7 +86,9 @@
 <noscript>
   <p>JavaScript is required for category deletion confirmation.</p>
 </noscript>
-{#if submitError}<p role="alert">{submitError}</p>{:else if form}
+{#if errorMessage}<p role="alert" tabindex="-1" bind:this={alertElement}>
+    {errorMessage}
+  </p>{:else if form}
   {#if form.ok}<p role="status">
       Category {form.operation === 'create'
         ? 'created'
@@ -81,7 +96,7 @@
           ? 'renamed'
           : 'deleted'}.
     </p>
-  {:else}<p role="alert">{form.message}</p>{/if}
+  {/if}
 {/if}
 
 <form
@@ -168,6 +183,8 @@
     margin-block: 0.75rem;
   }
   label {
+    min-width: 0;
+    max-width: 100%;
     display: grid;
     gap: 0.25rem;
   }

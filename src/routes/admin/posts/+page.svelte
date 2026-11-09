@@ -16,36 +16,44 @@
 <svelte:head><title>Posts · Administration</title></svelte:head>
 <h1>Posts</h1>
 <a href={resolve('/admin/posts/new')}>New post</a>
-<form method="GET" action={resolve('/admin/posts')}>
-  <label>Search titles <input name="q" value={data.q} maxlength="400" /></label>
-  <label
-    >Category filter <select
-      name="categoryId"
-      aria-label="Category filter"
-      value={data.categoryId}
+{#key data}
+  <form method="GET" action={resolve('/admin/posts')}>
+    <label
+      >Search titles <input
+        name="q"
+        defaultValue={data.q}
+        maxlength="400"
+      /></label
     >
-      <option value="">All categories</option>
-      {#each data.categories as category (category.id)}<option
-          value={category.id}>{category.name}</option
-        >{/each}
-    </select></label
-  >
-  <label
-    >Status filter <select
-      name="status"
-      aria-label="Status filter"
-      value={data.filter}
+    <label
+      >Category filter <select
+        name="categoryId"
+        aria-label="Category filter"
+        defaultValue={data.categoryId}
+      >
+        <option value="">All categories</option>
+        {#each data.categories as category (category.id)}<option
+            value={category.id}>{category.name}</option
+          >{/each}
+      </select></label
     >
-      <option value="all">All active posts</option><option value="draft"
-        >Draft</option
-      ><option value="published">Published</option><option value="archived"
-        >Archived</option
-      ><option value="trash">Trash</option>
-    </select></label
-  >
-  <button>Filter</button>
-  <a href={resolve('/admin/posts')}>Reset filters</a>
-</form>
+    <label
+      >Status filter <select
+        name="status"
+        aria-label="Status filter"
+        defaultValue={data.filter}
+      >
+        <option value="all">All active posts</option><option value="draft"
+          >Draft</option
+        ><option value="published">Published</option><option value="archived"
+          >Archived</option
+        ><option value="trash">Trash</option>
+      </select></label
+    >
+    <button>Filter</button>
+    <a href={resolve('/admin/posts')}>Reset filters</a>
+  </form>
+{/key}
 {#if data.posts.length === 0}<p>
     {data.q || data.categoryId || data.filter !== 'all'
       ? 'No posts match these filters.'
