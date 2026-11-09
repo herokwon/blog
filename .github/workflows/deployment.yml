@@ -212,11 +212,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_TARGET: ${{ needs.resolve-deployment.outputs.target }}
-          WORKER_SUCCEEDED: ${{ needs.deploy-worker.result == 'success' || needs.release-github.outputs.worker-verified == 'true' }}
+          WORKER_SUCCEEDED: ${{ (needs.deploy-worker.result == 'success' || needs.release-github.outputs.worker-verified == 'true') && 'true' || (inputs.mode == 'publish' && 'unknown' || 'false') }}
           PUBLICATION_RESULT: ${{ needs.release-github.result }}
           PUBLICATION_SUCCEEDED: ${{ needs.release-github.result == 'success' }}
           RELEASE_URL: ${{ needs.release-github.outputs.release-url }}
-          FAILED_STAGE: ${{ needs.deploy-worker.outputs.failed-stage || (inputs.mode == 'publish' && 'Release publication' || 'Deployment setup') }}
+          FAILED_STAGE: ${{ needs.deploy-worker.outputs.failed-stage || (inputs.mode == 'publish' && 'Production delivery verification' || 'Deployment setup') }}
         run: node .github/scripts/delivery/deployment.ts comment
 
   cleanup:

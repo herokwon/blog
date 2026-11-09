@@ -269,6 +269,9 @@ test('concurrent slug claims have one winner and all states reserve their slug',
     mutatePost(db, { action: 'create', input }),
   ]);
   expect(results.filter(result => result.ok)).toHaveLength(1);
+  expect(results.find(result => !result.ok)).toMatchObject({
+    code: 'slug_reserved',
+  });
   const winner = results.find(result => result.ok)!;
   if (!winner.ok) throw new Error('No winner');
   expect(await slugAvailability(db, 'a-post')).toMatchObject({
@@ -306,6 +309,9 @@ test('revision guards make concurrent updates single-winner and stale batches ca
     ),
   );
   expect(results.filter(result => result.ok)).toHaveLength(1);
+  expect(results.find(result => !result.ok)).toMatchObject({
+    code: 'stale_revision',
+  });
   const current = (await getPost(db, post.id))!;
   expect(current.tags).toEqual([current.title]);
   expect(
@@ -398,4 +404,35 @@ test('post lists filter trash and status with stable twenty-item ordering', asyn
     post.id,
   ]);
   expect((await listPosts(db, 'published')).posts).toEqual([]);
+});
+
+test('conflicts identify stale revisions, reserved slugs and deleted categories without changing content', async () => {
+  const first = await draft(input);
+  const second = await draft();
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: second.id,
+      revision: second.revision,
+      input,
+    }),
+  ).toMatchObject({ ok: false, status: 409, code: 'slug_reserved' });
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: second.id,
+      revision: second.revision,
+      input: { ...input, slug: 'other', categoryId: 'missing' },
+    }),
+  ).toMatchObject({ ok: false, status: 409, code: 'category_missing' });
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: first.id,
+      revision: 'stale',
+      input: { ...input, title: 'Lost' },
+    }),
+  ).toMatchObject({ ok: false, status: 409, code: 'stale_revision' });
+  expect((await getPost(db, first.id))?.title).toBe(input.title);
+  expect((await getPost(db, second.id))?.title).toBe('');
 });

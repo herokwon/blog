@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import MarkdownEditor from '#lib/components/MarkdownEditor.svelte';
+  import { requestFailure } from '#lib/form-feedback.js';
   import type {
     editorOptions,
     getPost,
@@ -15,10 +16,12 @@
     post = null,
     options,
     form = null,
+    notice = null,
   }: {
     post?: Awaited<ReturnType<typeof getPost>>;
     options: Awaited<ReturnType<typeof editorOptions>>;
     form?: PostFailure | null;
+    notice?: string | null;
   } = $props();
   function initialValues(): PostInput {
     const input = form?.input ?? {
@@ -162,11 +165,24 @@
     submitError = '';
     busy = true;
     return async ({ result, update }) => {
-      savedNavigation = result.type === 'redirect';
+      const redirectUrl =
+        result.type === 'redirect'
+          ? new URL(result.location, window.location.href)
+          : null;
+      const expectedRedirect =
+        redirectUrl?.origin === window.location.origin &&
+        (post
+          ? redirectUrl.pathname ===
+            resolve('/admin/posts/[id]', { id: post.id })
+          : /^\/admin\/posts\/[0-9a-f-]{36}$/.test(redirectUrl.pathname));
+      savedNavigation = result.type === 'redirect' && expectedRedirect;
       try {
+        if (result.type === 'redirect' && !expectedRedirect) {
+          submitError = requestFailure(401);
+          return;
+        }
         if (result.type === 'error') {
-          submitError =
-            'The request could not be completed. Your input has been kept. Please retry.';
+          submitError = requestFailure(result.status ?? result.error.status);
           return;
         }
         await update({ reset: false });
@@ -176,6 +192,41 @@
       }
     };
   };
+  function exportInput() {
+    let url: string | undefined;
+    try {
+      const data = {
+        ...values,
+        body: markdownEditor?.read() ?? values.body,
+        pendingTag: newTag,
+      };
+      url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'unsaved-post.json';
+
+      link.click();
+      link.remove();
+      submitError = '';
+    } catch {
+      submitError =
+        'Your input could not be exported. It has been kept. Please retry.';
+    } finally {
+      if (url) setTimeout(() => URL.revokeObjectURL(url!), 1000);
+    }
+  }
+  function reloadLatest() {
+    if (
+      !window.confirm(
+        'Discard unsaved changes and reload the latest saved post?',
+      )
+    )
+      return;
+    savedNavigation = true;
+    window.location.reload();
+  }
   function addTag() {
     const name = newTag.trim();
     if (name && !values.tags.includes(name) && values.tags.length < 20) {
@@ -185,7 +236,31 @@
   }
 </script>
 
+<p role="status" aria-label="Save status">
+  {busy
+    ? 'Saving…'
+    : submitError || form
+      ? 'Save failed.'
+      : dirty
+        ? 'Unsaved changes.'
+        : (notice ?? 'No changes.')}
+</p>
 {#if submitError || form}<p role="alert">{submitError || form?.message}</p>{/if}
+{#if post && form?.code === 'stale_revision'}
+  <div class="actions" aria-label="Save conflict recovery">
+    <a
+      href={resolve('/admin/posts/[id]', { id: post.id })}
+      target="_blank"
+      rel="noopener noreferrer">Open latest saved post</a
+    >
+    <button type="button" onclick={exportInput} disabled={busy}
+      >Export unsaved input</button
+    >
+    <button type="button" onclick={reloadLatest} disabled={busy}
+      >Reload latest saved post</button
+    >
+  </div>
+{/if}
 {#if post}
   <p>Status: {post.status}</p>
   {#if trashed}<p>Trash — read-only</p>{/if}
@@ -296,9 +371,16 @@
         Select an existing tag or enter a new name. Clear a tag to detach it.
       </p>
     </fieldset>
+    {#if post?.status === 'published'}<p>
+        Saving immediately updates the public post.
+      </p>{/if}
     {#if !trashed}<div class="actions">
         <button disabled={busy || uploadingImages}
-          >{post ? 'Save' : 'Create draft'}</button
+          >{post?.status === 'published'
+            ? 'Save and update public post'
+            : post
+              ? 'Save'
+              : 'Create draft'}</button
         >
         {#if !post || post.status === 'draft'}<button
             formaction="?/publish"
