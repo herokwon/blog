@@ -300,6 +300,7 @@ test('title and category filters persist across pages and browser history', asyn
   );
   await page.goBack();
   await expect(page).toHaveURL(firstUrl);
+  await expect(page.getByText('Page 1', { exact: true })).toBeVisible();
   await page
     .getByLabel('Search titles', { exact: true })
     .fill('no matching ' + crypto.randomUUID());

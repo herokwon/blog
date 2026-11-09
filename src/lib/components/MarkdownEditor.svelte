@@ -108,6 +108,10 @@
 <style>
   .markdown-editor {
     border: 1px solid #ccc;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    overflow-x: auto;
     min-height: 16rem;
   }
   .markdown-editor :global(.milkdown) {
