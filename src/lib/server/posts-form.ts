@@ -1,11 +1,17 @@
 import { error, fail, redirect, type RequestEvent } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
 import { env } from 'cloudflare:workers';
-import { mutatePost, type PostAction, type PostInput } from './db/posts.js';
+import {
+  mutatePost,
+  type PostAction,
+  type PostConflictCode,
+  type PostInput,
+} from './db/posts.js';
 
 export type PostFailure = {
   ok: false;
   message: string;
+  code?: PostConflictCode;
   input: PostInput | null;
   revision: string;
 };
@@ -55,6 +61,7 @@ export function postAction(action: PostAction, creating = false) {
       return fail(result.status, {
         ok: false,
         message: result.message,
+        code: result.code,
         input: writing ? input : null,
         revision,
       } satisfies PostFailure);

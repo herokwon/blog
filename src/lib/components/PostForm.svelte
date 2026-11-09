@@ -176,6 +176,41 @@
       }
     };
   };
+  function exportInput() {
+    let url: string | undefined;
+    try {
+      const data = {
+        ...values,
+        body: markdownEditor?.read() ?? values.body,
+        pendingTag: newTag,
+      };
+      url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'unsaved-post.json';
+
+      link.click();
+      link.remove();
+      submitError = '';
+    } catch {
+      submitError =
+        'Your input could not be exported. It has been kept. Please retry.';
+    } finally {
+      if (url) setTimeout(() => URL.revokeObjectURL(url!), 1000);
+    }
+  }
+  function reloadLatest() {
+    if (
+      !window.confirm(
+        'Discard unsaved changes and reload the latest saved post?',
+      )
+    )
+      return;
+    savedNavigation = true;
+    window.location.reload();
+  }
   function addTag() {
     const name = newTag.trim();
     if (name && !values.tags.includes(name) && values.tags.length < 20) {
@@ -186,6 +221,21 @@
 </script>
 
 {#if submitError || form}<p role="alert">{submitError || form?.message}</p>{/if}
+{#if post && form?.code === 'stale_revision'}
+  <div class="actions" aria-label="Save conflict recovery">
+    <a
+      href={resolve('/admin/posts/[id]', { id: post.id })}
+      target="_blank"
+      rel="noopener noreferrer">Open latest saved post</a
+    >
+    <button type="button" onclick={exportInput} disabled={busy}
+      >Export unsaved input</button
+    >
+    <button type="button" onclick={reloadLatest} disabled={busy}
+      >Reload latest saved post</button
+    >
+  </div>
+{/if}
 {#if post}
   <p>Status: {post.status}</p>
   {#if trashed}<p>Trash — read-only</p>{/if}

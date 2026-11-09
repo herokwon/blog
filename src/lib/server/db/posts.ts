@@ -13,9 +13,17 @@ export type PostInput = {
 export type PostAction =
   'create' | 'save' | 'publish' | 'archive' | 'republish' | 'trash' | 'restore';
 export type PostFilter = 'all' | 'draft' | 'published' | 'archived' | 'trash';
+export type PostConflictCode =
+  'stale_revision' | 'slug_reserved' | 'category_missing' | 'write_conflict';
+
 type PostResult =
   | { ok: true; id: string; revision: string }
-  | { ok: false; status: 400 | 404 | 409; message: string };
+  | {
+      ok: false;
+      status: 400 | 404 | 409;
+      message: string;
+      code?: PostConflictCode;
+    };
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const validSlug = (slug: string) =>
   slug.length <= 120 && slugPattern.test(slug);
@@ -24,11 +32,20 @@ const bad = (message: string): PostResult => ({
   status: 400,
   message,
 });
-const conflict = (): PostResult => ({
+const conflict = (code: PostConflictCode): PostResult => ({
   ok: false,
   status: 409,
-  message:
-    'The post changed, the slug is reserved, or the category no longer exists. Your input has been kept. Reload before retrying.',
+  code,
+  message: {
+    stale_revision:
+      'The post changed. Your input has been kept. Export it before reloading the latest saved post.',
+    slug_reserved:
+      'The slug is already reserved. Choose another slug and retry.',
+    category_missing:
+      'The category no longer exists. Choose another category and retry.',
+    write_conflict:
+      'The post could not be updated because a referenced item changed. Your input has been kept.',
+  }[code],
 });
 
 // RFC 9562: 48-bit millisecond timestamp, version 7, random remainder and RFC variant.
@@ -128,7 +145,8 @@ export async function mutatePost(
   const creating = !command.id && (action === 'create' || action === 'publish');
   if (!creating && !existing)
     return { ok: false, status: 404, message: 'Post not found.' };
-  if (existing && existing.revision !== command.revision) return conflict();
+  if (existing && existing.revision !== command.revision)
+    return conflict('stale_revision');
   if (existing?.deletedAt && action !== 'restore')
     return bad('Trashed posts are read-only. Restore this post first.');
   if (action === 'create' && !creating) return bad('This post already exists.');
@@ -311,5 +329,22 @@ export async function mutatePost(
     );
   }
   const results = await d1.batch<{ id: string }>(statements);
-  return results[0].results.length ? { ok: true, id, revision } : conflict();
+  if (results[0].results.length) return { ok: true, id, revision };
+  // Classify only after the guarded atomic write fails; never renew the client's revision.
+  const [current, category, reserved] = await d1.batch<{
+    revision?: string;
+    id?: string;
+  }>([
+    d1.prepare('SELECT revision FROM posts WHERE id = ?').bind(id),
+    d1.prepare('SELECT id FROM categories WHERE id = ?').bind(categoryId),
+    d1
+      .prepare('SELECT id FROM posts WHERE slug = ? AND id <> ?')
+      .bind(slug, id),
+  ]);
+  if (!creating && current.results[0]?.revision !== command.revision)
+    return conflict('stale_revision');
+  if (categoryId && !category.results.length)
+    return conflict('category_missing');
+  if (slug && reserved.results.length) return conflict('slug_reserved');
+  return conflict('write_conflict');
 }
