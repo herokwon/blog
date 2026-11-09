@@ -3,7 +3,8 @@ import { getDb } from './index.js';
 import { categories, posts } from './schema.js';
 
 type CategoryResult =
-  { ok: true } | { ok: false; status: 400 | 404 | 409; message: string };
+  | { ok: true; category?: { id: string; name: string } }
+  | { ok: false; status: 400 | 404 | 409; message: string };
 
 function validName(name: string) {
   return name.length > 0 && [...name].length <= 20 && !name.includes('\0');
@@ -51,8 +52,8 @@ export async function createCategory(
     .insert(categories)
     .values({ id: crypto.randomUUID(), name })
     .onConflictDoNothing()
-    .returning({ id: categories.id });
-  return rows.length ? { ok: true } : duplicate;
+    .returning({ id: categories.id, name: categories.name });
+  return rows.length ? { ok: true, category: rows[0] } : duplicate;
 }
 
 export async function renameCategory(

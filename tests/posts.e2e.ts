@@ -84,6 +84,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
   await expect(
     page.getByText('Status: archived', { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Save status' })).toHaveText(
+    'Restored.',
+  );
   await page.getByRole('link', { name: 'Posts', exact: true }).click();
   await page
     .getByLabel('Status filter', { exact: true })

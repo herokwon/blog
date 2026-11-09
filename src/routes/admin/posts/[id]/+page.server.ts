@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { createEditorCategory } from '#lib/server/category-form.js';
 import { editorOptions, getPost } from '#lib/server/db/posts.js';
 import { postAction } from '#lib/server/posts-form.js';
 import { env } from 'cloudflare:workers';
@@ -41,6 +42,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
   return { post, options: await editorOptions(env.DB), notice };
 };
 export const actions = {
+  createCategory: createEditorCategory,
   save: postAction('save'),
   publish: postAction('publish'),
   archive: postAction('archive'),
