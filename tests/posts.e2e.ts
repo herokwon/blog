@@ -84,6 +84,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
   await expect(
     page.getByText('Status: archived', { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Save status' })).toHaveText(
+    'Restored.',
+  );
   await page.getByRole('link', { name: 'Posts', exact: true }).click();
   await page
     .getByLabel('Status filter', { exact: true })
@@ -160,6 +163,47 @@ test('stale editor input and tag selection survive a competing save; stale slug 
     );
     await expect(second.getByLabel('Add tag', { exact: true })).toHaveValue(
       'Keep tag',
+    );
+    const latest = second.getByRole('link', { name: 'Open latest saved post' });
+    await expect(latest).toHaveAttribute('target', '_blank');
+    const downloadPromise = second.waitForEvent('download');
+    await second.getByRole('button', { name: 'Export unsaved input' }).click();
+    const download = await downloadPromise;
+    const contents: unknown = JSON.parse(
+      await (
+        await import('node:fs/promises')
+      ).readFile(await download.path(), 'utf8'),
+    );
+    expect(contents).toMatchObject({
+      title: 'Keep stale input',
+      body: '',
+      slug: '',
+      categoryId: '',
+      tags: [],
+      pendingTag: 'Keep tag',
+    });
+    await second.evaluate(() => {
+      URL.createObjectURL = () => {
+        throw new Error('Download blocked');
+      };
+    });
+    await second.getByRole('button', { name: 'Export unsaved input' }).click();
+    await expect(second.getByRole('alert')).toContainText(
+      'could not be exported',
+    );
+    second.once('dialog', dialog => dialog.dismiss());
+    await second
+      .getByRole('button', { name: 'Reload latest saved post' })
+      .click();
+    await expect(second.getByLabel('Title', { exact: true })).toHaveValue(
+      'Keep stale input',
+    );
+    second.once('dialog', dialog => dialog.accept());
+    await second
+      .getByRole('button', { name: 'Reload latest saved post' })
+      .click();
+    await expect(second.getByLabel('Title', { exact: true })).toHaveValue(
+      'Winning edit',
     );
     await first.reload();
     await expect(first.getByLabel('Title', { exact: true })).toHaveValue(

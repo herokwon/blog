@@ -7,4 +7,9 @@
 
 <svelte:head><title>Edit post · Administration</title></svelte:head>
 <h1>Edit post</h1>
-<PostForm post={data.post} options={data.options} {form} />
+<PostForm
+  post={data.post}
+  options={data.options}
+  notice={data.notice}
+  form={form && !('operation' in form) ? form : null}
+/>

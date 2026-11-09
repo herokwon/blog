@@ -38,7 +38,10 @@ afterAll(async () => {
 });
 
 test('category commands trim names, enforce Unicode limits and reserve unique names under concurrent writes', async () => {
-  expect(await createCategory(db, '  Notes  ')).toMatchObject({ ok: true });
+  const created = await createCategory(db, '  Notes  ');
+  expect(created).toMatchObject({ ok: true, category: { name: 'Notes' } });
+  if (!created.ok) throw new Error(created.message);
+  expect(created.category?.id).toMatch(/^[0-9a-f-]{36}$/);
   expect(await createCategory(db, 'Notes')).toMatchObject({
     ok: false,
     status: 409,

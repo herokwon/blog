@@ -7,4 +7,7 @@
 
 <svelte:head><title>New post · Administration</title></svelte:head>
 <h1>New post</h1>
-<PostForm options={data.options} {form} />
+<PostForm
+  options={data.options}
+  form={form && !('operation' in form) ? form : null}
+/>

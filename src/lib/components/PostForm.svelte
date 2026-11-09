@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import MarkdownEditor from '#lib/components/MarkdownEditor.svelte';
+  import { requestFailure } from '#lib/form-feedback.js';
   import type {
     editorOptions,
     getPost,
@@ -15,10 +16,12 @@
     post = null,
     options,
     form = null,
+    notice = null,
   }: {
     post?: Awaited<ReturnType<typeof getPost>>;
     options: Awaited<ReturnType<typeof editorOptions>>;
     form?: PostFailure | null;
+    notice?: string | null;
   } = $props();
   function initialValues(): PostInput {
     const input = form?.input ?? {
@@ -31,6 +34,59 @@
     return { ...input, tags: input.tags.filter(tag => tag.trim()) };
   }
   let values = $state(initialValues());
+  let categoryName = $state('');
+  let categoryError = $state('');
+  let categoryNotice = $state('');
+  let creatingCategory = $state(false);
+  let addedCategories = $state<{ id: string; name: string }[]>([]);
+  const categoryOptions = $derived(
+    [
+      ...options.categories,
+      ...addedCategories.filter(
+        added => !options.categories.some(item => item.id === added.id),
+      ),
+    ].sort((a, b) => a.name.localeCompare(b.name)),
+  );
+  const createCategory: SubmitFunction = ({ cancel }) => {
+    if (creatingCategory || busy || uploadingImages || trashed) {
+      cancel();
+      return;
+    }
+    categoryError = '';
+    categoryNotice = '';
+    creatingCategory = true;
+    return ({ result }) => {
+      try {
+        if (result.type === 'error')
+          categoryError = requestFailure(result.status ?? result.error.status);
+        else if (result.type === 'redirect')
+          categoryError = requestFailure(401);
+        else if (result.type === 'failure')
+          categoryError =
+            typeof result.data?.message === 'string'
+              ? result.data.message
+              : requestFailure(result.status);
+        else {
+          const category: unknown = result.data?.category;
+          if (
+            category &&
+            typeof category === 'object' &&
+            'id' in category &&
+            'name' in category &&
+            typeof category.id === 'string' &&
+            typeof category.name === 'string'
+          ) {
+            addedCategories.push({ id: category.id, name: category.name });
+            values.categoryId = category.id;
+            categoryName = '';
+            categoryNotice = 'Category created and selected.';
+          } else categoryError = requestFailure(500);
+        }
+      } finally {
+        creatingCategory = false;
+      }
+    };
+  };
   let newTag = $state('');
   let markdownEditor: { read(): string } | undefined = $state();
   let savedNavigation = $state(false);
@@ -141,7 +197,7 @@
     };
   });
   const submit: SubmitFunction = ({ formElement, formData, cancel }) => {
-    if (busy || uploadingImages) {
+    if (busy || uploadingImages || creatingCategory) {
       cancel();
       return;
     }
@@ -162,11 +218,24 @@
     submitError = '';
     busy = true;
     return async ({ result, update }) => {
-      savedNavigation = result.type === 'redirect';
+      const redirectUrl =
+        result.type === 'redirect'
+          ? new URL(result.location, window.location.href)
+          : null;
+      const expectedRedirect =
+        redirectUrl?.origin === window.location.origin &&
+        (post
+          ? redirectUrl.pathname ===
+            resolve('/admin/posts/[id]', { id: post.id })
+          : /^\/admin\/posts\/[0-9a-f-]{36}$/.test(redirectUrl.pathname));
+      savedNavigation = result.type === 'redirect' && expectedRedirect;
       try {
+        if (result.type === 'redirect' && !expectedRedirect) {
+          submitError = requestFailure(401);
+          return;
+        }
         if (result.type === 'error') {
-          submitError =
-            'The request could not be completed. Your input has been kept. Please retry.';
+          submitError = requestFailure(result.status ?? result.error.status);
           return;
         }
         await update({ reset: false });
@@ -176,6 +245,41 @@
       }
     };
   };
+  function exportInput() {
+    let url: string | undefined;
+    try {
+      const data = {
+        ...values,
+        body: markdownEditor?.read() ?? values.body,
+        pendingTag: newTag,
+      };
+      url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'unsaved-post.json';
+
+      link.click();
+      link.remove();
+      submitError = '';
+    } catch {
+      submitError =
+        'Your input could not be exported. It has been kept. Please retry.';
+    } finally {
+      if (url) setTimeout(() => URL.revokeObjectURL(url!), 1000);
+    }
+  }
+  function reloadLatest() {
+    if (
+      !window.confirm(
+        'Discard unsaved changes and reload the latest saved post?',
+      )
+    )
+      return;
+    savedNavigation = true;
+    window.location.reload();
+  }
   function addTag() {
     const name = newTag.trim();
     if (name && !values.tags.includes(name) && values.tags.length < 20) {
@@ -185,7 +289,31 @@
   }
 </script>
 
+<p role="status" aria-label="Save status">
+  {busy
+    ? 'Saving…'
+    : submitError || form
+      ? 'Save failed.'
+      : dirty
+        ? 'Unsaved changes.'
+        : (notice ?? 'No changes.')}
+</p>
 {#if submitError || form}<p role="alert">{submitError || form?.message}</p>{/if}
+{#if post && form?.code === 'stale_revision'}
+  <div class="actions" aria-label="Save conflict recovery">
+    <a
+      href={resolve('/admin/posts/[id]', { id: post.id })}
+      target="_blank"
+      rel="noopener noreferrer">Open latest saved post</a
+    >
+    <button type="button" onclick={exportInput} disabled={busy}
+      >Export unsaved input</button
+    >
+    <button type="button" onclick={reloadLatest} disabled={busy}
+      >Reload latest saved post</button
+    >
+  </div>
+{/if}
 {#if post}
   <p>Status: {post.status}</p>
   {#if trashed}<p>Trash — read-only</p>{/if}
@@ -210,7 +338,7 @@
       >Title <input
         name="title"
         bind:value={values.title}
-        readonly={busy}
+        readonly={busy || creatingCategory}
       /></label
     >
     {#if trashed}
@@ -244,10 +372,10 @@
         name="categoryId"
         aria-label="Category"
         bind:value={values.categoryId}
-        disabled={busy || uploadingImages}
+        disabled={busy || uploadingImages || creatingCategory}
       >
         <option value="">No category</option>
-        {#each options.categories as category (category.id)}<option
+        {#each categoryOptions as category (category.id)}<option
             value={category.id}>{category.name}</option
           >{/each}
       </select></label
@@ -267,7 +395,7 @@
           >
           <button
             type="button"
-            disabled={busy || uploadingImages}
+            disabled={busy || uploadingImages || creatingCategory}
             onclick={() => values.tags.splice(index, 1)}
             >Remove {tag || 'empty tag'}</button
           >
@@ -284,7 +412,10 @@
         >
         <button
           type="button"
-          disabled={busy || uploadingImages || values.tags.length >= 20}
+          disabled={busy ||
+            uploadingImages ||
+            creatingCategory ||
+            values.tags.length >= 20}
           onclick={addTag}>Add tag</button
         >
       </div>
@@ -296,26 +427,65 @@
         Select an existing tag or enter a new name. Clear a tag to detach it.
       </p>
     </fieldset>
+    {#if post?.status === 'published'}<p>
+        Saving immediately updates the public post.
+      </p>{/if}
     {#if !trashed}<div class="actions">
-        <button disabled={busy || uploadingImages}
-          >{post ? 'Save' : 'Create draft'}</button
+        <button disabled={busy || uploadingImages || creatingCategory}
+          >{post?.status === 'published'
+            ? 'Save and update public post'
+            : post
+              ? 'Save'
+              : 'Create draft'}</button
         >
         {#if !post || post.status === 'draft'}<button
             formaction="?/publish"
-            disabled={busy || uploadingImages}>Publish</button
+            disabled={busy || uploadingImages || creatingCategory}
+            >Publish</button
           >
         {:else if post.status === 'archived'}<button
             formaction="?/republish"
-            disabled={busy || uploadingImages}>Republish</button
+            disabled={busy || uploadingImages || creatingCategory}
+            >Republish</button
           >{/if}
       </div>{/if}
   </fieldset>
 </form>
+{#if !trashed}
+  <details>
+    <summary>Create a category</summary>
+    <form
+      method="POST"
+      action="?/createCategory"
+      aria-label="Create category while editing"
+      use:enhance={createCategory}
+    >
+      <label
+        >Category name <input
+          name="name"
+          bind:value={categoryName}
+          readonly={busy || creatingCategory}
+          required
+        /></label
+      >
+      <button
+        disabled={!hydrated || busy || creatingCategory || uploadingImages}
+        >Create category</button
+      >
+      {#if categoryError}<p role="alert">{categoryError}</p>{/if}
+      {#if categoryNotice}<p role="status">{categoryNotice}</p>{/if}
+    </form>
+    <noscript
+      >JavaScript is required to create a category while editing. Existing
+      category selection and post saving remain available.</noscript
+    >
+  </details>
+{/if}
 {#if post}
   <div class="actions">
     {#if trashed}<form method="POST" action="?/restore" use:enhance={submit}>
         <input type="hidden" name="revision" value={revision} /><button
-          disabled={busy || uploadingImages}>Restore</button
+          disabled={busy || uploadingImages || creatingCategory}>Restore</button
         >
       </form>
     {:else}
@@ -326,7 +496,8 @@
           use:enhance={submit}
         >
           <input type="hidden" name="revision" value={revision} /><button
-            disabled={busy || uploadingImages || !hydrated}>Archive</button
+            disabled={busy || uploadingImages || creatingCategory || !hydrated}
+            >Archive</button
           >
         </form>{/if}
       <form
@@ -336,7 +507,8 @@
         use:enhance={submit}
       >
         <input type="hidden" name="revision" value={revision} /><button
-          disabled={busy || uploadingImages || !hydrated}>Move to trash</button
+          disabled={busy || uploadingImages || creatingCategory || !hydrated}
+          >Move to trash</button
         >
       </form>
     {/if}

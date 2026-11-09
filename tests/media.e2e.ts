@@ -120,9 +120,14 @@ test('author stages images privately and explicit publication/removal controls p
   expect((await request.get(publicUrl)).status()).toBe(200);
   await page.getByText('Markdown source', { exact: true }).click();
   await page.getByLabel('Markdown', { exact: true }).fill('Image removed');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Save and update public post', exact: true })
+    .click();
   await expect(
-    page.getByRole('button', { name: 'Save', exact: true }),
+    page.getByRole('button', {
+      name: 'Save and update public post',
+      exact: true,
+    }),
   ).toBeEnabled();
   expect((await request.get(publicUrl)).status()).toBe(404);
 });
