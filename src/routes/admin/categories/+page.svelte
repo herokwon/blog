@@ -1,11 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
+  import { requestFailure } from '#lib/form-feedback.js';
   import { enhance, type SubmitFunction } from '$app/forms';
   import { resolve } from '$app/paths';
   import type { PageProps } from './$types';
 
   let { data, form }: PageProps = $props();
+  let createName = $state(
+    untrack(() =>
+      form?.operation === 'create' && !form.ok && typeof form.name === 'string'
+        ? form.name
+        : '',
+    ),
+  );
+  let renameInputs = $state<Record<string, string>>({});
   let busy = $state(false);
+  let submitError = $state('');
   let hydrated = $state(false);
   onMount(() => {
     hydrated = true;
@@ -22,15 +32,31 @@
       cancel();
       return;
     }
+    submitError = '';
     busy = true;
     return async ({ result, update }) => {
       try {
+        if (result.type === 'redirect') {
+          submitError = requestFailure(401);
+          return;
+        }
+        if (result.type === 'error') {
+          submitError = requestFailure(result.status ?? result.error.status);
+          return;
+        }
         await update({ reset: false });
         if (
           result.type === 'success' &&
           formElement.dataset.operation === 'create'
         )
-          formElement.reset();
+          createName = '';
+        if (
+          result.type === 'success' &&
+          formElement.dataset.operation !== 'create'
+        ) {
+          const id = new FormData(formElement).get('id');
+          if (typeof id === 'string') delete renameInputs[id];
+        }
       } finally {
         busy = false;
       }
@@ -47,7 +73,7 @@
 <noscript>
   <p>JavaScript is required for category deletion confirmation.</p>
 </noscript>
-{#if form}
+{#if submitError}<p role="alert">{submitError}</p>{:else if form}
   {#if form.ok}<p role="status">
       Category {form.operation === 'create'
         ? 'created'
@@ -70,7 +96,7 @@
       name="name"
       readonly={busy}
       required
-      value={form?.operation === 'create' && !form.ok ? form.name : ''}
+      bind:value={createName}
     /></label
   >
   <button disabled={busy}>Create category</button>
@@ -97,11 +123,15 @@
             name="name"
             readonly={busy}
             required
-            value={form?.operation === 'rename' &&
-            form.id === category.id &&
-            !form.ok
-              ? form.name
-              : category.name}
+            oninput={event => {
+              renameInputs[category.id] = event.currentTarget.value;
+            }}
+            value={renameInputs[category.id] ??
+              (form?.operation === 'rename' &&
+              form.id === category.id &&
+              !form.ok
+                ? form.name
+                : category.name)}
           /></label
         >
         <button disabled={busy}>Save name</button>
