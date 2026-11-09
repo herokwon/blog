@@ -31,6 +31,20 @@ test('narrow administrator pages and keyboard feedback keep controls usable and 
   await expect(
     page.getByRole('textbox', { name: 'Markdown editor', exact: true }),
   ).toBeVisible();
+  const editor = page.getByRole('textbox', {
+    name: 'Markdown editor',
+    exact: true,
+  });
+  await editor.fill('Toolbar QA text');
+  await editor.press('ArrowLeft');
+  await editor.press('Home');
+  await editor.press('Shift+ArrowRight');
+  await expect
+    .poll(() => page.evaluate(() => window.getSelection()?.toString().length))
+    .toBe(1);
+  await page
+    .getByRole('button', { name: 'Bold', exact: true })
+    .click({ timeout: 4000 });
   await page.getByLabel('Title', { exact: true }).fill('x'.repeat(200));
   await page.getByText('Markdown source', { exact: true }).click();
   await page
