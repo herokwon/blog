@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { imageReferences, MediaError } from '../media.js';
 import { getDb } from './index.js';
 import { categories, posts, postTags, tags } from './schema.js';
@@ -82,6 +82,7 @@ export async function listPosts(
   d1: D1Database,
   filter: PostFilter = 'all',
   page = 1,
+  search: { q?: string; categoryId?: string } = {},
 ) {
   const rows = await getDb(d1)
     .select({
@@ -95,12 +96,18 @@ export async function listPosts(
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .where(
-      filter === 'trash'
-        ? isNotNull(posts.deletedAt)
-        : and(
-            isNull(posts.deletedAt),
-            filter === 'all' ? undefined : eq(posts.status, filter),
-          ),
+      and(
+        filter === 'trash'
+          ? isNotNull(posts.deletedAt)
+          : and(
+              isNull(posts.deletedAt),
+              filter === 'all' ? undefined : eq(posts.status, filter),
+            ),
+        search.q
+          ? sql`instr(lower(${posts.title}), lower(${search.q})) > 0`
+          : undefined,
+        search.categoryId ? eq(posts.categoryId, search.categoryId) : undefined,
+      ),
     )
     .orderBy(desc(posts.updatedAt), desc(posts.id))
     .limit(21)

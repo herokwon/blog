@@ -436,3 +436,45 @@ test('conflicts identify stale revisions, reserved slugs and deleted categories 
   expect((await getPost(db, first.id))?.title).toBe(input.title);
   expect((await getPost(db, second.id))?.title).toBe('');
 });
+
+test('title search treats wildcard characters literally and combines category and state filters', async () => {
+  await db
+    .prepare("INSERT INTO categories (id,name) VALUES ('other','Other')")
+    .run();
+  const first = await draft({
+    ...input,
+    title: '한글 100%_Notes',
+    slug: 'search-one',
+  });
+  await draft({ ...input, title: '한글 100percentXNotes', slug: 'search-two' });
+  await draft({
+    ...input,
+    title: '한글 100%_Notes',
+    slug: 'search-three',
+    categoryId: 'other',
+  });
+  expect(
+    (
+      await listPosts(db, 'draft', 1, { q: '%_', categoryId: 'category' })
+    ).posts.map(p => p.id),
+  ).toEqual([first.id]);
+  expect((await listPosts(db, 'published', 1, { q: '한글' })).posts).toEqual(
+    [],
+  );
+  expect(
+    (await listPosts(db, 'all', 1, { q: 'does not exist' })).posts,
+  ).toEqual([]);
+  await mutatePost(db, {
+    action: 'trash',
+    id: first.id,
+    revision: first.revision,
+  });
+  expect(
+    (await listPosts(db, 'all', 1, { q: '%_', categoryId: 'category' })).posts,
+  ).toEqual([]);
+  expect(
+    (
+      await listPosts(db, 'trash', 1, { q: '%_', categoryId: 'category' })
+    ).posts.map(p => p.id),
+  ).toEqual([first.id]);
+});

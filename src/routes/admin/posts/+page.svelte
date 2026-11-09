@@ -3,12 +3,33 @@
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
+  function pageUrl(page: number) {
+    return new URLSearchParams({
+      status: data.filter,
+      q: data.q,
+      categoryId: data.categoryId,
+      page: String(page),
+    }).toString();
+  }
 </script>
 
 <svelte:head><title>Posts · Administration</title></svelte:head>
 <h1>Posts</h1>
 <a href={resolve('/admin/posts/new')}>New post</a>
 <form method="GET" action={resolve('/admin/posts')}>
+  <label>Search titles <input name="q" value={data.q} maxlength="400" /></label>
+  <label
+    >Category filter <select
+      name="categoryId"
+      aria-label="Category filter"
+      value={data.categoryId}
+    >
+      <option value="">All categories</option>
+      {#each data.categories as category (category.id)}<option
+          value={category.id}>{category.name}</option
+        >{/each}
+    </select></label
+  >
   <label
     >Status filter <select
       name="status"
@@ -23,8 +44,13 @@
     </select></label
   >
   <button>Filter</button>
+  <a href={resolve('/admin/posts')}>Reset filters</a>
 </form>
-{#if data.posts.length === 0}<p>No posts on this page.</p>{/if}
+{#if data.posts.length === 0}<p>
+    {data.q || data.categoryId || data.filter !== 'all'
+      ? 'No posts match these filters.'
+      : 'No posts on this page.'}
+  </p>{/if}
 <ul>
   {#each data.posts as post (post.id)}<li>
       <a href={resolve('/admin/posts/[id]', { id: post.id })}
@@ -38,13 +64,11 @@
     </li>{/each}
 </ul>
 <nav aria-label="Post pages">
-  {#if data.page > 1}<a
-      href={resolve(`/admin/posts?status=${data.filter}&page=${data.page - 1}`)}
+  {#if data.page > 1}<a href={resolve(`/admin/posts?${pageUrl(data.page - 1)}`)}
       >Previous</a
     >{/if}
   <span>Page {data.page}</span>
-  {#if data.hasNext}<a
-      href={resolve(`/admin/posts?status=${data.filter}&page=${data.page + 1}`)}
+  {#if data.hasNext}<a href={resolve(`/admin/posts?${pageUrl(data.page + 1)}`)}
       >Next</a
     >{/if}
 </nav>
@@ -57,6 +81,7 @@
     gap: 0.75rem;
     margin-block: 1.5rem;
   }
+  input,
   select,
   button {
     font: inherit;
