@@ -80,7 +80,7 @@ Build and operate a single-author personal blog while learning Svelte. Use the a
 - Keep the three issue templates and default PR template in English, preserving their emoji headings and `<br />` spacing.
 - Link work issues through Development metadata; include explicit issue references in the work record. Do not require a duplicate Related Issues body section.
 - Disable repository issue auto-closing. Issue closure is an explicit action based on verified outcomes.
-- Run CI on PR changes (including base-branch changes) and manual dispatch. Deployment builds the merged commit independently; CI artifacts are shared only within the CI run.
+- Run CI when a PR is opened, synchronized, reopened, or marked ready, and on manual dispatch. Title/body edits and base retargeting alone do not trigger CI; after retargeting, synchronize the source branch or push a new commit for current-target PR validation. Deployment builds the merged commit independently; CI artifacts are shared only within the CI run.
 
 ## Delivery Automation
 
