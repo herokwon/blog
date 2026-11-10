@@ -49,7 +49,7 @@ beforeEach(async () => {
       'DROP TRIGGER IF EXISTS ignore_parent',
       'DROP TRIGGER IF EXISTS reject_metadata',
       'DELETE FROM post_attachments',
-      'DELETE FROM post_tags',
+      'DELETE FROM post_owned_tags',
       'DELETE FROM posts',
       'DELETE FROM attachments',
       'DELETE FROM categories',

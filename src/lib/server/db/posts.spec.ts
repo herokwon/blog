@@ -39,7 +39,7 @@ beforeEach(async () => {
   await db.batch(
     [
       'DROP TRIGGER IF EXISTS reject_relation',
-      'DELETE FROM post_tags',
+      'DELETE FROM post_owned_tags',
       'DELETE FROM posts',
       'DELETE FROM categories',
       "INSERT INTO categories (id, name) VALUES ('category', 'Notes')",
@@ -347,7 +347,7 @@ test('revision guards make concurrent updates single-winner and stale batches ca
   expect(
     await db
       .prepare(
-        "SELECT count(*) AS count FROM post_tags WHERE name IN ('Winner A', 'Winner B')",
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name IN ('Winner A', 'Winner B')",
       )
       .first<number>('count'),
   ).toBe(1);
@@ -363,7 +363,7 @@ test('revision guards make concurrent updates single-winner and stale batches ca
   expect(
     await db
       .prepare(
-        "SELECT count(*) AS count FROM post_tags WHERE name = 'Stale orphan'",
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name = 'Stale orphan'",
       )
       .first<number>('count'),
   ).toBe(0);
@@ -381,7 +381,7 @@ test('a dependent SQL failure rolls back the post, revision, new tags and old re
   const post = await draft(input);
   await db
     .prepare(
-      "CREATE TRIGGER reject_relation BEFORE INSERT ON post_tags BEGIN SELECT RAISE(ABORT, 'relation rejected'); END",
+      "CREATE TRIGGER reject_relation BEFORE INSERT ON post_owned_tags BEGIN SELECT RAISE(ABORT, 'relation rejected'); END",
     )
     .run();
   await expect(
@@ -396,7 +396,7 @@ test('a dependent SQL failure rolls back the post, revision, new tags and old re
   expect(
     await db
       .prepare(
-        "SELECT count(*) AS count FROM post_tags WHERE name = 'Rollback'",
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name = 'Rollback'",
       )
       .first<number>('count'),
   ).toBe(0);

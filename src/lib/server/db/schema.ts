@@ -27,6 +27,20 @@ export const categories = sqliteTable(
   ],
 );
 
+export const legacyTags = sqliteTable(
+  'tags',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull().unique(),
+  },
+  table => [
+    check(
+      'tags_name',
+      sql`length(${table.name}) BETWEEN 1 AND 40 AND ${table.name} = trim(${table.name}, ${whitespace}) AND instr(${table.name}, char(0)) = 0`,
+    ),
+  ],
+);
+
 export const posts = sqliteTable(
   'posts',
   {
@@ -85,22 +99,19 @@ export const posts = sqliteTable(
   ],
 );
 
-export const postTags = sqliteTable(
+export const legacyPostTags = sqliteTable(
   'post_tags',
   {
     postId: text('post_id')
       .notNull()
       .references(() => posts.id, { onDelete: 'restrict' }),
-    name: text('name').notNull(),
-    position: integer('position').notNull(),
+    tagId: text('tag_id')
+      .notNull()
+      .references(() => legacyTags.id, { onDelete: 'restrict' }),
   },
   table => [
-    primaryKey({ columns: [table.postId, table.name] }),
-    check(
-      'post_tags_name',
-      sql`length(${table.name}) BETWEEN 1 AND 40 AND ${table.name} = trim(${table.name}, ${whitespace}) AND instr(${table.name}, char(0)) = 0`,
-    ),
-    check('post_tags_position', sql`${table.position} >= 0`),
+    primaryKey({ columns: [table.postId, table.tagId] }),
+    index('post_tags_tag').on(table.tagId),
   ],
 );
 
@@ -135,5 +146,25 @@ export const postAttachments = sqliteTable(
   table => [
     primaryKey({ columns: [table.postId, table.attachmentId] }),
     index('post_attachments_attachment').on(table.attachmentId),
+  ],
+);
+
+// Legacy tables remain during the migration-to-activation overlap (ADR 0005).
+export const postTags = sqliteTable(
+  'post_owned_tags',
+  {
+    postId: text('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    position: integer('position').notNull(),
+  },
+  table => [
+    primaryKey({ columns: [table.postId, table.name] }),
+    check(
+      'post_owned_tags_name',
+      sql`length(${table.name}) BETWEEN 1 AND 40 AND ${table.name} = trim(${table.name}, ${whitespace}) AND instr(${table.name}, char(0)) = 0`,
+    ),
+    check('post_owned_tags_position', sql`${table.position} >= 0`),
   ],
 );

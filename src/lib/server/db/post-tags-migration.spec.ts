@@ -17,20 +17,41 @@ test('post-owned migration preserves attached legacy names and independent order
     for (const file of files.slice(2))
       db.exec(readFileSync(`drizzle/${file}`, 'utf8'));
     expect(
-      db.prepare('SELECT * FROM post_tags ORDER BY post_id, position').all(),
+      db
+        .prepare('SELECT * FROM post_owned_tags ORDER BY post_id, position')
+        .all(),
     ).toEqual([
       { post_id: 'a', name: 'Legacy tag', position: 0 },
       { post_id: 'a', name: 'Svelte', position: 1 },
       { post_id: 'b', name: 'Svelte', position: 0 },
     ]);
+    // The prior Worker can still read and save after migrations and before activation.
+    expect(
+      db
+        .prepare(
+          "SELECT t.name FROM tags t INNER JOIN post_tags p ON p.tag_id=t.id WHERE p.post_id='a' ORDER BY t.name",
+        )
+        .all(),
+    ).toEqual([{ name: 'Legacy tag' }, { name: 'Svelte' }]);
     db.exec(
-      "UPDATE post_tags SET name = 'SvelteKit' WHERE post_id = 'a' AND name = 'Svelte'",
+      "INSERT INTO tags VALUES ('new','Overlap'); INSERT INTO post_tags VALUES ('b','new'); DELETE FROM post_tags WHERE post_id='b' AND tag_id='one'",
     );
     expect(
-      db.prepare("SELECT name FROM post_tags WHERE post_id = 'b'").all(),
-    ).toEqual([{ name: 'Svelte' }]);
+      db.prepare("SELECT name FROM post_owned_tags WHERE post_id='b'").all(),
+    ).toEqual([{ name: 'Overlap' }]);
+    db.exec("INSERT INTO post_tags VALUES ('b','one')");
+    db.exec(
+      "UPDATE post_owned_tags SET name = 'SvelteKit' WHERE post_id = 'a' AND name = 'Svelte'",
+    );
+    expect(
+      db
+        .prepare(
+          "SELECT name FROM post_owned_tags WHERE post_id = 'b' ORDER BY name",
+        )
+        .all(),
+    ).toEqual([{ name: 'Overlap' }, { name: 'Svelte' }]);
     expect(() =>
-      db.exec("INSERT INTO post_tags VALUES ('b','Svelte',1)"),
+      db.exec("INSERT INTO post_owned_tags VALUES ('b','Svelte',1)"),
     ).toThrow();
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   } finally {

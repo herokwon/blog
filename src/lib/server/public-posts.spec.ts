@@ -22,7 +22,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await db.batch(
     [
-      'DELETE FROM post_tags',
+      'DELETE FROM post_owned_tags',
       'DELETE FROM posts',
       'DELETE FROM categories',
       "INSERT INTO categories (id,name) VALUES ('category','Notes')",
@@ -69,7 +69,9 @@ test('public queries exclude every nonpublic state and expose only reader fields
       category: 'Notes',
     },
   ]);
-  await db.prepare("INSERT INTO post_tags VALUES ('public','Svelte',0)").run();
+  await db
+    .prepare("INSERT INTO post_owned_tags VALUES ('public','Svelte',0)")
+    .run();
   expect(await getPublicPost(db, 'public')).toEqual({
     title: 'Title public',
     body: 'Body',

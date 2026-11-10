@@ -71,12 +71,12 @@ test('classification boundaries and foreign keys protect referenced categories e
   ).toThrow();
   draft('tag-post');
   db.prepare(
-    "INSERT INTO post_tags (post_id, name, position) VALUES ('tag-post', ?, ?)",
+    "INSERT INTO post_owned_tags (post_id, name, position) VALUES ('tag-post', ?, ?)",
   ).run('a'.repeat(40), 0);
   expect(() =>
     db
       .prepare(
-        "INSERT INTO post_tags (post_id, name, position) VALUES ('tag-post', ?, ?)",
+        "INSERT INTO post_owned_tags (post_id, name, position) VALUES ('tag-post', ?, ?)",
       )
       .run('a'.repeat(41), 1),
   ).toThrow();
@@ -100,7 +100,7 @@ test('classification boundaries and foreign keys protect referenced categories e
   ).toThrow();
   expect(() =>
     db.exec(
-      "INSERT INTO post_tags (post_id, name, position) VALUES ('tag-post', '" +
+      "INSERT INTO post_owned_tags (post_id, name, position) VALUES ('tag-post', '" +
         'a'.repeat(40) +
         "', 1)",
     ),
@@ -170,7 +170,7 @@ test('slugs reject malformed input and stay reserved by archived trashed posts',
 test('post tag associations reject duplicates and dangling references', () => {
   const id = draft();
   const insert = db.prepare(
-    'INSERT INTO post_tags (post_id, name, position) VALUES (?, ?, 0)',
+    'INSERT INTO post_owned_tags (post_id, name, position) VALUES (?, ?, 0)',
   );
   insert.run(id, 'Svelte');
   expect(() => insert.run(id, 'Svelte')).toThrow();
@@ -190,7 +190,7 @@ test('content limits count title characters and Markdown bytes', () => {
 
 test('classification names reject whitespace-only, untrimmed and NUL-containing values', () => {
   draft('tag-post');
-  for (const table of ['categories', 'post_tags']) {
+  for (const table of ['categories', 'post_owned_tags']) {
     for (const name of [
       '\t',
       '\n',
@@ -205,7 +205,7 @@ test('classification names reject whitespace-only, untrimmed and NUL-containing 
           .prepare(
             table === 'categories'
               ? 'INSERT INTO categories (id, name) VALUES (?, ?)'
-              : 'INSERT INTO post_tags (post_id, name, position) VALUES (?, ?, 0)',
+              : 'INSERT INTO post_owned_tags (post_id, name, position) VALUES (?, ?, 0)',
           )
           .run(table === 'categories' ? 'invalid' : 'tag-post', name),
       ).toThrow();

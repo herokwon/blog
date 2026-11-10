@@ -303,14 +303,14 @@ export async function mutatePost(
     const guard = 'EXISTS (SELECT 1 FROM posts WHERE id = ? AND revision = ?)';
     statements.push(
       d1
-        .prepare(`DELETE FROM post_tags WHERE post_id = ? AND ${guard}`)
+        .prepare(`DELETE FROM post_owned_tags WHERE post_id = ? AND ${guard}`)
         .bind(id, id, revision),
     );
     for (const [position, name] of normalizedTags.entries())
       statements.push(
         d1
           .prepare(
-            `INSERT INTO post_tags (post_id, name, position) SELECT ?, ?, ? WHERE ${guard}`,
+            `INSERT INTO post_owned_tags (post_id, name, position) SELECT ?, ?, ? WHERE ${guard}`,
           )
           .bind(id, name, position, id, revision),
       );
