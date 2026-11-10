@@ -53,6 +53,7 @@ test('Wrangler applies committed SQL once and preserves data on repeat applicati
     expect(result.flatMap(item => item.results)).toEqual([
       { name: '0000_post-classification-schema.sql' },
       { name: '0001_private-post-attachments.sql' },
+      { name: '0002_post-owned-tags.sql' },
       { count: 1 },
     ]);
     const migrations = join(state, 'migrations');

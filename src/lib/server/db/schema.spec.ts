@@ -69,14 +69,16 @@ test('classification boundaries and foreign keys protect referenced categories e
       .prepare('INSERT INTO categories (id, name) VALUES (?, ?)')
       .run('too-long', 'a'.repeat(21)),
   ).toThrow();
-  db.prepare('INSERT INTO tags (id, name) VALUES (?, ?)').run(
-    'tag',
-    'a'.repeat(40),
-  );
+  draft('tag-post');
+  db.prepare(
+    "INSERT INTO post_tags (post_id, name, position) VALUES ('tag-post', ?, ?)",
+  ).run('a'.repeat(40), 0);
   expect(() =>
     db
-      .prepare('INSERT INTO tags (id, name) VALUES (?, ?)')
-      .run('too-long', 'a'.repeat(41)),
+      .prepare(
+        "INSERT INTO post_tags (post_id, name, position) VALUES ('tag-post', ?, ?)",
+      )
+      .run('a'.repeat(41), 1),
   ).toThrow();
   for (const name of ['', ' ', ' Notes', 'Notes ']) {
     expect(() =>
@@ -98,9 +100,9 @@ test('classification boundaries and foreign keys protect referenced categories e
   ).toThrow();
   expect(() =>
     db.exec(
-      "INSERT INTO tags (id, name) VALUES ('duplicate', '" +
+      "INSERT INTO post_tags (post_id, name, position) VALUES ('tag-post', '" +
         'a'.repeat(40) +
-        "')",
+        "', 1)",
     ),
   ).toThrow();
 });
@@ -167,14 +169,12 @@ test('slugs reject malformed input and stay reserved by archived trashed posts',
 
 test('post tag associations reject duplicates and dangling references', () => {
   const id = draft();
-  db.exec("INSERT INTO tags (id, name) VALUES ('tag', 'Svelte')");
   const insert = db.prepare(
-    'INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)',
+    'INSERT INTO post_tags (post_id, name, position) VALUES (?, ?, 0)',
   );
-  insert.run(id, 'tag');
-  expect(() => insert.run(id, 'tag')).toThrow();
-  expect(() => insert.run(id, 'missing')).toThrow();
-  expect(() => insert.run('missing', 'tag')).toThrow();
+  insert.run(id, 'Svelte');
+  expect(() => insert.run(id, 'Svelte')).toThrow();
+  expect(() => insert.run('missing', 'Svelte')).toThrow();
 });
 
 test('content limits count title characters and Markdown bytes', () => {
@@ -189,7 +189,8 @@ test('content limits count title characters and Markdown bytes', () => {
 });
 
 test('classification names reject whitespace-only, untrimmed and NUL-containing values', () => {
-  for (const table of ['categories', 'tags']) {
+  draft('tag-post');
+  for (const table of ['categories', 'post_tags']) {
     for (const name of [
       '\t',
       '\n',
@@ -201,8 +202,12 @@ test('classification names reject whitespace-only, untrimmed and NUL-containing 
     ]) {
       expect(() =>
         db
-          .prepare(`INSERT INTO ${table} (id, name) VALUES (?, ?)`)
-          .run('invalid', name),
+          .prepare(
+            table === 'categories'
+              ? 'INSERT INTO categories (id, name) VALUES (?, ?)'
+              : 'INSERT INTO post_tags (post_id, name, position) VALUES (?, ?, 0)',
+          )
+          .run(table === 'categories' ? 'invalid' : 'tag-post', name),
       ).toThrow();
     }
   }

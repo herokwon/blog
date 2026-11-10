@@ -27,20 +27,6 @@ export const categories = sqliteTable(
   ],
 );
 
-export const tags = sqliteTable(
-  'tags',
-  {
-    id: text('id').primaryKey(),
-    name: text('name').notNull().unique(),
-  },
-  table => [
-    check(
-      'tags_name',
-      sql`length(${table.name}) BETWEEN 1 AND 40 AND ${table.name} = trim(${table.name}, ${whitespace}) AND instr(${table.name}, char(0)) = 0`,
-    ),
-  ],
-);
-
 export const posts = sqliteTable(
   'posts',
   {
@@ -105,13 +91,16 @@ export const postTags = sqliteTable(
     postId: text('post_id')
       .notNull()
       .references(() => posts.id, { onDelete: 'restrict' }),
-    tagId: text('tag_id')
-      .notNull()
-      .references(() => tags.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    position: integer('position').notNull(),
   },
   table => [
-    primaryKey({ columns: [table.postId, table.tagId] }),
-    index('post_tags_tag').on(table.tagId),
+    primaryKey({ columns: [table.postId, table.name] }),
+    check(
+      'post_tags_name',
+      sql`length(${table.name}) BETWEEN 1 AND 40 AND ${table.name} = trim(${table.name}, ${whitespace}) AND instr(${table.name}, char(0)) = 0`,
+    ),
+    check('post_tags_position', sql`${table.position} >= 0`),
   ],
 );
 

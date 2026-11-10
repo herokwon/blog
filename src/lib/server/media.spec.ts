@@ -51,7 +51,6 @@ beforeEach(async () => {
       'DELETE FROM post_attachments',
       'DELETE FROM post_tags',
       'DELETE FROM posts',
-      'DELETE FROM tags',
       'DELETE FROM attachments',
       'DELETE FROM categories',
       "INSERT INTO categories (id, name) VALUES ('category', 'Notes')",
