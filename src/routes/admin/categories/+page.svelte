@@ -1,51 +1,69 @@
 <script lang="ts">
-  import { onMount, tick, untrack } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { requestFailure } from '#lib/form-feedback.js';
   import { enhance, type SubmitFunction } from '$app/forms';
   import { resolve } from '$app/paths';
   import type { PageProps } from './$types';
 
   let { data, form }: PageProps = $props();
-  let createName = $state(
-    untrack(() =>
-      form?.operation === 'create' && !form.ok && typeof form.name === 'string'
-        ? form.name
-        : '',
-    ),
-  );
-  let renameInputs = $state<Record<string, string>>({});
-  let busy = $state(false);
-  let submitError = $state('');
+  let busy = $state(false),
+    hydrated = $state(false),
+    submitError = $state('');
+  let attemptedNames = $state<Record<string, string>>({});
   let alertElement = $state<HTMLParagraphElement>();
+  let createButton = $state<HTMLButtonElement>();
   const errorMessage = $derived(
     submitError ||
       (form && !form.ok && typeof form.message === 'string'
         ? form.message
         : ''),
   );
-  async function focusError() {
-    await tick();
-    alertElement?.focus();
-  }
-  let hydrated = $state(false);
   onMount(() => {
     hydrated = true;
-    if (errorMessage) void focusError();
   });
-  const submit: SubmitFunction = ({ formElement, cancel }) => {
-    if (busy) {
+  const submit: SubmitFunction = ({ formElement, formData, cancel }) => {
+    if (!hydrated || busy) {
       cancel();
       return;
     }
-    if (
-      formElement.dataset.operation === 'delete' &&
-      !window.confirm('Delete this category?')
-    ) {
-      cancel();
-      return;
+    const operation = formElement.dataset.operation!;
+    const idValue = formData.get('id');
+    const id = typeof idValue === 'string' ? idValue : '';
+    const key = operation + ':' + id;
+    formElement.closest('details')?.removeAttribute('open');
+    if (operation === 'delete') {
+      if (Number(formElement.dataset.usage) > 0) {
+        window.alert(
+          'This category is used by posts, including drafts, archived posts or trash. Reassign those posts before deleting it.',
+        );
+        cancel();
+        return;
+      }
+      if (!window.confirm(`Delete “${formElement.dataset.name}”?`)) {
+        cancel();
+        return;
+      }
+    } else {
+      const previous =
+        attemptedNames[key] ??
+        (form && !form.ok && form.operation === operation && form.id === id
+          ? form.name
+          : (formElement.dataset.name ?? ''));
+      const name = window.prompt(
+        operation === 'create'
+          ? 'Category name (1–20 characters)'
+          : 'Rename category (1–20 characters)',
+        previous,
+      );
+      if (name === null) {
+        cancel();
+        return;
+      }
+      attemptedNames[key] = name;
+      formData.set('name', name);
     }
-    submitError = '';
     busy = true;
+    submitError = '';
     return async ({ result, update }) => {
       try {
         if (result.type === 'redirect') {
@@ -58,20 +76,21 @@
         }
         await update({ reset: false });
         if (
-          result.type === 'success' &&
-          formElement.dataset.operation === 'create'
+          result.type === 'failure' &&
+          result.data?.code === 'category_in_use'
         )
-          createName = '';
-        if (
-          result.type === 'success' &&
-          formElement.dataset.operation !== 'create'
-        ) {
-          const id = new FormData(formElement).get('id');
-          if (typeof id === 'string') delete renameInputs[id];
-        }
+          window.alert(String(result.data.message));
+        if (result.type === 'success') delete attemptedNames[key];
       } finally {
         busy = false;
-        if (submitError || result.type === 'failure') await focusError();
+        await tick();
+        if (submitError || result.type === 'failure') alertElement?.focus();
+        else {
+          const menu = document
+            .getElementById('category-' + id)
+            ?.querySelector('summary');
+          (menu ?? createButton)?.focus();
+        }
       }
     };
   };
@@ -80,25 +99,20 @@
 <svelte:head><title>Categories · Administration</title></svelte:head>
 <h1>Categories</h1>
 <p>
-  Names must be unique and contain 1–20 characters. Surrounding whitespace is
-  removed.
+  Names must be unique and contain 1–20 characters. Usage includes all post
+  states and trash.
 </p>
-<noscript>
-  <p>JavaScript is required for category deletion confirmation.</p>
-</noscript>
+<noscript><p>JavaScript is required to manage categories.</p></noscript>
 {#if errorMessage}<p role="alert" tabindex="-1" bind:this={alertElement}>
     {errorMessage}
-  </p>{:else if form}
-  {#if form.ok}<p role="status">
-      Category {form.operation === 'create'
-        ? 'created'
-        : form.operation === 'rename'
-          ? 'renamed'
-          : 'deleted'}.
-    </p>
-  {/if}
-{/if}
-
+  </p>
+{:else if form?.ok}<p role="status">
+    Category {form.operation === 'create'
+      ? 'created'
+      : form.operation === 'rename'
+        ? 'renamed'
+        : 'deleted'}.
+  </p>{/if}
 <form
   method="POST"
   action={`?/create&page=${data.page}`}
@@ -106,61 +120,40 @@
   data-operation="create"
   use:enhance={submit}
 >
-  <label
-    >Category name <input
-      name="name"
-      readonly={busy}
-      required
-      bind:value={createName}
-    /></label
+  <button bind:this={createButton} disabled={!hydrated || busy}
+    >Create category</button
   >
-  <button disabled={busy}>Create category</button>
 </form>
-
-{#if data.categories.length === 0}<p>No categories on this page.</p>{/if}
+{#if !data.categories.length}<p>No categories on this page.</p>{/if}
 <ul>
   {#each data.categories as category (category.id)}
-    <li>
+    <li id={`category-${category.id}`} data-category-id={category.id}>
       <h2>{category.name}</h2>
-      <p>
-        Used by {category.usage}
-        {category.usage === 1 ? 'post' : 'posts'} (all states, including trash).
-      </p>
-      <form
-        method="POST"
-        action={`?/rename&page=${data.page}`}
-        aria-label={`Rename ${category.name}`}
-        use:enhance={submit}
-      >
-        <input type="hidden" name="id" value={category.id} />
-        <label
-          >Category name <input
-            name="name"
-            readonly={busy}
-            required
-            oninput={event => {
-              renameInputs[category.id] = event.currentTarget.value;
-            }}
-            value={renameInputs[category.id] ??
-              (form?.operation === 'rename' &&
-              form.id === category.id &&
-              !form.ok
-                ? form.name
-                : category.name)}
-          /></label
+      <span>{category.usage} {category.usage === 1 ? 'post' : 'posts'}</span>
+      <details>
+        <summary aria-label="Category actions">⋯</summary>
+        <form
+          method="POST"
+          action={`?/rename&page=${data.page}`}
+          data-operation="rename"
+          data-name={category.name}
+          use:enhance={submit}
         >
-        <button disabled={busy}>Save name</button>
-      </form>
-      <form
-        method="POST"
-        action={`?/delete&page=${data.page}`}
-        data-operation="delete"
-        aria-label={`Delete ${category.name}`}
-        use:enhance={submit}
-      >
-        <input type="hidden" name="id" value={category.id} />
-        <button disabled={busy || !hydrated}>Delete category</button>
-      </form>
+          <input type="hidden" name="id" value={category.id} />
+          <button disabled={!hydrated || busy}>Rename</button>
+        </form>
+        <form
+          method="POST"
+          action={`?/delete&page=${data.page}`}
+          data-operation="delete"
+          data-name={category.name}
+          data-usage={category.usage}
+          use:enhance={submit}
+        >
+          <input type="hidden" name="id" value={category.id} />
+          <button disabled={!hydrated || busy}>Delete</button>
+        </form>
+      </details>
     </li>
   {/each}
 </ul>
@@ -175,40 +168,38 @@
 </nav>
 
 <style>
-  form {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    gap: 0.75rem;
-    margin-block: 0.75rem;
-  }
-  label {
-    min-width: 0;
-    max-width: 100%;
-    display: grid;
-    gap: 0.25rem;
-  }
-  input,
-  button {
-    font: inherit;
-    padding: 0.5rem;
-  }
   ul {
     list-style: none;
     padding: 0;
   }
   li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 1rem;
+    padding-block: 0.75rem;
     border-top: 1px solid #ccc;
-    padding-block: 1rem;
   }
   h2 {
     margin: 0;
     font-size: 1.15rem;
     overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  button {
+    font: inherit;
+    padding: 0.5rem;
+  }
+  summary {
+    cursor: pointer;
+    padding: 0.5rem;
   }
   nav {
     display: flex;
     gap: 1rem;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
+  }
+  p {
+    overflow-wrap: anywhere;
   }
 </style>

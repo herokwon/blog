@@ -15,6 +15,13 @@
       "when": 1794100043558,
       "tag": "0001_private-post-attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794294174501,
+      "tag": "0002_post-owned-tags",
+      "breakpoints": true
     }
   ]
 }

@@ -39,9 +39,8 @@ beforeEach(async () => {
   await db.batch(
     [
       'DROP TRIGGER IF EXISTS reject_relation',
-      'DELETE FROM post_tags',
+      'DELETE FROM post_owned_tags',
       'DELETE FROM posts',
-      'DELETE FROM tags',
       'DELETE FROM categories',
       "INSERT INTO categories (id, name) VALUES ('category', 'Notes')",
     ].map(query => db.prepare(query)),
@@ -64,6 +63,37 @@ async function draft(
   if (!result.ok) throw new Error(result.message);
   return (await getPost(db, result.id))!;
 }
+
+test('tags retain entry order and legacy spaces while another post keeps an independent same-name tag', async () => {
+  const first = await draft({
+    ...input,
+    slug: 'first-tags',
+    tags: ['Svelte', 'Legacy tag', 'Cloudflare'],
+  });
+  const second = await draft({
+    ...input,
+    slug: 'second-tags',
+    tags: ['Svelte'],
+  });
+  expect(first.tags).toEqual(['Svelte', 'Legacy tag', 'Cloudflare']);
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: first.id,
+      revision: first.revision,
+      input: {
+        ...input,
+        slug: 'first-tags',
+        tags: ['Legacy tag', 'SvelteKit'],
+      },
+    }),
+  ).toMatchObject({ ok: true });
+  expect((await getPost(db, first.id))?.tags).toEqual([
+    'Legacy tag',
+    'SvelteKit',
+  ]);
+  expect((await getPost(db, second.id))?.tags).toEqual(['Svelte']);
+});
 
 test('UUIDv7 drafts and publication lifecycle preserve first-publication metadata and restore privately', async () => {
   const post = await draft();
@@ -92,7 +122,7 @@ test('UUIDv7 drafts and publication lifecycle preserve first-publication metadat
   expect(first).toMatchObject({
     status: 'published',
     slug: 'a-post',
-    tags: ['Cloudflare', 'Svelte'],
+    tags: ['Svelte', 'Cloudflare'],
   });
   expect(first.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*\.\d{3}Z$/);
   await db
@@ -317,7 +347,7 @@ test('revision guards make concurrent updates single-winner and stale batches ca
   expect(
     await db
       .prepare(
-        "SELECT count(*) AS count FROM tags WHERE name IN ('Winner A', 'Winner B')",
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name IN ('Winner A', 'Winner B')",
       )
       .first<number>('count'),
   ).toBe(1);
@@ -332,7 +362,9 @@ test('revision guards make concurrent updates single-winner and stale batches ca
   expect((await getPost(db, post.id))?.tags).toEqual([current.title]);
   expect(
     await db
-      .prepare("SELECT count(*) AS count FROM tags WHERE name = 'Stale orphan'")
+      .prepare(
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name = 'Stale orphan'",
+      )
       .first<number>('count'),
   ).toBe(0);
   const detached = await mutatePost(db, {
@@ -349,7 +381,7 @@ test('a dependent SQL failure rolls back the post, revision, new tags and old re
   const post = await draft(input);
   await db
     .prepare(
-      "CREATE TRIGGER reject_relation BEFORE INSERT ON post_tags BEGIN SELECT RAISE(ABORT, 'relation rejected'); END",
+      "CREATE TRIGGER reject_relation BEFORE INSERT ON post_owned_tags BEGIN SELECT RAISE(ABORT, 'relation rejected'); END",
     )
     .run();
   await expect(
@@ -363,7 +395,9 @@ test('a dependent SQL failure rolls back the post, revision, new tags and old re
   expect(await getPost(db, post.id)).toEqual(post);
   expect(
     await db
-      .prepare("SELECT count(*) AS count FROM tags WHERE name = 'Rollback'")
+      .prepare(
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name = 'Rollback'",
+      )
       .first<number>('count'),
   ).toBe(0);
 });

@@ -83,16 +83,19 @@ test('clean metadata reverts and pending tags correctly govern dirty protection'
   await page.getByRole('link', { name: 'Posts', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/posts$/);
   await page.getByRole('link', { name: 'New post', exact: true }).click();
-  await page.getByLabel('Add tag', { exact: true }).fill('Unsaved tag');
+  await page.getByRole('toolbar', { name: 'Tag entry area' }).press('Enter');
+  await page.getByLabel('Add tag', { exact: true }).fill('Unsaved-tag');
   page.once('dialog', async dialog => {
     expect(dialog.type()).toBe('confirm');
     await dialog.dismiss();
   });
   await page.getByRole('link', { name: 'Categories', exact: true }).click();
-  await expect(page.getByLabel('Add tag', { exact: true })).toHaveValue(
-    'Unsaved tag',
-  );
-  await page.getByLabel('Add tag', { exact: true }).fill('');
+  await expect(
+    page.getByRole('button', { name: 'Edit tag Unsaved-tag', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Edit tag Unsaved-tag', exact: true })
+    .press('Backspace');
   await page.getByRole('link', { name: 'Categories', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/categories$/);
 });
@@ -244,111 +247,18 @@ test('save feedback reflects actual success and preserves fields after authentic
   await expect(status).toHaveText('No changes.');
 });
 
-test('inline category creation preserves unsaved post fields and selects the created category', async ({
-  page,
-  request,
-}) => {
+test('post editing only selects categories', async ({ page, request }) => {
   const token = await (await request.get('http://127.0.0.1:4174/token')).text();
   await page.setExtraHTTPHeaders({ 'cf-access-jwt-assertion': token });
   await page.goto('/admin/posts/new');
-  const editor = page.getByRole('textbox', {
-    name: 'Markdown editor',
-    exact: true,
-  });
-  await expect(editor).toBeVisible();
-  await page
-    .getByLabel('Title', { exact: true })
-    .fill('Unsaved category draft');
-  await editor.fill('Keep unsaved Markdown');
-  await page.getByLabel('Add tag', { exact: true }).fill('Pending tag');
-  await page.getByText('Create a category', { exact: true }).click();
-  const categoryForm = page.getByRole('form', {
-    name: 'Create category while editing',
-  });
-  const name = 'Inline ' + crypto.randomUUID().slice(0, 8);
-  await categoryForm.getByLabel('Category name', { exact: true }).fill(name);
-  await categoryForm
-    .getByRole('button', { name: 'Create category', exact: true })
-    .click();
-  await expect(page.getByLabel('Category', { exact: true })).toHaveValue(/.+/);
   await expect(
-    page.getByLabel('Category', { exact: true }).locator('option:checked'),
-  ).toHaveText(name);
-  await expect(page).toHaveURL(/\/admin\/posts\/new$/);
-  await expect(page.getByLabel('Title', { exact: true })).toHaveValue(
-    'Unsaved category draft',
-  );
-  await expect(editor).toContainText('Keep unsaved Markdown');
-  await expect(page.getByLabel('Add tag', { exact: true })).toHaveValue(
-    'Pending tag',
-  );
-  await categoryForm.getByLabel('Category name', { exact: true }).fill(name);
-  await categoryForm
-    .getByRole('button', { name: 'Create category', exact: true })
-    .click();
-  await expect(categoryForm.getByRole('alert')).toContainText('already exists');
+    page.getByRole('textbox', { name: 'Markdown editor', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel('Category', { exact: true })).toBeVisible();
   await expect(
-    categoryForm.getByLabel('Category name', { exact: true }),
-  ).toHaveValue(name);
-  await page.route('**/admin/posts/new?**', route => route.abort(), {
-    times: 1,
-  });
-  await categoryForm
-    .getByRole('button', { name: 'Create category', exact: true })
-    .click();
-  await expect(categoryForm.getByRole('alert')).toContainText(
-    'request could not be completed',
-  );
-  await expect(page.getByLabel('Title', { exact: true })).toHaveValue(
-    'Unsaved category draft',
-  );
-  await expect(editor).toContainText('Keep unsaved Markdown');
-  await expect(page.getByLabel('Add tag', { exact: true })).toHaveValue(
-    'Pending tag',
-  );
+    page.getByRole('button', { name: 'Create category', exact: true }),
+  ).toHaveCount(0);
   await expect(
-    page.getByLabel('Category', { exact: true }).locator('option:checked'),
-  ).toHaveText(name);
-  await page.getByRole('button', { name: 'Create draft', exact: true }).click();
-  await expect(page).toHaveURL(/\/admin\/posts\/[0-9a-f-]+$/);
-  await expect(
-    page.getByLabel('Category', { exact: true }).locator('option:checked'),
-  ).toHaveText(name);
-  const revision = await page
-    .locator('input[name="revision"]')
-    .first()
-    .inputValue();
-  await page.getByText('Create a category', { exact: true }).click();
-  await categoryForm
-    .getByLabel('Category name', { exact: true })
-    .fill(name + ' two');
-  await categoryForm
-    .getByRole('button', { name: 'Create category', exact: true })
-    .click();
-  await expect(
-    page.getByLabel('Category', { exact: true }).locator('option:checked'),
-  ).toHaveText(name + ' two');
-  await expect(page.locator('input[name="revision"]').first()).toHaveValue(
-    revision,
-  );
-  expect(
-    (
-      await request.post('/admin/posts/new?/createCategory', {
-        headers: { origin: 'http://localhost:4173' },
-        form: { name: 'Denied' },
-      })
-    ).status(),
-  ).toBe(401);
-  expect(
-    (
-      await request.post('/admin/posts/new?/createCategory', {
-        headers: {
-          'cf-access-jwt-assertion': token,
-          origin: 'https://evil.test',
-        },
-
-        form: { name: 'Denied' },
-      })
-    ).status(),
-  ).toBe(403);
+    page.getByText('Create a category', { exact: true }),
+  ).toHaveCount(0);
 });

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount, tick, untrack } from 'svelte';
   import MarkdownEditor from '#lib/components/MarkdownEditor.svelte';
+  import type { EditingTag } from '#lib/components/tag-input.js';
+  import TagInput from '#lib/components/TagInput.svelte';
   import { requestFailure } from '#lib/form-feedback.js';
   import type {
     editorOptions,
@@ -38,77 +40,23 @@
     untrack(() => (post ? post.id + ':' + post.revision : 'new')),
   );
   let alertElement = $state<HTMLParagraphElement>();
-  let categoryAlert = $state<HTMLParagraphElement>();
   let categorySelect = $state<HTMLSelectElement>();
   async function focusError() {
     await tick();
     alertElement?.focus();
   }
-  let categoryName = $state('');
-  let categoryError = $state('');
-  let categoryNotice = $state('');
-  let creatingCategory = $state(false);
-  let addedCategories = $state<{ id: string; name: string }[]>([]);
-  const categoryOptions = $derived(
-    [
-      ...options.categories,
-      ...addedCategories.filter(
-        added => !options.categories.some(item => item.id === added.id),
-      ),
-    ].sort((a, b) => a.name.localeCompare(b.name)),
-  );
-  const createCategory: SubmitFunction = ({ cancel }) => {
-    if (creatingCategory || busy || uploadingImages || trashed) {
-      cancel();
-      return;
-    }
-    categoryError = '';
-    categoryNotice = '';
-    creatingCategory = true;
-    return async ({ result }) => {
-      try {
-        if (result.type === 'error')
-          categoryError = requestFailure(result.status ?? result.error.status);
-        else if (result.type === 'redirect')
-          categoryError = requestFailure(401);
-        else if (result.type === 'failure')
-          categoryError =
-            typeof result.data?.message === 'string'
-              ? result.data.message
-              : requestFailure(result.status);
-        else {
-          const category: unknown = result.data?.category;
-          if (
-            category &&
-            typeof category === 'object' &&
-            'id' in category &&
-            'name' in category &&
-            typeof category.id === 'string' &&
-            typeof category.name === 'string'
-          ) {
-            addedCategories.push({ id: category.id, name: category.name });
-            values.categoryId = category.id;
-            categoryName = '';
-            categoryNotice = 'Category created and selected.';
-          } else categoryError = requestFailure(500);
-        }
-      } finally {
-        creatingCategory = false;
-        await tick();
-        if (categoryError) categoryAlert?.focus();
-        else {
-          if (categorySelect) categorySelect.value = values.categoryId;
-          categorySelect?.focus();
-        }
-      }
-    };
-  };
   let newTag = $state('');
+  let editingTag = $state<EditingTag | null>(null);
+  let tagInput: { commit(): boolean } | undefined = $state();
   let markdownEditor: { read(): string } | undefined = $state();
   let savedNavigation = $state(false);
   let uploadingImages = $state(false);
   let submitError = $state('');
-  function snapshot(input: PostInput, pendingTag = '') {
+  function snapshot(
+    input: PostInput,
+    pendingTag = '',
+    editing: EditingTag | null = null,
+  ) {
     return JSON.stringify([
       input.title,
       input.body,
@@ -116,6 +64,7 @@
       input.categoryId,
       input.tags,
       pendingTag,
+      editing,
     ]);
   }
   function baseline() {
@@ -129,7 +78,14 @@
   }
   const dirty = $derived(
     !post?.deletedAt &&
-      (uploadingImages || snapshot(values, newTag) !== baseline()),
+      (uploadingImages ||
+        snapshot(
+          values,
+          newTag,
+          editingTag && editingTag.value !== values.tags[editingTag.index]
+            ? editingTag
+            : null,
+        ) !== baseline()),
   );
   beforeNavigate(navigation => {
     if (
@@ -170,6 +126,7 @@
     if (!form && postVersion !== appliedPost) {
       values = initial;
       newTag = '';
+      editingTag = null;
       appliedPost = postVersion;
       if (categorySelect) categorySelect.value = initial.categoryId;
     }
@@ -219,7 +176,7 @@
     };
   });
   const submit: SubmitFunction = ({ formElement, formData, cancel }) => {
-    if (busy || uploadingImages || creatingCategory) {
+    if (busy || uploadingImages) {
       cancel();
       return;
     }
@@ -234,6 +191,12 @@
       return;
     }
     if (formElement.dataset.operation === 'content') {
+      if (tagInput && !tagInput.commit()) {
+        cancel();
+        return;
+      }
+      formData.delete('tags');
+      for (const tag of values.tags) formData.append('tags', tag);
       values.body = markdownEditor?.read() ?? values.body;
       formData.set('body', values.body);
     }
@@ -277,6 +240,7 @@
         ...values,
         body: markdownEditor?.read() ?? values.body,
         pendingTag: newTag,
+        editingTag,
       };
       url = URL.createObjectURL(
         new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
@@ -305,13 +269,6 @@
       return;
     savedNavigation = true;
     window.location.reload();
-  }
-  function addTag() {
-    const name = newTag.trim();
-    if (name && !values.tags.includes(name) && values.tags.length < 20) {
-      values.tags.push(name);
-      newTag = '';
-    }
   }
 </script>
 
@@ -366,7 +323,7 @@
       >Title <input
         name="title"
         bind:value={values.title}
-        readonly={busy || creatingCategory}
+        readonly={busy}
       /></label
     >
     {#if trashed}
@@ -404,66 +361,26 @@
         onchange={event => {
           values.categoryId = event.currentTarget.value;
         }}
-        disabled={busy || uploadingImages || creatingCategory}
+        disabled={busy || uploadingImages}
       >
         <option value="">No category</option>
-        {#each categoryOptions as category (category.id)}<option
+        {#each options.categories as category (category.id)}<option
             value={category.id}>{category.name}</option
           >{/each}
       </select></label
     >
-    <fieldset>
-      <legend>Tags (up to 20, 40 characters each)</legend>
-      {#each values.tags as tag, index (index)}
-        <div class="tag">
-          <label
-            >Tag {index + 1}
-            <input
-              name="tags"
-              bind:value={values.tags[index]}
-              list="existing-tags"
-              readonly={busy}
-            /></label
-          >
-          <button
-            type="button"
-            disabled={busy || uploadingImages || creatingCategory}
-            onclick={() => values.tags.splice(index, 1)}
-            >Remove {tag || 'empty tag'}</button
-          >
-        </div>
-      {/each}
-      <div class="tag">
-        <label
-          >Add tag <input
-            name="tags"
-            bind:value={newTag}
-            list="existing-tags"
-            readonly={busy}
-          /></label
-        >
-        <button
-          type="button"
-          disabled={busy ||
-            uploadingImages ||
-            creatingCategory ||
-            values.tags.length >= 20}
-          onclick={addTag}>Add tag</button
-        >
-      </div>
-      <datalist id="existing-tags"
-        >{#each options.tags as name (name)}<option value={name}
-          ></option>{/each}</datalist
-      >
-      <p>
-        Select an existing tag or enter a new name. Clear a tag to detach it.
-      </p>
-    </fieldset>
+    <TagInput
+      bind:this={tagInput}
+      bind:value={values.tags}
+      bind:pendingTag={newTag}
+      bind:editingTag
+      disabled={busy || uploadingImages || trashed}
+    />
     {#if post?.status === 'published'}<p>
         Saving immediately updates the public post.
       </p>{/if}
     {#if !trashed}<div class="actions">
-        <button disabled={busy || uploadingImages || creatingCategory}
+        <button disabled={busy || uploadingImages}
           >{post?.status === 'published'
             ? 'Save and update public post'
             : post
@@ -472,58 +389,20 @@
         >
         {#if !post || post.status === 'draft'}<button
             formaction="?/publish"
-            disabled={busy || uploadingImages || creatingCategory}
-            >Publish</button
+            disabled={busy || uploadingImages}>Publish</button
           >
         {:else if post.status === 'archived'}<button
             formaction="?/republish"
-            disabled={busy || uploadingImages || creatingCategory}
-            >Republish</button
+            disabled={busy || uploadingImages}>Republish</button
           >{/if}
       </div>{/if}
   </fieldset>
 </form>
-{#if !trashed}
-  <details>
-    <summary>Create a category</summary>
-    <form
-      method="POST"
-      action="?/createCategory"
-      aria-label="Create category while editing"
-      use:enhance={createCategory}
-    >
-      <label
-        >Category name <input
-          name="name"
-          bind:value={categoryName}
-          readonly={busy || creatingCategory}
-          required
-        /></label
-      >
-      <button
-        disabled={!hydrated || busy || creatingCategory || uploadingImages}
-        >Create category</button
-      >
-      {#if categoryError}<p
-          role="alert"
-          tabindex="-1"
-          bind:this={categoryAlert}
-        >
-          {categoryError}
-        </p>{/if}
-      {#if categoryNotice}<p role="status">{categoryNotice}</p>{/if}
-    </form>
-    <noscript
-      >JavaScript is required to create a category while editing. Existing
-      category selection and post saving remain available.</noscript
-    >
-  </details>
-{/if}
 {#if post}
   <div class="actions">
     {#if trashed}<form method="POST" action="?/restore" use:enhance={submit}>
         <input type="hidden" name="revision" value={revision} /><button
-          disabled={busy || uploadingImages || creatingCategory}>Restore</button
+          disabled={busy || uploadingImages}>Restore</button
         >
       </form>
     {:else}
@@ -534,8 +413,7 @@
           use:enhance={submit}
         >
           <input type="hidden" name="revision" value={revision} /><button
-            disabled={busy || uploadingImages || creatingCategory || !hydrated}
-            >Archive</button
+            disabled={busy || uploadingImages || !hydrated}>Archive</button
           >
         </form>{/if}
       <form
@@ -545,8 +423,7 @@
         use:enhance={submit}
       >
         <input type="hidden" name="revision" value={revision} /><button
-          disabled={busy || uploadingImages || creatingCategory || !hydrated}
-          >Move to trash</button
+          disabled={busy || uploadingImages || !hydrated}>Move to trash</button
         >
       </form>
     {/if}
@@ -587,19 +464,11 @@
     resize: vertical;
     font-family: ui-monospace, monospace;
   }
-  .actions,
-  .tag {
+  .actions {
     display: flex;
     flex-wrap: wrap;
     align-items: end;
     gap: 0.75rem;
-  }
-  .tag label {
-    flex: 1;
-    min-width: 10rem;
-  }
-  .tag button {
-    margin-bottom: 0.8rem;
   }
   p {
     overflow-wrap: anywhere;

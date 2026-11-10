@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { imageReferences, MediaError } from '../media.js';
 import { getDb } from './index.js';
-import { categories, posts, postTags, tags } from './schema.js';
+import { categories, posts, postTags } from './schema.js';
 
 export type PostInput = {
   title: string;
@@ -69,11 +69,10 @@ export async function getPost(d1: D1Database, id: string) {
   const [rows, names] = await db.batch([
     db.select().from(posts).where(eq(posts.id, id)),
     db
-      .select({ name: tags.name })
-      .from(tags)
-      .innerJoin(postTags, eq(tags.id, postTags.tagId))
+      .select({ name: postTags.name })
+      .from(postTags)
       .where(eq(postTags.postId, id))
-      .orderBy(asc(tags.name)),
+      .orderBy(asc(postTags.position)),
   ]);
   return rows[0] ? { ...rows[0], tags: names.map(tag => tag.name) } : null;
 }
@@ -117,11 +116,12 @@ export async function listPosts(
 
 export async function editorOptions(d1: D1Database) {
   const db = getDb(d1);
-  const [categoryRows, tagRows] = await db.batch([
-    db.select().from(categories).orderBy(asc(categories.name)),
-    db.select({ name: tags.name }).from(tags).orderBy(asc(tags.name)),
-  ]);
-  return { categories: categoryRows, tags: tagRows.map(tag => tag.name) };
+  return {
+    categories: await db
+      .select()
+      .from(categories)
+      .orderBy(asc(categories.name)),
+  };
 }
 
 export async function slugAvailability(
@@ -301,26 +301,18 @@ export async function mutatePost(
     // A zero-row stale parent update is not a SQL error. Every child write must
     // explicitly require the new opaque revision from THIS successful mutation.
     const guard = 'EXISTS (SELECT 1 FROM posts WHERE id = ? AND revision = ?)';
-    for (const name of normalizedTags)
-      statements.push(
-        d1
-          .prepare(
-            `INSERT INTO tags (id, name) SELECT ?, ? WHERE ${guard} ON CONFLICT(name) DO NOTHING`,
-          )
-          .bind(crypto.randomUUID(), name, id, revision),
-      );
     statements.push(
       d1
-        .prepare(`DELETE FROM post_tags WHERE post_id = ? AND ${guard}`)
+        .prepare(`DELETE FROM post_owned_tags WHERE post_id = ? AND ${guard}`)
         .bind(id, id, revision),
     );
-    for (const name of normalizedTags)
+    for (const [position, name] of normalizedTags.entries())
       statements.push(
         d1
           .prepare(
-            `INSERT INTO post_tags (post_id, tag_id) SELECT ?, id FROM tags WHERE name = ? AND ${guard}`,
+            `INSERT INTO post_owned_tags (post_id, name, position) SELECT ?, ?, ? WHERE ${guard}`,
           )
-          .bind(id, name, id, revision),
+          .bind(id, name, position, id, revision),
       );
     statements.push(
       d1

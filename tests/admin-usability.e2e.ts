@@ -51,15 +51,7 @@ test('narrow administrator pages and keyboard feedback keep controls usable and 
     .getByLabel('Markdown', { exact: true })
     .fill('\x60\x60\x60\n' + 'long'.repeat(100) + '\n\x60\x60\x60');
   await noOverflow();
-  await page.getByText('Create a category', { exact: true }).press('Enter');
-  const category = page.getByRole('form', {
-    name: 'Create category while editing',
-  });
-  await category
-    .getByLabel('Category name', { exact: true })
-    .fill('Keyboard ' + crypto.randomUUID().slice(0, 8));
-  await category.getByLabel('Category name', { exact: true }).press('Enter');
-  await expect(page.getByLabel('Category', { exact: true })).toBeFocused();
+  await expect(page.getByLabel('Category', { exact: true })).toBeVisible();
   await page.getByLabel('Title', { exact: true }).fill('');
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(page.getByRole('alert')).toBeFocused();
@@ -76,11 +68,14 @@ test('narrow administrator pages and keyboard feedback keep controls usable and 
   await page
     .getByRole('link', { name: 'Categories', exact: true })
     .press('Enter');
-  const create = page.getByRole('form', { name: 'Create category' });
-  await create.getByLabel('Category name').fill('a'.repeat(21));
-  await create.getByLabel('Category name').press('Enter');
+  page.once('dialog', async dialog => {
+    expect(dialog.type()).toBe('prompt');
+    await dialog.accept('a'.repeat(21));
+  });
+  await page
+    .getByRole('button', { name: 'Create category', exact: true })
+    .press('Enter');
   await expect(page.getByRole('alert')).toBeFocused();
-  await expect(create.getByLabel('Category name')).toHaveValue('a'.repeat(21));
   await noOverflow();
   // A 640 CSS-pixel viewport exercises 1280px desktop reflow at 200% zoom.
   await page.setViewportSize({ width: 640, height: 800 });
@@ -144,7 +139,7 @@ test('typing into native fields before hydration survives editor startup', async
       .getByLabel('Title', { exact: true })
       .fill('Typed before hydration');
     await page.getByLabel('Slug', { exact: true }).fill('before-hydration');
-    await page.getByLabel('Add tag', { exact: true }).fill('Early tag');
+    await expect(page.getByLabel('Add tag', { exact: true })).not.toBeVisible();
     chosenCategory = (
       await page
         .getByLabel('Category', { exact: true })
@@ -165,9 +160,7 @@ test('typing into native fields before hydration survives editor startup', async
   await expect(page.getByLabel('Slug', { exact: true })).toHaveValue(
     'before-hydration',
   );
-  await expect(page.getByLabel('Add tag', { exact: true })).toHaveValue(
-    'Early tag',
-  );
+  await expect(page.getByLabel('Add tag', { exact: true })).not.toBeVisible();
   await expect(page.getByLabel('Category', { exact: true })).toHaveValue(
     chosenCategory,
   );
