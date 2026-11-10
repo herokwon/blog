@@ -1,0 +1,79 @@
+name: 🧾 Verify Legacy Dependabot Intake
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-intake-verification
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrate and Verify Fixed Legacy Receipts
+    if: github.ref == 'refs/heads/main' && github.repository == 'herokwon/blog'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_REPO: herokwon/blog
+      LEGACY_EVIDENCE: legacy-intake.json
+    steps:
+      - name: Checkout Trusted Automation
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Resolve Runtime
+        id: runtime
+        run: echo "version=$(jq -er '.devEngines.runtime.version' package.json)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ steps.runtime.outputs.version }}
+          package-manager-cache: false
+      - name: Create Migration App Token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BLOG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BLOG_BOT_PRIVATE_KEY }}
+          permission-contents: read
+          permission-pull-requests: read
+          permission-issues: write
+          permission-checks: write
+      - name: Resolve App Identity
+        id: identity
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+        run: |
+          echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+          echo "app-id=$(gh api "/apps/${APP_SLUG}" --jq .id)" >> "$GITHUB_OUTPUT"
+      - name: Snapshot Authenticated Legacy Evidence
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_BOT_ID: ${{ steps.identity.outputs.id }}
+          APP_ID: ${{ steps.identity.outputs.app-id }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+        run: node .github/scripts/delivery/legacy-intake.ts snapshot
+      - name: Preserve Original Evidence Before Mutation
+        uses: actions/upload-artifact@v6
+        with:
+          name: legacy-intake-before-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.LEGACY_EVIDENCE }}
+          if-no-files-found: error
+      - name: Migrate and Verify Idempotent Rerun
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_BOT_ID: ${{ steps.identity.outputs.id }}
+          APP_ID: ${{ steps.identity.outputs.app-id }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+        run: node .github/scripts/delivery/legacy-intake.ts migrate
+      - name: Preserve Verification Results
+        uses: actions/upload-artifact@v6
+        with:
+          name: legacy-intake-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.LEGACY_EVIDENCE }}.result.json
+          if-no-files-found: error
