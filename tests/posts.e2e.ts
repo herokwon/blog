@@ -38,8 +38,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
   await page
     .getByLabel('Category', { exact: true })
     .selectOption({ label: categoryName });
+  await page.getByRole('toolbar', { name: 'Tag entry area' }).press('Enter');
   await page.getByLabel('Add tag', { exact: true }).fill('Svelte');
-  await page.getByRole('button', { name: 'Add tag', exact: true }).click();
+  await page.getByLabel('Add tag', { exact: true }).press('Enter');
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(
     page.getByText('Status: published', { exact: true }),
@@ -48,7 +49,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
     'readonly',
     '',
   );
-  await expect(page.getByLabel('Tag 1', { exact: true })).toHaveValue('Svelte');
+  await expect(
+    page.getByRole('button', { name: 'Edit tag Svelte', exact: true }),
+  ).toBeVisible();
   await page.getByLabel('Title', { exact: true }).fill('Unsaved title');
   page.once('dialog', async dialog => {
     expect(dialog.type()).toBe('confirm');
@@ -155,15 +158,18 @@ test('stale editor input and tag selection survive a competing save; stale slug 
       first.getByRole('button', { name: 'Save', exact: true }),
     ).toBeEnabled();
     await second.getByLabel('Title', { exact: true }).fill('Keep stale input');
-    await second.getByLabel('Add tag', { exact: true }).fill('Keep tag');
+    await second
+      .getByRole('toolbar', { name: 'Tag entry area' })
+      .press('Enter');
+    await second.getByLabel('Add tag', { exact: true }).fill('Keep-tag');
     await second.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(second.getByRole('alert')).toContainText('post changed');
     await expect(second.getByLabel('Title', { exact: true })).toHaveValue(
       'Keep stale input',
     );
-    await expect(second.getByLabel('Add tag', { exact: true })).toHaveValue(
-      'Keep tag',
-    );
+    await expect(
+      second.getByRole('button', { name: 'Edit tag Keep-tag', exact: true }),
+    ).toBeVisible();
     const latest = second.getByRole('link', { name: 'Open latest saved post' });
     await expect(latest).toHaveAttribute('target', '_blank');
     const downloadPromise = second.waitForEvent('download');
@@ -179,8 +185,9 @@ test('stale editor input and tag selection survive a competing save; stale slug 
       body: '',
       slug: '',
       categoryId: '',
-      tags: [],
-      pendingTag: 'Keep tag',
+      tags: ['Keep-tag'],
+      pendingTag: '',
+      editingTag: null,
     });
     await second.evaluate(() => {
       URL.createObjectURL = () => {

@@ -4,7 +4,12 @@ import { categories, posts } from './schema.js';
 
 type CategoryResult =
   | { ok: true; category?: { id: string; name: string } }
-  | { ok: false; status: 400 | 404 | 409; message: string };
+  | {
+      ok: false;
+      status: 400 | 404 | 409;
+      message: string;
+      code?: 'category_in_use';
+    };
 
 function validName(name: string) {
   return name.length > 0 && [...name].length <= 20 && !name.includes('\0');
@@ -99,6 +104,7 @@ export async function deleteCategory(
     ? {
         ok: false,
         status: 409,
+        code: 'category_in_use',
         message:
           'This category is used by posts, including drafts, archived posts or trash. Reassign those posts before deleting it.',
       }
