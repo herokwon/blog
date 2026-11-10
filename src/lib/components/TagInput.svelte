@@ -177,7 +177,7 @@
   function blurEdit(input: HTMLInputElement) {
     // Wait for a clicked chip's handler before closing the old editor.
     setTimeout(() => {
-      if (editInput === input) {
+      if (editInput === input && document.activeElement !== input) {
         finishEdit();
         editVisible = false;
       }
