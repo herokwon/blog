@@ -123,6 +123,7 @@ export function readReviewEvidence(comments: unknown[], headSha: string) {
       if (review?.commit_sha !== headSha) continue;
       return {
         headSha,
+        status: review.status,
         completed:
           review.status === 'completed' &&
           typeof review.has_any_findings === 'boolean' &&

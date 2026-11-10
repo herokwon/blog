@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import MarkdownEditor from '#lib/components/MarkdownEditor.svelte';
+  import type { EditingTag } from '#lib/components/tag-input.js';
+  import TagInput from '#lib/components/TagInput.svelte';
+  import { requestFailure } from '#lib/form-feedback.js';
   import type {
     editorOptions,
     getPost,
@@ -15,10 +18,12 @@
     post = null,
     options,
     form = null,
+    notice = null,
   }: {
     post?: Awaited<ReturnType<typeof getPost>>;
     options: Awaited<ReturnType<typeof editorOptions>>;
     form?: PostFailure | null;
+    notice?: string | null;
   } = $props();
   function initialValues(): PostInput {
     const input = form?.input ?? {
@@ -31,12 +36,27 @@
     return { ...input, tags: input.tags.filter(tag => tag.trim()) };
   }
   let values = $state(initialValues());
+  let appliedPost = $state(
+    untrack(() => (post ? post.id + ':' + post.revision : 'new')),
+  );
+  let alertElement = $state<HTMLParagraphElement>();
+  let categorySelect = $state<HTMLSelectElement>();
+  async function focusError() {
+    await tick();
+    alertElement?.focus();
+  }
   let newTag = $state('');
+  let editingTag = $state<EditingTag | null>(null);
+  let tagInput: { commit(): boolean } | undefined = $state();
   let markdownEditor: { read(): string } | undefined = $state();
   let savedNavigation = $state(false);
   let uploadingImages = $state(false);
   let submitError = $state('');
-  function snapshot(input: PostInput, pendingTag = '') {
+  function snapshot(
+    input: PostInput,
+    pendingTag = '',
+    editing: EditingTag | null = null,
+  ) {
     return JSON.stringify([
       input.title,
       input.body,
@@ -44,6 +64,7 @@
       input.categoryId,
       input.tags,
       pendingTag,
+      editing,
     ]);
   }
   function baseline() {
@@ -57,7 +78,14 @@
   }
   const dirty = $derived(
     !post?.deletedAt &&
-      (uploadingImages || snapshot(values, newTag) !== baseline()),
+      (uploadingImages ||
+        snapshot(
+          values,
+          newTag,
+          editingTag && editingTag.value !== values.tags[editingTag.index]
+            ? editingTag
+            : null,
+        ) !== baseline()),
   );
   beforeNavigate(navigation => {
     if (
@@ -83,6 +111,8 @@
   let hydrated = $state(false);
   onMount(() => {
     hydrated = true;
+    if (categorySelect) values.categoryId = categorySelect.value;
+    if (form) void focusError();
   });
   let slugMessage = $state('');
   const revision = $derived(form?.revision ?? post?.revision ?? '');
@@ -91,9 +121,14 @@
     const initial = initialValues();
     // Failed enhanced submissions keep the current fields and original revision.
     // A native failed submission initializes from the server-returned input.
-    if (!form) {
+    // Preserve native input entered before hydration; reset only for a new saved revision.
+    const postVersion = post ? post.id + ':' + post.revision : 'new';
+    if (!form && postVersion !== appliedPost) {
       values = initial;
       newTag = '';
+      editingTag = null;
+      appliedPost = postVersion;
+      if (categorySelect) categorySelect.value = initial.categoryId;
     }
   });
   $effect(() => {
@@ -156,36 +191,114 @@
       return;
     }
     if (formElement.dataset.operation === 'content') {
+      if (tagInput && !tagInput.commit()) {
+        cancel();
+        return;
+      }
+      formData.delete('tags');
+      for (const tag of values.tags) formData.append('tags', tag);
       values.body = markdownEditor?.read() ?? values.body;
       formData.set('body', values.body);
     }
     submitError = '';
     busy = true;
     return async ({ result, update }) => {
-      savedNavigation = result.type === 'redirect';
+      const redirectUrl =
+        result.type === 'redirect'
+          ? new URL(result.location, window.location.href)
+          : null;
+      const expectedRedirect =
+        redirectUrl?.origin === window.location.origin &&
+        (post
+          ? redirectUrl.pathname ===
+            resolve('/admin/posts/[id]', { id: post.id })
+          : /^\/admin\/posts\/[0-9a-f-]{36}$/.test(redirectUrl.pathname));
+      savedNavigation = result.type === 'redirect' && expectedRedirect;
       try {
+        if (result.type === 'redirect' && !expectedRedirect) {
+          submitError = requestFailure(401);
+          await focusError();
+          return;
+        }
         if (result.type === 'error') {
-          submitError =
-            'The request could not be completed. Your input has been kept. Please retry.';
+          submitError = requestFailure(result.status ?? result.error.status);
+          await focusError();
           return;
         }
         await update({ reset: false });
+        if (result.type === 'failure') await focusError();
       } finally {
         savedNavigation = false;
         busy = false;
       }
     };
   };
-  function addTag() {
-    const name = newTag.trim();
-    if (name && !values.tags.includes(name) && values.tags.length < 20) {
-      values.tags.push(name);
-      newTag = '';
+  function exportInput() {
+    let url: string | undefined;
+    try {
+      const data = {
+        ...values,
+        body: markdownEditor?.read() ?? values.body,
+        pendingTag: newTag,
+        editingTag,
+      };
+      url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'unsaved-post.json';
+
+      link.click();
+      link.remove();
+      submitError = '';
+    } catch {
+      submitError =
+        'Your input could not be exported. It has been kept. Please retry.';
+      void focusError();
+    } finally {
+      if (url) setTimeout(() => URL.revokeObjectURL(url!), 1000);
     }
+  }
+  function reloadLatest() {
+    if (
+      !window.confirm(
+        'Discard unsaved changes and reload the latest saved post?',
+      )
+    )
+      return;
+    savedNavigation = true;
+    window.location.reload();
   }
 </script>
 
-{#if submitError || form}<p role="alert">{submitError || form?.message}</p>{/if}
+<p role="status" aria-label="Save status">
+  {busy
+    ? 'Saving…'
+    : submitError || form
+      ? 'Save failed.'
+      : dirty
+        ? 'Unsaved changes.'
+        : (notice ?? 'No changes.')}
+</p>
+{#if submitError || form}<p role="alert" tabindex="-1" bind:this={alertElement}>
+    {submitError || form?.message}
+  </p>{/if}
+{#if post && form?.code === 'stale_revision'}
+  <div class="actions" aria-label="Save conflict recovery">
+    <a
+      href={resolve('/admin/posts/[id]', { id: post.id })}
+      target="_blank"
+      rel="noopener noreferrer">Open latest saved post</a
+    >
+    <button type="button" onclick={exportInput} disabled={busy}
+      >Export unsaved input</button
+    >
+    <button type="button" onclick={reloadLatest} disabled={busy}
+      >Reload latest saved post</button
+    >
+  </div>
+{/if}
 {#if post}
   <p>Status: {post.status}</p>
   {#if trashed}<p>Trash — read-only</p>{/if}
@@ -241,9 +354,13 @@
     </p>
     <label
       >Category <select
+        bind:this={categorySelect}
         name="categoryId"
         aria-label="Category"
-        bind:value={values.categoryId}
+        defaultValue={values.categoryId}
+        onchange={event => {
+          values.categoryId = event.currentTarget.value;
+        }}
         disabled={busy || uploadingImages}
       >
         <option value="">No category</option>
@@ -252,53 +369,23 @@
           >{/each}
       </select></label
     >
-    <fieldset>
-      <legend>Tags (up to 20, 40 characters each)</legend>
-      {#each values.tags as tag, index (index)}
-        <div class="tag">
-          <label
-            >Tag {index + 1}
-            <input
-              name="tags"
-              bind:value={values.tags[index]}
-              list="existing-tags"
-              readonly={busy}
-            /></label
-          >
-          <button
-            type="button"
-            disabled={busy || uploadingImages}
-            onclick={() => values.tags.splice(index, 1)}
-            >Remove {tag || 'empty tag'}</button
-          >
-        </div>
-      {/each}
-      <div class="tag">
-        <label
-          >Add tag <input
-            name="tags"
-            bind:value={newTag}
-            list="existing-tags"
-            readonly={busy}
-          /></label
-        >
-        <button
-          type="button"
-          disabled={busy || uploadingImages || values.tags.length >= 20}
-          onclick={addTag}>Add tag</button
-        >
-      </div>
-      <datalist id="existing-tags"
-        >{#each options.tags as name (name)}<option value={name}
-          ></option>{/each}</datalist
-      >
-      <p>
-        Select an existing tag or enter a new name. Clear a tag to detach it.
-      </p>
-    </fieldset>
+    <TagInput
+      bind:this={tagInput}
+      bind:value={values.tags}
+      bind:pendingTag={newTag}
+      bind:editingTag
+      disabled={busy || uploadingImages || trashed}
+    />
+    {#if post?.status === 'published'}<p>
+        Saving immediately updates the public post.
+      </p>{/if}
     {#if !trashed}<div class="actions">
         <button disabled={busy || uploadingImages}
-          >{post ? 'Save' : 'Create draft'}</button
+          >{post?.status === 'published'
+            ? 'Save and update public post'
+            : post
+              ? 'Save'
+              : 'Create draft'}</button
         >
         {#if !post || post.status === 'draft'}<button
             formaction="?/publish"
@@ -377,19 +464,11 @@
     resize: vertical;
     font-family: ui-monospace, monospace;
   }
-  .actions,
-  .tag {
+  .actions {
     display: flex;
     flex-wrap: wrap;
     align-items: end;
     gap: 0.75rem;
-  }
-  .tag label {
-    flex: 1;
-    min-width: 10rem;
-  }
-  .tag button {
-    margin-bottom: 0.8rem;
   }
   p {
     overflow-wrap: anywhere;

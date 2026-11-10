@@ -39,9 +39,8 @@ beforeEach(async () => {
   await db.batch(
     [
       'DROP TRIGGER IF EXISTS reject_relation',
-      'DELETE FROM post_tags',
+      'DELETE FROM post_owned_tags',
       'DELETE FROM posts',
-      'DELETE FROM tags',
       'DELETE FROM categories',
       "INSERT INTO categories (id, name) VALUES ('category', 'Notes')",
     ].map(query => db.prepare(query)),
@@ -64,6 +63,37 @@ async function draft(
   if (!result.ok) throw new Error(result.message);
   return (await getPost(db, result.id))!;
 }
+
+test('tags retain entry order and legacy spaces while another post keeps an independent same-name tag', async () => {
+  const first = await draft({
+    ...input,
+    slug: 'first-tags',
+    tags: ['Svelte', 'Legacy tag', 'Cloudflare'],
+  });
+  const second = await draft({
+    ...input,
+    slug: 'second-tags',
+    tags: ['Svelte'],
+  });
+  expect(first.tags).toEqual(['Svelte', 'Legacy tag', 'Cloudflare']);
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: first.id,
+      revision: first.revision,
+      input: {
+        ...input,
+        slug: 'first-tags',
+        tags: ['Legacy tag', 'SvelteKit'],
+      },
+    }),
+  ).toMatchObject({ ok: true });
+  expect((await getPost(db, first.id))?.tags).toEqual([
+    'Legacy tag',
+    'SvelteKit',
+  ]);
+  expect((await getPost(db, second.id))?.tags).toEqual(['Svelte']);
+});
 
 test('UUIDv7 drafts and publication lifecycle preserve first-publication metadata and restore privately', async () => {
   const post = await draft();
@@ -92,7 +122,7 @@ test('UUIDv7 drafts and publication lifecycle preserve first-publication metadat
   expect(first).toMatchObject({
     status: 'published',
     slug: 'a-post',
-    tags: ['Cloudflare', 'Svelte'],
+    tags: ['Svelte', 'Cloudflare'],
   });
   expect(first.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*\.\d{3}Z$/);
   await db
@@ -269,6 +299,9 @@ test('concurrent slug claims have one winner and all states reserve their slug',
     mutatePost(db, { action: 'create', input }),
   ]);
   expect(results.filter(result => result.ok)).toHaveLength(1);
+  expect(results.find(result => !result.ok)).toMatchObject({
+    code: 'slug_reserved',
+  });
   const winner = results.find(result => result.ok)!;
   if (!winner.ok) throw new Error('No winner');
   expect(await slugAvailability(db, 'a-post')).toMatchObject({
@@ -306,12 +339,15 @@ test('revision guards make concurrent updates single-winner and stale batches ca
     ),
   );
   expect(results.filter(result => result.ok)).toHaveLength(1);
+  expect(results.find(result => !result.ok)).toMatchObject({
+    code: 'stale_revision',
+  });
   const current = (await getPost(db, post.id))!;
   expect(current.tags).toEqual([current.title]);
   expect(
     await db
       .prepare(
-        "SELECT count(*) AS count FROM tags WHERE name IN ('Winner A', 'Winner B')",
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name IN ('Winner A', 'Winner B')",
       )
       .first<number>('count'),
   ).toBe(1);
@@ -326,7 +362,9 @@ test('revision guards make concurrent updates single-winner and stale batches ca
   expect((await getPost(db, post.id))?.tags).toEqual([current.title]);
   expect(
     await db
-      .prepare("SELECT count(*) AS count FROM tags WHERE name = 'Stale orphan'")
+      .prepare(
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name = 'Stale orphan'",
+      )
       .first<number>('count'),
   ).toBe(0);
   const detached = await mutatePost(db, {
@@ -343,7 +381,7 @@ test('a dependent SQL failure rolls back the post, revision, new tags and old re
   const post = await draft(input);
   await db
     .prepare(
-      "CREATE TRIGGER reject_relation BEFORE INSERT ON post_tags BEGIN SELECT RAISE(ABORT, 'relation rejected'); END",
+      "CREATE TRIGGER reject_relation BEFORE INSERT ON post_owned_tags BEGIN SELECT RAISE(ABORT, 'relation rejected'); END",
     )
     .run();
   await expect(
@@ -357,7 +395,9 @@ test('a dependent SQL failure rolls back the post, revision, new tags and old re
   expect(await getPost(db, post.id)).toEqual(post);
   expect(
     await db
-      .prepare("SELECT count(*) AS count FROM tags WHERE name = 'Rollback'")
+      .prepare(
+        "SELECT count(*) AS count FROM post_owned_tags WHERE name = 'Rollback'",
+      )
       .first<number>('count'),
   ).toBe(0);
 });
@@ -398,4 +438,77 @@ test('post lists filter trash and status with stable twenty-item ordering', asyn
     post.id,
   ]);
   expect((await listPosts(db, 'published')).posts).toEqual([]);
+});
+
+test('conflicts identify stale revisions, reserved slugs and deleted categories without changing content', async () => {
+  const first = await draft(input);
+  const second = await draft();
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: second.id,
+      revision: second.revision,
+      input,
+    }),
+  ).toMatchObject({ ok: false, status: 409, code: 'slug_reserved' });
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: second.id,
+      revision: second.revision,
+      input: { ...input, slug: 'other', categoryId: 'missing' },
+    }),
+  ).toMatchObject({ ok: false, status: 409, code: 'category_missing' });
+  expect(
+    await mutatePost(db, {
+      action: 'save',
+      id: first.id,
+      revision: 'stale',
+      input: { ...input, title: 'Lost' },
+    }),
+  ).toMatchObject({ ok: false, status: 409, code: 'stale_revision' });
+  expect((await getPost(db, first.id))?.title).toBe(input.title);
+  expect((await getPost(db, second.id))?.title).toBe('');
+});
+
+test('title search treats wildcard characters literally and combines category and state filters', async () => {
+  await db
+    .prepare("INSERT INTO categories (id,name) VALUES ('other','Other')")
+    .run();
+  const first = await draft({
+    ...input,
+    title: '한글 100%_Notes',
+    slug: 'search-one',
+  });
+  await draft({ ...input, title: '한글 100percentXNotes', slug: 'search-two' });
+  await draft({
+    ...input,
+    title: '한글 100%_Notes',
+    slug: 'search-three',
+    categoryId: 'other',
+  });
+  expect(
+    (
+      await listPosts(db, 'draft', 1, { q: '%_', categoryId: 'category' })
+    ).posts.map(p => p.id),
+  ).toEqual([first.id]);
+  expect((await listPosts(db, 'published', 1, { q: '한글' })).posts).toEqual(
+    [],
+  );
+  expect(
+    (await listPosts(db, 'all', 1, { q: 'does not exist' })).posts,
+  ).toEqual([]);
+  await mutatePost(db, {
+    action: 'trash',
+    id: first.id,
+    revision: first.revision,
+  });
+  expect(
+    (await listPosts(db, 'all', 1, { q: '%_', categoryId: 'category' })).posts,
+  ).toEqual([]);
+  expect(
+    (
+      await listPosts(db, 'trash', 1, { q: '%_', categoryId: 'category' })
+    ).posts.map(p => p.id),
+  ).toEqual([first.id]);
 });

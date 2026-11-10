@@ -38,8 +38,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
   await page
     .getByLabel('Category', { exact: true })
     .selectOption({ label: categoryName });
+  await page.getByRole('toolbar', { name: 'Tag entry area' }).press('Enter');
   await page.getByLabel('Add tag', { exact: true }).fill('Svelte');
-  await page.getByRole('button', { name: 'Add tag', exact: true }).click();
+  await page.getByLabel('Add tag', { exact: true }).press('Enter');
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(
     page.getByText('Status: published', { exact: true }),
@@ -48,7 +49,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
     'readonly',
     '',
   );
-  await expect(page.getByLabel('Tag 1', { exact: true })).toHaveValue('Svelte');
+  await expect(
+    page.getByRole('button', { name: 'Edit tag Svelte', exact: true }),
+  ).toBeVisible();
   await page.getByLabel('Title', { exact: true }).fill('Unsaved title');
   page.once('dialog', async dialog => {
     expect(dialog.type()).toBe('confirm');
@@ -84,6 +87,9 @@ test('author publishes, archives, trashes and restores without saving unsubmitte
   await expect(
     page.getByText('Status: archived', { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Save status' })).toHaveText(
+    'Restored.',
+  );
   await page.getByRole('link', { name: 'Posts', exact: true }).click();
   await page
     .getByLabel('Status filter', { exact: true })
@@ -152,14 +158,59 @@ test('stale editor input and tag selection survive a competing save; stale slug 
       first.getByRole('button', { name: 'Save', exact: true }),
     ).toBeEnabled();
     await second.getByLabel('Title', { exact: true }).fill('Keep stale input');
-    await second.getByLabel('Add tag', { exact: true }).fill('Keep tag');
+    await second
+      .getByRole('toolbar', { name: 'Tag entry area' })
+      .press('Enter');
+    await second.getByLabel('Add tag', { exact: true }).fill('Keep-tag');
     await second.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(second.getByRole('alert')).toContainText('post changed');
     await expect(second.getByLabel('Title', { exact: true })).toHaveValue(
       'Keep stale input',
     );
-    await expect(second.getByLabel('Add tag', { exact: true })).toHaveValue(
-      'Keep tag',
+    await expect(
+      second.getByRole('button', { name: 'Edit tag Keep-tag', exact: true }),
+    ).toBeVisible();
+    const latest = second.getByRole('link', { name: 'Open latest saved post' });
+    await expect(latest).toHaveAttribute('target', '_blank');
+    const downloadPromise = second.waitForEvent('download');
+    await second.getByRole('button', { name: 'Export unsaved input' }).click();
+    const download = await downloadPromise;
+    const contents: unknown = JSON.parse(
+      await (
+        await import('node:fs/promises')
+      ).readFile(await download.path(), 'utf8'),
+    );
+    expect(contents).toMatchObject({
+      title: 'Keep stale input',
+      body: '',
+      slug: '',
+      categoryId: '',
+      tags: ['Keep-tag'],
+      pendingTag: '',
+      editingTag: null,
+    });
+    await second.evaluate(() => {
+      URL.createObjectURL = () => {
+        throw new Error('Download blocked');
+      };
+    });
+    await second.getByRole('button', { name: 'Export unsaved input' }).click();
+    await expect(second.getByRole('alert')).toContainText(
+      'could not be exported',
+    );
+    second.once('dialog', dialog => dialog.dismiss());
+    await second
+      .getByRole('button', { name: 'Reload latest saved post' })
+      .click();
+    await expect(second.getByLabel('Title', { exact: true })).toHaveValue(
+      'Keep stale input',
+    );
+    second.once('dialog', dialog => dialog.accept());
+    await second
+      .getByRole('button', { name: 'Reload latest saved post' })
+      .click();
+    await expect(second.getByLabel('Title', { exact: true })).toHaveValue(
+      'Winning edit',
     );
     await first.reload();
     await expect(first.getByLabel('Title', { exact: true })).toHaveValue(
@@ -189,4 +240,89 @@ test('stale editor input and tag selection survive a competing save; stale slug 
   } finally {
     await context.close();
   }
+});
+
+test('title and category filters persist across pages and browser history', async ({
+  page,
+  request,
+}) => {
+  const token = await (await request.get('http://127.0.0.1:4174/token')).text();
+  const headers = {
+    'cf-access-jwt-assertion': token,
+    origin: 'http://localhost:4173',
+  };
+  const category = 'Search ' + crypto.randomUUID().slice(0, 8);
+  await request.post('/admin/categories?/create', {
+    headers,
+    form: { name: category },
+  });
+  await page.setExtraHTTPHeaders({ 'cf-access-jwt-assertion': token });
+  await page.goto('/admin/posts/new');
+  await expect(
+    page.getByRole('textbox', { name: 'Markdown editor', exact: true }),
+  ).toBeVisible();
+  const categoryId = await page
+    .getByLabel('Category', { exact: true })
+    .locator('option')
+    .filter({ hasText: category })
+    .getAttribute('value');
+  expect(categoryId).toBeTruthy();
+  if (!categoryId) throw new Error('Created category has no ID');
+  const prefix = '검색%_' + crypto.randomUUID().slice(0, 8);
+  for (let i = 0; i < 21; i++)
+    await request.post('/admin/posts/new?/create', {
+      headers,
+      form: {
+        title: prefix + ' ' + i,
+        categoryId: categoryId,
+        body: '',
+        slug: '',
+        tags: '',
+      },
+    });
+  await page.goto('/admin/posts');
+  await page
+    .getByLabel('Search titles', { exact: true })
+    .fill('  ' + prefix + '  ');
+  await page
+    .getByLabel('Category filter', { exact: true })
+    .selectOption({ label: category });
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  await expect(page).toHaveURL(
+    url =>
+      url.searchParams.get('q')?.trim() === prefix &&
+      url.searchParams.get('categoryId') === categoryId,
+  );
+  await expect(
+    page.getByRole('link', { name: 'Next', exact: true }),
+  ).toBeVisible();
+  const firstUrl = page.url();
+  await page.getByRole('link', { name: 'Next', exact: true }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.getByLabel('Search titles', { exact: true })).toHaveValue(
+    prefix,
+  );
+  await expect(page.getByLabel('Category filter', { exact: true })).toHaveValue(
+    categoryId,
+  );
+  await page.goBack();
+  await expect(page).toHaveURL(firstUrl);
+  await expect(page.getByText('Page 1', { exact: true })).toBeVisible();
+  await page
+    .getByLabel('Search titles', { exact: true })
+    .fill('no matching ' + crypto.randomUUID());
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  await expect(
+    page.getByText('No posts match these filters.', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/posts$/);
+  expect(
+    (
+      await request.get(
+        '/admin/posts?q=' + encodeURIComponent('a'.repeat(201)),
+        { headers },
+      )
+    ).status(),
+  ).toBe(400);
 });

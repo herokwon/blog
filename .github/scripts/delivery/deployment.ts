@@ -162,7 +162,7 @@ export async function publishRelease(
 type Result = {
   updatedAt: string;
   publicationResult: string;
-  worker: boolean;
+  worker: boolean | 'unknown';
   publication: boolean;
   stage: string;
   releaseUrl?: string;
@@ -183,7 +183,7 @@ export function renderComment(
     '',
     `Commit: [\`${target.sha.slice(0, 7)}\`](https://github.com/${repo}/commit/${target.sha}) · Updated: <relative-time datetime="${result.updatedAt}">${result.updatedAt}</relative-time> · [View logs](${logs})`,
   ];
-  if (result.worker) {
+  if (result.worker === true) {
     lines[2] += '  ';
     lines.push(`Link: [View URL](${target.url})`);
   }
@@ -191,7 +191,7 @@ export function renderComment(
     '',
     '| Stage | Status |',
     '| --- | --- |',
-    `| ${name} | ${result.worker ? '✅ **Deployed**' : '❌ **Failed**'} |`,
+    `| ${name} | ${result.worker === 'unknown' ? '⚠️ **Verification unavailable**' : result.worker ? '✅ **Deployed**' : '❌ **Failed**'} |`,
   );
   if (production) {
     const version = result.releaseUrl
@@ -204,8 +204,8 @@ export function renderComment(
         : '❌ **Failed**';
     lines.push(`| 📦 **GitHub Release** | ${status} |`);
   }
-  if (!result.worker || (production && !result.publication)) {
-    const stage = result.worker ? 'Release publication' : result.stage;
+  if (result.worker !== true || (production && !result.publication)) {
+    const stage = result.worker === true ? 'Release publication' : result.stage;
     lines.push('', `Failed stage: **${stage}**`);
   }
   return lines.join('\n');
@@ -219,7 +219,10 @@ async function comment(repo: Repository, target: DeploymentTarget) {
     {
       updatedAt: new Date().toISOString(),
       publicationResult: env('PUBLICATION_RESULT'),
-      worker: process.env.WORKER_SUCCEEDED === 'true',
+      worker:
+        process.env.WORKER_SUCCEEDED === 'unknown'
+          ? 'unknown'
+          : process.env.WORKER_SUCCEEDED === 'true',
       publication: process.env.PUBLICATION_SUCCEEDED === 'true',
       stage: process.env.FAILED_STAGE || 'Deployment',
       releaseUrl: process.env.RELEASE_URL,

@@ -6,7 +6,7 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { getDb } from './db/index.js';
-import { categories, posts, postTags, tags } from './db/schema.js';
+import { categories, posts, postTags } from './db/schema.js';
 
 const published = and(eq(posts.status, 'published'), isNull(posts.deletedAt));
 const metadata = {
@@ -53,12 +53,11 @@ export async function getPublicPost(d1: D1Database, slug: string) {
       .where(and(published, eq(posts.slug, slug)))
       .limit(1),
     db
-      .select({ name: tags.name })
-      .from(tags)
-      .innerJoin(postTags, eq(tags.id, postTags.tagId))
+      .select({ name: postTags.name })
+      .from(postTags)
       .innerJoin(posts, eq(postTags.postId, posts.id))
       .where(and(published, eq(posts.slug, slug)))
-      .orderBy(asc(tags.name)),
+      .orderBy(asc(postTags.position)),
   ]);
   return rows[0] ? { ...rows[0], tags: names.map(tag => tag.name) } : null;
 }

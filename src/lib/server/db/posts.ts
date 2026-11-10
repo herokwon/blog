@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { imageReferences, MediaError } from '../media.js';
 import { getDb } from './index.js';
-import { categories, posts, postTags, tags } from './schema.js';
+import { categories, posts, postTags } from './schema.js';
 
 export type PostInput = {
   title: string;
@@ -13,9 +13,17 @@ export type PostInput = {
 export type PostAction =
   'create' | 'save' | 'publish' | 'archive' | 'republish' | 'trash' | 'restore';
 export type PostFilter = 'all' | 'draft' | 'published' | 'archived' | 'trash';
+export type PostConflictCode =
+  'stale_revision' | 'slug_reserved' | 'category_missing' | 'write_conflict';
+
 type PostResult =
   | { ok: true; id: string; revision: string }
-  | { ok: false; status: 400 | 404 | 409; message: string };
+  | {
+      ok: false;
+      status: 400 | 404 | 409;
+      message: string;
+      code?: PostConflictCode;
+    };
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const validSlug = (slug: string) =>
   slug.length <= 120 && slugPattern.test(slug);
@@ -24,11 +32,20 @@ const bad = (message: string): PostResult => ({
   status: 400,
   message,
 });
-const conflict = (): PostResult => ({
+const conflict = (code: PostConflictCode): PostResult => ({
   ok: false,
   status: 409,
-  message:
-    'The post changed, the slug is reserved, or the category no longer exists. Your input has been kept. Reload before retrying.',
+  code,
+  message: {
+    stale_revision:
+      'The post changed. Your input has been kept. Export it before reloading the latest saved post.',
+    slug_reserved:
+      'The slug is already reserved. Choose another slug and retry.',
+    category_missing:
+      'The category no longer exists. Choose another category and retry.',
+    write_conflict:
+      'The post could not be updated because a referenced item changed. Your input has been kept.',
+  }[code],
 });
 
 // RFC 9562: 48-bit millisecond timestamp, version 7, random remainder and RFC variant.
@@ -52,11 +69,10 @@ export async function getPost(d1: D1Database, id: string) {
   const [rows, names] = await db.batch([
     db.select().from(posts).where(eq(posts.id, id)),
     db
-      .select({ name: tags.name })
-      .from(tags)
-      .innerJoin(postTags, eq(tags.id, postTags.tagId))
+      .select({ name: postTags.name })
+      .from(postTags)
       .where(eq(postTags.postId, id))
-      .orderBy(asc(tags.name)),
+      .orderBy(asc(postTags.position)),
   ]);
   return rows[0] ? { ...rows[0], tags: names.map(tag => tag.name) } : null;
 }
@@ -65,6 +81,7 @@ export async function listPosts(
   d1: D1Database,
   filter: PostFilter = 'all',
   page = 1,
+  search: { q?: string; categoryId?: string } = {},
 ) {
   const rows = await getDb(d1)
     .select({
@@ -78,12 +95,18 @@ export async function listPosts(
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .where(
-      filter === 'trash'
-        ? isNotNull(posts.deletedAt)
-        : and(
-            isNull(posts.deletedAt),
-            filter === 'all' ? undefined : eq(posts.status, filter),
-          ),
+      and(
+        filter === 'trash'
+          ? isNotNull(posts.deletedAt)
+          : and(
+              isNull(posts.deletedAt),
+              filter === 'all' ? undefined : eq(posts.status, filter),
+            ),
+        search.q
+          ? sql`instr(lower(${posts.title}), lower(${search.q})) > 0`
+          : undefined,
+        search.categoryId ? eq(posts.categoryId, search.categoryId) : undefined,
+      ),
     )
     .orderBy(desc(posts.updatedAt), desc(posts.id))
     .limit(21)
@@ -93,11 +116,12 @@ export async function listPosts(
 
 export async function editorOptions(d1: D1Database) {
   const db = getDb(d1);
-  const [categoryRows, tagRows] = await db.batch([
-    db.select().from(categories).orderBy(asc(categories.name)),
-    db.select({ name: tags.name }).from(tags).orderBy(asc(tags.name)),
-  ]);
-  return { categories: categoryRows, tags: tagRows.map(tag => tag.name) };
+  return {
+    categories: await db
+      .select()
+      .from(categories)
+      .orderBy(asc(categories.name)),
+  };
 }
 
 export async function slugAvailability(
@@ -128,7 +152,8 @@ export async function mutatePost(
   const creating = !command.id && (action === 'create' || action === 'publish');
   if (!creating && !existing)
     return { ok: false, status: 404, message: 'Post not found.' };
-  if (existing && existing.revision !== command.revision) return conflict();
+  if (existing && existing.revision !== command.revision)
+    return conflict('stale_revision');
   if (existing?.deletedAt && action !== 'restore')
     return bad('Trashed posts are read-only. Restore this post first.');
   if (action === 'create' && !creating) return bad('This post already exists.');
@@ -276,26 +301,18 @@ export async function mutatePost(
     // A zero-row stale parent update is not a SQL error. Every child write must
     // explicitly require the new opaque revision from THIS successful mutation.
     const guard = 'EXISTS (SELECT 1 FROM posts WHERE id = ? AND revision = ?)';
-    for (const name of normalizedTags)
-      statements.push(
-        d1
-          .prepare(
-            `INSERT INTO tags (id, name) SELECT ?, ? WHERE ${guard} ON CONFLICT(name) DO NOTHING`,
-          )
-          .bind(crypto.randomUUID(), name, id, revision),
-      );
     statements.push(
       d1
-        .prepare(`DELETE FROM post_tags WHERE post_id = ? AND ${guard}`)
+        .prepare(`DELETE FROM post_owned_tags WHERE post_id = ? AND ${guard}`)
         .bind(id, id, revision),
     );
-    for (const name of normalizedTags)
+    for (const [position, name] of normalizedTags.entries())
       statements.push(
         d1
           .prepare(
-            `INSERT INTO post_tags (post_id, tag_id) SELECT ?, id FROM tags WHERE name = ? AND ${guard}`,
+            `INSERT INTO post_owned_tags (post_id, name, position) SELECT ?, ?, ? WHERE ${guard}`,
           )
-          .bind(id, name, id, revision),
+          .bind(id, name, position, id, revision),
       );
     statements.push(
       d1
@@ -311,5 +328,22 @@ export async function mutatePost(
     );
   }
   const results = await d1.batch<{ id: string }>(statements);
-  return results[0].results.length ? { ok: true, id, revision } : conflict();
+  if (results[0].results.length) return { ok: true, id, revision };
+  // Classify only after the guarded atomic write fails; never renew the client's revision.
+  const [current, category, reserved] = await d1.batch<{
+    revision?: string;
+    id?: string;
+  }>([
+    d1.prepare('SELECT revision FROM posts WHERE id = ?').bind(id),
+    d1.prepare('SELECT id FROM categories WHERE id = ?').bind(categoryId),
+    d1
+      .prepare('SELECT id FROM posts WHERE slug = ? AND id <> ?')
+      .bind(slug, id),
+  ]);
+  if (!creating && current.results[0]?.revision !== command.revision)
+    return conflict('stale_revision');
+  if (categoryId && !category.results.length)
+    return conflict('category_missing');
+  if (slug && reserved.results.length) return conflict('slug_reserved');
+  return conflict('write_conflict');
 }
