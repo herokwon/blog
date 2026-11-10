@@ -63,7 +63,7 @@ test('Wrangler applies committed SQL once and preserves data on repeat applicati
       join(migrations, '0000_post-classification-schema.sql'),
     );
     writeFileSync(
-      join(migrations, '0002_invalid.sql'),
+      join(migrations, '0003_invalid.sql'),
       'CREATE TABLE partial_migration (id TEXT); INSERT INTO missing_table VALUES (1);',
     );
     copyFileSync(
@@ -117,6 +117,7 @@ test('Wrangler applies committed SQL once and preserves data on repeat applicati
       [
         { name: '0000_post-classification-schema.sql' },
         { name: '0001_private-post-attachments.sql' },
+        { name: '0002_post-owned-tags.sql' },
       ],
       [],
       [{ count: 1 }],
