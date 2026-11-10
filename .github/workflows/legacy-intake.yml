@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 10
     env:
       GH_REPO: herokwon/blog
-      LEGACY_EVIDENCE: ${{ runner.temp }}/legacy-intake.json
+      LEGACY_EVIDENCE: legacy-intake.json
     steps:
       - name: Checkout Trusted Automation
         uses: actions/checkout@v7
