@@ -162,3 +162,65 @@ test('invalid hidden buffers remain recoverable and whitespace paste respects al
   await expect(input).toHaveValue('overflow');
   await expect(page).toHaveURL(/\/new$/);
 });
+
+test('held Enter cannot submit and removing another chip cannot discard a hidden invalid edit', async ({
+  page,
+}) => {
+  const area = page.getByRole('toolbar', { name: 'Tag entry area' }),
+    input = page.getByLabel('Add tag', { exact: true });
+  await area.press('Enter');
+  await input.fill('first');
+  await input.press('Enter');
+  await input.fill('second');
+  await input.press('Enter');
+  await input.fill('pending');
+  // Cancelable keydown identifies whether native form submission was suppressed.
+  expect(
+    await input.evaluate(
+      element =>
+        !element.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'Enter',
+            repeat: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        ),
+    ),
+  ).toBe(true);
+  await input.fill('');
+  await page
+    .getByRole('button', { name: 'Edit tag first', exact: true })
+    .click();
+  await page.getByLabel('Edit tag first', { exact: true }).fill('x'.repeat(41));
+  await page.getByLabel('Title', { exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Edit tag second', exact: true })
+    .press('Backspace');
+  await expect(
+    page.getByLabel('Edit tag first', { exact: true }),
+  ).toBeFocused();
+  await expect(page.getByLabel('Edit tag first', { exact: true })).toHaveValue(
+    'x'.repeat(41),
+  );
+  await expect(
+    page.getByRole('button', { name: 'Edit tag second', exact: true }),
+  ).toBeVisible();
+});
+
+test('pointer activation edits the intended chip even when committing its neighbor changes width', async ({
+  page,
+}) => {
+  const input = page.getByLabel('Add tag', { exact: true });
+  await page.getByRole('toolbar', { name: 'Tag entry area' }).press('Enter');
+  await input.fill('one');
+  await input.press('Enter');
+  await input.fill('two');
+  await input.press('Enter');
+  await page.getByRole('button', { name: 'Edit tag one', exact: true }).click();
+  await page.getByLabel('Edit tag one', { exact: true }).fill('x'.repeat(40));
+  await page
+    .getByRole('button', { name: 'Edit tag two', exact: true })
+    .click({ delay: 150 });
+  await expect(page.getByLabel('Edit tag two', { exact: true })).toBeFocused();
+});

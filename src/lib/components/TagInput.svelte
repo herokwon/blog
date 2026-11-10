@@ -82,12 +82,14 @@
     await tick();
     newInput?.focus();
   }
-  async function edit(index: number) {
+  async function edit(tag: string) {
     if (!finishEdit() || !finishNew()) {
       await focusBuffer();
       return;
     }
     newVisible = false;
+    const index = value.indexOf(tag);
+    if (index < 0) return;
     editingTag = { index, value: value[index] };
     editVisible = true;
     await tick();
@@ -103,6 +105,10 @@
     (chip ?? area)?.focus();
   }
   async function remove(index: number) {
+    if (editingTag && editingTag.index !== index && !finishEdit()) {
+      await focusBuffer();
+      return;
+    }
     value = value.filter((_, i) => i !== index);
     editingTag = null;
     editVisible = false;
@@ -111,6 +117,14 @@
     await focusChip(index - 1);
   }
   function inputKey(event: KeyboardEvent, index?: number) {
+    // Skipping a repeated shortcut must not fall through to native submit.
+    if (
+      event.key === 'Enter' &&
+      !composing &&
+      !event.isComposing &&
+      event.keyCode !== 229
+    )
+      event.preventDefault();
     if (
       disabled ||
       composing ||
@@ -160,11 +174,10 @@
       else void focusChip(next);
     }
   }
-  function blurEdit() {
-    const active = editingTag;
+  function blurEdit(input: HTMLInputElement) {
     // Wait for a clicked chip's handler before closing the old editor.
     setTimeout(() => {
-      if (editingTag === active) {
+      if (editInput === input) {
         finishEdit();
         editVisible = false;
       }
@@ -224,7 +237,7 @@
             bind:value={editingTag.value}
             size={Math.min(40, Math.max(3, editingTag.value.length + 1))}
             onkeydown={event => inputKey(event, index)}
-            onblur={blurEdit}
+            onblur={event => blurEdit(event.currentTarget)}
             oncompositionstart={() => {
               composing = true;
             }}
@@ -238,7 +251,12 @@
           type="button"
           aria-label={`Edit tag ${tag}`}
           disabled={disabled || !hydrated}
-          onclick={() => edit(index)}
+          onpointerdown={event => {
+            if (event.button !== 0 || disabled || !hydrated) return;
+            // Keep the old editor from shrinking/moving this target before click.
+            event.preventDefault();
+          }}
+          onclick={() => edit(tag)}
           onkeydown={event => chipKey(event, index)}>#{tag}</button
         >
       {/if}
