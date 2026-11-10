@@ -30,6 +30,7 @@ import {
   mergeReady,
   Repository,
 } from './github.ts';
+import { migrateLegacyIntake, snapshotLegacyIntake } from './legacy-intake.ts';
 import {
   ciPassed,
   classifyUpdates,
@@ -48,6 +49,182 @@ import {
 
 // Test fixtures must not be published to the real Actions job summary.
 delete process.env.GITHUB_STEP_SUMMARY;
+
+function legacyMigrationFixture() {
+  const receipts = [
+    {
+      pr: 15,
+      id: 6685921679,
+      head: '2ef712e17d8dcd4faa8044223b49f7b873dfd4bc',
+      original: '2ef712e17d8dcd4faa8044223b49f7b873dfd4bc',
+    },
+    {
+      pr: 16,
+      id: 6685936862,
+      head: '9a58bc5ba256f6808f3f65f8765dc50f2e792212',
+      original: '93e5602690b1d8ef1f5ffcdf182e32901ae08660',
+    },
+  ];
+  const comments = receipts.map(item => ({
+    id: item.id,
+    user: { id: 352761549, login: 'herokwon-blog-bot[bot]', type: 'Bot' },
+    body: `<!-- dependabot-intake:v1 ${JSON.stringify({ pr: item.pr, headSha: item.head, originalSha: item.original, updates: [{ dependencyName: 'vite', dependencyType: 'direct:development', packageEcosystem: 'npm_and_yarn', updateType: 'version-update:semver-patch', prevVersion: '1.2.3', newVersion: '1.2.4' }] })} -->`,
+  }));
+  const unrelated = {
+    id: 1,
+    user: { id: 1, login: 'owner', type: 'User' },
+    body: 'Keep this comment',
+  };
+  const checks: Record<string, unknown>[] = [];
+  const mutations: string[] = [];
+  const faults = { secondWrite: false };
+  const api = new GitHubClient('fixture', async (input, init) => {
+    const url = new URL(
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url,
+    );
+    const path = url.pathname.replace('/repos/herokwon/blog', '');
+    if (init?.method === 'POST' && path === '/check-runs') {
+      const data = JSON.parse(requestBody(init)) as Record<string, unknown>;
+      if (
+        faults.secondWrite &&
+        data.head_sha === '9a58bc5ba256f6808f3f65f8765dc50f2e792212'
+      )
+        return new Response(null, { status: 403 });
+      const check = {
+        ...data,
+        id: checks.length + 10,
+        app: { id: 5622834, slug: 'herokwon-blog-bot' },
+      };
+      checks.push(check);
+      mutations.push(`check:${String(data.head_sha)}`);
+      return Response.json(check);
+    }
+    const comment = comments.find(
+      item => path === `/issues/comments/${item.id}`,
+    );
+    if (comment && init?.method === 'DELETE') {
+      comments.splice(comments.indexOf(comment), 1);
+      mutations.push(`delete:${comment.id}`);
+      return new Response(null, { status: 204 });
+    }
+    if (comment) return Response.json(comment);
+    const target = receipts.find(
+      item => path === `/issues/${item.pr}/comments`,
+    );
+    if (target)
+      return Response.json([
+        ...comments.filter(item => item.id === target.id),
+        unrelated,
+      ]);
+    if (receipts.some(item => path === `/pulls/${item.pr}`))
+      return Response.json({
+        state: 'closed',
+        user: { login: 'dependabot[bot]' },
+        head: { repo: { full_name: 'herokwon/blog' } },
+        base: { repo: { full_name: 'herokwon/blog' } },
+      });
+    const shaMatch = /^\/commits\/([a-f0-9]{40})\/check-runs$/.exec(path);
+    if (shaMatch)
+      return Response.json({
+        check_runs: checks.filter(item => item.head_sha === shaMatch[1]),
+      });
+    throw new Error(
+      `Unexpected migration API: ${init?.method ?? 'GET'} ${path}`,
+    );
+  });
+  return {
+    repo: new Repository('herokwon/blog', 'fixture', api),
+    comments,
+    checks,
+    mutations,
+    faults,
+    unrelated,
+  };
+}
+
+const legacyEnvironment = {
+  APP_ID: '5622834',
+  APP_BOT_ID: '352761549',
+  APP_SLUG: 'herokwon-blog-bot',
+};
+
+await test('limited legacy migration snapshots before writes, preserves unrelated comments and reuses exact-SHA checks on rerun', async () => {
+  await withEnvironment(legacyEnvironment, async () => {
+    const fixture = legacyMigrationFixture();
+    const snapshot = await snapshotLegacyIntake(fixture.repo);
+    assert.equal(fixture.mutations.length, 0);
+    const result = await migrateLegacyIntake(fixture.repo, snapshot);
+    assert.equal(fixture.comments.length, 0);
+    assert.equal(fixture.checks.length, 2);
+    assert.deepEqual(
+      result.map(item => item.sha),
+      [
+        '2ef712e17d8dcd4faa8044223b49f7b873dfd4bc',
+        '9a58bc5ba256f6808f3f65f8765dc50f2e792212',
+      ],
+    );
+    assert.equal(fixture.mutations.length, 4);
+    const repeated = await snapshotLegacyIntake(fixture.repo);
+    await migrateLegacyIntake(fixture.repo, repeated);
+    assert.equal(fixture.mutations.length, 4);
+    assert.deepEqual(
+      (await fixture.repo.comments(15)).map(comment => comment.body),
+      ['Keep this comment'],
+    );
+  });
+});
+
+await test('limited legacy migration refuses changed source evidence, wrong repository and unexpected App identity before mutation', async () => {
+  await withEnvironment(legacyEnvironment, async () => {
+    const fixture = legacyMigrationFixture();
+    const snapshot = await snapshotLegacyIntake(fixture.repo);
+    fixture.comments[1].body = fixture.comments[1].body.replace(
+      '1.2.4',
+      '1.2.5',
+    );
+    await assert.rejects(
+      migrateLegacyIntake(fixture.repo, snapshot),
+      /changed after backup/,
+    );
+    assert.equal(fixture.mutations.length, 0);
+    const foreign = new Repository('other/blog', 'fixture', fixture.repo.api);
+    await assert.rejects(snapshotLegacyIntake(foreign));
+    await withEnvironment({ APP_ID: '999' }, async () => {
+      await assert.rejects(snapshotLegacyIntake(fixture.repo));
+    });
+    assert.equal(fixture.mutations.length, 0);
+  });
+});
+
+await test('limited legacy migration resumes a partially migrated pair without recreating the first Check', async () => {
+  await withEnvironment(legacyEnvironment, async () => {
+    const fixture = legacyMigrationFixture();
+    const snapshot = await snapshotLegacyIntake(fixture.repo);
+    fixture.faults.secondWrite = true;
+    await assert.rejects(
+      migrateLegacyIntake(fixture.repo, snapshot),
+      /GitHub 403/,
+    );
+    assert.equal(fixture.checks.length, 1);
+    const firstId = fixture.checks[0].id;
+    assert.deepEqual(
+      fixture.comments.map(comment => comment.id),
+      [6685936862],
+    );
+    fixture.faults.secondWrite = false;
+    await migrateLegacyIntake(
+      fixture.repo,
+      await snapshotLegacyIntake(fixture.repo),
+    );
+    assert.equal(fixture.checks.length, 2);
+    assert.equal(fixture.checks[0].id, firstId);
+    assert.equal(fixture.mutations.length, 4);
+  });
+});
 
 function requestBody(init?: RequestInit): string {
   if (typeof init?.body !== 'string')
