@@ -1158,7 +1158,7 @@ await test('cleanup recognizes an unchanged squash-merged head while preserving 
   );
 });
 
-await test('concurrent milestone and release creation reuse the winner without overwriting its ref', async () => {
+await test('concurrent milestone creation reuses the winner', async () => {
   let milestoneExists = false;
   const milestones = new Repository(
     'herokwon/blog',
@@ -1174,6 +1174,9 @@ await test('concurrent milestone and release creation reuse the winner without o
     }),
   );
   assert.equal(await milestones.milestone('1.2.1'), 1);
+});
+
+await test('App synchronization uses the live target despite a stale PR base and rejects target movement without carrying intake', async () => {
   await withEnvironment(
     {
       APP_BOT_ID: '123',
@@ -1183,93 +1186,103 @@ await test('concurrent milestone and release creation reuse the winner without o
       GITHUB_STEP_SUMMARY: undefined,
     },
     async () => {
-      let refExists = false,
-        routed = '';
-      const synchronizedHead = 'b'.repeat(40);
-      let synchronizedCheck: unknown = null;
-      const native = {
-        ...pull,
-        state: 'open',
-        merged: false,
-        head: { ...pull.head, ref: 'dependabot/npm/test', sha },
-        base: { ...pull.base, ref: 'main', sha: 'd'.repeat(40) },
-      };
-      const repo = new Repository(
-        'herokwon/blog',
-        'token',
-        new GitHubClient('token', async (input, init) => {
-          const url =
-            typeof input === 'string'
-              ? input
-              : input instanceof URL
-                ? input.href
-                : input.url;
-          if (url.includes('/check-runs') && init?.method === 'POST') {
-            synchronizedCheck = {
-              ...(JSON.parse(requestBody(init)) as object),
-              id: 10,
-              app: { id: 456, slug: 'blog-bot' },
-            };
-            return Response.json(synchronizedCheck);
-          }
-          if (url.includes(`/commits/${synchronizedHead}/check-runs`))
-            return Response.json({
-              check_runs: synchronizedCheck ? [synchronizedCheck] : [],
-            });
-          if (url.includes('/check-runs'))
-            return Response.json({
-              check_runs: [
-                intakeCheck({
-                  pr: 3,
-                  headSha: sha,
-                  originalSha: sha,
-                  updates: [
-                    {
-                      ...update,
-                      updateType: 'version-update:semver-major',
-                      newVersion: '2.0.0',
-                    },
-                  ],
-                }),
-              ],
-            });
-          if (url.endsWith(`/commits/${synchronizedHead}`))
-            return Response.json({
-              author: { id: 123 },
-              commit: { verification: { verified: true } },
-              parents: [{ sha }, { sha }],
-            });
-          if (url.endsWith('/git/refs') && init?.method === 'POST') {
-            refExists = true;
-            return new Response('', { status: 422 });
-          }
-          if (url.includes('/git/ref/heads/'))
-            return refExists
-              ? Response.json({ object: { sha } })
-              : new Response('', { status: 404 });
-          if (url.includes('/branches')) return Response.json([]);
-          if (url.endsWith('/pulls/3') && init?.method === 'PATCH') {
-            routed = (JSON.parse(requestBody(init)) as { base: string }).base;
-            native.base.ref = routed;
-            return Response.json(native);
-          }
-          throw new Error(`Unexpected creation request: ${url}`);
-        }),
-      );
-      repo.pull = async () => structuredClone(native);
-      repo.ref = async () => sha;
-      repo.version = async () => '1.2.0';
-      repo.frozenReleases = async () => [];
-      repo.milestone = async () => 1;
-      repo.assignMilestone = async () => {};
-      repo.synchronize = async () => {
-        native.head.sha = synchronizedHead;
-        return true;
-      };
-      repo.comments = async () => [];
-      await runDependabotPullRequest(repo, 3);
-      assert.equal(routed, 'release/1.2.1');
-      assert.ok(synchronizedCheck);
+      for (const targetMoved of [false, true]) {
+        let refExists = false,
+          routed = '';
+        const synchronizedHead = 'b'.repeat(40);
+        let synchronizedCheck: unknown = null;
+        const native = {
+          ...pull,
+          state: 'open',
+          merged: false,
+          head: { ...pull.head, ref: 'dependabot/npm/test', sha },
+          base: { ...pull.base, ref: 'main', sha: 'd'.repeat(40) },
+        };
+        const repo = new Repository(
+          'herokwon/blog',
+          'token',
+          new GitHubClient('token', async (input, init) => {
+            const url =
+              typeof input === 'string'
+                ? input
+                : input instanceof URL
+                  ? input.href
+                  : input.url;
+            if (url.includes('/check-runs') && init?.method === 'POST') {
+              synchronizedCheck = {
+                ...(JSON.parse(requestBody(init)) as object),
+                id: 10,
+                app: { id: 456, slug: 'blog-bot' },
+              };
+              return Response.json(synchronizedCheck);
+            }
+            if (url.includes(`/commits/${synchronizedHead}/check-runs`))
+              return Response.json({
+                check_runs: synchronizedCheck ? [synchronizedCheck] : [],
+              });
+            if (url.includes('/check-runs'))
+              return Response.json({
+                check_runs: [
+                  intakeCheck({
+                    pr: 3,
+                    headSha: sha,
+                    originalSha: sha,
+                    updates: [
+                      {
+                        ...update,
+                        updateType: 'version-update:semver-major',
+                        newVersion: '2.0.0',
+                      },
+                    ],
+                  }),
+                ],
+              });
+            if (url.endsWith(`/commits/${synchronizedHead}`))
+              return Response.json({
+                author: { id: 123 },
+                commit: { verification: { verified: true } },
+                parents: [{ sha }, { sha }],
+              });
+            if (url.endsWith('/git/refs') && init?.method === 'POST') {
+              refExists = true;
+              return new Response('', { status: 422 });
+            }
+            if (url.includes('/git/ref/heads/'))
+              return refExists
+                ? Response.json({ object: { sha } })
+                : new Response('', { status: 404 });
+            if (url.includes('/branches')) return Response.json([]);
+            if (url.endsWith('/pulls/3') && init?.method === 'PATCH') {
+              routed = (JSON.parse(requestBody(init)) as { base: string }).base;
+              native.base.ref = routed;
+              return Response.json(native);
+            }
+            throw new Error(`Unexpected creation request: ${url}`);
+          }),
+        );
+        repo.pull = async () => structuredClone(native);
+        repo.ref = async () =>
+          targetMoved && native.head.sha === synchronizedHead
+            ? 'c'.repeat(40)
+            : sha;
+        repo.version = async () => '1.2.0';
+        repo.frozenReleases = async () => [];
+        repo.milestone = async () => 1;
+        repo.assignMilestone = async () => {};
+        repo.synchronize = async () => {
+          native.head.sha = synchronizedHead;
+          return true;
+        };
+        repo.comments = async () => [];
+        if (targetMoved)
+          await assert.rejects(
+            runDependabotPullRequest(repo, 3),
+            /Cannot authenticate synchronized Dependabot head/,
+          );
+        else await runDependabotPullRequest(repo, 3);
+        assert.equal(routed, 'release/1.2.1');
+        assert.equal(Boolean(synchronizedCheck), !targetMoved);
+      }
     },
   );
 });
