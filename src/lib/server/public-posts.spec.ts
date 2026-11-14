@@ -366,3 +366,27 @@ test('allowed standalone breaks preserve immediately following Markdown without 
   expect(safe).toContain('<br>');
   expect(safe).not.toMatch(/<img|onerror/);
 });
+
+test('Markdown following breaks retains document-wide links, images and footnotes without copying definitions', async () => {
+  for (const [label, name] of [
+    ['target', 'Read more'],
+    ['a\\]', 'Escaped'],
+  ]) {
+    const html = await renderMarkdown(
+      `<br />\n[${name}][${label}]\n\n[${label}]: https://example.com/reference`,
+    );
+    expect(html).toContain(`href="https://example.com/reference">${name}</a>`);
+    expect(html).not.toContain('__markdown_reference_context__');
+  }
+  const image = await renderMarkdown(
+    '<br />\n![Picture][image]\n\n[image]: https://example.com/picture.png',
+  );
+  expect(image).toContain('src="https://example.com/picture.png"');
+  const note = await renderPostMarkdown(
+    '<br />\nText[^note]\n\n[^note]: Original footnote text.',
+  );
+  expect(note.html).toContain('data-footnote-ref');
+  expect(note.html.match(/Original footnote text\./g)).toHaveLength(1);
+  expect(note.html).not.toContain('__markdown_reference_context__');
+  expect(note.description).toBe('Text Original footnote text.');
+});

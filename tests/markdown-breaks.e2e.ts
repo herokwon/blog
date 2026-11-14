@@ -20,7 +20,7 @@ test('explicit paragraph breaks survive editor changes, saving and anonymous SSR
   )?.[1];
   expect(categoryId).toBeTruthy();
   const body =
-    '안녕하세요.\n\n방문해주신 모든 분들을 환영합니다.\n\n<br />\n\n이곳은 저의 경험들을 기록하고 공유하는 공간입니다.\n\n잠시 지나가는 수많은 시간 속에서 작더라도 영감을 줄 수 있다면 굉장히 가치 있는 것이라 믿습니다.\n\n<br />\n\n감사합니다.\n\n좋은 하루 되세요!';
+    '안녕하세요.\n\n방문해주신 모든 분들을 환영합니다.\n\n<br />\n[Reference link][target]\n\n이곳은 저의 경험들을 기록하고 공유하는 공간입니다.\n\n잠시 지나가는 수많은 시간 속에서 작더라도 영감을 줄 수 있다면 굉장히 가치 있는 것이라 믿습니다.\n\n<br />\n\n감사합니다.\n\n좋은 하루 되세요!\n\n[target]: https://example.com/reference';
   const created = await request.post('/admin/posts/new?/publish', {
     headers,
     form: {
@@ -48,6 +48,9 @@ test('explicit paragraph breaks survive editor changes, saving and anonymous SSR
       exact: true,
     });
     await expect(editor).toBeVisible();
+    await expect(
+      editor.getByRole('link', { name: 'Reference link', exact: true }),
+    ).toHaveAttribute('href', 'https://example.com/reference');
     await expect(editor.locator('p').filter({ hasText: /^\s*$/ })).toHaveCount(
       2,
     );
@@ -69,6 +72,9 @@ test('explicit paragraph breaks survive editor changes, saving and anonymous SSR
       reader.locator('.content p').filter({ hasText: /^\s*$/ }),
     ).toHaveCount(2);
     await expect(reader.locator('.content')).toContainText('Updated');
+    await expect(
+      reader.getByRole('link', { name: 'Reference link', exact: true }),
+    ).toHaveAttribute('href', 'https://example.com/reference');
     const editorSpacing = await editor
       .locator('p')
       .first()
