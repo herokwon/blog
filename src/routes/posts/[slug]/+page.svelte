@@ -25,6 +25,16 @@
             <a href={resolve(`/?tag=${encodeURIComponent(tag)}`)}>{tag}</a>
           </li>{/each}
       </ul>{/if}
+    {#if data.post.toc.length}
+      <nav class="toc" aria-label="Table of contents">
+        <h2>Contents</h2>
+        <ol>
+          {#each data.post.toc as entry (entry.id)}<li>
+              <a href={'#' + entry.id}>{entry.title || 'Section'}</a>
+            </li>{/each}
+        </ol>
+      </nav>
+    {/if}
     <div class="content reader-prose">
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- Only the server-side sanitized Markdown pipeline supplies this HTML. -->
       {@html data.post.html}
@@ -33,6 +43,19 @@
 </ReaderLayout>
 
 <style>
+  .toc {
+    margin-block: 1.5rem;
+  }
+  .toc h2 {
+    font-size: 1.15rem;
+  }
+  .toc ol {
+    padding-inline-start: 1.5rem;
+  }
+  .toc li {
+    background: none;
+    padding: 0;
+  }
   h1 {
     line-height: 1.3;
   }
@@ -53,6 +76,5 @@
   }
   .content {
     margin-top: 2rem;
-    overflow-x: auto;
   }
 </style>

@@ -1,11 +1,11 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
+import { renderMarkdown } from './markdown.js';
 import {
   getPublicPost,
   listPublicClassifications,
   listPublicPosts,
-  renderMarkdown,
 } from './public-posts';
 
 let platform: PlatformProxy<{ DB: D1Database }>;
@@ -124,7 +124,7 @@ test('server Markdown preserves CommonMark/GFM structures and safe public image 
   );
   expect(html).toMatch(/&(?:lt|#x3C|#60);script(?:>|&(?:gt|#x3E|#62);)/i);
   for (const fragment of [
-    '<h2>Heading</h2>',
+    '>Heading</h2>',
     '<strong>Strong</strong>',
     '<em>emphasis</em>',
     '<del>removed</del>',
@@ -273,4 +273,16 @@ test('classification choices expose only public associations and deduplicate pos
     categories: [],
     tags: [],
   });
+});
+
+test('long-form headings use deterministic collision-free anchors separate from footnotes', async () => {
+  const html = await renderMarkdown(
+    '## 동일 제목\n\n### 동일 제목\n\nText[^one]\n\n[^one]: Note',
+  );
+  expect(html).toContain('id="post-heading-1"');
+  expect(html).toContain('id="post-heading-2"');
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+  expect(new Set(ids).size).toBe(ids.length);
+  for (const match of html.matchAll(/href="#([^"]+)"/g))
+    expect(ids).toContain(decodeURIComponent(match[1]));
 });
