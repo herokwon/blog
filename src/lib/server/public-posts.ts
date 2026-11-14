@@ -95,3 +95,17 @@ export async function listPublicSitemap(d1: D1Database) {
     .where(published)
     .orderBy(desc(posts.publishedAt), desc(posts.id));
 }
+
+export async function listPublicFeed(d1: D1Database) {
+  return getDb(d1)
+    .select({
+      title: posts.title,
+      body: posts.body,
+      slug: sql<string>`${posts.slug}`,
+      publishedAt: sql<string>`${posts.publishedAt}`,
+    })
+    .from(posts)
+    .where(published)
+    .orderBy(desc(posts.publishedAt), desc(posts.id))
+    .limit(20);
+}

@@ -1,10 +1,15 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
-import { renderMarkdown, renderPostMarkdown } from './markdown.js';
+import {
+  renderMarkdown,
+  renderPostMarkdown,
+  summarizeMarkdown,
+} from './markdown.js';
 import {
   getPublicPost,
   listPublicClassifications,
+  listPublicFeed,
   listPublicPosts,
 } from './public-posts';
 
@@ -306,4 +311,24 @@ test('metadata summaries use readable paragraphs, skip code/HTML and truncate by
   expect([...long.description]).toHaveLength(160);
   expect(long.description).toBe('😀'.repeat(160));
   expect((await renderPostMarkdown('# Heading only')).description).toBe('');
+  expect(summarizeMarkdown('# Heading only', 'Fallback title')).toBe(
+    'Fallback title',
+  );
+});
+
+test('RSS query returns twenty public summaries in first-publication order and revokes archived posts', async () => {
+  for (let i = 0; i < 21; i++) await post('feed-' + String(i).padStart(2, '0'));
+  await post('private-feed', 'draft');
+  const rows = await listPublicFeed(db);
+  expect(rows).toHaveLength(20);
+  expect(rows[0].slug).toBe('feed-20');
+  expect(rows.at(-1)?.slug).toBe('feed-01');
+  expect(rows[0].body).toBe('Body');
+  expect(rows[0]).not.toHaveProperty('revision');
+  await db
+    .prepare("UPDATE posts SET status='archived' WHERE id='feed-20'")
+    .run();
+  expect((await listPublicFeed(db)).some(post => post.slug === 'feed-20')).toBe(
+    false,
+  );
 });
