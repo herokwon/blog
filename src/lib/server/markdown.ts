@@ -23,10 +23,20 @@ type HtmlNode =
       children: HtmlNode[];
     }
   | { type: 'text' | 'comment' | 'doctype'; value?: string };
-function text(node: TextNode): string {
+function text(node: TextNode, excludeCode = false): string {
+  if (
+    excludeCode &&
+    ['code', 'inlineCode', 'image', 'imageReference'].includes(node.type)
+  )
+    return '';
   if (node.type === 'html') return '';
   if (node.type === 'break') return ' ';
-  return node.value ?? node.alt ?? node.children?.map(text).join('') ?? '';
+  return (
+    node.value ??
+    node.alt ??
+    node.children?.map(child => text(child, excludeCode)).join('') ??
+    ''
+  );
 }
 function accessibleBlocks() {
   return (tree: HtmlNode) => {
@@ -76,10 +86,28 @@ for (const name of ['pre', 'div'])
   ];
 attributes.th = [...(attributes.th ?? []), 'scope'];
 
+function describeTree(tree: Root) {
+  const paragraphs: string[] = [];
+  visit(tree, 'paragraph', node => {
+    paragraphs.push(text(node, true));
+  });
+  return [...paragraphs.join(' ').replace(/\s+/g, ' ').trim()]
+    .slice(0, 160)
+    .join('');
+}
+export function summarizeMarkdown(body: string, fallback = '') {
+  const processor = parser();
+  const tree = processor.parse(body);
+  processor.runSync(tree);
+  return describeTree(tree) || fallback;
+}
+
 export async function renderPostMarkdown(body: string) {
   const toc: TocEntry[] = [];
+  let description = '';
   const file = await parser()
     .use(() => (tree: Root) => {
+      description = describeTree(tree);
       visit(tree, 'heading', node => {
         if (node.depth < 2) return;
         const entry = {
@@ -103,7 +131,7 @@ export async function renderPostMarkdown(body: string) {
     .use(rehypeSanitize, { ...defaultSchema, attributes, clobberPrefix: '' })
     .use(rehypeStringify)
     .process(body);
-  return { html: String(file), toc };
+  return { html: String(file), toc, description };
 }
 export async function renderMarkdown(body: string) {
   return (await renderPostMarkdown(body)).html;

@@ -8,5 +8,12 @@ export const load: PageServerLoad = async ({ params }) => {
   const post = await getPublicPost(env.DB, params.slug);
   if (!post) error(404, 'Post not found.');
   const { body, ...metadata } = post;
-  return { post: { ...metadata, ...(await renderPostMarkdown(body)) } };
+  const rendered = await renderPostMarkdown(body);
+  return {
+    post: {
+      ...metadata,
+      ...rendered,
+      description: rendered.description || metadata.title,
+    },
+  };
 };
