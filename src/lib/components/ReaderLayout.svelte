@@ -5,8 +5,19 @@
   let { children }: { children: Snippet } = $props();
 </script>
 
+<svelte:head
+  ><link
+    rel="alternate"
+    type="application/rss+xml"
+    title="Personal Blog RSS"
+    href={resolve('/rss.xml')}
+  /></svelte:head
+>
 <div class="reader">
-  <header><a href={resolve('/')}>Personal Blog</a></header>
+  <header>
+    <a href={resolve('/')}>Personal Blog</a><a href={resolve('/rss.xml')}>RSS</a
+    >
+  </header>
   <main>{@render children()}</main>
 </div>
 
@@ -21,6 +32,10 @@
     overflow-wrap: anywhere;
   }
   header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: space-between;
     border-bottom: 1px solid #ddd;
     padding-bottom: 1rem;
     margin-bottom: 2rem;

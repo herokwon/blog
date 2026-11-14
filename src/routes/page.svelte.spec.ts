@@ -8,7 +8,15 @@ describe('homepage component', () => {
     await render(Page, {
       params: {},
       form: null,
-      data: { posts: [], page: 1, hasNext: false },
+      data: {
+        posts: [],
+        page: 1,
+        hasNext: false,
+        production: false,
+        filters: { q: '', category: '', tag: '' },
+        categories: [],
+        tags: [],
+      },
     });
     await expect
       .element(page.getByRole('heading', { level: 1 }))

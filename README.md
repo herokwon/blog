@@ -4,7 +4,15 @@ A single-author TypeScript SvelteKit blog running on Cloudflare Workers.
 
 See [AGENTS.md](AGENTS.md) for setup, development, testing, review, and release instructions, and [ADR 0001](docs/adr/0001-blog-architecture.md) for the approved architecture.
 
-Published posts are available at `/` and `/posts/[slug]`, with server-rendered CommonMark/GFM content and sanitized HTML. Draft, archived, and trashed posts are private. Public pages and image responses are not cached.
+Published posts are available at `/` and `/posts/[slug]`, with server-rendered CommonMark/GFM content and sanitized HTML. Draft, archived, and trashed posts are private. Public pages, images, sitemap and RSS responses are not cached.
+
+## Reader workflow
+
+- Search titles and combine one category and one tag filter at `/`. Links, explicit search submission, pagination and browser history work without JavaScript. Only published, undeleted posts and their classification choices are public; identical tag names can find posts without creating shared tag identity.
+- Follow the contents links on long posts. Code blocks and tables keep their own keyboard-accessible horizontal scrolling on narrow screens. Paragraphs, Markdown hard breaks and attribute-free `<br>`, `<br/>` or `<br />` preserve explicit spacing; ordinary soft line breaks retain Markdown semantics. Other authored HTML is disabled.
+- Subscribe at `/rss.xml` for the latest 20 public post summaries. Archiving or trashing a post removes it from subsequent feed and sitemap responses; already downloaded copies are outside the application.
+
+Public posts include automatically derived descriptions, canonical URLs and Open Graph metadata. Production advertises `/sitemap.xml`; Preview disallows crawling and indexing. The nonsecret `SITE_ENVIRONMENT` Wrangler variable identifies each environment, independently of the request host. Search/filter and error pages are not indexable. See [ADR 0006](docs/adr/0006-public-reader-experience.md) for the reader boundaries.
 
 ## Author workflow
 

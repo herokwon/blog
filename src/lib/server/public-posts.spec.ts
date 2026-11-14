@@ -1,7 +1,17 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
-import { getPublicPost, listPublicPosts, renderMarkdown } from './public-posts';
+import {
+  renderMarkdown,
+  renderPostMarkdown,
+  summarizeMarkdown,
+} from './markdown.js';
+import {
+  getPublicPost,
+  listPublicClassifications,
+  listPublicFeed,
+  listPublicPosts,
+} from './public-posts';
 
 let platform: PlatformProxy<{ DB: D1Database }>;
 let db: D1Database;
@@ -67,6 +77,7 @@ test('public queries exclude every nonpublic state and expose only reader fields
       slug: 'public',
       publishedAt: '2026-11-08T00:00:00.000Z',
       category: 'Notes',
+      categoryId: 'category',
     },
   ]);
   await db
@@ -78,6 +89,7 @@ test('public queries exclude every nonpublic state and expose only reader fields
     slug: 'public',
     publishedAt: '2026-11-08T00:00:00.000Z',
     category: 'Notes',
+    categoryId: 'category',
     tags: ['Svelte'],
   });
   await db.prepare("UPDATE categories SET name = 'Renamed'").run();
@@ -117,7 +129,7 @@ test('server Markdown preserves CommonMark/GFM structures and safe public image 
   );
   expect(html).toMatch(/&(?:lt|#x3C|#60);script(?:>|&(?:gt|#x3E|#62);)/i);
   for (const fragment of [
-    '<h2>Heading</h2>',
+    '>Heading</h2>',
     '<strong>Strong</strong>',
     '<em>emphasis</em>',
     '<del>removed</del>',
@@ -154,4 +166,227 @@ test('sanitized GFM footnote navigation and return links resolve to actual IDs',
   for (const fragment of fragments) expect(ids).toContain(fragment);
   for (const match of html.matchAll(/aria-describedby="([^"]+)"/g))
     for (const id of match[1].split(/\s+/)) expect(ids).toContain(id);
+});
+
+test('explicit HTML breaks retain paragraph spacing without enabling authored HTML or changing code and soft breaks', async () => {
+  const html = await renderMarkdown(
+    '안녕하세요.\n\n방문해주신 모든 분들을 환영합니다.\n\n<br />\n\n감사합니다.\n\n좋은 하루 되세요!',
+  );
+  expect(html).toContain('<p>안녕하세요.</p>');
+  expect(html).toContain('<p><br>');
+  expect(html).toContain('<p>좋은 하루 되세요!</p>');
+  for (const tag of ['<br>', '<br/>', '<br />'])
+    expect(await renderMarkdown('First' + tag + 'Second')).toContain(
+      'First<br>',
+    );
+  expect(await renderMarkdown('First\nSecond')).toBe('<p>First\nSecond</p>');
+  expect(await renderMarkdown('First  \nSecond')).toContain('First<br>');
+  const unsafe = await renderMarkdown(
+    'First<br onclick="alert(1)">Second\n\n<script>bad()</script>',
+  );
+  expect(unsafe).not.toMatch(/<br|onclick|<script|bad\(\)/);
+  const tick = String.fromCharCode(96);
+  const code = await renderMarkdown(
+    tick +
+      '<br />' +
+      tick +
+      '\n\n' +
+      tick.repeat(3) +
+      'html\n<br />\n' +
+      tick.repeat(3),
+  );
+  expect(code).not.toContain('<br>');
+  expect(code).toMatch(/&(?:lt|#x3C|#60);br/);
+});
+
+test('consecutive allowed HTML breaks in one raw block preserve every break', async () => {
+  expect(await renderMarkdown('<br />\n<br/>\n<br>')).toMatch(
+    /^<p><br>\n<br>\n<br>\n<\/p>$/,
+  );
+  const mixed = await renderMarkdown('<br />\n<br onclick="bad()">');
+  expect(mixed).toContain('<br>');
+  expect(mixed).not.toMatch(/onclick|bad\(\)/);
+});
+
+test('public title/category/tag filters combine without leaking private records or duplicating shared names', async () => {
+  await post('public-one');
+  await post('public-two');
+  await post('draft-one', 'draft');
+  await post('archived-one', 'archived');
+  await db
+    .prepare("INSERT INTO categories (id,name) VALUES ('other','Other')")
+    .run();
+  await db
+    .prepare("UPDATE posts SET category_id='other' WHERE id='public-two'")
+    .run();
+  await db.batch([
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-one','Legacy Tag',0)",
+    ),
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-two','Legacy Tag',0)",
+    ),
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('draft-one','PrivateOnly',0)",
+    ),
+  ]);
+  expect(
+    (
+      await listPublicPosts(db, 1, {
+        q: 'TITLE PUBLIC',
+        category: 'category',
+        tag: 'Legacy Tag',
+      })
+    ).posts.map(p => p.slug),
+  ).toEqual(['public-one']);
+  expect((await listPublicPosts(db, 1, { tag: 'legacy tag' })).posts).toEqual(
+    [],
+  );
+  expect((await listPublicPosts(db, 1, { category: 'missing' })).posts).toEqual(
+    [],
+  );
+  expect((await listPublicPosts(db, 1, { q: 'draft' })).posts).toEqual([]);
+});
+
+test('classification choices expose only public associations and deduplicate post-owned names', async () => {
+  await db
+    .prepare("INSERT INTO categories VALUES ('private','Secret category')")
+    .run();
+  await post('public-one');
+  await post('public-two');
+  await post('draft', 'draft');
+  await db
+    .prepare("UPDATE posts SET category_id='private' WHERE id='draft'")
+    .run();
+  await db.batch([
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-one','Same Name',0)",
+    ),
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-two','Same Name',0)",
+    ),
+    db.prepare("INSERT INTO post_owned_tags VALUES ('draft','Secret tag',0)"),
+  ]);
+  expect(await listPublicClassifications(db)).toEqual({
+    categories: [{ id: 'category', name: 'Notes' }],
+    tags: [{ name: 'Same Name' }],
+  });
+  await db
+    .prepare("UPDATE posts SET status='archived' WHERE status='published'")
+    .run();
+  expect(await listPublicClassifications(db)).toEqual({
+    categories: [],
+    tags: [],
+  });
+});
+
+test('long-form headings use deterministic collision-free anchors separate from footnotes', async () => {
+  const html = await renderMarkdown(
+    '## 동일 제목\n\n### 동일 제목\n\nText[^one]\n\n[^one]: Note',
+  );
+  expect(html).toContain('id="post-heading-1"');
+  expect(html).toContain('id="post-heading-2"');
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+  expect(new Set(ids).size).toBe(ids.length);
+  for (const match of html.matchAll(/href="#([^"]+)"/g))
+    expect(ids).toContain(decodeURIComponent(match[1]));
+});
+
+test('metadata summaries use readable paragraphs, skip code/HTML and truncate by Unicode characters', async () => {
+  const tick = String.fromCharCode(96);
+  const body =
+    '# Heading\n\n' +
+    tick.repeat(3) +
+    'js\nsecret()\n' +
+    tick.repeat(3) +
+    '\n\nVisible **paragraph** ' +
+    tick +
+    'hiddenInlineCode' +
+    tick +
+    ' & more.\n\n<script>bad()</script>';
+  expect((await renderPostMarkdown(body)).description).toBe(
+    'Visible paragraph & more.',
+  );
+  const long = await renderPostMarkdown('😀'.repeat(161));
+  expect([...long.description]).toHaveLength(160);
+  expect(long.description).toBe('😀'.repeat(160));
+  expect((await renderPostMarkdown('# Heading only')).description).toBe('');
+  expect(summarizeMarkdown('# Heading only', 'Fallback title')).toBe(
+    'Fallback title',
+  );
+});
+
+test('RSS query returns twenty public summaries in first-publication order and revokes archived posts', async () => {
+  for (let i = 0; i < 21; i++) await post('feed-' + String(i).padStart(2, '0'));
+  await post('private-feed', 'draft');
+  const rows = await listPublicFeed(db);
+  expect(rows).toHaveLength(20);
+  expect(rows[0].slug).toBe('feed-20');
+  expect(rows.at(-1)?.slug).toBe('feed-01');
+  expect(rows[0].body).toBe('Body');
+  expect(rows[0]).not.toHaveProperty('revision');
+  await db
+    .prepare("UPDATE posts SET status='archived' WHERE id='feed-20'")
+    .run();
+  expect((await listPublicFeed(db)).some(post => post.slug === 'feed-20')).toBe(
+    false,
+  );
+});
+
+test('unused footnote definitions cannot contribute invisible summaries or dead contents links', async () => {
+  const source =
+    'Visible paragraph.\n\n[^unused]: Unrendered note text.\n\n    ## Unrendered heading';
+  const rendered = await renderPostMarkdown(source);
+  expect(rendered.html).not.toContain('Unrendered');
+  expect(rendered.description).toBe('Visible paragraph.');
+  expect(rendered.toc).toEqual([]);
+  expect(summarizeMarkdown(source)).toBe('Visible paragraph.');
+  const visible = await renderPostMarkdown(
+    'Text[^one]\n\n[^one]: Visible note.\n\n    ## Note heading',
+  );
+  expect(visible.description).toBe('Text Visible note.');
+  expect(visible.toc.map(entry => entry.title)).toEqual(['Note heading']);
+  for (const entry of visible.toc)
+    expect(visible.html).toContain('id="' + entry.id + '"');
+});
+
+test('allowed standalone breaks preserve immediately following Markdown without enabling raw HTML', async () => {
+  const html = await renderMarkdown('<br />\nVisible **text**.');
+  expect(html).toContain('<br>');
+  expect(html).toContain('<strong>text</strong>');
+  expect(
+    await renderMarkdown('<script>\n<br />\nsecret()\n</script>'),
+  ).not.toMatch(/secret|<br>/);
+  const codeAfterBreak = await renderMarkdown(
+    '<br />\n    <script>literal()</script>',
+  );
+  expect(codeAfterBreak).toMatch(/<pre(?:\s|>)/);
+  expect(codeAfterBreak).toContain('literal()');
+  const safe = await renderMarkdown('<br />\n<img src="x" onerror="bad()">');
+  expect(safe).toContain('<br>');
+  expect(safe).not.toMatch(/<img|onerror/);
+});
+
+test('Markdown following breaks retains document-wide links, images and footnotes without copying definitions', async () => {
+  for (const [label, name] of [
+    ['target', 'Read more'],
+    ['a\\]', 'Escaped'],
+  ]) {
+    const html = await renderMarkdown(
+      `<br />\n[${name}][${label}]\n\n[${label}]: https://example.com/reference`,
+    );
+    expect(html).toContain(`href="https://example.com/reference">${name}</a>`);
+    expect(html).not.toContain('__markdown_reference_context__');
+  }
+  const image = await renderMarkdown(
+    '<br />\n![Picture][image]\n\n[image]: https://example.com/picture.png',
+  );
+  expect(image).toContain('src="https://example.com/picture.png"');
+  const note = await renderPostMarkdown(
+    '<br />\nText[^note]\n\n[^note]: Original footnote text.',
+  );
+  expect(note.html).toContain('data-footnote-ref');
+  expect(note.html.match(/Original footnote text\./g)).toHaveLength(1);
+  expect(note.html).not.toContain('__markdown_reference_context__');
+  expect(note.description).toBe('Text Original footnote text.');
 });

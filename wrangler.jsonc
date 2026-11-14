@@ -18,7 +18,10 @@
     }
   ],
   "r2_buckets": [
-    { "binding": "ATTACHMENTS", "bucket_name": "blog-preview-attachments" }
+    {
+      "binding": "ATTACHMENTS",
+      "bucket_name": "blog-preview-attachments"
+    }
   ],
   "preview_urls": false,
   "observability": {
@@ -46,10 +49,16 @@
         }
       ],
       "r2_buckets": [
-        { "binding": "ATTACHMENTS", "bucket_name": "blog-preview-attachments" }
+        {
+          "binding": "ATTACHMENTS",
+          "bucket_name": "blog-preview-attachments"
+        }
       ],
       "routes": [
-        { "pattern": "blog-preview.herokwon.dev", "custom_domain": true }
+        {
+          "pattern": "blog-preview.herokwon.dev",
+          "custom_domain": true
+        }
       ],
       "observability": {
         "logs": {
@@ -63,6 +72,9 @@
           "persist": true,
           "head_sampling_rate": 1
         }
+      },
+      "vars": {
+        "SITE_ENVIRONMENT": "preview"
       }
     },
     "production": {
@@ -76,9 +88,17 @@
         }
       ],
       "r2_buckets": [
-        { "binding": "ATTACHMENTS", "bucket_name": "blog-attachments" }
+        {
+          "binding": "ATTACHMENTS",
+          "bucket_name": "blog-attachments"
+        }
       ],
-      "routes": [{ "pattern": "blog.herokwon.dev", "custom_domain": true }],
+      "routes": [
+        {
+          "pattern": "blog.herokwon.dev",
+          "custom_domain": true
+        }
+      ],
       "observability": {
         "logs": {
           "enabled": true,
@@ -91,7 +111,13 @@
           "persist": true,
           "head_sampling_rate": 0.05
         }
+      },
+      "vars": {
+        "SITE_ENVIRONMENT": "production"
       }
     }
+  },
+  "vars": {
+    "SITE_ENVIRONMENT": "preview"
   }
 }

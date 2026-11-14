@@ -7,10 +7,15 @@ import { listItem } from '@milkdown/crepe/feature/list-item';
 import { placeholder } from '@milkdown/crepe/feature/placeholder';
 import { table } from '@milkdown/crepe/feature/table';
 import { toolbar } from '@milkdown/crepe/feature/toolbar';
-import { editorViewOptionsCtx } from '@milkdown/kit/core';
+import {
+  editorViewOptionsCtx,
+  InitReady,
+  remarkPluginsCtx,
+} from '@milkdown/kit/core';
 import { uploadConfig } from '@milkdown/kit/plugin/upload';
 import { Plugin } from '@milkdown/kit/prose/state';
 import { $prose, insert, replaceAll } from '@milkdown/kit/utils';
+import { explicitBreaks } from '../markdown-breaks.js';
 import '@milkdown/crepe/theme/common/style.css';
 import '@milkdown/crepe/theme/classic.css';
 
@@ -98,6 +103,20 @@ export async function mountMarkdownEditor(
       };
     }),
   );
+  // Run before Milkdown expands references and removes their definitions.
+  editor.editor.use(ctx => async () => {
+    await ctx.wait(InitReady);
+    const entry = {
+      plugin: explicitBreaks,
+      options: { preserveEmptyParagraphs: true },
+    };
+    ctx.update(remarkPluginsCtx, plugins => [entry, ...plugins]);
+    return () => {
+      ctx.update(remarkPluginsCtx, plugins =>
+        plugins.filter(plugin => plugin !== entry),
+      );
+    };
+  });
   let initializing = true;
   let synchronizing = false;
   let baselineSource = source;

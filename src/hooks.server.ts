@@ -4,6 +4,7 @@ import {
   authorizeAdminRequest,
   isAdminPath,
 } from '#lib/server/auth/access.js';
+import { publicIndexable } from '#lib/site.js';
 import { env } from 'cloudflare:workers';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -17,13 +18,32 @@ export const handle: Handle = async ({ event, resolve }) => {
   } catch {
     return new Response('Invalid path.', {
       status: 400,
-      headers: { 'cache-control': 'private, no-store' },
+      headers: {
+        'cache-control': 'private, no-store',
+        'x-robots-tag': 'noindex, nofollow',
+      },
     });
   }
   if (!protectedPath) {
     const response = await resolve(event);
-    if (route === '/' || route === '/posts/[slug]')
+    if (
+      [
+        '/',
+        '/posts/[slug]',
+        '/sitemap.xml',
+        '/rss.xml',
+        '/robots.txt',
+      ].includes(route ?? '')
+    )
       response.headers.set('cache-control', 'no-store');
+    if (
+      !publicIndexable(
+        String(env.SITE_ENVIRONMENT) === 'production',
+        event.url,
+        response.status,
+      )
+    )
+      response.headers.set('x-robots-tag', 'noindex, nofollow');
     return response;
   }
   try {
@@ -39,5 +59,6 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
   const response = await resolve(event);
   response.headers.set('cache-control', 'private, no-store');
+  response.headers.set('x-robots-tag', 'noindex, nofollow');
   return response;
 };
