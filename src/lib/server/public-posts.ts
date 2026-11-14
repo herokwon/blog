@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, isNull, sql } from 'drizzle-orm';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
@@ -15,6 +15,7 @@ const metadata = {
   slug: sql<string>`${posts.slug}`,
   publishedAt: sql<string>`${posts.publishedAt}`,
   category: categories.name,
+  categoryId: categories.id,
 };
 const renderer = unified()
   .use(remarkParse)
@@ -33,12 +34,40 @@ export async function renderMarkdown(body: string) {
   return String(await renderer.process(body));
 }
 
-export async function listPublicPosts(d1: D1Database, page = 1) {
-  const rows = await getDb(d1)
+export type PublicFilters = { q?: string; category?: string; tag?: string };
+
+export async function listPublicPosts(
+  d1: D1Database,
+  page = 1,
+  filters: PublicFilters = {},
+) {
+  const db = getDb(d1);
+  const rows = await db
     .select(metadata)
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
-    .where(published)
+    .where(
+      and(
+        published,
+        filters.q?.trim()
+          ? sql`instr(lower(${posts.title}), lower(${filters.q.trim()})) > 0`
+          : undefined,
+        filters.category ? eq(posts.categoryId, filters.category) : undefined,
+        filters.tag
+          ? exists(
+              db
+                .select({ id: postTags.postId })
+                .from(postTags)
+                .where(
+                  and(
+                    eq(postTags.postId, posts.id),
+                    eq(postTags.name, filters.tag),
+                  ),
+                ),
+            )
+          : undefined,
+      ),
+    )
     .orderBy(desc(posts.publishedAt), desc(posts.id))
     .limit(21)
     .offset((page - 1) * 20);
@@ -62,4 +91,23 @@ export async function getPublicPost(d1: D1Database, slug: string) {
       .orderBy(asc(postTags.position)),
   ]);
   return rows[0] ? { ...rows[0], tags: names.map(tag => tag.name) } : null;
+}
+
+export async function listPublicClassifications(d1: D1Database) {
+  const db = getDb(d1);
+  const [publicCategories, publicTags] = await db.batch([
+    db
+      .selectDistinct({ id: categories.id, name: categories.name })
+      .from(categories)
+      .innerJoin(posts, eq(posts.categoryId, categories.id))
+      .where(published)
+      .orderBy(asc(categories.name)),
+    db
+      .selectDistinct({ name: postTags.name })
+      .from(postTags)
+      .innerJoin(posts, eq(postTags.postId, posts.id))
+      .where(published)
+      .orderBy(asc(postTags.name)),
+  ]);
+  return { categories: publicCategories, tags: publicTags };
 }

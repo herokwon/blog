@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
-import { getPublicPost, listPublicPosts, renderMarkdown } from './public-posts';
+import {
+  getPublicPost,
+  listPublicClassifications,
+  listPublicPosts,
+  renderMarkdown,
+} from './public-posts';
 
 let platform: PlatformProxy<{ DB: D1Database }>;
 let db: D1Database;
@@ -67,6 +72,7 @@ test('public queries exclude every nonpublic state and expose only reader fields
       slug: 'public',
       publishedAt: '2026-11-08T00:00:00.000Z',
       category: 'Notes',
+      categoryId: 'category',
     },
   ]);
   await db
@@ -78,6 +84,7 @@ test('public queries exclude every nonpublic state and expose only reader fields
     slug: 'public',
     publishedAt: '2026-11-08T00:00:00.000Z',
     category: 'Notes',
+    categoryId: 'category',
     tags: ['Svelte'],
   });
   await db.prepare("UPDATE categories SET name = 'Renamed'").run();
@@ -194,4 +201,76 @@ test('consecutive allowed HTML breaks in one raw block preserve every break', as
   expect(await renderMarkdown('<br />\n<br onclick="bad()">')).not.toContain(
     '<br>',
   );
+});
+
+test('public title/category/tag filters combine without leaking private records or duplicating shared names', async () => {
+  await post('public-one');
+  await post('public-two');
+  await post('draft-one', 'draft');
+  await post('archived-one', 'archived');
+  await db
+    .prepare("INSERT INTO categories (id,name) VALUES ('other','Other')")
+    .run();
+  await db
+    .prepare("UPDATE posts SET category_id='other' WHERE id='public-two'")
+    .run();
+  await db.batch([
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-one','Legacy Tag',0)",
+    ),
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-two','Legacy Tag',0)",
+    ),
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('draft-one','PrivateOnly',0)",
+    ),
+  ]);
+  expect(
+    (
+      await listPublicPosts(db, 1, {
+        q: 'TITLE PUBLIC',
+        category: 'category',
+        tag: 'Legacy Tag',
+      })
+    ).posts.map(p => p.slug),
+  ).toEqual(['public-one']);
+  expect((await listPublicPosts(db, 1, { tag: 'legacy tag' })).posts).toEqual(
+    [],
+  );
+  expect((await listPublicPosts(db, 1, { category: 'missing' })).posts).toEqual(
+    [],
+  );
+  expect((await listPublicPosts(db, 1, { q: 'draft' })).posts).toEqual([]);
+});
+
+test('classification choices expose only public associations and deduplicate post-owned names', async () => {
+  await db
+    .prepare("INSERT INTO categories VALUES ('private','Secret category')")
+    .run();
+  await post('public-one');
+  await post('public-two');
+  await post('draft', 'draft');
+  await db
+    .prepare("UPDATE posts SET category_id='private' WHERE id='draft'")
+    .run();
+  await db.batch([
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-one','Same Name',0)",
+    ),
+    db.prepare(
+      "INSERT INTO post_owned_tags VALUES ('public-two','Same Name',0)",
+    ),
+    db.prepare("INSERT INTO post_owned_tags VALUES ('draft','Secret tag',0)"),
+  ]);
+  expect(await listPublicClassifications(db)).toEqual({
+    categories: [{ id: 'category', name: 'Notes' }],
+    tags: [{ name: 'Same Name' }],
+  });
+  await db
+    .prepare("UPDATE posts SET status='archived' WHERE status='published'")
+    .run();
+  expect(await listPublicClassifications(db)).toEqual({
+    categories: [],
+    tags: [],
+  });
 });

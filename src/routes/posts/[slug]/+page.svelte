@@ -1,5 +1,6 @@
 <script lang="ts">
   import ReaderLayout from '#lib/components/ReaderLayout.svelte';
+  import { resolve } from '$app/paths';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -13,10 +14,16 @@
       <time datetime={data.post.publishedAt}
         >{data.post.publishedAt.slice(0, 10)}</time
       >
-      · {data.post.category}
+      ·
+      <a
+        href={resolve(`/?category=${encodeURIComponent(data.post.categoryId)}`)}
+        >{data.post.category}</a
+      >
     </p>
     {#if data.post.tags.length}<ul aria-label="Tags">
-        {#each data.post.tags as tag (tag)}<li>{tag}</li>{/each}
+        {#each data.post.tags as tag (tag)}<li>
+            <a href={resolve(`/?tag=${encodeURIComponent(tag)}`)}>{tag}</a>
+          </li>{/each}
       </ul>{/if}
     <div class="content reader-prose">
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- Only the server-side sanitized Markdown pipeline supplies this HTML. -->
