@@ -155,3 +155,43 @@ test('sanitized GFM footnote navigation and return links resolve to actual IDs',
   for (const match of html.matchAll(/aria-describedby="([^"]+)"/g))
     for (const id of match[1].split(/\s+/)) expect(ids).toContain(id);
 });
+
+test('explicit HTML breaks retain paragraph spacing without enabling authored HTML or changing code and soft breaks', async () => {
+  const html = await renderMarkdown(
+    '안녕하세요.\n\n방문해주신 모든 분들을 환영합니다.\n\n<br />\n\n감사합니다.\n\n좋은 하루 되세요!',
+  );
+  expect(html).toContain('<p>안녕하세요.</p>');
+  expect(html).toContain('<p><br>');
+  expect(html).toContain('<p>좋은 하루 되세요!</p>');
+  for (const tag of ['<br>', '<br/>', '<br />'])
+    expect(await renderMarkdown('First' + tag + 'Second')).toContain(
+      'First<br>',
+    );
+  expect(await renderMarkdown('First\nSecond')).toBe('<p>First\nSecond</p>');
+  expect(await renderMarkdown('First  \nSecond')).toContain('First<br>');
+  const unsafe = await renderMarkdown(
+    'First<br onclick="alert(1)">Second\n\n<script>bad()</script>',
+  );
+  expect(unsafe).not.toMatch(/<br|onclick|<script|bad\(\)/);
+  const tick = String.fromCharCode(96);
+  const code = await renderMarkdown(
+    tick +
+      '<br />' +
+      tick +
+      '\n\n' +
+      tick.repeat(3) +
+      'html\n<br />\n' +
+      tick.repeat(3),
+  );
+  expect(code).not.toContain('<br>');
+  expect(code).toMatch(/&(?:lt|#x3C|#60);br/);
+});
+
+test('consecutive allowed HTML breaks in one raw block preserve every break', async () => {
+  expect(await renderMarkdown('<br />\n<br/>\n<br>')).toMatch(
+    /^<p><br>\n<br>\n<br>\n<\/p>$/,
+  );
+  expect(await renderMarkdown('<br />\n<br onclick="bad()">')).not.toContain(
+    '<br>',
+  );
+});

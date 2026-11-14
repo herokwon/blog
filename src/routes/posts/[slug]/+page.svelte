@@ -18,7 +18,7 @@
     {#if data.post.tags.length}<ul aria-label="Tags">
         {#each data.post.tags as tag (tag)}<li>{tag}</li>{/each}
       </ul>{/if}
-    <div class="content">
+    <div class="content reader-prose">
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- Only the server-side sanitized Markdown pipeline supplies this HTML. -->
       {@html data.post.html}
     </div>

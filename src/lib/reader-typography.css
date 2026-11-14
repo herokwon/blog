@@ -1,0 +1,13 @@
+.reader-prose,
+.markdown-editor .milkdown .ProseMirror {
+  font-family: system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.reader-prose p,
+.markdown-editor .milkdown .ProseMirror p {
+  margin-block: 0 1.25rem;
+  min-block-size: 1.7em;
+}
