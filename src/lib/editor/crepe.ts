@@ -10,7 +10,8 @@ import { toolbar } from '@milkdown/crepe/feature/toolbar';
 import { editorViewOptionsCtx } from '@milkdown/kit/core';
 import { uploadConfig } from '@milkdown/kit/plugin/upload';
 import { Plugin } from '@milkdown/kit/prose/state';
-import { $prose, insert, replaceAll } from '@milkdown/kit/utils';
+import { $prose, $remark, insert, replaceAll } from '@milkdown/kit/utils';
+import { explicitBreaks } from '../markdown-breaks.js';
 import '@milkdown/crepe/theme/common/style.css';
 import '@milkdown/crepe/theme/classic.css';
 
@@ -98,6 +99,7 @@ export async function mountMarkdownEditor(
       };
     }),
   );
+  editor.editor.use($remark('explicitBreaks', () => explicitBreaks));
   let initializing = true;
   let synchronizing = false;
   let baselineSource = source;

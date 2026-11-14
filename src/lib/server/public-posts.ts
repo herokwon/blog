@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
+import { explicitBreaks } from '../markdown-breaks.js';
 import { getDb } from './db/index.js';
 import { categories, posts, postTags } from './db/schema.js';
 
@@ -18,6 +19,7 @@ const metadata = {
 const renderer = unified()
   .use(remarkParse)
   .use(remarkGfm)
+  .use(explicitBreaks)
   // Raw authored HTML remains disabled. The bridge owns the generated ID
   // namespace; applying a second sanitizer prefix would break fragment/ARIA refs.
   .use(remarkRehype, {
