@@ -1,12 +1,28 @@
 <script lang="ts">
   import ReaderLayout from '#lib/components/ReaderLayout.svelte';
+  import { SITE_ORIGIN } from '#lib/site.js';
   import { resolve } from '$app/paths';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
+  const canonical = $derived(SITE_ORIGIN + '/posts/' + data.post.slug);
 </script>
 
-<svelte:head><title>{data.post.title} · Personal Blog</title></svelte:head>
+<svelte:head
+  ><title>{data.post.title} · Personal Blog</title>
+  <meta name="description" content={data.post.description} /><link
+    rel="canonical"
+    href={canonical}
+  />
+  <meta property="og:title" content={data.post.title} /><meta
+    property="og:description"
+    content={data.post.description}
+  />
+  <meta property="og:url" content={canonical} /><meta
+    property="og:type"
+    content="article"
+  />
+</svelte:head>
 <ReaderLayout>
   <article>
     <h1>{data.post.title}</h1>

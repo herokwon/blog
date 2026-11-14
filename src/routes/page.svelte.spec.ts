@@ -12,6 +12,7 @@ describe('homepage component', () => {
         posts: [],
         page: 1,
         hasNext: false,
+        production: false,
         filters: { q: '', category: '', tag: '' },
         categories: [],
         tags: [],

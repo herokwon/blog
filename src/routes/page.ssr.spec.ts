@@ -20,6 +20,7 @@ describe('homepage server rendering', () => {
           ],
           page: 1,
           hasNext: false,
+          production: false,
           filters: { q: '', category: '', tag: '' },
           categories: [],
           tags: [],

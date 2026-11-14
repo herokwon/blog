@@ -87,3 +87,11 @@ export async function listPublicClassifications(d1: D1Database) {
   ]);
   return { categories: publicCategories, tags: publicTags };
 }
+
+export async function listPublicSitemap(d1: D1Database) {
+  return getDb(d1)
+    .select({ slug: sql<string>`${posts.slug}`, updatedAt: posts.updatedAt })
+    .from(posts)
+    .where(published)
+    .orderBy(desc(posts.publishedAt), desc(posts.id));
+}

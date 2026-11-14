@@ -1,5 +1,6 @@
 <script lang="ts">
   import ReaderLayout from '#lib/components/ReaderLayout.svelte';
+  import { SITE_ORIGIN } from '#lib/site.js';
   import { resolve } from '$app/paths';
   import type { PageProps } from './$types';
 
@@ -10,9 +11,36 @@
       page: String(page),
     }).toString();
   }
+  const filtered = $derived(
+    Boolean(data.filters.q || data.filters.category || data.filters.tag),
+  );
+  const canonical = $derived(
+    SITE_ORIGIN + (!filtered && data.page > 1 ? '/?page=' + data.page : '/'),
+  );
+  const title = $derived(
+    filtered
+      ? 'Filtered posts · Personal Blog'
+      : data.page > 1
+        ? 'Page ' + data.page + ' · Personal Blog'
+        : 'Personal Blog',
+  );
 </script>
 
-<svelte:head><title>Personal Blog</title></svelte:head>
+<svelte:head>
+  <title>{title}</title><meta
+    name="description"
+    content="Read the latest published posts on Personal Blog."
+  />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:title" content={title} /><meta
+    property="og:description"
+    content="Read the latest published posts on Personal Blog."
+  />
+  <meta property="og:url" content={canonical} /><meta
+    property="og:type"
+    content="website"
+  />
+</svelte:head>
 <ReaderLayout>
   <h1>Personal Blog</h1>
   {#key data}

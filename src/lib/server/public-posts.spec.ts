@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
-import { renderMarkdown } from './markdown.js';
+import { renderMarkdown, renderPostMarkdown } from './markdown.js';
 import {
   getPublicPost,
   listPublicClassifications,
@@ -285,4 +285,25 @@ test('long-form headings use deterministic collision-free anchors separate from 
   expect(new Set(ids).size).toBe(ids.length);
   for (const match of html.matchAll(/href="#([^"]+)"/g))
     expect(ids).toContain(decodeURIComponent(match[1]));
+});
+
+test('metadata summaries use readable paragraphs, skip code/HTML and truncate by Unicode characters', async () => {
+  const tick = String.fromCharCode(96);
+  const body =
+    '# Heading\n\n' +
+    tick.repeat(3) +
+    'js\nsecret()\n' +
+    tick.repeat(3) +
+    '\n\nVisible **paragraph** ' +
+    tick +
+    'hiddenInlineCode' +
+    tick +
+    ' & more.\n\n<script>bad()</script>';
+  expect((await renderPostMarkdown(body)).description).toBe(
+    'Visible paragraph & more.',
+  );
+  const long = await renderPostMarkdown('😀'.repeat(161));
+  expect([...long.description]).toHaveLength(160);
+  expect(long.description).toBe('😀'.repeat(160));
+  expect((await renderPostMarkdown('# Heading only')).description).toBe('');
 });
