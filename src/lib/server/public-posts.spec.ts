@@ -1,10 +1,15 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
-import { renderMarkdown, renderPostMarkdown } from './markdown.js';
+import {
+  renderMarkdown,
+  renderPostMarkdown,
+  summarizeMarkdown,
+} from './markdown.js';
 import {
   getPublicPost,
   listPublicClassifications,
+  listPublicFeed,
   listPublicPosts,
 } from './public-posts';
 
@@ -198,9 +203,9 @@ test('consecutive allowed HTML breaks in one raw block preserve every break', as
   expect(await renderMarkdown('<br />\n<br/>\n<br>')).toMatch(
     /^<p><br>\n<br>\n<br>\n<\/p>$/,
   );
-  expect(await renderMarkdown('<br />\n<br onclick="bad()">')).not.toContain(
-    '<br>',
-  );
+  const mixed = await renderMarkdown('<br />\n<br onclick="bad()">');
+  expect(mixed).toContain('<br>');
+  expect(mixed).not.toMatch(/onclick|bad\(\)/);
 });
 
 test('public title/category/tag filters combine without leaking private records or duplicating shared names', async () => {
@@ -306,4 +311,58 @@ test('metadata summaries use readable paragraphs, skip code/HTML and truncate by
   expect([...long.description]).toHaveLength(160);
   expect(long.description).toBe('😀'.repeat(160));
   expect((await renderPostMarkdown('# Heading only')).description).toBe('');
+  expect(summarizeMarkdown('# Heading only', 'Fallback title')).toBe(
+    'Fallback title',
+  );
+});
+
+test('RSS query returns twenty public summaries in first-publication order and revokes archived posts', async () => {
+  for (let i = 0; i < 21; i++) await post('feed-' + String(i).padStart(2, '0'));
+  await post('private-feed', 'draft');
+  const rows = await listPublicFeed(db);
+  expect(rows).toHaveLength(20);
+  expect(rows[0].slug).toBe('feed-20');
+  expect(rows.at(-1)?.slug).toBe('feed-01');
+  expect(rows[0].body).toBe('Body');
+  expect(rows[0]).not.toHaveProperty('revision');
+  await db
+    .prepare("UPDATE posts SET status='archived' WHERE id='feed-20'")
+    .run();
+  expect((await listPublicFeed(db)).some(post => post.slug === 'feed-20')).toBe(
+    false,
+  );
+});
+
+test('unused footnote definitions cannot contribute invisible summaries or dead contents links', async () => {
+  const source =
+    'Visible paragraph.\n\n[^unused]: Unrendered note text.\n\n    ## Unrendered heading';
+  const rendered = await renderPostMarkdown(source);
+  expect(rendered.html).not.toContain('Unrendered');
+  expect(rendered.description).toBe('Visible paragraph.');
+  expect(rendered.toc).toEqual([]);
+  expect(summarizeMarkdown(source)).toBe('Visible paragraph.');
+  const visible = await renderPostMarkdown(
+    'Text[^one]\n\n[^one]: Visible note.\n\n    ## Note heading',
+  );
+  expect(visible.description).toBe('Text Visible note.');
+  expect(visible.toc.map(entry => entry.title)).toEqual(['Note heading']);
+  for (const entry of visible.toc)
+    expect(visible.html).toContain('id="' + entry.id + '"');
+});
+
+test('allowed standalone breaks preserve immediately following Markdown without enabling raw HTML', async () => {
+  const html = await renderMarkdown('<br />\nVisible **text**.');
+  expect(html).toContain('<br>');
+  expect(html).toContain('<strong>text</strong>');
+  expect(
+    await renderMarkdown('<script>\n<br />\nsecret()\n</script>'),
+  ).not.toMatch(/secret|<br>/);
+  const codeAfterBreak = await renderMarkdown(
+    '<br />\n    <script>literal()</script>',
+  );
+  expect(codeAfterBreak).toMatch(/<pre(?:\s|>)/);
+  expect(codeAfterBreak).toContain('literal()');
+  const safe = await renderMarkdown('<br />\n<img src="x" onerror="bad()">');
+  expect(safe).toContain('<br>');
+  expect(safe).not.toMatch(/<img|onerror/);
 });

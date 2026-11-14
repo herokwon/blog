@@ -1,4 +1,3 @@
-import type { Root } from 'mdast';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
@@ -9,12 +8,6 @@ import { SKIP, visit } from 'unist-util-visit';
 import { explicitBreaks } from '../markdown-breaks.js';
 
 export type TocEntry = { id: string; title: string; depth: number };
-type TextNode = {
-  type: string;
-  value?: string;
-  alt?: string | null;
-  children?: readonly TextNode[];
-};
 type HtmlNode =
   | {
       type: 'root' | 'element';
@@ -23,20 +16,29 @@ type HtmlNode =
       children: HtmlNode[];
     }
   | { type: 'text' | 'comment' | 'doctype'; value?: string };
-function text(node: TextNode, excludeCode = false): string {
-  if (
-    excludeCode &&
-    ['code', 'inlineCode', 'image', 'imageReference'].includes(node.type)
-  )
-    return '';
-  if (node.type === 'html') return '';
-  if (node.type === 'break') return ' ';
-  return (
-    node.value ??
-    node.alt ??
-    node.children?.map(child => text(child, excludeCode)).join('') ??
-    ''
-  );
+
+function htmlText(node: HtmlNode, excludeCode = false): string {
+  if (node.type === 'text') return node.value ?? '';
+  if (node.type !== 'element' && node.type !== 'root') return '';
+  if (node.type === 'element') {
+    if (node.tagName === 'br') return ' ';
+    if (
+      excludeCode &&
+      ['code', 'pre', 'img', 'sup'].includes(node.tagName ?? '')
+    )
+      return '';
+    if (
+      excludeCode &&
+      node.tagName === 'a' &&
+      Object.hasOwn(node.properties ?? {}, 'dataFootnoteBackref')
+    )
+      return '';
+    if (node.tagName === 'img')
+      return typeof node.properties?.alt === 'string'
+        ? node.properties.alt
+        : '';
+  }
+  return node.children.map(child => htmlText(child, excludeCode)).join('');
 }
 function accessibleBlocks() {
   return (tree: HtmlNode) => {
@@ -72,7 +74,6 @@ function accessibleBlocks() {
     });
   };
 }
-const parser = unified().use(remarkParse).use(remarkGfm).use(explicitBreaks);
 const attributes = { ...defaultSchema.attributes };
 for (const name of ['h2', 'h3', 'h4', 'h5', 'h6'])
   attributes[name] = [...(attributes[name] ?? []), ['tabIndex', -1]];
@@ -86,49 +87,59 @@ for (const name of ['pre', 'div'])
   ];
 attributes.th = [...(attributes.th ?? []), 'scope'];
 
-function describeTree(tree: Root) {
+// Derive reader metadata after the bridge has omitted unused footnotes and the
+// sanitizer has removed disallowed content. Reuse the same pipeline for RSS.
+const safeHtml = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(explicitBreaks)
+  .use(remarkRehype, {
+    allowDangerousHtml: false,
+    clobberPrefix: 'user-content-',
+  })
+  .use(accessibleBlocks)
+  .use(rehypeSanitize, { ...defaultSchema, attributes, clobberPrefix: '' });
+
+function describeHtml(tree: HtmlNode) {
   const paragraphs: string[] = [];
-  visit(tree, 'paragraph', node => {
-    paragraphs.push(text(node, true));
+  visit(tree, node => {
+    if (node.type === 'element' && node.tagName === 'p')
+      paragraphs.push(htmlText(node, true));
   });
   return [...paragraphs.join(' ').replace(/\s+/g, ' ').trim()]
     .slice(0, 160)
     .join('');
 }
 export function summarizeMarkdown(body: string, fallback = '') {
-  const processor = parser();
-  const tree = processor.parse(body);
-  processor.runSync(tree);
-  return describeTree(tree) || fallback;
+  return (
+    describeHtml(safeHtml.runSync(safeHtml.parse(body)) as HtmlNode) || fallback
+  );
 }
-
 export async function renderPostMarkdown(body: string) {
   const toc: TocEntry[] = [];
   let description = '';
-  const file = await parser()
-    .use(() => (tree: Root) => {
-      description = describeTree(tree);
-      visit(tree, 'heading', node => {
-        if (node.depth < 2) return;
+  const file = await safeHtml()
+    .use(() => (tree: HtmlNode) => {
+      description = describeHtml(tree);
+      visit(tree, node => {
+        if (node.type !== 'element') return;
+        const tag = node.tagName;
+        if (
+          !tag ||
+          !/^h[2-6]$/.test(tag) ||
+          node.properties?.id === 'footnote-label'
+        )
+          return;
         const entry = {
           id: 'post-heading-' + (toc.length + 1),
-          title: text(node).replace(/\s+/g, ' ').trim(),
-          depth: node.depth,
+          title: htmlText(node).replace(/\s+/g, ' ').trim(),
+          depth: Number(tag.slice(1)),
         };
-        node.data = {
-          ...node.data,
-          hProperties: { id: entry.id, tabIndex: -1 },
-        };
+        // These IDs and focus values are generated literals, never authored HTML.
+        node.properties = { ...node.properties, id: entry.id, tabIndex: -1 };
         toc.push(entry);
       });
     })
-    // Raw HTML is disabled. The bridge owns the existing footnote ID namespace.
-    .use(remarkRehype, {
-      allowDangerousHtml: false,
-      clobberPrefix: 'user-content-',
-    })
-    .use(accessibleBlocks)
-    .use(rehypeSanitize, { ...defaultSchema, attributes, clobberPrefix: '' })
     .use(rehypeStringify)
     .process(body);
   return { html: String(file), toc, description };
