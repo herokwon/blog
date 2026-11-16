@@ -4,9 +4,21 @@
   "compatibility_date": "2026-11-16",
   "compatibility_flags": ["nodejs_als"],
   "main": ".svelte-kit/cloudflare/_worker.js",
-  "assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".svelte-kit/cloudflare"
+  },
   "workers_dev": true,
   "preview_urls": true,
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "persist": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    },
+    "traces": { "enabled": true, "persist": true, "head_sampling_rate": 0.05 }
+  },
   "env": {
     "preview": {
       "name": "blog-preview",
