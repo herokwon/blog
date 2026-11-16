@@ -1,54 +1,74 @@
-# sv
+# Personal blog
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A SvelteKit application targeting Cloudflare Workers. The initial architecture
+and version boundaries are recorded in [ADR 0001](docs/adr/0001-initial-blog-architecture.md).
 
-## Creating a project
+## Local setup
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+Use Node.js 26.x and pnpm 12.x. Minor and patch versions may differ.
 
 ```sh
-# recreate this project
-pnpm dlx sv@1.4.0 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" playwright="demo:yes" sveltekit-adapter="adapter:cloudflare+cfTarget:workers" drizzle="database:d1" --install pnpm .
+pnpm install --frozen-lockfile
+pnpm run test:install
+pnpm run dev
 ```
 
-## Adding features
+Installation generates Worker types and synchronizes SvelteKit. The development
+server uses the `preview` configuration with locally simulated D1 and R2 storage.
+It does not connect to the deployed preview resources. No Cloudflare credentials
+or environment variables are required for the default local workflow.
 
-Add features to your project with `sv add`:
+`worker-configuration.d.ts` is generated and ignored by Git. Do not edit it.
+`dev`, `build`, and type-check commands regenerate it automatically. Use `pnpm run
+gen` after editing bindings when no such command is running. Main-module inference
+is disabled so generated types do not pull built JavaScript into type checking.
+
+## Development commands
+
+| Command                  | Purpose                                                |
+| ------------------------ | ------------------------------------------------------ |
+| `pnpm run format`        | Format source and configuration files                  |
+| `pnpm run format:check`  | Check formatting without modifying files               |
+| `pnpm run lint`          | Run ESLint without modifying files                     |
+| `pnpm run check`         | Generate types, synchronize SvelteKit, and check types |
+| `pnpm run check:watch`   | Run type checking in watch mode                        |
+| `pnpm run test:unit`     | Run Node.js and Chromium component tests once          |
+| `pnpm run test:watch`    | Watch Vitest tests                                     |
+| `pnpm run test:coverage` | Run Vitest with V8 coverage                            |
+| `pnpm run test:e2e`      | Run Playwright against a local build                   |
+| `pnpm test`              | Run Vitest, then Playwright if Vitest succeeds         |
+| `pnpm run build`         | Build for Workers                                      |
+| `pnpm run preview`       | Serve the build locally on port 4173                   |
+
+Coverage includes untested source files and writes text, HTML, and JSON summary
+reports under `coverage/`; it does not enforce a percentage threshold or include
+Playwright execution. GitHub Actions enables Vitest's built-in test summary and
+Playwright JSON output at `test-results/e2e-results.json`. Coverage/E2E summary
+aggregation and artifact uploads belong to the separate CI/CD work.
+
+Playwright reuses a running local server at port 4173 when available, so that
+server must serve the current build. CI starts a fresh server and retries a
+failed test once. Trace collection occurs on the first retry; screenshots and
+videos are retained on failure. Browser installation is a separate step and
+should be repeated after Playwright updates.
+
+## Database changes
+
+Drizzle generates SQL and metadata in `drizzle/`; commit both when migrations are
+introduced. Wrangler applies those migrations and records each environment's
+history in `d1_migrations`.
 
 ```sh
-npx sv add
+pnpm run db:generate
+pnpm run db:migrate
 ```
 
-For example, to add Tailwind CSS:
+The default migration command targets local preview storage. Remote commands are
+`db:migrate:preview` and `db:migrate:production`. They require Cloudflare
+authentication and the real database configuration from the infrastructure work.
+Do not use Drizzle push or a second migration runner for these databases.
 
-```sh
-npx sv add tailwindcss
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
+Cloudflare provisioning, Access, domains, deployment policies, repository settings,
+and CI/CD are separate work. The configured resource names are declarations;
+database IDs are intentionally absent until provisioning. Package version changes
+will be discussed separately.
