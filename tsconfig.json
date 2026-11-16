@@ -1,15 +1,15 @@
 {
-	"extends": "$app/tsconfig",
-	"compilerOptions": {
-		"strict": true,
-		"types": ["$app/types", "node", "./worker-configuration.d.ts"]
-	},
-	"include": [
-		"src",
-		"vite.config.ts",
-		"prettier.config.js",
-		"eslint.config.js",
-		"playwright.config.ts",
-		"drizzle.config.ts"
-	]
+  "extends": "$app/tsconfig",
+  "compilerOptions": {
+    "strict": true,
+    "types": ["$app/types", "node", "./worker-configuration.d.ts"]
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "prettier.config.ts",
+    "eslint.config.js",
+    "playwright.config.ts",
+    "drizzle.config.ts"
+  ]
 }
