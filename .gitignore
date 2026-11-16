@@ -9,6 +9,7 @@ node_modules
 /build
 /worker-configuration.d.ts
 /coverage/
+/playwright-report/
 
 # OS
 .DS_Store
