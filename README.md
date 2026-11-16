@@ -68,6 +68,13 @@ The default migration command targets local preview storage. Remote commands are
 authentication and the real database configuration from the infrastructure work.
 Do not use Drizzle push or a second migration runner for these databases.
 
+## GitHub templates
+
+Issue templates provide bug reports and feature requests. Select `task.md` or
+`release.md` explicitly from `.github/PULL_REQUEST_TEMPLATE/` when creating a PR.
+Keep project fields, milestones, and Development issue links in GitHub metadata.
+The repository's linked-issue auto-close setting must preserve manual closure.
+
 Cloudflare provisioning, Access, domains, deployment policies, repository settings,
 and CI/CD are separate work. The configured resource names are declarations;
 database IDs are intentionally absent until provisioning. Package version changes
