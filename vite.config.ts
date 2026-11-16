@@ -16,7 +16,20 @@ export default defineConfig({
     }),
   ],
   test: {
+    globals: true,
     expect: { requireAssertions: true },
+    reporters:
+      process.env.GITHUB_ACTIONS === 'true'
+        ? ['default', 'github-actions']
+        : ['default'],
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: './coverage',
+      reporter: ['text', 'html', 'json-summary'],
+      include: ['src/**/*.{ts,js,svelte}'],
+      exclude: ['**/*.{test,spec,e2e}.{ts,js}', '**/*.d.ts'],
+      reportOnFailure: true,
+    },
     projects: [
       {
         extends: './vite.config.ts',
