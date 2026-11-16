@@ -28,10 +28,10 @@
     "test:e2e": "playwright test",
     "test:install": "playwright install chromium",
     "gen": "wrangler types --env preview --include-main-module=false",
-    "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:migrate": "wrangler d1 migrations apply DB --env preview --local",
+    "db:migrate:preview": "wrangler d1 migrations apply DB --env preview --remote",
+    "db:migrate:production": "wrangler d1 migrations apply DB --env production --remote"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

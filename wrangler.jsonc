@@ -11,7 +11,13 @@
     "preview": {
       "name": "blog-preview",
       "d1_databases": [
-        { "binding": "DB", "database_name": "blog-preview-db", "remote": false }
+        {
+          "binding": "DB",
+          "database_name": "blog-preview-db",
+          "migrations_dir": "./drizzle",
+          "migrations_table": "d1_migrations",
+          "remote": false
+        }
       ],
       "r2_buckets": [
         {
@@ -24,7 +30,13 @@
     "production": {
       "name": "blog",
       "d1_databases": [
-        { "binding": "DB", "database_name": "blog-db", "remote": false }
+        {
+          "binding": "DB",
+          "database_name": "blog-db",
+          "migrations_dir": "./drizzle",
+          "migrations_table": "d1_migrations",
+          "remote": false
+        }
       ],
       "r2_buckets": [
         { "binding": "BUCKET", "bucket_name": "blog-bucket", "remote": false }
