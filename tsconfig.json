@@ -8,7 +8,7 @@
     "src",
     "vite.config.ts",
     "prettier.config.ts",
-    "eslint.config.js",
+    "eslint.config.ts",
     "playwright.config.ts",
     "drizzle.config.ts"
   ]
