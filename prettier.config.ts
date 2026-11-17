@@ -1,4 +1,5 @@
 import type { PrettierConfig } from '@ianvs/prettier-plugin-sort-imports';
+import { version as typescriptVersion } from 'typescript';
 
 const config: PrettierConfig = {
   useTabs: false,
@@ -10,7 +11,7 @@ const config: PrettierConfig = {
   semi: true,
   endOfLine: 'lf',
   importOrderCaseSensitive: false,
-  importOrderTypeScriptVersion: '6.0.3',
+  importOrderTypeScriptVersion: typescriptVersion,
   importOrder: [
     '^svelte(?:/.*)?$',
     '',

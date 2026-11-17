@@ -9,12 +9,5 @@
       "vitest/globals"
     ]
   },
-  "include": [
-    "src",
-    "vite.config.ts",
-    "prettier.config.ts",
-    "eslint.config.ts",
-    "playwright.config.ts",
-    "drizzle.config.ts"
-  ]
+  "include": ["src", "*.config.ts"]
 }
