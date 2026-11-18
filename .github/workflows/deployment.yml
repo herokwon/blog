@@ -67,6 +67,7 @@ jobs:
         env:
           ACCESS_ISSUER: ${{ vars.ACCESS_ISSUER }}
           ACCESS_AUDIENCE: ${{ vars.ACCESS_AUDIENCE }}
+          ACCESS_PROBE_AUDIENCE: ${{ vars.ACCESS_PROBE_AUDIENCE }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
