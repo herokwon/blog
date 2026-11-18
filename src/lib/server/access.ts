@@ -3,6 +3,7 @@ import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 export interface AccessConfig {
   ACCESS_ISSUER?: string;
   ACCESS_AUDIENCE?: string;
+  ACCESS_PROBE_AUDIENCE?: string;
   ADMIN_EMAIL?: string;
   CI_ACCESS_CLIENT_ID?: string;
 }
@@ -17,11 +18,17 @@ export async function authorize(
   allowService: boolean,
   resolveKey?: JWTVerifyGetKey,
 ): Promise<Identity | null> {
-  const { ACCESS_ISSUER: issuer, ACCESS_AUDIENCE: audience } = config;
+  const {
+    ACCESS_ISSUER: issuer,
+    ACCESS_AUDIENCE: adminAudience,
+    ACCESS_PROBE_AUDIENCE: probeAudience,
+  } = config;
+  const audience = allowService ? probeAudience : adminAudience;
   if (
     !issuer ||
     !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(issuer) ||
     !audience ||
+    (allowService && audience === adminAudience) ||
     !config.ADMIN_EMAIL
   )
     return null;

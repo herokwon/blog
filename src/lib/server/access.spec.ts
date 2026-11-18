@@ -11,6 +11,7 @@ const resolveKey = createLocalJWKSet({
 const config = {
   ACCESS_ISSUER: 'https://test.cloudflareaccess.com',
   ACCESS_AUDIENCE: 'expected-audience',
+  ACCESS_PROBE_AUDIENCE: 'probe-audience',
   ADMIN_EMAIL: 'owner@example.com',
   CI_ACCESS_CLIENT_ID: 'ci-client.access',
 };
@@ -51,14 +52,37 @@ describe('Access authorization', () => {
     ).toBeNull();
   });
   it('allows the configured service only for deployment verification', async () => {
-    const req = await request({ common_name: 'ci-client.access', sub: '' });
+    const claims = { common_name: config.CI_ACCESS_CLIENT_ID, sub: '' };
+    const req = await request(claims, config.ACCESS_PROBE_AUDIENCE);
     expect(await authorize(req, config, true, resolveKey)).toEqual({
       kind: 'service',
     });
     expect(await authorize(req, config, false, resolveKey)).toBeNull();
     expect(
+      await authorize(await request(claims), config, true, resolveKey),
+    ).toBeNull();
+    expect(
       await authorize(
-        await request({ common_name: 'other.access', sub: '' }),
+        req,
+        { ...config, ACCESS_PROBE_AUDIENCE: undefined },
+        true,
+        resolveKey,
+      ),
+    ).toBeNull();
+    expect(
+      await authorize(
+        await request(claims),
+        { ...config, ACCESS_PROBE_AUDIENCE: config.ACCESS_AUDIENCE },
+        true,
+        resolveKey,
+      ),
+    ).toBeNull();
+    expect(
+      await authorize(
+        await request(
+          { common_name: 'other.access', sub: '' },
+          config.ACCESS_PROBE_AUDIENCE,
+        ),
         config,
         true,
         resolveKey,
