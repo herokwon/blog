@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "pnpm run gen && vite dev",
     "build": "pnpm run gen && vite build",
-    "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --env preview --local --port 4173",
+    "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --env preview --local --infer-origin-from-routes=false --port 4173",
     "prepare": "pnpm run gen && svelte-kit sync",
     "check": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -61,5 +61,8 @@
     "vitest": "^4.1.8",
     "vitest-browser-svelte": "^2.1.1",
     "wrangler": "^4.97.0"
+  },
+  "dependencies": {
+    "jose": "6.2.17"
   }
 }
