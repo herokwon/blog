@@ -27,3 +27,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Playwright
 test-results
+
+# Superpowers local artifacts
+/docs/superpowers/
+/.superpowers/
+/.worktrees/
+/worktrees/
