@@ -16,8 +16,10 @@ blog-preview.herokwon.dev and blog.herokwon.dev as Custom Domains; disable
 workers.dev and version URLs. Protect the complete preview host and production
 /admin paths with Access. Validate signed Access JWTs at the server. Human
 administrators require the exact configured email; service identities may only
-call bounded deployment checks. D1/R2 probes read only; prepare a fixed R2 fixture
-during provisioning. Never bypass authentication for local development.
+call bounded deployment checks. Use a separate Access application and audience
+for the deployment-check path in each environment so service credentials do not
+pass Access on administrator routes. D1/R2 probes read only; prepare a fixed R2
+fixture during provisioning. Never bypass authentication for local development.
 
 Use environment-scoped Cloudflare deployment and Access service credentials.
 CI needs no remote credentials. Separate read-only CI/security checks from
