@@ -36,7 +36,9 @@ from a separate repository automation App for version bump PR creation. The
 agent, not a merge workflow, checks current CI/Codex review and squash-merges
 bump PRs. Release branch names determine package versions; never downgrade.
 
-Deploy only merged PRs targeting release/* or main, using their merge SHA.
+Trigger deployments from pushes to release/* or main so GitHub Environment
+protection checks the branch ref. Deploy only when the push SHA matches a merged
+PR's merge SHA on that same target branch.
 Required PR checks and up-to-date branches gate merging; post-merge push CI is
 informational to deployment. The deploy job builds, migrates, publishes, and
 verifies the Worker under one Environment. After deployment, a separate job

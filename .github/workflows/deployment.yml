@@ -1,14 +1,13 @@
-name: Deployment
+name: 🚀 Deployment
 on:
-  pull_request:
+  push:
     branches: [main, 'release/*']
-    types: [closed]
 permissions:
   contents: read
   pull-requests: read
 jobs:
   prepare:
-    if: github.event.pull_request.merged == true
+    if: github.event.deleted == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -16,10 +15,11 @@ jobs:
       url: ${{ steps.prepare.outputs.url }}
       sha: ${{ steps.prepare.outputs.sha }}
       version: ${{ steps.prepare.outputs.version }}
+      pr_number: ${{ steps.prepare.outputs.pr_number }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: prepare
@@ -147,11 +147,12 @@ jobs:
           DEPLOY_ENVIRONMENT: ${{ needs.prepare.outputs.environment }}
           DEPLOY_URL: ${{ needs.prepare.outputs.url }}
           DEPLOY_SHA: ${{ needs.prepare.outputs.sha }}
+          DEPLOY_PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
           VERIFIED: ${{ needs.deploy.outputs.deployed }}
           STALE: ${{ needs.deploy.outputs.stale }}
         with:
           script: |
-            const { DEPLOY_ENVIRONMENT, DEPLOY_URL, DEPLOY_SHA, VERIFIED, STALE } = process.env;
+            const { DEPLOY_ENVIRONMENT, DEPLOY_URL, DEPLOY_SHA, DEPLOY_PR_NUMBER, VERIFIED, STALE } = process.env;
             const result = STALE === 'true'
               ? 'Skipped — superseded deployment'
               : VERIFIED === 'true' ? 'Succeeded — smoke checks passed' : 'Failed — see workflow logs';
@@ -169,7 +170,7 @@ jobs:
               `| Target URL | ${DEPLOY_URL} |`,
               `| Workflow | [View run](${runUrl}) |`,
             ].join('\n');
-            const target = { ...context.repo, issue_number: context.payload.pull_request.number };
+            const target = { ...context.repo, issue_number: Number(DEPLOY_PR_NUMBER) };
             const comments = await github.paginate(github.rest.issues.listComments, { ...target, per_page: 100 });
             const existing = comments.find(comment =>
               comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(marker)

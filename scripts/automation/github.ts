@@ -335,9 +335,37 @@ export async function scheduledTargets({ github, context, core }: Action) {
   );
 }
 
-export async function prepareDeployment({ github, context, core }: Action) {
+export async function prepareDeployment({
+  github,
+  context,
+  core,
+}: Action & { context: { ref: string; sha: string } }) {
+  if (!context.ref.startsWith('refs/heads/')) return;
+  const branch = context.ref.slice('refs/heads/'.length);
+  if (branch !== 'main') releaseVersion(branch);
+  const pulls = await github.paginate(github.rest.pulls.list, {
+    ...context.repo,
+    state: 'closed',
+    base: branch,
+    per_page: 100,
+  });
+  const matches = pulls.filter(
+    pr =>
+      pr.merged_at &&
+      pr.base.ref === branch &&
+      pr.merge_commit_sha === context.sha,
+  );
+  if (!matches.length) {
+    core.info(
+      `No merged PR found for ${branch} at ${context.sha}; skipping deployment`,
+    );
+    return;
+  }
+  if (matches.length !== 1)
+    throw new Error('Multiple merged PRs match the push');
+  const [pr] = matches;
   const target = deploymentTarget(
-    context.payload.pull_request,
+    { ...pr, merged: true },
     context.payload.repository.full_name,
   );
   if (!target) return;
@@ -358,6 +386,7 @@ export async function prepareDeployment({ github, context, core }: Action) {
     }
   }
   for (const [key, value] of Object.entries(target)) core.setOutput(key, value);
+  core.setOutput('pr_number', String(pr.number));
 }
 
 export async function staleDeployment({ github, context, core }: Action) {

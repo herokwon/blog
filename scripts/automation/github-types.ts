@@ -30,6 +30,11 @@ type EventPull = DeploymentPR & {
   user: { login: string };
   html_url: string;
 };
+type ListedPull = Omit<DeploymentPR, 'merged'> & {
+  number: number;
+  state: string;
+  merged_at: string | null;
+};
 type Deployment = Sha & { id: number };
 type DeploymentStatus = { state: string; description?: string };
 type Content =
@@ -63,8 +68,8 @@ export type GitHub = {
     pulls: {
       get: Endpoint<{ pull_number: number }, Pull>;
       list: List<
-        { state: 'all'; head: string; base: string },
-        { state: string }
+        { state: 'all' | 'closed'; head?: string; base: string },
+        ListedPull
       >;
       create: Endpoint<
         { head: string; base: string; title: string; body: string },

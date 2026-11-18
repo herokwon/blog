@@ -123,6 +123,8 @@ function fixture(version = '0.0.1') {
   };
   const context = {
     repo,
+    ref: 'refs/heads/main',
+    sha,
     payload: { pull_request: pr, repository: { full_name: 'owner/blog' } },
   };
   const outputs: Record<string, string> = {};
@@ -149,6 +151,9 @@ function fixture(version = '0.0.1') {
     },
   });
   github.rest.pulls.get = async () => ({ data: pr });
+  github.rest.pulls.list = async () => ({
+    data: [{ ...pr, state: 'closed', merged_at: '2026-11-18T14:39:39Z' }],
+  });
   github.rest.git.getRef = async () => {
     throw Object.assign(new Error('Not found'), { status: 404 });
   };
@@ -172,6 +177,44 @@ test('version gate rejects mismatch and deployment preflight rejects conflicting
   await assert.rejects(prepareDeployment(ready), /conflicts/);
 });
 
+test('a release branch push deploys the exact merged PR and retains its number for reporting', async () => {
+  const input = fixture('0.1.0');
+  const branch = 'release/0.1.0';
+  const base = { ...input.pr.base, ref: branch };
+  const head = { ...input.pr.head, ref: 'codex/work' };
+  const candidate = { ...input.pr, base, head, state: 'closed' };
+  const mergedAt = '2026-11-18T14:39:39Z';
+  input.context.ref = `refs/heads/${branch}`;
+  input.github.rest.pulls.list = async params => {
+    assert.equal(params.state, 'closed');
+    assert.equal(params.base, branch);
+    return {
+      data: [
+        { ...candidate, number: 2, merged_at: null },
+        {
+          ...candidate,
+          number: 3,
+          merge_commit_sha: 'b'.repeat(40),
+          merged_at: mergedAt,
+        },
+        { ...candidate, number: 8, merged_at: mergedAt },
+      ],
+    };
+  };
+  await prepareDeployment(input);
+  assert.equal(input.outputs.environment, 'preview');
+  assert.equal(input.outputs.sha, sha);
+  assert.equal(input.outputs.pr_number, '8');
+});
+
+test('a push without a merged PR targeting the pushed branch does not deploy', async () => {
+  const input = fixture('0.1.0');
+  input.context.ref = 'refs/heads/release/0.1.0';
+  input.github.rest.repos.getContent = unexpectedCall;
+  await prepareDeployment(input);
+  assert.deepEqual(input.outputs, {});
+});
+
 test('duplicate version preparation reuses tracking issue and open bump PR without writing Git refs', async () => {
   const input = fixture();
   const tracking = {
@@ -183,7 +226,9 @@ test('duplicate version preparation reuses tracking issue and open bump PR witho
     data: [{ number: 2, title: '0.1.0' }],
   });
   input.github.rest.issues.listForRepo = async () => ({ data: [tracking] });
-  input.github.rest.pulls.list = async () => ({ data: [{ state: 'open' }] });
+  input.github.rest.pulls.list = async () => ({
+    data: [{ ...input.pr, state: 'open', merged_at: null }],
+  });
   input.github.rest.issues.update = async args => {
     assert.equal(args.issue_number, 7);
     assert.equal(args.milestone, 2);
