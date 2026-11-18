@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "baseBranchPatterns": ["/^release\\/.+$/"],
+  "enabledManagers": ["npm", "github-actions"],
+  "timezone": "Asia/Seoul",
+  "schedule": ["before 9am on monday"],
+  "automerge": false,
+  "semanticCommits": "enabled",
+  "packageRules": [
+    { "matchUpdateTypes": ["major"], "dependencyDashboardApproval": true },
+    {
+      "matchPackageNames": ["svelte", "@sveltejs/**", "vite"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "SvelteKit and Vite"
+    },
+    {
+      "matchPackageNames": ["vitest", "@vitest/**", "vitest-browser-svelte"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Vitest"
+    },
+    {
+      "matchPackageNames": ["playwright", "@playwright/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Playwright"
+    },
+    { "matchManagers": ["github-actions"], "pinDigests": true }
+  ]
+}
