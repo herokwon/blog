@@ -1,0 +1,208 @@
+name: Deployment
+on:
+  pull_request:
+    branches: [main, 'release/*']
+    types: [closed]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  prepare:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      environment: ${{ steps.prepare.outputs.environment }}
+      url: ${{ steps.prepare.outputs.url }}
+      sha: ${{ steps.prepare.outputs.sha }}
+      version: ${{ steps.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        id: prepare
+        with:
+          script: |
+            const { prepareDeployment } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            await prepareDeployment({ github, context, core });
+
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: ${{ needs.prepare.outputs.environment }}
+      url: ${{ needs.prepare.outputs.url }}
+    concurrency:
+      group: deployment-${{ needs.prepare.outputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      deployments: write
+    outputs:
+      deployed: ${{ steps.complete.outputs.deployed }}
+      stale: ${{ steps.stale.outputs.skip }}
+    env:
+      DEPLOY_SHA: ${{ needs.prepare.outputs.sha }}
+      DEPLOY_ENVIRONMENT: ${{ needs.prepare.outputs.environment }}
+      DEPLOY_URL: ${{ needs.prepare.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        id: stale
+        with:
+          script: |
+            const { staleDeployment } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            await staleDeployment({ github, context, core });
+      - uses: ./.github/actions/setup
+        if: steps.stale.outputs.skip != 'true'
+      - name: Check deployment configuration
+        if: steps.stale.outputs.skip != 'true'
+        env:
+          ACCESS_ISSUER: ${{ vars.ACCESS_ISSUER }}
+          ACCESS_AUDIENCE: ${{ vars.ACCESS_AUDIENCE }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/automation/deployment-config.ts
+      - name: Build before modifying remote storage
+        if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published != 'true'
+        run: pnpm run build
+      - name: Record publication intent before remote changes
+        if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { markIntent } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            await markIntent({ github, context, core });
+      - name: Apply committed migrations
+        if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published != 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if find drizzle -maxdepth 1 -name '*.sql' -print -quit 2>/dev/null | grep -q .; then
+            pnpm exec wrangler d1 migrations apply DB --env "$DEPLOY_ENVIRONMENT" --remote
+          else
+            echo 'No committed SQL migrations; skipping migration step.'
+          fi
+      - name: Publish Worker
+        if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published != 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy --env "$DEPLOY_ENVIRONMENT" --keep-vars
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published != 'true'
+        with:
+          script: |
+            const { markPublished } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            await markPublished({ github, context, core });
+      - name: Verify deployment
+        if: steps.stale.outputs.skip != 'true'
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: node scripts/automation/smoke.ts
+      - name: Record verified deployment
+        if: steps.stale.outputs.skip != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { markPublished } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            await markPublished({ github, context, core });
+      - name: Complete deployment
+        if: steps.stale.outputs.skip != 'true'
+        id: complete
+        run: echo 'deployed=true' >> "$GITHUB_OUTPUT"
+      - name: Record deployment result
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          SKIPPED: ${{ steps.stale.outputs.skip }}
+        run: |
+          printf '## Deployment\nEnvironment: %s\nSHA: %s\nResult: %s\nStale skip: %s\n' "$DEPLOY_ENVIRONMENT" "$DEPLOY_SHA" "$JOB_STATUS" "$SKIPPED" >> "$GITHUB_STEP_SUMMARY"
+
+  comment:
+    needs: [prepare, deploy]
+    if: >-
+      !cancelled() && needs.prepare.outputs.sha != '' &&
+      (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Report Workers deployment on the PR
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DEPLOY_ENVIRONMENT: ${{ needs.prepare.outputs.environment }}
+          DEPLOY_URL: ${{ needs.prepare.outputs.url }}
+          DEPLOY_SHA: ${{ needs.prepare.outputs.sha }}
+          VERIFIED: ${{ needs.deploy.outputs.deployed }}
+          STALE: ${{ needs.deploy.outputs.stale }}
+        with:
+          script: |
+            const { DEPLOY_ENVIRONMENT, DEPLOY_URL, DEPLOY_SHA, VERIFIED, STALE } = process.env;
+            const result = STALE === 'true'
+              ? 'Skipped — superseded deployment'
+              : VERIFIED === 'true' ? 'Succeeded — smoke checks passed' : 'Failed — see workflow logs';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const marker = `<!-- workers-deployment:${context.runId} -->`;
+            const body = [
+              marker,
+              '### Cloudflare Workers deployment',
+              '',
+              '| Field | Value |',
+              '| --- | --- |',
+              `| Environment | ${DEPLOY_ENVIRONMENT} |`,
+              `| Result | ${result} |`,
+              `| Commit | \`${DEPLOY_SHA}\` |`,
+              `| Target URL | ${DEPLOY_URL} |`,
+              `| Workflow | [View run](${runUrl}) |`,
+            ].join('\n');
+            const target = { ...context.repo, issue_number: context.payload.pull_request.number };
+            const comments = await github.paginate(github.rest.issues.listComments, { ...target, per_page: 100 });
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...target, body });
+            }
+
+  release:
+    needs: [prepare, deploy]
+    if: needs.prepare.outputs.environment == 'production' && needs.deploy.outputs.deployed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      DEPLOY_SHA: ${{ needs.prepare.outputs.sha }}
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { publishRelease } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            await publishRelease({ github, context, core });
+      - name: Record publication result
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          printf '## Release publication\nVersion: %s\nDeployed SHA: %s\nResult: %s\nPublication errors require manual recovery; deployment is not rolled back.\n' "$RELEASE_VERSION" "$DEPLOY_SHA" "$JOB_STATUS" >> "$GITHUB_STEP_SUMMARY"

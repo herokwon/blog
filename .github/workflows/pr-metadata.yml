@@ -1,0 +1,50 @@
+name: PR metadata
+on:
+  pull_request_target:
+    branches: [main, 'release/*']
+    types:
+      [
+        opened,
+        reopened,
+        synchronize,
+        ready_for_review,
+        milestoned,
+        demilestoned,
+      ]
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+concurrency:
+  group: metadata-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Only trusted default-branch automation; never checkout or install PR code here.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Resolve automation App identity
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.event.pull_request.head.ref, 'codex/bump-')
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          client-id: ${{ vars.AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-metadata: read
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          AUTOMATION_APP_SLUG: ${{ steps.app.outputs.app-slug }}
+        with:
+          script: |
+            const { metadata, checkMetadata } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            await metadata({ github, context, core, appSlug: process.env.AUTOMATION_APP_SLUG });
+            await checkMetadata({ github, context, core });
