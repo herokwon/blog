@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "ghsa": "GHSA-fc5q-39xc-vjpf",
+    "reason": "Owner-approved temporary exception for PR #8. picomatch 4.0.7 is reachable through development and CI tooling only in the current lockfile, with no production dependency path. No patched version is available. Update the lockfile and remove this exception when a patch is published.",
+    "reviewBy": "2026-11-25"
+  }
+]
