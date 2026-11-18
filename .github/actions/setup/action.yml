@@ -1,0 +1,23 @@
+name: Set up project
+description: Install the supported runtime and frozen dependencies
+inputs:
+  install:
+    description: Whether to install dependencies
+    default: 'true'
+  cache:
+    description: Whether to cache the pnpm store
+    default: 'true'
+  working-directory:
+    description: Project directory relative to the workspace
+    default: '.'
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+      with:
+        version: '12.x'
+        runtime: node@26
+        cache: ${{ inputs.cache }}
+        working-directory: ${{ inputs.working-directory }}
+        require-lockfile: 'true'
+        install: ${{ inputs.install }}
