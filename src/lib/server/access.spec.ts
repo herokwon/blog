@@ -11,9 +11,7 @@ const resolveKey = createLocalJWKSet({
 const config = {
   ACCESS_ISSUER: 'https://test.cloudflareaccess.com',
   ACCESS_AUDIENCE: 'expected-audience',
-  ACCESS_PROBE_AUDIENCE: 'probe-audience',
   ADMIN_EMAIL: 'owner@example.com',
-  CI_ACCESS_CLIENT_ID: 'ci-client.access',
 };
 async function request(
   claims: Record<string, unknown>,
@@ -38,7 +36,6 @@ describe('Access authorization', () => {
       await authorize(
         await request({ email: 'owner@example.com', sub: 'human' }),
         config,
-        false,
         resolveKey,
       ),
     ).toEqual({ kind: 'admin', email: 'owner@example.com' });
@@ -46,45 +43,6 @@ describe('Access authorization', () => {
       await authorize(
         await request({ email: 'other@example.com', sub: 'human' }),
         config,
-        false,
-        resolveKey,
-      ),
-    ).toBeNull();
-  });
-  it('allows the configured service only for deployment verification', async () => {
-    const claims = { common_name: config.CI_ACCESS_CLIENT_ID, sub: '' };
-    const req = await request(claims, config.ACCESS_PROBE_AUDIENCE);
-    expect(await authorize(req, config, true, resolveKey)).toEqual({
-      kind: 'service',
-    });
-    expect(await authorize(req, config, false, resolveKey)).toBeNull();
-    expect(
-      await authorize(await request(claims), config, true, resolveKey),
-    ).toBeNull();
-    expect(
-      await authorize(
-        req,
-        { ...config, ACCESS_PROBE_AUDIENCE: undefined },
-        true,
-        resolveKey,
-      ),
-    ).toBeNull();
-    expect(
-      await authorize(
-        await request(claims),
-        { ...config, ACCESS_PROBE_AUDIENCE: config.ACCESS_AUDIENCE },
-        true,
-        resolveKey,
-      ),
-    ).toBeNull();
-    expect(
-      await authorize(
-        await request(
-          { common_name: 'other.access', sub: '' },
-          config.ACCESS_PROBE_AUDIENCE,
-        ),
-        config,
-        true,
         resolveKey,
       ),
     ).toBeNull();
@@ -106,31 +64,32 @@ describe('Access authorization', () => {
       await request({ email: config.ADMIN_EMAIL }, 'other'),
       await request({ email: config.ADMIN_EMAIL }, 'expected-audience', '-1s'),
     ]) {
-      expect(await authorize(req, config, false, resolveKey)).toBeNull();
+      expect(await authorize(req, config, resolveKey)).toBeNull();
     }
-    expect(await authorize(valid, wrongIssuer, false, resolveKey)).toBeNull();
+    expect(await authorize(valid, wrongIssuer, resolveKey)).toBeNull();
   });
   it('fails closed when identity configuration is absent or issuer is untrusted', async () => {
     const req = await request({ email: config.ADMIN_EMAIL, sub: 'human' });
-    expect(await authorize(req, {}, true, resolveKey)).toBeNull();
+    expect(await authorize(req, {}, resolveKey)).toBeNull();
     expect(
       await authorize(
         req,
         { ...config, ACCESS_ISSUER: 'http://localhost' },
-        true,
         resolveKey,
       ),
     ).toBeNull();
-    expect(
-      await authorize(
-        await request({
-          common_name: config.CI_ACCESS_CLIENT_ID,
-          email: config.ADMIN_EMAIL,
-        }),
-        config,
-        false,
-        resolveKey,
-      ),
-    ).toBeNull();
+  });
+  it('rejects service identities even with the administrator audience', async () => {
+    for (const serviceClaim of [
+      { common_name: 'ci-client.access' },
+      { service_token_id: 'ci-client.access' },
+    ]) {
+      const req = await request({
+        ...serviceClaim,
+        email: config.ADMIN_EMAIL,
+        sub: 'human',
+      });
+      expect(await authorize(req, config, resolveKey)).toBeNull();
+    }
   });
 });

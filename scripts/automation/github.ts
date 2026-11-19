@@ -5,6 +5,7 @@ import {
   releaseVersion,
   versionDecision,
 } from './policy.ts';
+import { workerVersionId } from './worker-version.ts';
 
 type Repository = ActionContext['context']['repo'];
 
@@ -398,12 +399,13 @@ export async function staleDeployment({ github, context, core }: Action) {
     environment,
     per_page: 100,
   });
+  let retryVersion: string | undefined;
   for (const deployment of deployments) {
     const statuses = await github.paginate(
       github.rest.repos.listDeploymentStatuses,
       { ...context.repo, deployment_id: deployment.id, per_page: 100 },
     );
-    const published = statuses.some(item =>
+    const published = statuses.find(item =>
       item.description?.startsWith('Worker published:'),
     );
     const started = statuses.some(item =>
@@ -424,7 +426,17 @@ export async function staleDeployment({ github, context, core }: Action) {
       data.status === 'identical' &&
       !statuses.some(item => item.state === 'success')
     ) {
-      core.setOutput('already_published', 'true');
+      const prefix = `Worker published: ${sha} `;
+      if (!published?.description?.startsWith(prefix))
+        throw new Error(
+          'Published Worker version ID is missing; review the deployment manually',
+        );
+      const id = workerVersionId(published.description.slice(prefix.length));
+      if (retryVersion && retryVersion !== id)
+        throw new Error(
+          'Multiple published Worker versions match this SHA; review manually',
+        );
+      retryVersion = id;
       continue;
     }
     if (data.status === 'ahead' || data.status === 'identical') {
@@ -439,11 +451,16 @@ export async function staleDeployment({ github, context, core }: Action) {
     if (data.status === 'diverged')
       throw new Error('Deployment history diverged; review manually');
   }
+  if (retryVersion) {
+    core.setOutput('already_published', 'true');
+    core.setOutput('worker_version_id', retryVersion);
+  }
   core.setOutput('skip', 'false');
 }
 
 export async function markPublished({ github, context }: ActionContext) {
-  return recordPublication({ github, context }, 'Worker published:');
+  const versionId = workerVersionId(process.env.WORKER_VERSION_ID);
+  return recordPublication({ github, context }, 'Worker published:', versionId);
 }
 
 export async function markIntent({ github, context }: ActionContext) {
@@ -453,6 +470,7 @@ export async function markIntent({ github, context }: ActionContext) {
 async function recordPublication(
   { github, context }: ActionContext,
   marker: string,
+  versionId?: string,
 ) {
   const { data } = await github.rest.repos.listDeployments({
     ...context.repo,
@@ -465,7 +483,7 @@ async function recordPublication(
     ...context.repo,
     deployment_id: data[0].id,
     state: 'in_progress',
-    description: `${marker} ${process.env.DEPLOY_SHA}`,
+    description: `${marker} ${process.env.DEPLOY_SHA}${versionId ? ` ${versionId}` : ''}`,
     environment_url: process.env.DEPLOY_URL,
   });
 }

@@ -45,6 +45,7 @@ jobs:
     outputs:
       deployed: ${{ steps.complete.outputs.deployed }}
       stale: ${{ steps.stale.outputs.skip }}
+      worker_version_id: ${{ steps.publish.outputs.worker_version_id || steps.stale.outputs.worker_version_id }}
     env:
       DEPLOY_SHA: ${{ needs.prepare.outputs.sha }}
       DEPLOY_ENVIRONMENT: ${{ needs.prepare.outputs.environment }}
@@ -67,10 +68,7 @@ jobs:
         env:
           ACCESS_ISSUER: ${{ vars.ACCESS_ISSUER }}
           ACCESS_AUDIENCE: ${{ vars.ACCESS_AUDIENCE }}
-          ACCESS_PROBE_AUDIENCE: ${{ vars.ACCESS_PROBE_AUDIENCE }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/automation/deployment-config.ts
@@ -96,26 +94,41 @@ jobs:
             echo 'No committed SQL migrations; skipping migration step.'
           fi
       - name: Publish Worker
+        id: publish
         if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm exec wrangler deploy --env "$DEPLOY_ENVIRONMENT" --keep-vars
+        run: |
+          output="$(mktemp)"
+          WRANGLER_OUTPUT_FILE_PATH="$output" pnpm exec wrangler deploy --env "$DEPLOY_ENVIRONMENT" --keep-vars --tag "$DEPLOY_SHA"
+          version_id="$(node scripts/automation/worker-version.ts published "$output" "$DEPLOY_ENVIRONMENT")"
+          printf 'worker_version_id=%s\n' "$version_id" >> "$GITHUB_OUTPUT"
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published != 'true'
+        env:
+          WORKER_VERSION_ID: ${{ steps.publish.outputs.worker_version_id }}
         with:
           script: |
             const { markPublished } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
             await markPublished({ github, context, core });
-      - name: Verify deployment
+      - name: Verify active Worker version
         if: steps.stale.outputs.skip != 'true'
         env:
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: node scripts/automation/smoke.ts
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_VERSION_ID: ${{ steps.publish.outputs.worker_version_id || steps.stale.outputs.worker_version_id }}
+        run: |
+          deployment="$(mktemp)"
+          version="$(mktemp)"
+          pnpm exec wrangler versions view "$WORKER_VERSION_ID" --env "$DEPLOY_ENVIRONMENT" --json > "$version"
+          pnpm exec wrangler deployments status --env "$DEPLOY_ENVIRONMENT" --json > "$deployment"
+          node scripts/automation/worker-version.ts verify "$deployment" "$version"
       - name: Record verified deployment
-        if: steps.stale.outputs.skip != 'true'
+        if: steps.stale.outputs.skip != 'true' && steps.stale.outputs.already_published == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          WORKER_VERSION_ID: ${{ steps.stale.outputs.worker_version_id }}
         with:
           script: |
             const { markPublished } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
@@ -149,14 +162,15 @@ jobs:
           DEPLOY_URL: ${{ needs.prepare.outputs.url }}
           DEPLOY_SHA: ${{ needs.prepare.outputs.sha }}
           DEPLOY_PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
+          WORKER_VERSION_ID: ${{ needs.deploy.outputs.worker_version_id }}
           VERIFIED: ${{ needs.deploy.outputs.deployed }}
           STALE: ${{ needs.deploy.outputs.stale }}
         with:
           script: |
-            const { DEPLOY_ENVIRONMENT, DEPLOY_URL, DEPLOY_SHA, DEPLOY_PR_NUMBER, VERIFIED, STALE } = process.env;
+            const { DEPLOY_ENVIRONMENT, DEPLOY_URL, DEPLOY_SHA, DEPLOY_PR_NUMBER, WORKER_VERSION_ID, VERIFIED, STALE } = process.env;
             const result = STALE === 'true'
               ? 'Skipped — superseded deployment'
-              : VERIFIED === 'true' ? 'Succeeded — smoke checks passed' : 'Failed — see workflow logs';
+              : VERIFIED === 'true' ? 'Succeeded — active Worker version verified' : 'Failed — see workflow logs';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const marker = `<!-- workers-deployment:${context.runId} -->`;
             const body = [
@@ -168,6 +182,7 @@ jobs:
               `| Environment | ${DEPLOY_ENVIRONMENT} |`,
               `| Result | ${result} |`,
               `| Commit | \`${DEPLOY_SHA}\` |`,
+              `| Worker version | ${WORKER_VERSION_ID || '—'} |`,
               `| Target URL | ${DEPLOY_URL} |`,
               `| Workflow | [View run](${runUrl}) |`,
             ].join('\n');

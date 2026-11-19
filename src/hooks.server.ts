@@ -8,10 +8,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   const path = event.route.id ?? event.url.pathname;
   // Also cover SvelteKit's data requests and the exact /admin root.
   const admin = path === '/admin' || path.startsWith('/admin/');
-  const probe = path === '/admin/api/deployment-check';
   const remotePreview = event.url.hostname === 'blog-preview.herokwon.dev';
   if (admin || remotePreview) {
-    const identity = await authorize(event.request, env, probe);
+    const identity = await authorize(event.request, env);
     if (!identity)
       return new Response('Access denied', {
         status: 403,
