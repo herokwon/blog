@@ -168,23 +168,26 @@ jobs:
         with:
           script: |
             const { DEPLOY_ENVIRONMENT, DEPLOY_URL, DEPLOY_SHA, DEPLOY_PR_NUMBER, WORKER_VERSION_ID, VERIFIED, STALE } = process.env;
-            const result = STALE === 'true'
-              ? 'Skipped — superseded deployment'
-              : VERIFIED === 'true' ? 'Succeeded — active Worker version verified' : 'Failed — see workflow logs';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const status = STALE === 'true'
+              ? '⏭️ Skipped · Superseded deployment'
+              : VERIFIED === 'true' ? '✅ Succeeded · Active Worker version verified' : '❌ Failed · See workflow logs';
+            const environment = DEPLOY_ENVIRONMENT === 'production' ? 'Production' : 'Preview';
+            const repositoryUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
+            const commitUrl = `${repositoryUrl}/commit/${DEPLOY_SHA}`;
+            const runUrl = `${repositoryUrl}/actions/runs/${context.runId}`;
+            const workerVersion = WORKER_VERSION_ID ? `\`${WORKER_VERSION_ID}\`` : '—';
             const marker = `<!-- workers-deployment:${context.runId} -->`;
             const body = [
               marker,
-              '### Cloudflare Workers deployment',
+              '### ⚡ Cloudflare Workers deployment',
               '',
-              '| Field | Value |',
-              '| --- | --- |',
-              `| Environment | ${DEPLOY_ENVIRONMENT} |`,
-              `| Result | ${result} |`,
-              `| Commit | \`${DEPLOY_SHA}\` |`,
-              `| Worker version | ${WORKER_VERSION_ID || '—'} |`,
-              `| Target URL | ${DEPLOY_URL} |`,
-              `| Workflow | [View run](${runUrl}) |`,
+              `| **Status** | ${status} |`,
+              '| :--- | :--- |',
+              `| **Environment** | ${environment} |`,
+              `| **Commit** | [\`${DEPLOY_SHA.slice(0, 7)}\`](${commitUrl}) |`,
+              `| **URL** | [Open ${DEPLOY_ENVIRONMENT}](${DEPLOY_URL}) |`,
+              `| **Worker version** | ${workerVersion} |`,
+              `| **Details** | [GitHub Actions](${runUrl}) |`,
             ].join('\n');
             const target = { ...context.repo, issue_number: Number(DEPLOY_PR_NUMBER) };
             const comments = await github.paginate(github.rest.issues.listComments, { ...target, per_page: 100 });
