@@ -19,7 +19,7 @@
     "check": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:automation": "tsc --project tsconfig.automation.json",
     "check:watch": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:unit": "vitest run",
