@@ -1,5 +1,3 @@
-import type { AccessConfig } from './lib/server/access';
-
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
@@ -10,11 +8,6 @@ declare global {
     }
     // interface PageData {}
     // interface PageState {}
-  }
-  namespace Cloudflare {
-    interface Env extends AccessConfig {
-      DEPLOYMENT_SHA?: string;
-    }
   }
 }
 

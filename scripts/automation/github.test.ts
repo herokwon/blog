@@ -278,8 +278,9 @@ test('stale deployment skips descendants, but never assumes a failed unpublished
   }
 });
 
-test('a published but unverified identical SHA retries smoke without republishing', async () => {
+test('a published but unverified identical SHA retries the recorded version without republishing', async () => {
   const input = fixture();
+  const versionId = '5c34bb02-3817-4ac7-8f56-f8d0a62968c0';
   const oldSha = process.env.DEPLOY_SHA;
   const oldEnvironment = process.env.DEPLOY_ENVIRONMENT;
   process.env.DEPLOY_SHA = sha;
@@ -294,12 +295,16 @@ test('a published but unverified identical SHA retries smoke without republishin
     input.github.rest.repos.listDeploymentStatuses = async () => ({
       data: [
         { state: 'failure' },
-        { state: 'in_progress', description: `Worker published: ${sha}` },
+        {
+          state: 'in_progress',
+          description: `Worker published: ${sha} ${versionId}`,
+        },
       ],
     });
     await staleDeployment(input);
     assert.equal(input.outputs.skip, 'false');
     assert.equal(input.outputs.already_published, 'true');
+    assert.equal(input.outputs.worker_version_id, versionId);
   } finally {
     if (oldSha === undefined) delete process.env.DEPLOY_SHA;
     else process.env.DEPLOY_SHA = oldSha;
