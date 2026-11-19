@@ -14,14 +14,11 @@ defines how the project provisions, protects, validates, and deploys those resou
 Keep the existing preview/production D1 and private R2 names. Use
 blog-preview.herokwon.dev and blog.herokwon.dev as Custom Domains; disable
 workers.dev and version URLs. Protect the complete preview host and production
-/admin paths with Access. Validate signed Access JWTs at the server. Human
-administrators require the exact configured email; service identities may only
-call bounded deployment checks. Use a separate Access application and audience
-for the deployment-check path in each environment so service credentials do not
-pass Access on administrator routes. D1/R2 probes read only; prepare a fixed R2
-fixture during provisioning. Never bypass authentication for local development.
+/admin paths with Access. Validate signed Access JWTs at the server against the
+environment's administrator application audience and exact administrator email.
+Never bypass authentication for local development.
 
-Use environment-scoped Cloudflare deployment and Access service credentials.
+Use environment-scoped Cloudflare deployment credentials.
 CI needs no remote credentials. Separate read-only CI/security checks from
 privileged metadata automation. Use jose for JWT signature/claim verification
 with Cloudflare JWKS rather than implementing cryptography manually.
@@ -43,9 +40,12 @@ protection checks the branch ref. Deploy only when the push SHA matches a merged
 PR's merge SHA on that same target branch.
 Required PR checks and up-to-date branches gate merging; post-merge push CI is
 informational to deployment. The deploy job builds, migrates, publishes, and
-verifies the Worker under one Environment. After deployment, a separate job
-reports the result on the merged PR so reviewers can find it without opening
-Actions. PR reporting and production release publication run independently.
+verifies the Worker under one Environment. Check the published version ID and
+merge SHA tag against the active Worker deployment using Wrangler. Cloudflare
+Bot Fight Mode can challenge automated requests, so the owner checks site and
+administrator login behavior separately in a browser. After deployment, a
+separate job reports the result on the merged PR so reviewers can find it without
+opening Actions. PR reporting and production release publication run independently.
 Serialize each environment without interrupting active work. Skip an older
 commit when a descendant has already been deployed. Production success publishes
 v<version> and GitHub Release for the deployed SHA. Publication errors require
