@@ -29,14 +29,14 @@ high/critical findings and audit service failures fail. Daily 09:17 KST audits
 inspect main and the sole release branch. Keep reports for 14 days.
 
 Use hosted Renovate on /^release\/.+$/, keeping only one active release branch.
-Create an issue for each bot PR (an explicit issue-first exception for Renovate),
-and assign the PR and issue to the target milestone. Use an installation token
-from a separate repository automation App for version bump PR creation. The
-agent, not a merge workflow, checks current CI/Codex review and squash-merges
-bump PRs. Release branch names determine package versions; never downgrade.
+For 0.1.0, each bot PR had a tracking issue in the same milestone. Renovate
+could open its PR first. See [AGENTS.md](../../AGENTS.md#repository-guidelines)
+for the current tracking issue policy.
 
-[ADR 0003](0003-track-version-bumps-in-pull-requests.md) supersedes the tracking
-issue requirement for automated version bumps.
+Use an installation token from a separate repository automation App for version
+bump PR creation. The agent, not a merge workflow, checks current CI/Codex review
+and squash-merges bump PRs. Release branch names determine package versions;
+never downgrade.
 
 Trigger deployments from pushes to release/* or main so GitHub Environment
 protection checks the branch ref. Deploy only when the push SHA matches a merged
