@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-16
-- Related issue: https://github.com/herokwon/blog/issues/1
+- Related issue: [#1](https://github.com/herokwon/blog/issues/1)
 
 ## Context
 
