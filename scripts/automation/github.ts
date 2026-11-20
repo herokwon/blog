@@ -81,12 +81,7 @@ async function ensureIssue(
   return data;
 }
 
-export async function metadata({
-  github,
-  context,
-  core,
-  appSlug,
-}: Action & { appSlug?: string }) {
+export async function metadata({ github, context, core }: Action) {
   const pr = context.payload.pull_request;
   if (!pr || pr.head.repo?.full_name !== context.payload.repository.full_name)
     return;
@@ -99,47 +94,17 @@ export async function metadata({
     issue_number: pr.number,
     milestone,
   });
-  const automation =
-    pr.head.ref.startsWith('codex/bump-') &&
-    Boolean(appSlug) &&
-    pr.user.login === `${appSlug}[bot]`;
-  const renovate =
-    pr.user.login === 'renovate[bot]' && pr.head.ref.startsWith('renovate/');
-  if (!automation && !renovate) return;
-  let issue;
-  if (automation) {
-    const { data } = await github.rest.pulls.get({
-      ...context.repo,
-      pull_number: pr.number,
-    });
-    const issueNumber = data.body?.match(/Refs: #(\d+)/)?.[1];
-    if (!issueNumber)
-      throw new Error('Bump PR must reference its pre-existing issue');
-    ({ data: issue } = await github.rest.issues.get({
-      ...context.repo,
-      issue_number: Number(issueNumber),
-    }));
-    if (
-      issue.pull_request ||
-      issue.state !== 'open' ||
-      !issue.body?.includes(`<!-- version-bump:${version} -->`)
-    )
-      throw new Error('Invalid bump tracking issue');
-    await github.rest.issues.update({
-      ...context.repo,
-      issue_number: issue.number,
-      milestone,
-    });
-  } else {
-    issue = await ensureIssue(
-      github,
-      context.repo,
-      `<!-- bot-pr:${pr.number} -->`,
-      `chore(deps): track dependency PR #${pr.number}`,
-      `Track ${pr.html_url}.\n\n## Acceptance Criteria\n- [ ] Review dependency and lockfile changes.\n- [ ] Required CI and current Codex review pass; valid findings are resolved.\n- [ ] Verify release deployment before owner-authorized closure.`,
-      milestone,
-    );
-  }
+  if (pr.user.login !== 'renovate[bot]' || !pr.head.ref.startsWith('renovate/'))
+    return;
+
+  const issue = await ensureIssue(
+    github,
+    context.repo,
+    `<!-- bot-pr:${pr.number} -->`,
+    `chore(deps): track dependency PR #${pr.number}`,
+    `Track ${pr.html_url}.\n\n## Acceptance Criteria\n- [ ] Review dependency and lockfile changes.\n- [ ] Required CI and current Codex review pass; valid findings are resolved.\n- [ ] Verify release deployment before owner-authorized closure.`,
+    milestone,
+  );
   const marker = '<!-- bot-tracking -->';
   const comments = await github.paginate(github.rest.issues.listComments, {
     ...context.repo,
@@ -165,7 +130,11 @@ export async function metadata({
   core.info(`Tracking issue #${issue.number}`);
 }
 
-export async function checkMetadata({ github, context }: ActionContext) {
+export async function checkMetadata({
+  github,
+  context,
+  appSlug,
+}: ActionContext & { appSlug?: string }) {
   const pr = context.payload.pull_request;
   if (!pr) return;
   const version = releaseVersion(
@@ -177,6 +146,17 @@ export async function checkMetadata({ github, context }: ActionContext) {
   });
   if (fresh.milestone?.title !== version)
     throw new Error('PR milestone does not match target release');
+
+  // A release PR describes multiple work issues; its own milestone is the gate.
+  if (pr.base.ref === 'main') return;
+  if (
+    appSlug &&
+    pr.user.login === `${appSlug}[bot]` &&
+    pr.head.repo?.full_name === context.payload.repository.full_name &&
+    pr.head.ref === `codex/bump-${version}`
+  )
+    return;
+
   const comments = await github.paginate(github.rest.issues.listComments, {
     ...context.repo,
     issue_number: pr.number,
@@ -190,8 +170,6 @@ export async function checkMetadata({ github, context }: ActionContext) {
   const issueNumber =
     fresh.body?.match(/Refs: #(\d+)/)?.[1] ??
     trusted?.body?.match(/Related issue: #(\d+)/)?.[1];
-  // A release PR describes multiple work issues; its own milestone is the gate.
-  if (pr.base.ref === 'main') return;
   if (!issueNumber)
     throw new Error('Missing related issue (use Refs: #number)');
   const { data: issue } = await github.rest.issues.get({
@@ -228,14 +206,6 @@ export async function bump({ github, context, core }: Action) {
     return;
   }
   const milestone = await milestoneFor(github, context.repo, decision.target);
-  const issue = await ensureIssue(
-    github,
-    context.repo,
-    `<!-- version-bump:${decision.target} -->`,
-    `chore(release): prepare version ${decision.target}`,
-    `Prepare release PR #${pr.number}.\n\n## Acceptance Criteria\n- [ ] Package version equals ${decision.target}.\n- [ ] CI, metadata and latest Codex review pass.\n- [ ] Merge bump PR into ${fresh.head.ref} and recheck release PR.\n- [ ] Verify production before owner-authorized closure.`,
-    milestone,
-  );
   const branch = `codex/bump-${decision.target}`;
   const existing = await github.paginate(github.rest.pulls.list, {
     ...context.repo,
@@ -244,7 +214,14 @@ export async function bump({ github, context, core }: Action) {
     base: fresh.head.ref,
     per_page: 100,
   });
-  if (existing.some(item => item.state === 'open')) {
+  const open = existing.find(item => item.state === 'open');
+  if (open) {
+    if (open.milestone?.number !== milestone)
+      await github.rest.issues.update({
+        ...context.repo,
+        issue_number: open.number,
+        milestone,
+      });
     core.info(
       'Existing bump PR retained; resolve drift/conflicts without force-push',
     );
@@ -301,7 +278,13 @@ export async function bump({ github, context, core }: Action) {
     head: branch,
     base: fresh.head.ref,
     title: `chore(release): bump version to ${decision.target}`,
-    body: `## Related Issues\nRefs: #${issue.number}\n\n## Changes\nSet package version to ${decision.target}; dependencies are unchanged.\n\n## Verification\nCI and current Codex review are pending. Agent checks and merges; no automatic merge.`,
+    body: `## 🗝️ Changes
+
+- Set the package version to ${decision.target} for release PR #${pr.number}.
+
+## 🧪 Verification
+
+- CI and Codex review are pending.`,
   });
   await github.rest.issues.update({
     ...context.repo,

@@ -1,6 +1,6 @@
 {
   "name": "blog",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -12,13 +12,13 @@
     "#lib/*": "./src/lib/*"
   },
   "scripts": {
-    "dev": "pnpm run gen && vite dev",
-    "build": "pnpm run gen && vite build",
+    "dev": "pnpm gen && vite dev",
+    "build": "pnpm gen && vite build",
     "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --env preview --local --infer-origin-from-routes=false --port 4173",
-    "prepare": "pnpm run gen && svelte-kit sync",
-    "check": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:automation": "tsc --project tsconfig.automation.json",
-    "check:watch": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "prepare": "pnpm gen && svelte-kit sync",
+    "check": "pnpm gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:automation": "tsc --project scripts/automation/tsconfig.json",
+    "check:watch": "pnpm gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -26,7 +26,7 @@
     "test:automation": "node --test scripts/automation/*.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test": "pnpm run test:automation && pnpm run test:unit && pnpm run test:e2e",
+    "test": "pnpm test:automation && pnpm test:unit && pnpm test:e2e",
     "test:e2e": "playwright test",
     "test:install": "playwright install chromium",
     "gen": "wrangler types --env preview --include-main-module=false",
