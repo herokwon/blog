@@ -34,6 +34,7 @@ type ListedPull = Omit<DeploymentPR, 'merged'> & {
   number: number;
   state: string;
   merged_at: string | null;
+  milestone?: Milestone | null;
 };
 type Deployment = Sha & { id: number };
 type DeploymentStatus = { state: string; description?: string };
