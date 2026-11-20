@@ -35,6 +35,9 @@ from a separate repository automation App for version bump PR creation. The
 agent, not a merge workflow, checks current CI/Codex review and squash-merges
 bump PRs. Release branch names determine package versions; never downgrade.
 
+[ADR 0003](0003-track-version-bumps-in-pull-requests.md) supersedes the tracking
+issue requirement for automated version bumps.
+
 Trigger deployments from pushes to release/* or main so GitHub Environment
 protection checks the branch ref. Deploy only when the push SHA matches a merged
 PR's merge SHA on that same target branch.
