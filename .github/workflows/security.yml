@@ -39,7 +39,7 @@ jobs:
         with:
           persist-credentials: false
           path: automation
-      - uses: ./automation/.github/actions/setup
+      - uses: <owner>/<repo>/.github/actions/setup@<pinned-commit-sha>
         with:
           install: 'false'
           cache: 'false'
