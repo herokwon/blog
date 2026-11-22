@@ -39,7 +39,7 @@ jobs:
         with:
           persist-credentials: false
           path: automation
-      - uses: ./automation/.github/actions/setup
+      - uses: herokwon/blog/.github/actions/setup@91cacfb599514d797def0dee82788b9af8cf37e9
         with:
           install: 'false'
           cache: 'false'
