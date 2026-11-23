@@ -319,6 +319,25 @@ export async function scheduledTargets({ github, context, core }: Action) {
   );
 }
 
+export async function readAuditLockfile(
+  github: GitHub,
+  repo: Repository,
+  sha: string,
+) {
+  if (!/^[a-f0-9]{40}$/i.test(sha))
+    throw new Error('Expected a full audit commit SHA');
+  const { data } = await github.rest.repos.getContent({
+    ...repo,
+    path: 'pnpm-lock.yaml',
+    ref: sha,
+  });
+  if (Array.isArray(data) || data.type !== 'file' || data.encoding !== 'base64')
+    throw new Error('Expected base64-encoded pnpm-lock.yaml content');
+  const lockfile = Buffer.from(data.content, 'base64');
+  if (!lockfile.length) throw new Error('Audit lockfile is empty');
+  return lockfile;
+}
+
 export async function prepareDeployment({
   github,
   context,

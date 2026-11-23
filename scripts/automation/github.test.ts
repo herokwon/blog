@@ -8,6 +8,7 @@ import {
   checkVersion,
   metadata,
   prepareDeployment,
+  readAuditLockfile,
   staleDeployment,
 } from './github.ts';
 
@@ -111,6 +112,41 @@ function fixture(version = '0.0.1') {
   };
   return { github, context, core, outputs, pr };
 }
+
+test('reads only the lockfile at the selected audit commit', async () => {
+  const github = mockGitHub();
+  const lockfile = Buffer.from("lockfileVersion: '9.0'\n");
+  github.rest.repos.getContent = async params => {
+    assert.deepEqual(params, { ...repo, path: 'pnpm-lock.yaml', ref: sha });
+    return {
+      data: {
+        type: 'file',
+        encoding: 'base64',
+        content: lockfile.toString('base64'),
+      },
+    };
+  };
+
+  assert.deepEqual(await readAuditLockfile(github, repo, sha), lockfile);
+});
+
+test('rejects invalid audit refs and unavailable lockfile content', async () => {
+  const github = mockGitHub();
+  await assert.rejects(readAuditLockfile(github, repo, 'main'), /commit SHA/);
+
+  github.rest.repos.getContent = async () => ({
+    data: { type: 'file', encoding: 'base64', content: '' },
+  });
+  await assert.rejects(
+    readAuditLockfile(github, repo, sha),
+    /lockfile is empty/,
+  );
+
+  github.rest.repos.getContent = async () => {
+    throw Object.assign(new Error('Not found'), { status: 404 });
+  };
+  await assert.rejects(readAuditLockfile(github, repo, sha), /Not found/);
+});
 
 test('only the configured App on the matching bump branch may omit a tracking issue', async () => {
   const input = { ...fixture(), appSlug: 'current-app' };
