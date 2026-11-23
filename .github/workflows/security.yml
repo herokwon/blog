@@ -25,6 +25,7 @@ jobs:
     needs: targets
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    cache-mode: none
     strategy:
       fail-fast: false
       matrix:
@@ -32,30 +33,37 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ matrix.sha }}
           persist-credentials: false
-          path: target
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          path: automation
       - uses: herokwon/blog/.github/actions/setup@91cacfb599514d797def0dee82788b9af8cf37e9
         with:
           install: 'false'
           cache: 'false'
-          working-directory: target
+      - name: Fetch target lockfile
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          AUDIT_DIRECTORY: ${{ runner.temp }}/dependency-audit
+          AUDIT_SHA: ${{ matrix.sha }}
+        with:
+          script: |
+            const { mkdir, writeFile } = await import('node:fs/promises');
+            const { join } = await import('node:path');
+            const { readAuditLockfile } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/automation/github.ts`);
+            const lockfile = await readAuditLockfile(github, context.repo, process.env.AUDIT_SHA);
+            const directory = process.env.AUDIT_DIRECTORY;
+            await mkdir(directory);
+            await writeFile(join(directory, 'pnpm-lock.yaml'), lockfile);
       - name: Audit target lockfile
-        working-directory: target
+        working-directory: ${{ runner.temp }}/dependency-audit
         env:
           AUDIT_BRANCH: ${{ matrix.branch }}
           AUDIT_SHA: ${{ matrix.sha }}
-          AUDIT_EXCEPTIONS_FILE: ../automation/.github/audit-exceptions.json
+          AUDIT_EXCEPTIONS_FILE: ${{ github.workspace }}/.github/audit-exceptions.json
         run: |
           printf '## %s\nSHA: %s\n' "$AUDIT_BRANCH" "$AUDIT_SHA" >> "$GITHUB_STEP_SUMMARY"
-          node ../automation/scripts/automation/audit.ts
+          node "$GITHUB_WORKSPACE/scripts/automation/audit.ts"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: scheduled-audit-${{ matrix.sha }}-${{ github.run_attempt }}
-          path: target/test-results/audit.json
+          name: scheduled-audit-${{ matrix.sha }}-${{ strategy.job-index }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dependency-audit/test-results/audit.json
           retention-days: 14
