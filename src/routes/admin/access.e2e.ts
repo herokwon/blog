@@ -23,3 +23,22 @@ test('encoded administrator routes cannot bypass authentication', async ({
     expect(response.status()).toBe(403);
   }
 });
+
+test('post and category forms reject unauthenticated mutations', async ({
+  request,
+  baseURL,
+}) => {
+  for (const path of [
+    '/admin/categories?/create',
+    '/admin/posts/new?/saveDraft',
+    '/admin/posts/example/edit?/save',
+  ]) {
+    const response = await request.post(path, {
+      form: { title: 'Test' },
+      headers: { Origin: baseURL! },
+    });
+    expect(response.status()).toBe(403);
+    expect(await response.text()).toBe('Access denied');
+    expect(response.headers()['cache-control']).toBe('no-store');
+  }
+});
