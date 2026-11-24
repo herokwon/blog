@@ -1,12 +1,15 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
 
-  let { signedIn, returnTo }: { signedIn: boolean; returnTo: string } =
-    $props();
+  let {
+    signedIn,
+    onAdminPage,
+    returnTo,
+  }: { signedIn: boolean; onAdminPage: boolean; returnTo: string } = $props();
 </script>
 
 <header>
-  {#if signedIn}
+  {#if signedIn && onAdminPage}
     <form method="GET" action="/cdn-cgi/access/logout" data-sveltekit-reload>
       <input type="hidden" name="returnTo" value={returnTo} />
       <button type="submit">로그아웃</button>
@@ -15,7 +18,8 @@
     <a
       href={resolve('/admin')}
       data-sveltekit-reload
-      data-sveltekit-preload-data="off">로그인</a
+      data-sveltekit-preload-data="off"
+      >{signedIn ? '관리자 페이지' : '로그인'}</a
     >
   {/if}
 </header>
