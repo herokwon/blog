@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
 
 import { revisePost } from '../posts/manage';
+import { getPostDetail } from '../posts/markdown';
 import {
   createCategory,
   createPost,
@@ -45,6 +46,40 @@ afterAll(async () => {
 });
 
 describe('post storage on local D1', () => {
+  it('renders the stored post detail and excludes deleted posts', async () => {
+    const db = proxy.env.DB;
+    const id = 'render-detail';
+    const body = '## 제목\n\n<strong>Raw block</strong>\n';
+    await expect(
+      createPost(
+        db,
+        {
+          id,
+          title: 'Detail',
+          body,
+          categoryId,
+          tags: ['테스트'],
+          status: 'draft',
+        },
+        clock,
+      ),
+    ).resolves.toBe('saved');
+    const detail = await getPostDetail(db, id);
+    expect(detail).toMatchObject({
+      id,
+      categoryName: '개발',
+      tags: ['테스트'],
+      html: expect.stringContaining('<h2>제목</h2>'),
+    });
+    expect(detail).not.toHaveProperty('body');
+    expect(detail?.html).not.toContain('<strong>');
+    expect((await getPost(db, id))?.body).toBe(body);
+    await expect(setPostDeletion(db, id, 1, 'delete', clock)).resolves.toBe(
+      'saved',
+    );
+    await expect(getPostDetail(db, id)).resolves.toBeUndefined();
+  });
+
   it('applies publication transitions and submitted content through the server operation', async () => {
     const db = proxy.env.DB;
     const id = 'revision-workflow';

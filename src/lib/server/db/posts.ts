@@ -116,16 +116,24 @@ export async function setPostDeletion(
 
 export async function getPost(d1: D1Database, id: string) {
   const db = getDb(d1);
-  const [[post], tagRows] = await db.batch([
-    db.select().from(posts).where(eq(posts.id, id)),
+  const [[record], tagRows] = await db.batch([
+    db
+      .select({ post: posts, categoryName: categories.name })
+      .from(posts)
+      .innerJoin(categories, eq(posts.categoryId, categories.id))
+      .where(and(eq(posts.id, id), isNull(posts.deletedAt))),
     db
       .select({ name: tags.name })
       .from(tags)
       .where(eq(tags.postId, id))
       .orderBy(asc(tags.name)),
   ]);
-  if (!post || post.deletedAt !== null) return undefined;
-  return { ...post, tags: tagRows.map(({ name }) => name) };
+  if (!record) return undefined;
+  return {
+    ...record.post,
+    categoryName: record.categoryName,
+    tags: tagRows.map(({ name }) => name),
+  };
 }
 
 function isForeignKeyConstraint(error: unknown) {
