@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { page } from '$app/state';
 
+  import AdminHeading from '../../../AdminHeading.svelte';
   import PostForm from '../../PostForm.svelte';
   import type { PageProps } from './$types';
 
@@ -23,17 +24,18 @@
 </svelte:head>
 
 <main lang="ko">
-  <h1>게시글 수정</h1>
+  <AdminHeading title="게시글 수정" postId={page.params.id} />
   {#if values}
-    <PostForm
-      categories={data.categories}
-      {values}
-      existingTags={data.post?.tags}
-      errors={form?.errors}
-      message={form?.message}
-    />
+    {#key values.id}
+      <PostForm
+        categories={data.categories}
+        {values}
+        existingTags={data.post?.tags}
+        errors={form?.errors}
+        message={form?.message}
+      />
+    {/key}
   {:else}
     <p>게시글을 불러오지 못했습니다.</p>
-    <p><a href={resolve('/admin/posts')}>게시글 목록</a></p>
   {/if}
 </main>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
 
+  import AdminHeading from '../AdminHeading.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -12,7 +13,7 @@
 </svelte:head>
 
 <main lang="ko">
-  <h1>게시글 관리</h1>
+  <AdminHeading title="게시글 관리" home />
   <nav aria-label="게시글 관리">
     <a href={resolve('/admin/posts/new')}>새 글</a>
     <a href={resolve('/admin/categories')}>카테고리</a>
