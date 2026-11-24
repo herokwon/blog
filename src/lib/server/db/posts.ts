@@ -20,6 +20,38 @@ export async function createCategory(d1: D1Database, name: string) {
   return category?.id;
 }
 
+export async function renameCategory(d1: D1Database, id: number, name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return 'invalid';
+  try {
+    const result = await d1
+      .prepare('UPDATE categories SET name = ? WHERE id = ?')
+      .bind(trimmed, id)
+      .run();
+    return result.meta.changes === 1 ? 'renamed' : 'missing';
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('UNIQUE constraint failed: categories.name')
+    )
+      return 'duplicate';
+    throw error;
+  }
+}
+
+export async function removeCategory(d1: D1Database, id: number) {
+  try {
+    const result = await d1
+      .prepare('DELETE FROM categories WHERE id = ?')
+      .bind(id)
+      .run();
+    return result.meta.changes === 1 ? 'deleted' : 'missing';
+  } catch (error) {
+    if (isForeignKeyConstraint(error)) return 'inUse';
+    throw error;
+  }
+}
+
 export function listPosts(d1: D1Database) {
   return getDb(d1)
     .select({
@@ -49,8 +81,7 @@ export async function getPost(d1: D1Database, id: string) {
   return { ...post, tags: tagRows.map(({ name }) => name) };
 }
 
-function isCategoryConstraint(error: unknown) {
-  // The only foreign key a post write can violate is its category reference.
+function isForeignKeyConstraint(error: unknown) {
   return (
     error instanceof Error &&
     error.message.includes('FOREIGN KEY constraint failed')
@@ -90,7 +121,7 @@ export async function createPost(
     ]);
     return 'saved';
   } catch (error) {
-    if (isCategoryConstraint(error)) return 'category';
+    if (isForeignKeyConstraint(error)) return 'category';
     if (
       !(error instanceof Error) ||
       !error.message.includes('UNIQUE constraint failed: posts.id')
@@ -149,7 +180,7 @@ export async function updatePost(
     ]);
     return updated.meta.changes === 1 ? 'saved' : 'conflict';
   } catch (error) {
-    if (isCategoryConstraint(error)) return 'category';
+    if (isForeignKeyConstraint(error)) return 'category';
     throw error;
   }
 }

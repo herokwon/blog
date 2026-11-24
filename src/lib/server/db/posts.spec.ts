@@ -6,7 +6,10 @@ import {
   createCategory,
   createPost,
   getPost,
+  listCategories,
   listPosts,
+  removeCategory,
+  renameCategory,
   updatePost,
 } from './posts';
 
@@ -39,6 +42,42 @@ afterAll(async () => {
 });
 
 describe('post storage on local D1', () => {
+  it('renames categories and only removes a category with no post references', async () => {
+    const db = proxy.env.DB;
+    const unused = (await createCategory(db, 'Unused'))!;
+    const used = (await createCategory(db, 'Trashed posts'))!;
+    await createPost(
+      db,
+      {
+        id: 'category-reference',
+        title: 'Draft',
+        body: '',
+        status: 'draft',
+        categoryId: used,
+        tags: [],
+      },
+      clock,
+    );
+    await db
+      .prepare('UPDATE posts SET deleted_at = ? WHERE id = ?')
+      .bind(clock.getTime(), 'category-reference')
+      .run();
+
+    await expect(renameCategory(db, unused, ' ')).resolves.toBe('invalid');
+    await expect(renameCategory(db, unused, '개발')).resolves.toBe('duplicate');
+    await expect(renameCategory(db, unused, ' Renamed ')).resolves.toBe(
+      'renamed',
+    );
+    expect(await listCategories(db)).toContainEqual({
+      id: unused,
+      name: 'Renamed',
+    });
+    await expect(removeCategory(db, used)).resolves.toBe('inUse');
+    await expect(removeCategory(db, unused)).resolves.toBe('deleted');
+    await expect(removeCategory(db, unused)).resolves.toBe('missing');
+    await expect(renameCategory(db, unused, 'Gone')).resolves.toBe('missing');
+  });
+
   it('applies schema defaults, protects categories and allows tags on distinct posts', async () => {
     const db = proxy.env.DB;
     const fields = await db
