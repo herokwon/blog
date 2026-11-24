@@ -5,6 +5,13 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  optimizeDeps: {
+    include: [
+      '@milkdown/crepe',
+      '@milkdown/kit/core',
+      '@milkdown/kit/plugin/upload',
+    ],
+  },
   plugins: [
     sveltekit({
       compilerOptions: {
