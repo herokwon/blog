@@ -1,4 +1,4 @@
-import { asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import type { PostContent, PostStatus } from '../posts/domain';
 import { getDb } from './index';
@@ -52,19 +52,66 @@ export async function removeCategory(d1: D1Database, id: number) {
   }
 }
 
+const postSummary = {
+  id: posts.id,
+  title: posts.title,
+  status: posts.status,
+  categoryName: categories.name,
+  updatedAt: posts.updatedAt,
+};
+
 export function listPosts(d1: D1Database) {
   return getDb(d1)
-    .select({
-      id: posts.id,
-      title: posts.title,
-      status: posts.status,
-      categoryName: categories.name,
-      updatedAt: posts.updatedAt,
-    })
+    .select(postSummary)
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
     .where(isNull(posts.deletedAt))
     .orderBy(desc(posts.updatedAt), desc(posts.id));
+}
+
+export function listTrashedPosts(d1: D1Database) {
+  return getDb(d1)
+    .select({
+      ...postSummary,
+      deletedAt: posts.deletedAt,
+      version: posts.version,
+    })
+    .from(posts)
+    .innerJoin(categories, eq(posts.categoryId, categories.id))
+    .where(isNotNull(posts.deletedAt))
+    .orderBy(desc(posts.deletedAt), desc(posts.id));
+}
+
+export async function setPostDeletion(
+  d1: D1Database,
+  id: string,
+  version: number,
+  action: 'delete' | 'restore',
+  now = new Date(),
+) {
+  const db = getDb(d1);
+  const deleting = action === 'delete';
+  const [updated] = await db
+    .update(posts)
+    .set({
+      deletedAt: deleting ? now : null,
+      updatedAt: now,
+      version: sql`${posts.version} + 1`,
+    })
+    .where(
+      and(
+        eq(posts.id, id),
+        eq(posts.version, version),
+        deleting ? isNull(posts.deletedAt) : isNotNull(posts.deletedAt),
+      ),
+    )
+    .returning({ id: posts.id });
+  if (updated) return 'saved';
+  const [existing] = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(eq(posts.id, id));
+  return existing ? 'conflict' : 'missing';
 }
 
 export async function getPost(d1: D1Database, id: string) {

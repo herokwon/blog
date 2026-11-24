@@ -9,8 +9,10 @@ import {
   getPost,
   listCategories,
   listPosts,
+  listTrashedPosts,
   removeCategory,
   renameCategory,
+  setPostDeletion,
   updatePost,
 } from './posts';
 
@@ -293,33 +295,64 @@ describe('post storage on local D1', () => {
     expect(await getPost(db, 'invalid')).toBeUndefined();
   });
 
-  it('omits deleted posts and preserves the first publication time through republication', async () => {
+  it('moves posts to and from trash without changing their original publication or tags', async () => {
     const db = proxy.env.DB;
     const input = {
-      id: 'lifecycle',
+      id: 'trash-workflow',
       title: 'Title',
       body: 'Body',
       categoryId,
-      tags: [],
+      tags: ['original'],
       status: 'published',
     } as const;
     const later = new Date(clock.getTime() + 1000);
-    await createPost(db, { ...input, tags: [] }, clock);
-    await updatePost(
-      db,
-      { ...input, version: 1, status: 'archived', tags: [] },
-      later,
-    );
-    await updatePost(db, { ...input, version: 2, tags: [] }, later);
-    expect((await getPost(db, input.id))?.publishedAt).toEqual(clock);
-    await db
-      .prepare('UPDATE posts SET deleted_at = ? WHERE id = ?')
-      .bind(later.getTime(), input.id)
-      .run();
+    const restoredAt = new Date(clock.getTime() + 2000);
     await expect(
-      updatePost(db, { ...input, version: 3, tags: ['gone'] }, later),
+      createPost(db, { ...input, tags: [...input.tags] }, clock),
+    ).resolves.toBe('saved');
+    await expect(
+      setPostDeletion(db, input.id, 1, 'restore', later),
+    ).resolves.toBe('conflict');
+    await expect(
+      setPostDeletion(db, input.id, 1, 'delete', later),
+    ).resolves.toBe('saved');
+    await expect(
+      setPostDeletion(db, input.id, 2, 'delete', restoredAt),
+    ).resolves.toBe('conflict');
+    await expect(
+      updatePost(db, { ...input, version: 2, tags: ['gone'] }, later),
     ).resolves.toBe('conflict');
     expect(await getPost(db, input.id)).toBeUndefined();
     expect((await listPosts(db)).some(({ id }) => id === input.id)).toBe(false);
+    expect(await listTrashedPosts(db)).toContainEqual(
+      expect.objectContaining({
+        id: input.id,
+        title: input.title,
+        status: 'published',
+        updatedAt: later,
+        deletedAt: later,
+        version: 2,
+      }),
+    );
+    await expect(
+      setPostDeletion(db, input.id, 1, 'restore', restoredAt),
+    ).resolves.toBe('conflict');
+    await expect(
+      setPostDeletion(db, input.id, 2, 'restore', restoredAt),
+    ).resolves.toBe('saved');
+    expect(await getPost(db, input.id)).toMatchObject({
+      ...input,
+      createdAt: clock,
+      publishedAt: clock,
+      updatedAt: restoredAt,
+      deletedAt: null,
+      version: 3,
+    });
+    expect((await listTrashedPosts(db)).some(({ id }) => id === input.id)).toBe(
+      false,
+    );
+    await expect(
+      setPostDeletion(db, 'missing', 1, 'restore', restoredAt),
+    ).resolves.toBe('missing');
   });
 });
