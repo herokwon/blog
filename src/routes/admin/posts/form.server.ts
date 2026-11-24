@@ -24,19 +24,20 @@ export function readPostForm(form: FormData, id: string) {
 
 type Values = ReturnType<typeof readPostForm>;
 
+export function readPostContent(values: Values) {
+  return {
+    title: values.title,
+    body: values.body,
+    categoryId: Number(values.categoryId),
+    tags: values.tags
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean),
+  };
+}
+
 export function validateForm(values: Values, status: PostStatus) {
-  return validatePostContent(
-    {
-      title: values.title,
-      body: values.body,
-      categoryId: Number(values.categoryId),
-      tags: values.tags
-        .split(',')
-        .map(name => name.trim())
-        .filter(Boolean),
-    },
-    status,
-  );
+  return validatePostContent(readPostContent(values), status);
 }
 
 export function postFormFailure(
