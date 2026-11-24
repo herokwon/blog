@@ -7,8 +7,8 @@
   let {
     id,
     value = '',
-    invalid = false,
-  }: { id: string; value?: string; invalid?: boolean } = $props();
+    errorId,
+  }: { id: string; value?: string; errorId?: string } = $props();
   let edited = $state<string>();
   const name = $derived(edited ?? value);
 </script>
@@ -20,8 +20,8 @@
   value={name}
   oninput={event => (edited = event.currentTarget.value)}
   required
-  aria-invalid={invalid || undefined}
-  aria-describedby={invalid ? `${id}-limit category-error` : `${id}-limit`}
+  aria-invalid={!!errorId || undefined}
+  aria-describedby={errorId ? `${id}-limit ${errorId}` : `${id}-limit`}
 />
 <small id={`${id}-limit`}
   >{categoryNameLength(name)}/{categoryNameLimit}자</small
