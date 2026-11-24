@@ -3,7 +3,13 @@ import { expect, test } from '@playwright/test';
 test('administrator routes reject anonymous and forged identity headers', async ({
   request,
 }) => {
-  for (const path of ['/admin', '/admin/example']) {
+  for (const path of [
+    '/admin',
+    '/admin/posts/example',
+    '/admin/posts/example/__data.json',
+    '/admin/trash',
+    '/admin/trash/__data.json',
+  ]) {
     const response = await request.get(path, {
       headers: {
         'Cf-Access-Authenticated-User-Email': 'wooyng825@gmail.com',
@@ -30,10 +36,14 @@ test('post and category forms reject unauthenticated mutations', async ({
 }) => {
   for (const path of [
     '/admin/categories?/create',
+    '/admin/categories?/rename',
+    '/admin/categories?/remove',
     '/admin/posts/new?/saveDraft',
     '/admin/posts/example/edit?/save',
     '/admin/posts/example/edit?/publish',
     '/admin/posts/example/edit?/archive',
+    '/admin/posts/example?/delete',
+    '/admin/trash?/restore',
   ]) {
     const response = await request.post(path, {
       form: { title: 'Test' },

@@ -1,7 +1,6 @@
-import { readdir, readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { getPlatformProxy, type PlatformProxy } from 'wrangler';
 
+import { createLocalD1 } from '../../../../tests/support/local-d1';
 import { revisePost } from '../posts/manage';
 import { getPostDetail } from '../posts/markdown';
 import {
@@ -17,27 +16,12 @@ import {
   updatePost,
 } from './posts';
 
-const migrations = new URL('../../../../drizzle/', import.meta.url);
 const clock = new Date('2026-11-24T00:00:00Z');
-let proxy: PlatformProxy<{ DB: D1Database }>;
+let proxy: Awaited<ReturnType<typeof createLocalD1>>;
 let categoryId: number;
 
 beforeAll(async () => {
-  proxy = await getPlatformProxy({
-    environment: 'preview',
-    envFiles: [],
-    persist: false,
-    remoteBindings: false,
-  });
-  for (const name of (await readdir(migrations))
-    .filter(name => name.endsWith('.sql'))
-    .sort()) {
-    const migration = await readFile(new URL(name, migrations), 'utf8');
-    const statements = migration
-      .split('--> statement-breakpoint')
-      .filter(sql => sql.trim());
-    await proxy.env.DB.batch(statements.map(sql => proxy.env.DB.prepare(sql)));
-  }
+  proxy = await createLocalD1();
   categoryId = (await createCategory(proxy.env.DB, '개발'))!;
 });
 
