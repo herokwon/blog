@@ -2,8 +2,16 @@ import { v7 } from 'uuid';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 
 import { createLocalD1 } from '../../../tests/support/local-d1';
-import { createCategory, createPost, getPost } from '../../lib/server/db/posts';
-import { actions as categoryActions } from './categories/+page.server';
+import {
+  createCategory,
+  createPost,
+  getPost,
+  setPostDeletion,
+} from '../../lib/server/db/posts';
+import {
+  actions as categoryActions,
+  load as loadCategories,
+} from './categories/+page.server';
 import {
   actions as detailActions,
   load as loadDetail,
@@ -53,6 +61,19 @@ it('handles category names and prevents removing a category referenced by a post
     data: { id, name: 'Taken' },
   });
   await expect(rename(' ')).resolves.toMatchObject({ status: 422 });
+  await expect(rename('😀'.repeat(31))).resolves.toMatchObject({ status: 422 });
+  await expect(
+    categoryActions.create({
+      request: post('/admin/categories?/create', {
+        name: ` ${'😀'.repeat(30)} `,
+      }),
+    } as Parameters<typeof categoryActions.create>[0]),
+  ).rejects.toMatchObject({ status: 303 });
+  await expect(
+    categoryActions.create({
+      request: post('/admin/categories?/create', { name: '한'.repeat(31) }),
+    } as Parameters<typeof categoryActions.create>[0]),
+  ).resolves.toMatchObject({ status: 422 });
   await expect(rename(' Renamed ')).rejects.toMatchObject({
     status: 303,
     location: '/admin/categories',
@@ -70,12 +91,78 @@ it('handles category names and prevents removing a category referenced by a post
   });
   expect((await getPost(db, postId))?.categoryName).toBe('Renamed');
   await expect(remove(id)).resolves.toMatchObject({ status: 409 });
+  expect((await loadCategories()).categories).toContainEqual({
+    id: categoryId,
+    name: 'Renamed',
+    postCount: 1,
+    referenceCount: 1,
+  });
+  await setPostDeletion(db, postId, 1, 'delete');
+  expect((await loadCategories()).categories).toContainEqual({
+    id: categoryId,
+    name: 'Renamed',
+    postCount: 0,
+    referenceCount: 1,
+  });
+  await expect(remove(id)).resolves.toMatchObject({ status: 409 });
   const unused = (await createCategory(db, 'Unused'))!;
   await expect(remove(String(unused))).rejects.toMatchObject({
     status: 303,
     location: '/admin/categories',
   });
   await expect(remove(String(unused))).rejects.toMatchObject({ status: 404 });
+});
+
+it('changes the saved post status without accepting replacement content from detail', async () => {
+  const db = proxy.env.DB;
+  const id = v7();
+  const categoryId = (await createCategory(db, 'Detail publication'))!;
+  const content = {
+    id,
+    categoryId,
+    title: 'Saved title',
+    body: 'Saved body',
+    tags: ['saved'],
+  };
+  await createPost(db, { ...content, status: 'draft' });
+  const submit = (
+    action: 'publish' | 'archive',
+    version: string,
+    postId = id,
+  ) =>
+    detailActions[action]({
+      params: { id: postId },
+      request: post(`/admin/posts/${postId}?/${action}`, {
+        version,
+        title: 'Replacement title',
+        body: '',
+      }),
+    } as Parameters<typeof detailActions.publish>[0]);
+  await expect(submit('publish', '1')).rejects.toMatchObject({
+    status: 303,
+    location: `/admin/posts/${id}`,
+  });
+  const published = await getPost(db, id);
+  expect(published).toMatchObject({
+    ...content,
+    status: 'published',
+    version: 2,
+  });
+  expect(published?.publishedAt).toBeInstanceOf(Date);
+  await expect(submit('archive', '1')).resolves.toMatchObject({ status: 409 });
+  await expect(submit('archive', '2')).rejects.toMatchObject({ status: 303 });
+  await expect(submit('publish', '3')).rejects.toMatchObject({ status: 303 });
+  expect(await getPost(db, id)).toMatchObject({
+    ...content,
+    status: 'published',
+    version: 4,
+    publishedAt: published?.publishedAt,
+  });
+  const emptyId = v7();
+  await createPost(db, { ...content, id: emptyId, status: 'draft', body: '' });
+  await expect(submit('publish', '1', emptyId)).resolves.toMatchObject({
+    status: 422,
+  });
 });
 
 it('loads sanitized details and round-trips delete and restore with version checks', async () => {

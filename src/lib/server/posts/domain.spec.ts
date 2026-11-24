@@ -18,6 +18,25 @@ describe('post lifecycle', () => {
 });
 
 describe('post validation', () => {
+  it('caps new tags at ten while preserving or reducing previously saved tags', () => {
+    const tags = Array.from({ length: 11 }, (_, index) => `tag${index}`);
+    const post = { title: 'Old post', body: '', categoryId: 1, tags };
+    expect(
+      validatePostContent({ ...post, tags: tags.slice(0, 10) }, 'draft').valid,
+    ).toBe(true);
+    expect(validatePostContent(post, 'draft')).toMatchObject({
+      valid: false,
+      errors: { tags: 'tooMany' },
+    });
+    expect(validatePostContent(post, 'draft', tags).valid).toBe(true);
+    expect(
+      validatePostContent(
+        { ...post, tags: [...tags.slice(1), 'new'] },
+        'draft',
+        tags,
+      ).valid,
+    ).toBe(false);
+  });
   it('normalizes titles and tags while preserving Markdown', () => {
     const body = '  # 본문\n\n';
     expect(

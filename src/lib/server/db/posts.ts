@@ -11,6 +11,23 @@ export function listCategories(d1: D1Database) {
   return getDb(d1).select().from(categories).orderBy(asc(categories.name));
 }
 
+export function listCategoryUsage(d1: D1Database) {
+  return getDb(d1)
+    .select({
+      id: categories.id,
+      name: categories.name,
+      postCount:
+        sql<number>`count(case when ${posts.deletedAt} is null then ${posts.id} end)`.mapWith(
+          Number,
+        ),
+      referenceCount: sql<number>`count(${posts.id})`.mapWith(Number),
+    })
+    .from(categories)
+    .leftJoin(posts, eq(categories.id, posts.categoryId))
+    .groupBy(categories.id, categories.name)
+    .orderBy(asc(categories.name));
+}
+
 export async function createCategory(d1: D1Database, name: string) {
   const [category] = await getDb(d1)
     .insert(categories)

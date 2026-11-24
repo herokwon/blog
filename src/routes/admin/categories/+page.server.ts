@@ -1,8 +1,12 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 
 import {
+  categoryNameLength,
+  categoryNameLimit,
+} from '../../../lib/admin-input';
+import {
   createCategory,
-  listCategories,
+  listCategoryUsage,
   removeCategory,
   renameCategory,
 } from '../../../lib/server/db/posts';
@@ -11,14 +15,21 @@ import { positiveInteger, readFormText } from '../form-values.server';
 import type { Actions } from './$types';
 
 export const load = async () => ({
-  categories: await listCategories(env.DB).catch(() => null),
+  categories: await listCategoryUsage(env.DB).catch(() => null),
 });
+
+function categoryNameError(name: string) {
+  const length = categoryNameLength(name);
+  if (length === 0) return '카테고리 이름을 입력해 주세요.';
+  if (length > categoryNameLimit)
+    return `카테고리 이름은 ${categoryNameLimit}자 이하여야 합니다.`;
+}
 
 export const actions = {
   async create({ request }) {
     const name = readFormText(await request.formData(), 'name').trim();
-    if (!name)
-      return fail(422, { name, error: '카테고리 이름을 입력해 주세요.' });
+    const validationError = categoryNameError(name);
+    if (validationError) return fail(422, { name, error: validationError });
     try {
       if (!(await createCategory(env.DB, name))) {
         return fail(409, {
@@ -41,6 +52,8 @@ export const actions = {
     const categoryId = positiveInteger(id);
     if (categoryId === undefined)
       return fail(422, { id, name, error: '카테고리를 다시 선택해 주세요.' });
+    const validationError = categoryNameError(name);
+    if (validationError) return fail(422, { id, name, error: validationError });
 
     const result = await renameCategory(env.DB, categoryId, name).catch(
       () => null,
