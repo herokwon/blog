@@ -1,0 +1,49 @@
+import { fail } from '@sveltejs/kit';
+
+import {
+  validatePostContent,
+  type PostErrors,
+  type PostStatus,
+} from '../../../lib/server/posts/domain';
+
+export function readPostForm(form: FormData, id: string) {
+  function text(name: string) {
+    const value = form.get(name);
+    return typeof value === 'string' ? value : '';
+  }
+
+  return {
+    id,
+    title: text('title'),
+    body: text('body'),
+    categoryId: text('categoryId'),
+    tags: text('tags'),
+    version: text('version'),
+  };
+}
+
+type Values = ReturnType<typeof readPostForm>;
+
+export function validateForm(values: Values, status: PostStatus) {
+  return validatePostContent(
+    {
+      title: values.title,
+      body: values.body,
+      categoryId: Number(values.categoryId),
+      tags: values.tags
+        .split(',')
+        .map(name => name.trim())
+        .filter(Boolean),
+    },
+    status,
+  );
+}
+
+export function postFormFailure(
+  status: 409 | 422 | 503,
+  values: Values,
+  message?: string,
+  errors: PostErrors = {},
+) {
+  return fail(status, { values, errors, message });
+}
