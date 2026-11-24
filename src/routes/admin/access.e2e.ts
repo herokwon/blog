@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 
+test('the signed-out home has a Korean document and a login link to the protected admin', async ({
+  page,
+}) => {
+  const response = await page.goto('/');
+  expect(response?.headers()['cache-control']).toBe('no-store');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
+  expect(await page.locator('header').getAttribute('lang')).toBeNull();
+  await expect(
+    page.getByRole('link', { name: '로그인', exact: true }),
+  ).toHaveAttribute('href', '/admin');
+  await expect(page.getByRole('button', { name: '로그아웃' })).toHaveCount(0);
+});
+
 test('administrator routes reject anonymous and forged identity headers', async ({
   request,
 }) => {

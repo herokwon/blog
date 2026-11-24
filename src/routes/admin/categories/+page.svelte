@@ -1,12 +1,22 @@
 <script lang="ts">
   import AdminHeading from '../AdminHeading.svelte';
   import type { PageProps } from './$types';
-  import CategoryNameInput from './CategoryNameInput.svelte';
+  import CategoryDialog from './CategoryDialog.svelte';
 
   let { data, form }: PageProps = $props();
   let errorSummary = $state<HTMLParagraphElement>();
+  const isCreateFailure = $derived(!!form?.error && form.id === undefined);
+  const isRenameFailure = $derived(
+    !!form?.error &&
+      form.id !== undefined &&
+      form.name !== undefined &&
+      !!data.categories?.some(category => String(category.id) === form?.id),
+  );
+  const pageError = $derived(
+    isCreateFailure || isRenameFailure ? undefined : form?.error,
+  );
   $effect(() => {
-    if (form?.error) errorSummary?.focus();
+    if (pageError) errorSummary?.focus();
   });
 </script>
 
@@ -16,22 +26,17 @@
 
 <main lang="ko">
   <AdminHeading title="카테고리 관리" />
-  {#if form?.error}
+  {#if pageError}
     <p id="category-error" role="alert" tabindex="-1" bind:this={errorSummary}>
-      {form.error}
+      {pageError}
     </p>
   {/if}
-  <details class="add" open={!!form?.error && form.id === undefined}>
-    <summary>추가</summary>
-    <form method="POST" action="?/create" aria-label="카테고리 추가">
-      <CategoryNameInput
-        id="name"
-        value={form?.id === undefined ? form?.name : ''}
-        invalid={!!form?.error && form.id === undefined}
-      />
-      <button type="submit">카테고리 추가</button>
-    </form>
-  </details>
+  <div class="add">
+    <CategoryDialog
+      value={isCreateFailure ? form?.name : ''}
+      message={isCreateFailure ? form?.error : undefined}
+    />
+  </div>
   {#if data.categories === null}
     <p>카테고리 목록을 불러오지 못했습니다.</p>
   {:else}
@@ -53,27 +58,16 @@
         <tbody>
           {#each data.categories as category (category.id)}
             {@const renaming =
-              form?.id === String(category.id) && form?.name !== undefined}
+              isRenameFailure && form?.id === String(category.id)}
             <tr>
               <th scope="row">{category.name}</th>
               <td>{category.postCount}</td>
               <td>
-                <details open={renaming}>
-                  <summary>이름 변경</summary>
-                  <form
-                    method="POST"
-                    action="?/rename"
-                    aria-label={`${category.name} 이름 변경`}
-                  >
-                    <input type="hidden" name="id" value={category.id} />
-                    <CategoryNameInput
-                      id={`name-${category.id}`}
-                      value={renaming ? form?.name : category.name}
-                      invalid={renaming}
-                    />
-                    <button type="submit">이름 저장</button>
-                  </form>
-                </details>
+                <CategoryDialog
+                  categoryId={category.id}
+                  value={renaming ? form?.name : category.name}
+                  message={renaming ? form?.error : undefined}
+                />
                 {#if category.referenceCount === 0}
                   <details>
                     <summary>삭제</summary>
