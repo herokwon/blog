@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 
+import { splitTags } from '../../../lib/admin-input';
 import {
   validatePostContent,
   type PostErrors,
@@ -29,10 +30,7 @@ export function readPostContent(values: Values) {
     title: values.title,
     body: values.body,
     categoryId: Number(values.categoryId),
-    tags: values.tags
-      .split(',')
-      .map(name => name.trim())
-      .filter(Boolean),
+    tags: splitTags(values.tags),
   };
 }
 

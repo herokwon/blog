@@ -19,8 +19,8 @@ permanent deletion are deferred.
 Require a title and one category for every post. Allow an empty body only for
 drafts. New posts may start as `draft` or `published`. Existing posts may move
 from `draft` to `published`, from `published` to `archived`, or from `archived`
-to `published`. Saving preserves the current status. A status change saves the
-submitted content and classification in the same operation.
+to `published`. Saving preserves the current status. Status changes from the
+detail page use the stored content and the submitted version.
 
 Store soft deletion in nullable `deleted_at`, independently of publication
 status. Deleted posts appear in the administrator trash and are excluded from
@@ -35,6 +35,10 @@ composite primary key on `(post_id, name)`. Trim surrounding whitespace, normali
 to NFC, and convert ASCII letters to lowercase before validation. Allow only
 precomposed Hangul syllables, ASCII lowercase letters, and ASCII digits. Reject
 duplicates within a post and allow the same tag on different posts.
+
+Limit category names to 30 Unicode code points after trimming and new tag sets
+to ten tags. Existing posts above the tag limit can keep or remove their saved
+tags. Category counts include all publication states and exclude the trash.
 
 ### Storage and consistency
 

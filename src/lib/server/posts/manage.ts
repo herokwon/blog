@@ -7,12 +7,13 @@ import {
   type PostErrors,
 } from './domain';
 
-interface PostRevision {
+type PostRevision = {
   id: string;
   version: number;
-  action: PostAction;
-  content: PostContent;
-}
+} & (
+  | { action: 'save'; content: PostContent }
+  | { action: Exclude<PostAction, 'save'> }
+);
 
 type RevisionResult =
   | { result: 'saved' | 'missing' | 'conflict' | 'category' | 'transition' }
@@ -20,9 +21,10 @@ type RevisionResult =
 
 export async function revisePost(
   d1: D1Database,
-  { id, version, action, content }: PostRevision,
+  revision: PostRevision,
   now = new Date(),
 ): Promise<RevisionResult> {
+  const { id, version, action } = revision;
   const current = await getPost(d1, id);
   if (!current) return { result: 'missing' };
   if (version !== current.version) return { result: 'conflict' };
@@ -30,7 +32,11 @@ export async function revisePost(
   const status = resolvePostStatus(current.status, action);
   if (status === null) return { result: 'transition' };
 
-  const validated = validatePostContent(content, status);
+  const validated = validatePostContent(
+    revision.action === 'save' ? revision.content : current,
+    status,
+    current.tags,
+  );
   if (!validated.valid) return { result: 'invalid', errors: validated.errors };
 
   return {

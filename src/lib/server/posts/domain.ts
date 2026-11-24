@@ -1,3 +1,5 @@
+import { normalizeTag, validateTags } from '../../admin-input';
+
 export const postStatuses = ['draft', 'published', 'archived'] as const;
 export type PostStatus = (typeof postStatuses)[number];
 export type PostAction = 'save' | 'publish' | 'archive';
@@ -12,7 +14,7 @@ export interface PostContent {
   tags: string[];
 }
 
-type FieldError = 'required' | 'tooLong' | 'invalid' | 'duplicate';
+type FieldError = 'required' | 'tooLong' | 'invalid' | 'duplicate' | 'tooMany';
 export type PostErrors = Partial<Record<keyof PostContent, FieldError>>;
 
 export function resolvePostStatus(
@@ -32,17 +34,12 @@ export function resolvePostStatus(
 export function validatePostContent(
   input: PostContent,
   status: PostStatus,
+  existingTags?: string[],
 ):
   { valid: true; content: PostContent } | { valid: false; errors: PostErrors } {
   const title = input.title.trim();
   const { body, categoryId } = input;
-  // Fold ASCII letters only, keeping other scripts subject to the allowlist.
-  const tags = input.tags.map(tag =>
-    tag
-      .trim()
-      .normalize('NFC')
-      .replace(/[A-Z]/g, letter => letter.toLowerCase()),
-  );
+  const tags = input.tags.map(normalizeTag);
   const errors: PostErrors = {};
   if (!title) {
     errors.title = 'required';
@@ -57,11 +54,8 @@ export function validatePostContent(
   if (!Number.isSafeInteger(categoryId) || categoryId < 1) {
     errors.categoryId = 'required';
   }
-  if (tags.some(tag => !/^[가-힣a-z0-9]+$/u.test(tag))) {
-    errors.tags = 'invalid';
-  } else if (new Set(tags).size !== tags.length) {
-    errors.tags = 'duplicate';
-  }
+  const tagError = validateTags(tags, existingTags);
+  if (tagError) errors.tags = tagError;
   return Object.keys(errors).length
     ? { valid: false, errors }
     : { valid: true, content: { title, body, categoryId, tags } };

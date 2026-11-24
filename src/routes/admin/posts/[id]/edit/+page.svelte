@@ -28,6 +28,7 @@
     <PostForm
       categories={data.categories}
       {values}
+      existingTags={data.post?.tags}
       errors={form?.errors}
       message={form?.message}
     />

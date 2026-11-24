@@ -1,7 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 
 import { getPost, listCategories } from '../../../../../lib/server/db/posts';
-import type { PostAction } from '../../../../../lib/server/posts/domain';
 import { revisePost } from '../../../../../lib/server/posts/manage';
 import { env } from '../../../../../lib/server/runtime';
 import {
@@ -23,13 +22,13 @@ export const load: PageServerLoad = async ({ params }) => {
   return { post, categories };
 };
 
-function revise(action: PostAction): Actions[string] {
-  return async ({ params, request }) => {
+export const actions = {
+  async save({ params, request }) {
     const values = readPostForm(await request.formData(), params.id);
     const outcome = await revisePost(env.DB, {
       id: params.id,
       version: Number(values.version),
-      action,
+      action: 'save',
       content: readPostContent(values),
     }).catch(() => null);
     if (!outcome) {
@@ -61,11 +60,5 @@ function revise(action: PostAction): Actions[string] {
       case 'saved':
         return redirect(303, '/admin/posts');
     }
-  };
-}
-
-export const actions = {
-  save: revise('save'),
-  publish: revise('publish'),
-  archive: revise('archive'),
+  },
 } satisfies Actions;

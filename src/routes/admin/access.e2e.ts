@@ -40,8 +40,8 @@ test('post and category forms reject unauthenticated mutations', async ({
     '/admin/categories?/remove',
     '/admin/posts/new?/saveDraft',
     '/admin/posts/example/edit?/save',
-    '/admin/posts/example/edit?/publish',
-    '/admin/posts/example/edit?/archive',
+    '/admin/posts/example?/publish',
+    '/admin/posts/example?/archive',
     '/admin/posts/example?/delete',
     '/admin/trash?/restore',
   ]) {

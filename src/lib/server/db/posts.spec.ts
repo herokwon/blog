@@ -64,7 +64,7 @@ describe('post storage on local D1', () => {
     await expect(getPostDetail(db, id)).resolves.toBeUndefined();
   });
 
-  it('applies publication transitions and submitted content through the server operation', async () => {
+  it('applies publication transitions to the most recently saved content', async () => {
     const db = proxy.env.DB;
     const id = 'revision-workflow';
     const draft = { title: 'Draft', body: '', categoryId, tags: ['draft'] };
@@ -79,18 +79,10 @@ describe('post storage on local D1', () => {
       createPost(db, { ...draft, id, status: 'draft' }, clock),
     ).resolves.toBe('saved');
     await expect(
-      revisePost(
-        db,
-        { id, version: 1, action: 'archive', content: draft },
-        clock,
-      ),
+      revisePost(db, { id, version: 1, action: 'archive' }, clock),
     ).resolves.toEqual({ result: 'transition' });
     await expect(
-      revisePost(
-        db,
-        { id, version: 1, action: 'publish', content: draft },
-        clock,
-      ),
+      revisePost(db, { id, version: 1, action: 'publish' }, clock),
     ).resolves.toMatchObject({
       result: 'invalid',
       errors: { body: 'required' },
@@ -98,9 +90,12 @@ describe('post storage on local D1', () => {
     await expect(
       revisePost(
         db,
-        { id, version: 1, action: 'publish', content: published },
+        { id, version: 1, action: 'save', content: published },
         clock,
       ),
+    ).resolves.toEqual({ result: 'saved' });
+    await expect(
+      revisePost(db, { id, version: 2, action: 'publish' }, clock),
     ).resolves.toEqual({ result: 'saved' });
     await expect(
       revisePost(db, { id, version: 1, action: 'save', content: draft }, later),
@@ -113,39 +108,26 @@ describe('post storage on local D1', () => {
       publishedAt: clock,
     });
     await expect(
-      revisePost(
-        db,
-        {
-          id,
-          version: 2,
-          action: 'archive',
-          content: { ...published, title: 'Archived' },
-        },
-        later,
-      ),
+      revisePost(db, { id, version: 3, action: 'archive' }, later),
     ).resolves.toEqual({ result: 'saved' });
     expect(await getPost(db, id)).toMatchObject({
       status: 'archived',
-      title: 'Archived',
+      title: 'Published',
     });
     await expect(
-      revisePost(db, { id, version: 3, action: 'save', content: draft }, later),
+      revisePost(db, { id, version: 4, action: 'save', content: draft }, later),
     ).resolves.toMatchObject({
       result: 'invalid',
       errors: { body: 'required' },
     });
     await expect(
-      revisePost(
-        db,
-        { id, version: 3, action: 'publish', content: published },
-        later,
-      ),
+      revisePost(db, { id, version: 4, action: 'publish' }, later),
     ).resolves.toEqual({ result: 'saved' });
     expect(await getPost(db, id)).toMatchObject({
       status: 'published',
       publishedAt: clock,
       updatedAt: later,
-      version: 4,
+      version: 5,
     });
     await expect(
       revisePost(

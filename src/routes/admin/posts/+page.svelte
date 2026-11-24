@@ -16,12 +16,13 @@
   <nav aria-label="게시글 관리">
     <a href={resolve('/admin/posts/new')}>새 글</a>
     <a href={resolve('/admin/categories')}>카테고리</a>
+    <a href={resolve('/admin/trash')}>휴지통</a>
   </nav>
   {#if data.posts.length}
     <ul>
       {#each data.posts as post (post.id)}
         <li>
-          <a href={resolve('/admin/posts/[id]/edit', { id: post.id })}
+          <a href={resolve('/admin/posts/[id]', { id: post.id })}
             >{post.title}</a
           >
           · {post.categoryName} · {statuses[post.status]}
