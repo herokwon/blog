@@ -32,6 +32,8 @@ test('post and category forms reject unauthenticated mutations', async ({
     '/admin/categories?/create',
     '/admin/posts/new?/saveDraft',
     '/admin/posts/example/edit?/save',
+    '/admin/posts/example/edit?/publish',
+    '/admin/posts/example/edit?/archive',
   ]) {
     const response = await request.post(path, {
       form: { title: 'Test' },

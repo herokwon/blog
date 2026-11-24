@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPlatformProxy, type PlatformProxy } from 'wrangler';
 
+import { revisePost } from '../posts/manage';
 import {
   createCategory,
   createPost,
@@ -42,6 +43,98 @@ afterAll(async () => {
 });
 
 describe('post storage on local D1', () => {
+  it('applies publication transitions and submitted content through the server operation', async () => {
+    const db = proxy.env.DB;
+    const id = 'revision-workflow';
+    const draft = { title: 'Draft', body: '', categoryId, tags: ['draft'] };
+    const published = {
+      ...draft,
+      title: 'Published',
+      body: '# Markdown',
+      tags: ['First'],
+    };
+    const later = new Date(clock.getTime() + 1000);
+    await expect(
+      createPost(db, { ...draft, id, status: 'draft' }, clock),
+    ).resolves.toBe('saved');
+    await expect(
+      revisePost(
+        db,
+        { id, version: 1, action: 'archive', content: draft },
+        clock,
+      ),
+    ).resolves.toEqual({ result: 'transition' });
+    await expect(
+      revisePost(
+        db,
+        { id, version: 1, action: 'publish', content: draft },
+        clock,
+      ),
+    ).resolves.toMatchObject({
+      result: 'invalid',
+      errors: { body: 'required' },
+    });
+    await expect(
+      revisePost(
+        db,
+        { id, version: 1, action: 'publish', content: published },
+        clock,
+      ),
+    ).resolves.toEqual({ result: 'saved' });
+    await expect(
+      revisePost(db, { id, version: 1, action: 'save', content: draft }, later),
+    ).resolves.toEqual({ result: 'conflict' });
+    expect(await getPost(db, id)).toMatchObject({
+      title: 'Published',
+      body: '# Markdown',
+      status: 'published',
+      tags: ['first'],
+      publishedAt: clock,
+    });
+    await expect(
+      revisePost(
+        db,
+        {
+          id,
+          version: 2,
+          action: 'archive',
+          content: { ...published, title: 'Archived' },
+        },
+        later,
+      ),
+    ).resolves.toEqual({ result: 'saved' });
+    expect(await getPost(db, id)).toMatchObject({
+      status: 'archived',
+      title: 'Archived',
+    });
+    await expect(
+      revisePost(db, { id, version: 3, action: 'save', content: draft }, later),
+    ).resolves.toMatchObject({
+      result: 'invalid',
+      errors: { body: 'required' },
+    });
+    await expect(
+      revisePost(
+        db,
+        { id, version: 3, action: 'publish', content: published },
+        later,
+      ),
+    ).resolves.toEqual({ result: 'saved' });
+    expect(await getPost(db, id)).toMatchObject({
+      status: 'published',
+      publishedAt: clock,
+      updatedAt: later,
+      version: 4,
+    });
+    await expect(
+      revisePost(
+        db,
+        { id: 'not-found', version: 1, action: 'save', content: draft },
+        clock,
+      ),
+    ).resolves.toEqual({ result: 'missing' });
+  });
+
   it('renames categories and only removes a category with no post references', async () => {
     const db = proxy.env.DB;
     const unused = (await createCategory(db, 'Unused'))!;
