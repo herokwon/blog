@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
 
+  import AdminHeading from '../../AdminHeading.svelte';
   import PostForm from '../PostForm.svelte';
   import type { PageProps } from './$types';
 
@@ -12,7 +13,7 @@
 </svelte:head>
 
 <main lang="ko">
-  <h1>새 게시글</h1>
+  <AdminHeading title="새 게시글" />
   {#if data.categories?.length || form}
     <PostForm
       creating

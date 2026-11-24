@@ -1,7 +1,10 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
 
+  import AdminHeading from '../../AdminHeading.svelte';
   import type { PageProps } from './$types';
+  import DeletePost from './DeletePost.svelte';
 
   let { data, form }: PageProps = $props();
   const post = $derived(data.post);
@@ -21,7 +24,7 @@
 </svelte:head>
 
 <main lang="ko">
-  <h1>{post?.title ?? '게시글 상세'}</h1>
+  <AdminHeading title={post?.title ?? '게시글 상세'} />
   {#if post}
     {@const state = states[post.status]}
     <div class="actions">
@@ -30,13 +33,11 @@
         <button type="submit">{state.next}</button>
       </form>
       <a href={resolve('/admin/posts/[id]/edit', { id: post.id })}>수정</a>
-      <details>
-        <summary>삭제</summary>
-        <form method="POST" action="?/delete" aria-label="게시글 삭제 확인">
-          <input type="hidden" name="version" value={post.version} />
-          <button type="submit">휴지통으로 이동</button>
-        </form>
-      </details>
+      <DeletePost
+        id={post.id}
+        version={post.version}
+        confirming={page.url.searchParams.has('confirmDelete')}
+      />
     </div>
   {/if}
   {#if form?.error}
@@ -58,7 +59,6 @@
       {@html post.html}
     </article>
   {/if}
-  <p><a href={resolve('/admin/posts')}>게시글 목록</a></p>
 </main>
 
 <style>

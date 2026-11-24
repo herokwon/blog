@@ -3,6 +3,7 @@
 
   import { tagErrorMessages } from '../../../lib/admin-input';
   import type { PostErrors } from '../../../lib/server/posts/domain';
+  import MarkdownEditor from './MarkdownEditor.svelte';
   import TagInput from './TagInput.svelte';
 
   interface Props {
@@ -116,16 +117,9 @@
       aria-describedby={errors.title ? 'post-errors' : undefined}
     />
   </p>
-  <p>
-    <label for="body">본문 (Markdown)</label><br />
-    <textarea
-      id="body"
-      name="body"
-      rows="10"
-      value={values.body}
-      aria-invalid={errors.body ? true : undefined}
-      aria-describedby={errors.body ? 'post-errors' : undefined}></textarea>
-  </p>
+  {#key values.body}
+    <MarkdownEditor value={values.body} invalid={!!errors.body} />
+  {/key}
   {#key values.tags}
     <TagInput value={values.tags} {existingTags} invalid={!!errors.tags} />
   {/key}

@@ -136,8 +136,8 @@
           : invalid
             ? 'tag-help post-errors'
             : 'tag-help'}
+        enterkeyhint="done"
       />
-      <button type="button" onclick={commit}>태그 추가</button>
     </div>
     <small id="tag-help"
       >{tags.length}/{postTagLimit}개 · Space 또는 Enter로 추가</small

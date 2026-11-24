@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
-
+  import AdminHeading from '../AdminHeading.svelte';
   import type { PageProps } from './$types';
 
   let { data, form }: PageProps = $props();
@@ -20,8 +19,7 @@
 </svelte:head>
 
 <main lang="ko">
-  <h1>휴지통</h1>
-  <p><a href={resolve('/admin/posts')}>게시글 목록</a></p>
+  <AdminHeading title="휴지통" />
   {#if form?.error}
     <p role="alert" tabindex="-1" bind:this={errorSummary}>{form.error}</p>
   {/if}
