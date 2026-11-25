@@ -44,46 +44,26 @@ async function milestoneFor(github: GitHub, repo: Repository, version: string) {
   return matches[0].number;
 }
 
-async function ensureIssue(
-  github: GitHub,
-  repo: Repository,
-  marker: string,
-  title: string,
-  body: string,
-  milestone: number,
+function isRenovateDependencyPR(
+  pr: NonNullable<ActionContext['context']['payload']['pull_request']>,
+  repository: string,
 ) {
-  const issues = await github.paginate(github.rest.issues.listForRepo, {
-    ...repo,
-    state: 'all',
-    per_page: 100,
-  });
-  const existing = issues.filter(
-    item => !item.pull_request && item.body?.includes(marker),
+  return (
+    pr.base.ref.startsWith('release/') &&
+    pr.head.repo?.full_name === repository &&
+    pr.user.login === 'renovate[bot]' &&
+    pr.head.ref.startsWith('renovate/')
   );
-  if (existing.length > 1)
-    throw new Error('Duplicate tracking issues require manual resolution');
-  if (existing.length) {
-    if (existing[0].state !== 'open')
-      throw new Error('Tracking issue is closed; review manually');
-    await github.rest.issues.update({
-      ...repo,
-      issue_number: existing[0].number,
-      milestone,
-    });
-    return existing[0];
-  }
-  const { data } = await github.rest.issues.create({
-    ...repo,
-    title,
-    milestone,
-    body: `${marker}\n${body}\n\nRecommended metadata: Priority p2; Size xs; Estimate 1 hour.`,
-  });
-  return data;
 }
 
-export async function metadata({ github, context, core }: Action) {
+export async function metadata({ github, context }: ActionContext) {
   const pr = context.payload.pull_request;
-  if (!pr || pr.head.repo?.full_name !== context.payload.repository.full_name)
+  const repository = context.payload.repository.full_name;
+  if (
+    !pr ||
+    pr.head.repo?.full_name !== repository ||
+    isRenovateDependencyPR(pr, repository)
+  )
     return;
   const version = releaseVersion(
     pr.base.ref === 'main' ? pr.head.ref : pr.base.ref,
@@ -94,49 +74,12 @@ export async function metadata({ github, context, core }: Action) {
     issue_number: pr.number,
     milestone,
   });
-  if (pr.user.login !== 'renovate[bot]' || !pr.head.ref.startsWith('renovate/'))
-    return;
-
-  const issue = await ensureIssue(
-    github,
-    context.repo,
-    `<!-- bot-pr:${pr.number} -->`,
-    `chore(deps): track dependency PR #${pr.number}`,
-    `Track ${pr.html_url}.\n\n## Acceptance Criteria\n- [ ] Review dependency and lockfile changes.\n- [ ] Required CI and current Codex review pass; valid findings are resolved.\n- [ ] Verify release deployment before owner-authorized closure.`,
-    milestone,
-  );
-  const marker = '<!-- bot-tracking -->';
-  const comments = await github.paginate(github.rest.issues.listComments, {
-    ...context.repo,
-    issue_number: pr.number,
-    per_page: 100,
-  });
-  const body = `${marker}\nRelated issue: #${issue.number}\nTarget milestone: ${version}\nNo automatic issue closure.`;
-  const comment = comments.find(
-    item => item.user?.type === 'Bot' && item.body?.startsWith(marker),
-  );
-  if (comment)
-    await github.rest.issues.updateComment({
-      ...context.repo,
-      comment_id: comment.id,
-      body,
-    });
-  else
-    await github.rest.issues.createComment({
-      ...context.repo,
-      issue_number: pr.number,
-      body,
-    });
-  core.info(`Tracking issue #${issue.number}`);
 }
 
-export async function checkMetadata({
-  github,
-  context,
-  appSlug,
-}: ActionContext & { appSlug?: string }) {
+export async function checkMetadata({ github, context }: ActionContext) {
   const pr = context.payload.pull_request;
-  if (!pr) return;
+  if (!pr || isRenovateDependencyPR(pr, context.payload.repository.full_name))
+    return;
   const version = releaseVersion(
     pr.base.ref === 'main' ? pr.head.ref : pr.base.ref,
   );
@@ -146,44 +89,6 @@ export async function checkMetadata({
   });
   if (fresh.milestone?.title !== version)
     throw new Error('PR milestone does not match target release');
-
-  // A release PR describes multiple work issues; its own milestone is the gate.
-  if (pr.base.ref === 'main') return;
-  if (
-    appSlug &&
-    pr.user.login === `${appSlug}[bot]` &&
-    pr.head.repo?.full_name === context.payload.repository.full_name &&
-    pr.head.ref === `codex/bump-${version}`
-  )
-    return;
-
-  const comments = await github.paginate(github.rest.issues.listComments, {
-    ...context.repo,
-    issue_number: pr.number,
-    per_page: 100,
-  });
-  const trusted = comments.find(
-    item =>
-      item.user?.type === 'Bot' &&
-      item.body?.startsWith('<!-- bot-tracking -->'),
-  );
-  const issueNumber =
-    fresh.body?.match(/Refs: #(\d+)/)?.[1] ??
-    trusted?.body?.match(/Related issue: #(\d+)/)?.[1];
-  if (!issueNumber)
-    throw new Error('Missing related issue (use Refs: #number)');
-  const { data: issue } = await github.rest.issues.get({
-    ...context.repo,
-    issue_number: Number(issueNumber),
-  });
-  if (
-    issue.pull_request ||
-    issue.state !== 'open' ||
-    issue.milestone?.title !== version
-  )
-    throw new Error(
-      'Related issue must be open and share the target milestone',
-    );
 }
 
 export async function bump({ github, context, core }: Action) {
