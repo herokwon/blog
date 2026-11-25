@@ -5,22 +5,9 @@ type Page = { per_page: number };
 type Sha = { sha: string };
 type Milestone = { number: number; title: string };
 type Branch = { name: string; commit: Sha };
-type Issue = {
-  number: number;
-  state: string;
-  body?: string | null;
-  pull_request?: unknown;
-  milestone?: Milestone | null;
-};
-type Comment = {
-  id: number;
-  body?: string;
-  user: { type: string } | null;
-};
 type Pull = {
   number: number;
   state: string;
-  body: string | null;
   milestone?: Milestone | null;
   head: { sha: string; ref: string };
 };
@@ -28,7 +15,6 @@ type EventPull = DeploymentPR & {
   number: number;
   head: DeploymentPR['head'] & Sha;
   user: { login: string };
-  html_url: string;
 };
 type ListedPull = Omit<DeploymentPR, 'merged'> & {
   number: number;
@@ -55,16 +41,7 @@ export type GitHub = {
   rest: {
     issues: {
       listMilestones: List<{ state: 'open' }, Milestone>;
-      listForRepo: List<{ state: 'all' }, Issue>;
-      listComments: List<{ issue_number: number }, Comment>;
-      get: Endpoint<{ issue_number: number }, Issue>;
       update: Endpoint<{ issue_number: number; milestone: number }>;
-      create: Endpoint<
-        { title: string; milestone: number; body: string },
-        Issue
-      >;
-      updateComment: Endpoint<{ comment_id: number; body: string }>;
-      createComment: Endpoint<{ issue_number: number; body: string }>;
     };
     pulls: {
       get: Endpoint<{ pull_number: number }, Pull>;

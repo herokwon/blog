@@ -27,13 +27,7 @@ function mockGitHub(): GitHub {
     rest: {
       issues: {
         listMilestones: unexpectedCall,
-        listForRepo: unexpectedCall,
-        listComments: unexpectedCall,
-        get: unexpectedCall,
         update: unexpectedCall,
-        create: unexpectedCall,
-        updateComment: unexpectedCall,
-        createComment: unexpectedCall,
       },
       pulls: {
         get: unexpectedCall,
@@ -67,7 +61,6 @@ function fixture(version = '0.0.1') {
     number: 1,
     state: 'open',
     body: null,
-    html_url: 'https://github.com/owner/blog/pull/1',
     user: { login: 'author' },
     merged: true,
     merge_commit_sha: sha,
@@ -148,93 +141,77 @@ test('rejects invalid audit refs and unavailable lockfile content', async () => 
   await assert.rejects(readAuditLockfile(github, repo, sha), /Not found/);
 });
 
-test('only the configured App on the matching bump branch may omit a tracking issue', async () => {
-  const input = { ...fixture(), appSlug: 'current-app' };
-  const pr = {
-    ...input.pr,
-    base: { ...input.pr.base, ref: 'release/0.1.0' },
-    head: { ...input.pr.head, ref: 'codex/bump-0.1.0' },
-    user: { login: 'current-app[bot]' },
-  };
-  const milestone = { number: 2, title: '0.1.0' };
-  const issues = input.github.rest.issues;
-  input.context.payload.pull_request = pr;
-  issues.listMilestones = async () => ({ data: [milestone] });
-  const milestoneUpdates: number[] = [];
-  issues.update = async ({ issue_number, milestone: assignedMilestone }) => {
-    assert.equal(assignedMilestone, milestone.number);
-    milestoneUpdates.push(issue_number);
-    return { data: {} };
-  };
-  input.github.rest.pulls.get = async () => ({ data: { ...pr, milestone } });
+test('validates milestones for work, release, and Version Bump PRs without issue references', async () => {
+  for (const [head, base, author] of [
+    ['codex/work', 'release/0.1.0', 'author'],
+    ['release/0.1.0', 'main', 'author'],
+    ['codex/bump-0.1.0', 'release/0.1.0', 'current-app[bot]'],
+    ['renovate/dependency', 'release/0.1.0', 'author'],
+  ]) {
+    const input = fixture();
+    const pr = {
+      ...input.pr,
+      base: { ...input.pr.base, ref: base },
+      head: { ...input.pr.head, ref: head },
+      user: { login: author },
+    };
+    const milestone = { number: 2, title: '0.1.0' };
+    input.context.payload.pull_request = pr;
+    input.github.rest.issues.listMilestones = async () => ({
+      data: [milestone],
+    });
+    const updates: number[] = [];
+    input.github.rest.issues.update = async args => {
+      assert.deepEqual(args, {
+        ...repo,
+        issue_number: pr.number,
+        milestone: 2,
+      });
+      updates.push(args.milestone);
+      return { data: {} };
+    };
+    input.github.rest.pulls.get = async () => ({ data: { ...pr, milestone } });
 
-  await metadata(input);
-  assert.deepEqual(milestoneUpdates, [pr.number]);
-  await checkMetadata(input);
+    await metadata(input);
+    assert.deepEqual(updates, [milestone.number]);
+    await checkMetadata(input);
 
-  issues.listComments = async () => ({ data: [] });
-  await assert.rejects(
-    checkMetadata({ ...input, appSlug: undefined }),
-    /Missing related issue/,
-  );
-  await assert.rejects(
-    checkMetadata({ ...input, appSlug: 'different-app' }),
-    /Missing related issue/,
-  );
-  input.context.payload.pull_request = {
-    ...pr,
-    head: { ...pr.head, ref: 'codex/bump-0.1.1' },
-  };
-  await assert.rejects(checkMetadata(input), /Missing related issue/);
-  input.context.payload.pull_request = {
-    ...pr,
-    head: { ...pr.head, repo: { full_name: 'fork/blog' } },
-  };
-  await assert.rejects(checkMetadata(input), /Missing related issue/);
-
-  input.context.payload.pull_request = pr;
-  input.github.rest.pulls.get = async () => ({
-    data: { ...pr, milestone: null },
-  });
-  await assert.rejects(checkMetadata(input), /milestone does not match/);
+    input.github.rest.pulls.get = async () => ({
+      data: { ...pr, milestone: { number: 3, title: '0.2.0' } },
+    });
+    await assert.rejects(checkMetadata(input), /milestone does not match/);
+  }
 });
 
-test('Renovate still creates a milestone-matched tracking issue and comment', async () => {
+test('skips metadata API calls for same-repository Renovate dependency PRs', async () => {
   const input = fixture();
-  const pr = {
+  input.context.payload.pull_request = {
     ...input.pr,
     base: { ...input.pr.base, ref: 'release/0.1.0' },
     head: { ...input.pr.head, ref: 'renovate/dependency' },
     user: { login: 'renovate[bot]' },
   };
-  const milestone = { number: 2, title: '0.1.0' };
-  const issues = input.github.rest.issues;
-  input.context.payload.pull_request = pr;
-  input.github.rest.pulls.get = async () => ({ data: { ...pr, milestone } });
-  issues.listMilestones = async () => ({ data: [milestone] });
-  issues.listForRepo = async () => ({ data: [] });
-  issues.update = async () => ({ data: {} });
-  const tracking = { number: 7, state: 'open', milestone };
-  issues.create = async args => {
-    assert.equal(args.milestone, milestone.number);
-    assert.match(args.body, /<!-- bot-pr:1 -->/);
-    return { data: tracking };
-  };
-  issues.get = async ({ issue_number }) => {
-    assert.equal(issue_number, tracking.number);
-    return { data: tracking };
-  };
-  const comments: { id: number; body: string; user: { type: string } }[] = [];
-  issues.listComments = async () => ({ data: comments });
-  issues.createComment = async ({ body }) => {
-    comments.push({ id: 1, body, user: { type: 'Bot' } });
-    return { data: {} };
-  };
-
+  input.github.rest.pulls.get = unexpectedCall;
   await metadata(input);
-  assert.equal(comments.length, 1);
-  assert.match(comments[0].body, /Related issue: #7/);
   await checkMetadata(input);
+});
+
+test('still validates forked Renovate PR milestones', async () => {
+  const input = fixture();
+  const pr = {
+    ...input.pr,
+    base: { ...input.pr.base, ref: 'release/0.1.0' },
+    head: {
+      ...input.pr.head,
+      ref: 'renovate/dependency',
+      repo: { full_name: 'fork/blog' },
+    },
+    user: { login: 'renovate[bot]' },
+  };
+  input.context.payload.pull_request = pr;
+  input.github.rest.pulls.get = async () => ({ data: pr });
+  await metadata(input);
+  await assert.rejects(checkMetadata(input), /milestone does not match/);
 });
 
 test('matching package version does not create issues, commits or bump PRs', async () => {
@@ -297,8 +274,6 @@ test('version preparation creates no issue and repairs a failed PR milestone ass
   const { issues, git, pulls } = input.github.rest;
   const targetMilestone = { number: 2, title: '0.1.0' };
   issues.listMilestones = async () => ({ data: [targetMilestone] });
-  issues.listForRepo = async () =>
-    assert.fail('Version Bump must not look up tracking issues');
   let created = 0;
   let milestoneUpdates = 0;
   let assignedMilestone: typeof targetMilestone | null = null;
