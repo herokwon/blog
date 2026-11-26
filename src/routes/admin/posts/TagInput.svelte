@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { flushSync, onMount } from 'svelte';
 
   import {
     normalizeTag,
@@ -20,13 +20,15 @@
   } = $props();
   let root: HTMLDivElement;
   let input = $state<HTMLInputElement>();
+  let prompt = $state<HTMLButtonElement>();
   let enhanced = $state(false);
+  let editing = $state(false);
   let tags = $state<string[]>([]);
   let message = $state('');
   let composing = false;
 
   function commit() {
-    if (!input) return false;
+    if (!input) return true;
     const tag = normalizeTag(input.value);
     if (!tag) return true;
 
@@ -34,15 +36,28 @@
     const error = validateTags(next, existingTags);
     if (error) {
       message = tagErrorMessages[error];
-      input.focus();
       return false;
     }
 
     tags = next;
     input.value = '';
     message = '';
-    input.focus();
     return true;
+  }
+
+  function openInput() {
+    flushSync(() => (editing = true));
+    input?.focus();
+  }
+
+  function finishEditing(event: FocusEvent) {
+    if (!editing || composing) return;
+    if (
+      event.relatedTarget instanceof Node &&
+      root.contains(event.relatedTarget)
+    )
+      return;
+    if (commit()) editing = false;
   }
 
   function handleKey(event: KeyboardEvent) {
@@ -68,7 +83,7 @@
   function remove(index: number) {
     tags = tags.filter((_, position) => position !== index);
     message = '';
-    input?.focus();
+    (input ?? prompt)?.focus();
   }
 
   function handleChipKey(event: KeyboardEvent, index: number) {
@@ -83,7 +98,10 @@
     if (!form) return;
 
     function validatePending(event: SubmitEvent) {
-      if (composing || !commit()) event.preventDefault();
+      if (composing || !commit()) {
+        event.preventDefault();
+        input?.focus();
+      }
     }
 
     function serialize(event: FormDataEvent) {
@@ -92,6 +110,7 @@
 
     form.addEventListener('submit', validatePending);
     form.addEventListener('formdata', serialize);
+    editing = invalid;
     enhanced = true;
     return () => {
       form.removeEventListener('submit', validatePending);
@@ -101,7 +120,11 @@
 </script>
 
 <div bind:this={root}>
-  <label for="tags">태그</label>
+  {#if enhanced && !editing}
+    <span>태그</span>
+  {:else}
+    <label for="tags">태그</label>
+  {/if}
   {#if enhanced}
     <div class="entry">
       {#if tags.length}
@@ -112,6 +135,7 @@
                 type="button"
                 aria-label={`태그 ${tag} 제거`}
                 onclick={() => remove(index)}
+                onblur={finishEditing}
                 onkeydown={event => handleChipKey(event, index)}
               >
                 {tag} ×
@@ -120,24 +144,37 @@
           {/each}
         </ul>
       {/if}
-      <input
-        id="tags"
-        bind:this={input}
-        placeholder={tags.length
-          ? undefined
-          : `태그를 입력해 주세요. (최대 ${postTagLimit}개)`}
-        onkeydown={handleKey}
-        oninput={() => (message = '')}
-        oncompositionstart={() => (composing = true)}
-        oncompositionend={() => (composing = false)}
-        aria-invalid={!!message || invalid || undefined}
-        aria-describedby={message
-          ? 'tag-help tag-error'
-          : invalid
-            ? 'tag-help post-errors'
-            : 'tag-help'}
-        enterkeyhint="done"
-      />
+      {#if editing}
+        <div class="tag-field">
+          <span aria-hidden="true">#</span>
+          <input
+            id="tags"
+            bind:this={input}
+            onblur={finishEditing}
+            onkeydown={handleKey}
+            oninput={() => (message = '')}
+            oncompositionstart={() => (composing = true)}
+            oncompositionend={() => (composing = false)}
+            aria-invalid={!!message || invalid || undefined}
+            aria-describedby={message
+              ? 'tag-help tag-error'
+              : invalid
+                ? 'tag-help post-errors'
+                : 'tag-help'}
+            enterkeyhint="done"
+          />
+        </div>
+      {:else}
+        <button
+          type="button"
+          class="tag-prompt"
+          bind:this={prompt}
+          onclick={openInput}
+          aria-describedby="tag-help"
+        >
+          태그를 입력해 주세요. (최대 {postTagLimit}개)
+        </button>
+      {/if}
     </div>
     <small id="tag-help">{tags.length}/{postTagLimit}개</small>
     {#if message}
@@ -162,6 +199,49 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+  }
+
+  .entry {
+    align-items: center;
+    border-block-start: 1px solid #ddd;
+    padding-block: 0.4rem;
+  }
+
+  .tag-prompt {
+    flex: 1 1 auto;
+    padding: 0.4rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .tag-field {
+    display: inline-flex;
+    align-items: center;
+    max-inline-size: 100%;
+    box-sizing: border-box;
+    border-radius: 0.25rem;
+    padding: 0.3rem 0.45rem;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .tag-field:focus-within {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  .tag-field input {
+    field-sizing: content;
+    min-inline-size: 1ch;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    outline: none;
   }
 
   ul {

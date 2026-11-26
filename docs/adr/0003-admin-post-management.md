@@ -24,9 +24,11 @@ detail page use the stored content and the submitted version.
 
 Store soft deletion in nullable `deleted_at`, independently of publication
 status. Deleted posts appear in the administrator trash and are excluded from
-ordinary list, detail, and edit queries. Restoring clears `deleted_at` and
-preserves publication status, content, classification, and first publication
-time. Both operations update the modification time and version.
+ordinary list, detail, and edit queries. Restoring a published post clears
+`deleted_at` and archives it in one update, so making it public again requires
+explicit republication. Draft and archived posts keep their status. Restoration
+preserves content, classification, and first publication time. Both operations
+update the modification time and version.
 
 Allow the administrator to create and rename categories and delete unused ones.
 The required `posts.category_id` foreign key protects categories referenced by
