@@ -79,7 +79,11 @@ const postSummary = {
 
 export function listPosts(d1: D1Database) {
   return getDb(d1)
-    .select(postSummary)
+    .select({
+      ...postSummary,
+      createdAt: posts.createdAt,
+      publishedAt: posts.publishedAt,
+    })
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
     .where(isNull(posts.deletedAt))

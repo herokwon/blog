@@ -18,7 +18,7 @@ it('opens a reversible-delete warning, supports Escape, and submits the version 
   await expect.element(trigger).toHaveFocus();
 
   await trigger.click();
-  const confirm = dialog.getByRole('button', { name: '삭제 확인' });
+  const confirm = dialog.getByRole('button', { name: '확인', exact: true });
   const form = (confirm.element() as HTMLButtonElement).form!;
   let result: FormDataEntryValue | null | undefined;
   form.addEventListener('submit', event => {

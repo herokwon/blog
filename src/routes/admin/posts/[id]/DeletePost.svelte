@@ -20,7 +20,7 @@
 {#snippet confirmDelete()}
   <form method="POST" action="?/delete" aria-label="게시글 삭제 확인">
     <input type="hidden" name="version" value={version} />
-    <button type="submit">삭제 확인</button>
+    <button type="submit">확인</button>
   </form>
 {/snippet}
 

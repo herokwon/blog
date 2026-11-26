@@ -13,8 +13,8 @@
   let invoker = $state<HTMLButtonElement>();
   const editing = $derived(categoryId !== undefined);
   const formId = $derived(`category-${categoryId ?? 'new'}`);
-  const title = $derived(editing ? '카테고리 이름 변경' : '카테고리 추가');
-  const trigger = $derived(editing ? '이름 변경' : '추가');
+  const title = $derived(editing ? '카테고리 수정' : '카테고리 추가');
+  const trigger = $derived(editing ? '수정' : '추가');
   const errorId = $derived(message ? `${formId}-error` : undefined);
 
   onMount(async () => {
@@ -45,7 +45,12 @@
       <p role="alert" id={errorId}>{message}</p>
     {/if}
     <CategoryNameInput id={`${formId}-name`} {value} {errorId} />
-    <button type="submit">{editing ? '이름 저장' : '카테고리 추가'}</button>
+    <div class="actions">
+      <button type="submit">{trigger}</button>
+      {#if modalAvailable}
+        <button type="submit" formmethod="dialog" formnovalidate>취소</button>
+      {/if}
+    </div>
   </form>
 {/snippet}
 
@@ -56,9 +61,6 @@
   <dialog bind:this={dialog} aria-labelledby={`${formId}-title`}>
     <h1 id={`${formId}-title`}>{title}</h1>
     {@render nameForm()}
-    <form method="dialog">
-      <button type="submit">취소</button>
-    </form>
   </dialog>
 {:else}
   <details open={!!message}>
@@ -82,7 +84,10 @@
     overscroll-behavior: contain;
   }
 
-  form + form {
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     margin-block-start: 0.5rem;
   }
 </style>

@@ -65,7 +65,8 @@ After authentication, return a `302` redirect from `GET /admin` to
 `/admin/posts`. Place the list, creation, detail, and edit pages under that path.
 Provide separate pages at `/admin/categories` and `/admin/trash`. Use SvelteKit
 server loads and form actions under the existing Access and `no-store` protection.
-Cancel returns to the post list without saving. Use Milkdown Crepe for editing,
+Cancel returns to the post list without saving, or to the same post's detail
+page when editing was opened from there. Use Milkdown Crepe for editing,
 with a plain Markdown field if the editor cannot initialize.
 
 Render the saved Markdown on the server for the administrator detail page. Disable

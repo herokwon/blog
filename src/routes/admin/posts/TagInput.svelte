@@ -139,9 +139,7 @@
         enterkeyhint="done"
       />
     </div>
-    <small id="tag-help"
-      >{tags.length}/{postTagLimit}개 · Space 또는 Enter로 추가</small
-    >
+    <small id="tag-help">{tags.length}/{postTagLimit}개</small>
     {#if message}
       <p role="alert" id="tag-error">{message}</p>
     {/if}

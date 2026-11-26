@@ -20,6 +20,7 @@ it('commits tag chips without interrupting IME and removes the focused chip with
   await expect
     .element(input)
     .toHaveAttribute('placeholder', '태그를 입력해 주세요. (최대 10개)');
+  await expect.element(page.getByText('0/10개', { exact: true })).toBeVisible();
   await input.fill('Svelte');
   await userEvent.keyboard(' ');
   const chip = page.getByRole('button', { name: '태그 svelte 제거' });

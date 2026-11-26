@@ -1,14 +1,11 @@
 <script lang="ts">
   import AdminHeading from '../AdminHeading.svelte';
+  import { postStatusLabels } from '../post-status';
+  import PostTime from '../PostTime.svelte';
   import type { PageProps } from './$types';
 
   let { data, form }: PageProps = $props();
   let errorSummary = $state<HTMLParagraphElement>();
-  const deletionDate = new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: 'Asia/Seoul',
-  });
   $effect(() => {
     if (form?.error) errorSummary?.focus();
   });
@@ -28,10 +25,9 @@
       {#each data.posts as post (post.id)}
         <li>
           <strong>{post.title}</strong>
+          · {postStatusLabels[post.status]}
           {#if post.deletedAt}
-            · 삭제 시각 <time datetime={post.deletedAt.toISOString()}
-              >{deletionDate.format(post.deletedAt)}</time
-            >
+            · 삭제 시각 <PostTime value={post.deletedAt} />
           {/if}
           <form
             method="POST"

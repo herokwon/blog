@@ -2,10 +2,11 @@
   import { resolve } from '$app/paths';
 
   import AdminHeading from '../AdminHeading.svelte';
+  import { postStatusLabels } from '../post-status';
+  import PostTime from '../PostTime.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
-  const statuses = { draft: '초안', published: '발행됨', archived: '보관됨' };
 </script>
 
 <svelte:head>
@@ -26,7 +27,19 @@
           <a href={resolve('/admin/posts/[id]', { id: post.id })}
             >{post.title}</a
           >
-          · {post.categoryName} · {statuses[post.status]}
+          · {post.categoryName} · {postStatusLabels[post.status]}
+          <a
+            href={resolve('/admin/posts/[id]/edit', { id: post.id })}
+            aria-label={`${post.title} 수정`}>수정</a
+          >
+          <div class="times">
+            {#if post.status === 'draft'}
+              <span>생성 시각 <PostTime value={post.createdAt} /></span>
+            {:else if post.status === 'published' && post.publishedAt}
+              <span>최초 발행 시각 <PostTime value={post.publishedAt} /></span>
+            {/if}
+            <span>최종 변경 시각 <PostTime value={post.updatedAt} /></span>
+          </div>
         </li>
       {/each}
     </ul>
@@ -34,3 +47,11 @@
     <p>저장된 게시글이 없습니다.</p>
   {/if}
 </main>
+
+<style>
+  .times {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 1rem;
+  }
+</style>
