@@ -3,6 +3,8 @@
   import { page } from '$app/state';
 
   import AdminHeading from '../../AdminHeading.svelte';
+  import { postStatusLabels } from '../../post-status';
+  import PostTime from '../../PostTime.svelte';
   import type { PageProps } from './$types';
   import DeletePost from './DeletePost.svelte';
 
@@ -10,9 +12,9 @@
   const post = $derived(data.post);
   let errorSummary = $state<HTMLParagraphElement>();
   const states = {
-    draft: { label: '초안', next: '발행', action: '?/publish' },
-    published: { label: '발행됨', next: '발행취소', action: '?/archive' },
-    archived: { label: '보관됨', next: '재발행', action: '?/publish' },
+    draft: { next: '발행', action: '?/publish' },
+    published: { next: '발행취소', action: '?/archive' },
+    archived: { next: '재발행', action: '?/publish' },
   };
   $effect(() => {
     if (form?.error) errorSummary?.focus();
@@ -32,7 +34,9 @@
         <input type="hidden" name="version" value={post.version} />
         <button type="submit">{state.next}</button>
       </form>
-      <a href={resolve('/admin/posts/[id]/edit', { id: post.id })}>수정</a>
+      <a href={resolve('/admin/posts/[id]/edit?from=detail', { id: post.id })}
+        >수정</a
+      >
       <DeletePost
         id={post.id}
         version={post.version}
@@ -46,13 +50,21 @@
   {#if post}
     <dl>
       <dt>상태</dt>
-      <dd>{states[post.status].label}</dd>
+      <dd>{postStatusLabels[post.status]}</dd>
       <dt>카테고리</dt>
       <dd>{post.categoryName}</dd>
       {#if post.tags.length}
         <dt>태그</dt>
         <dd>{post.tags.join(', ')}</dd>
       {/if}
+      <dt>생성 시각</dt>
+      <dd><PostTime value={post.createdAt} /></dd>
+      {#if post.publishedAt}
+        <dt>최초 발행 시각</dt>
+        <dd><PostTime value={post.publishedAt} /></dd>
+      {/if}
+      <dt>최종 변경 시각</dt>
+      <dd><PostTime value={post.updatedAt} /></dd>
     </dl>
     <article aria-label="게시글 본문">
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- The server renderer sanitizes this HTML. -->

@@ -19,6 +19,7 @@
     errors?: PostErrors;
     message?: string;
     creating?: boolean;
+    fromDetail?: boolean;
     existingTags?: string[];
   }
 
@@ -28,6 +29,7 @@
     errors = {},
     message,
     creating = false,
+    fromDetail = false,
     existingTags,
   }: Props = $props();
   let errorSummary = $state<HTMLDivElement>();
@@ -60,7 +62,14 @@
   });
 </script>
 
-<form method="POST" action={creating ? '?/saveDraft' : '?/save'}>
+<form
+  method="POST"
+  action={creating
+    ? '?/saveDraft'
+    : fromDetail
+      ? '?/save&from=detail'
+      : '?/save'}
+>
   <div class="actions">
     {#if creating}
       <button type="submit">초안 생성</button>
@@ -68,7 +77,11 @@
     {:else}
       <button type="submit">저장</button>
     {/if}
-    <a href={resolve('/admin/posts')}>취소</a>
+    <a
+      href={fromDetail
+        ? resolve('/admin/posts/[id]', { id: values.id })
+        : resolve('/admin/posts')}>취소</a
+    >
   </div>
   {#if message || Object.keys(errors).length}
     <div id="post-errors" role="alert" tabindex="-1" bind:this={errorSummary}>

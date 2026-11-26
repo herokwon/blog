@@ -13,7 +13,7 @@
   const name = $derived(edited ?? value);
 </script>
 
-<label for={id}>카테고리 이름 (필수)</label>
+<label for={id}>이름</label>
 <input
   {id}
   name="name"

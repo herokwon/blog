@@ -6,6 +6,7 @@
   import type { PageProps } from './$types';
 
   let { data, form }: PageProps = $props();
+  const fromDetail = $derived(page.url.searchParams.get('from') === 'detail');
   const values = $derived(
     form?.values ??
       (data.post && {
@@ -24,13 +25,17 @@
 </svelte:head>
 
 <main lang="ko">
-  <AdminHeading title="게시글 수정" postId={page.params.id} />
+  <AdminHeading
+    title="게시글 수정"
+    postId={fromDetail ? page.params.id : undefined}
+  />
   {#if values}
     {#key values.id}
       <PostForm
         categories={data.categories}
         {values}
         existingTags={data.post?.tags}
+        {fromDetail}
         errors={form?.errors}
         message={form?.message}
       />
