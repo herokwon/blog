@@ -20,12 +20,13 @@
   } = $props();
   let root: HTMLDivElement;
   let input = $state<HTMLInputElement>();
-  let prompt = $state<HTMLButtonElement>();
+  let entryButton = $state<HTMLButtonElement>();
   let enhanced = $state(false);
   let editing = $state(false);
   let tags = $state<string[]>([]);
   let message = $state('');
   let composing = false;
+  const promptText = `태그를 입력해 주세요. (최대 ${postTagLimit}개)`;
 
   function commit() {
     if (!input) return true;
@@ -83,7 +84,7 @@
   function remove(index: number) {
     tags = tags.filter((_, position) => position !== index);
     message = '';
-    (input ?? prompt)?.focus();
+    (input ?? entryButton)?.focus();
   }
 
   function handleChipKey(event: KeyboardEvent, index: number) {
@@ -127,6 +128,19 @@
   {/if}
   {#if enhanced}
     <div class="entry">
+      {#if !editing}
+        <button
+          type="button"
+          class="open-entry"
+          bind:this={entryButton}
+          onclick={openInput}
+          aria-label={tags.length ? '태그 추가' : promptText}
+          aria-describedby="tag-help"
+        ></button>
+        {#if !tags.length}
+          <span class="tag-prompt" aria-hidden="true">{promptText}</span>
+        {/if}
+      {/if}
       {#if tags.length}
         <ul aria-label="확정한 태그">
           {#each tags as tag, index (`${index}:${tag}`)}
@@ -164,16 +178,6 @@
             enterkeyhint="done"
           />
         </div>
-      {:else}
-        <button
-          type="button"
-          class="tag-prompt"
-          bind:this={prompt}
-          onclick={openInput}
-          aria-describedby="tag-help"
-        >
-          태그를 입력해 주세요. (최대 {postTagLimit}개)
-        </button>
       {/if}
     </div>
     <small id="tag-help">{tags.length}/{postTagLimit}개</small>
@@ -202,20 +206,33 @@
   }
 
   .entry {
+    position: relative;
+    box-sizing: border-box;
+    min-block-size: 2.75rem;
     align-items: center;
     border-block-start: 1px solid #ddd;
-    padding-block: 0.4rem;
+    padding: 0.4rem;
+  }
+
+  .open-entry {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .open-entry:focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
   }
 
   .tag-prompt {
-    flex: 1 1 auto;
-    padding: 0.4rem;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: start;
-    cursor: pointer;
+    position: absolute;
+    inset: 0.4rem;
+    display: grid;
+    align-content: center;
+    pointer-events: none;
   }
 
   .tag-field {
@@ -245,9 +262,11 @@
   }
 
   ul {
+    position: relative;
     margin: 0;
     padding: 0;
     list-style: none;
+    pointer-events: none;
   }
 
   input {
@@ -257,5 +276,6 @@
 
   li button {
     overflow-wrap: anywhere;
+    pointer-events: auto;
   }
 </style>
