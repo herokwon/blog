@@ -231,8 +231,19 @@ it('loads sanitized details and round-trips delete and restore with version chec
   expect(await getPost(db, id)).toMatchObject({
     categoryId,
     tags: ['한글'],
-    status: 'published',
+    status: 'archived',
     publishedAt: now,
     version: 3,
+  });
+  await expect(
+    detailActions.publish({
+      params: { id },
+      request: post(`/admin/posts/${id}?/publish`, { version: '3' }),
+    } as Parameters<typeof detailActions.publish>[0]),
+  ).rejects.toMatchObject({ status: 303 });
+  expect(await getPost(db, id)).toMatchObject({
+    status: 'published',
+    publishedAt: now,
+    version: 4,
   });
 });

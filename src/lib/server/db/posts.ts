@@ -116,6 +116,9 @@ export async function setPostDeletion(
     .update(posts)
     .set({
       deletedAt: deleting ? now : null,
+      status: deleting
+        ? undefined
+        : sql`case when ${posts.status} = 'published' then 'archived' else ${posts.status} end`,
       updatedAt: now,
       version: sql`${posts.version} + 1`,
     })

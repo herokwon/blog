@@ -296,7 +296,7 @@ describe('post storage on local D1', () => {
     expect(await getPost(db, 'invalid')).toBeUndefined();
   });
 
-  it('moves posts to and from trash without changing their original publication or tags', async () => {
+  it('archives restored published posts while preserving first publication and tags', async () => {
     const db = proxy.env.DB;
     const input = {
       id: 'trash-workflow',
@@ -343,6 +343,7 @@ describe('post storage on local D1', () => {
     ).resolves.toBe('saved');
     expect(await getPost(db, input.id)).toMatchObject({
       ...input,
+      status: 'archived',
       createdAt: clock,
       publishedAt: clock,
       updatedAt: restoredAt,
@@ -356,4 +357,46 @@ describe('post storage on local D1', () => {
       setPostDeletion(db, 'missing', 1, 'restore', restoredAt),
     ).resolves.toBe('missing');
   });
+
+  it.each(['draft', 'archived'] as const)(
+    'restores a %s post with its existing status',
+    async status => {
+      const db = proxy.env.DB;
+      const input = {
+        id: `restore-${status}`,
+        title: 'Title',
+        body: 'Body',
+        categoryId,
+        tags: [],
+      };
+      const initiallyPublished = status === 'archived';
+      await expect(
+        createPost(
+          db,
+          {
+            ...input,
+            status: initiallyPublished ? 'published' : 'draft',
+          },
+          clock,
+        ),
+      ).resolves.toBe('saved');
+      if (initiallyPublished) {
+        await expect(
+          updatePost(db, { ...input, status, version: 1 }, clock),
+        ).resolves.toBe('saved');
+      }
+      const version = initiallyPublished ? 2 : 1;
+      await expect(
+        setPostDeletion(db, input.id, version, 'delete', clock),
+      ).resolves.toBe('saved');
+      await expect(
+        setPostDeletion(db, input.id, version + 1, 'restore', clock),
+      ).resolves.toBe('saved');
+      expect(await getPost(db, input.id)).toMatchObject({
+        status,
+        publishedAt: initiallyPublished ? clock : null,
+        deletedAt: null,
+      });
+    },
+  );
 });
