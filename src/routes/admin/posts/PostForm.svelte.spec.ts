@@ -3,6 +3,10 @@ import { page, userEvent } from 'vitest/browser';
 
 import PostForm from './PostForm.svelte';
 
+const tagPrompt = '태그를 입력해 주세요. (최대 10개)';
+const tagTrigger = page.getByRole('button', { name: tagPrompt, exact: true });
+const tagInput = page.getByRole('textbox', { name: '태그', exact: true });
+
 function renderForm(tags = '', body = '') {
   render(PostForm, {
     creating: true,
@@ -13,14 +17,13 @@ function renderForm(tags = '', body = '') {
 
 it('commits tag chips without interrupting IME and removes the focused chip with Backspace', async () => {
   renderForm();
-  const input = page.getByRole('textbox', { name: '태그', exact: true });
-  await expect
-    .element(page.getByRole('button', { name: '태그 추가' }))
-    .not.toBeInTheDocument();
-  await expect
-    .element(input)
-    .toHaveAttribute('placeholder', '태그를 입력해 주세요. (최대 10개)');
+  const input = tagInput;
+  await expect.element(input).not.toBeInTheDocument();
   await expect.element(page.getByText('0/10개', { exact: true })).toBeVisible();
+  (tagTrigger.element() as HTMLButtonElement).focus();
+  await userEvent.keyboard('{Enter}');
+  await expect.element(input).toHaveFocus();
+  await expect.element(tagTrigger).not.toBeInTheDocument();
   await input.fill('Svelte');
   await userEvent.keyboard(' ');
   const chip = page.getByRole('button', { name: '태그 svelte 제거' });
@@ -56,6 +59,34 @@ it('commits tag chips without interrupting IME and removes the focused chip with
   await expect.element(input).toHaveFocus();
 });
 
+it('closes an empty tag input on blur and commits valid text when leaving the field', async () => {
+  renderForm('existing');
+  const title = page.getByRole('textbox', { name: '제목 (필수)' });
+  await expect.element(page.getByText('1/10개', { exact: true })).toBeVisible();
+  await tagTrigger.click();
+  await expect.element(tagInput).toHaveFocus();
+  await title.click();
+  await expect.element(tagTrigger).toBeVisible();
+  await expect.element(tagInput).not.toBeInTheDocument();
+  await tagTrigger.click();
+  await tagInput.fill('한글태그');
+  await title.click();
+  await expect.element(title).toHaveFocus();
+  await expect.element(tagTrigger).toBeVisible();
+  await expect
+    .element(page.getByRole('button', { name: '태그 한글태그 제거' }))
+    .toBeVisible();
+  await expect.element(page.getByText('2/10개', { exact: true })).toBeVisible();
+  await tagTrigger.click();
+  await tagInput.fill('한글태그');
+  await title.click();
+  await expect.element(title).toHaveFocus();
+  await expect.element(tagInput).toHaveValue('한글태그');
+  await expect
+    .element(page.getByText('중복된 태그를 제거해 주세요.'))
+    .toBeVisible();
+});
+
 it('loads stored Markdown into Crepe and submits the latest edit', async () => {
   const original = '## 저장된 제목\n\n본문\n\n';
   renderForm('', original);
@@ -84,7 +115,8 @@ it('loads stored Markdown into Crepe and submits the latest edit', async () => {
 
 it('keeps the pending input available when adding it would exceed the limit', async () => {
   renderForm(Array.from({ length: 10 }, (_, index) => `tag${index}`).join(','));
-  const input = page.getByRole('textbox', { name: '태그', exact: true });
+  const input = tagInput;
+  await tagTrigger.click();
   await input.fill('extra');
   await userEvent.keyboard('{Enter}');
   await expect
@@ -98,7 +130,7 @@ it('keeps the pending input available when adding it would exceed the limit', as
 
 it('includes valid pending tags on submit and keeps invalid pending input', async () => {
   renderForm();
-  const input = page.getByRole('textbox', { name: '태그', exact: true });
+  const input = tagInput;
   const submit = page.getByRole('button', { name: '초안 생성' });
   const form = (submit.element() as HTMLButtonElement).form!;
   const sent: FormDataEntryValue[] = [];
@@ -110,11 +142,12 @@ it('includes valid pending tags on submit and keeps invalid pending input', asyn
     event.preventDefault();
   });
 
+  await tagTrigger.click();
   await input.fill('Preview');
-  await submit.click();
+  form.requestSubmit();
   expect(sent).toEqual(['preview']);
   await input.fill('PREVIEW');
-  await submit.click();
+  form.requestSubmit();
   expect(sent).toEqual(['preview']);
   await expect.element(input).toHaveValue('PREVIEW');
   await expect.element(input).toHaveFocus();
