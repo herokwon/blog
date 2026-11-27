@@ -1,7 +1,7 @@
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
 
-import { authorize } from './access';
+import { authorize, verifyAccessToken } from './access';
 
 const keys = await generateKeyPair('RS256');
 const jwk = await exportJWK(keys.publicKey);
@@ -31,6 +31,18 @@ async function request(
 }
 
 describe('Access authorization', () => {
+  it('recognizes a signed application cookie without authorizing protected requests from that cookie alone', async () => {
+    const signed = await request({ email: config.ADMIN_EMAIL, sub: 'human' });
+    const token = signed.headers.get('Cf-Access-Jwt-Assertion')!;
+    expect(await verifyAccessToken(token, config, resolveKey)).toMatchObject({
+      kind: 'admin',
+    });
+    expect(await verifyAccessToken('invalid', config, resolveKey)).toBeNull();
+    const cookieOnly = new Request(signed.url, {
+      headers: { cookie: `CF_Authorization=${token}` },
+    });
+    expect(await authorize(cookieOnly, config, resolveKey)).toBeNull();
+  });
   it('allows the exact administrator but rejects another email', async () => {
     expect(
       await authorize(

@@ -10,21 +10,32 @@ export type Identity = { kind: 'admin'; email: string };
 
 const resolvers = new Map<string, JWTVerifyGetKey>();
 
-export async function authorize(
+export function authorize(
   request: Request,
+  config: AccessConfig,
+  resolveKey?: JWTVerifyGetKey,
+): Promise<Identity | null> {
+  return verifyAccessToken(
+    request.headers.get('Cf-Access-Jwt-Assertion'),
+    config,
+    resolveKey,
+  );
+}
+
+export async function verifyAccessToken(
+  token: string | null | undefined,
   config: AccessConfig,
   resolveKey?: JWTVerifyGetKey,
 ): Promise<Identity | null> {
   const { ACCESS_ISSUER: issuer, ACCESS_AUDIENCE: audience } = config;
   if (
+    !token ||
     !issuer ||
     !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(issuer) ||
     !audience ||
     !config.ADMIN_EMAIL
   )
     return null;
-  const token = request.headers.get('Cf-Access-Jwt-Assertion');
-  if (!token) return null;
   try {
     let key = resolveKey ?? resolvers.get(issuer);
     if (!key) {
