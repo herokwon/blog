@@ -118,9 +118,11 @@ it('loads stored Markdown into Crepe and submits the latest edit', async () => {
     exact: true,
   });
   await expect.element(editor).toHaveAttribute('contenteditable', 'true');
-  await expect
-    .element(editor.getByRole('heading', { name: '저장된 제목' }))
-    .toBeInTheDocument();
+  const heading = editor.getByRole('heading', {
+    name: '저장된 제목',
+    level: 2,
+  });
+  await expect.element(heading).toBeInTheDocument();
   await page.getByText('본문 (Markdown)', { exact: true }).click();
   await expect.element(editor).toHaveFocus();
   const submit = page.getByRole('button', { name: '초안 생성' });
@@ -131,9 +133,20 @@ it('loads stored Markdown into Crepe and submits the latest edit', async () => {
     event.preventDefault();
     body = new FormData(form).get('body');
   });
-  await editor.fill('Updated body');
+  const headingEnd = document.createRange();
+  headingEnd.selectNodeContents(heading.element());
+  headingEnd.collapse(false);
+  const selection = window.getSelection()!;
+  selection.removeAllRanges();
+  selection.addRange(headingEnd);
+  await userEvent.keyboard(' updated');
+  await expect
+    .element(
+      editor.getByRole('heading', { name: '저장된 제목 updated', level: 2 }),
+    )
+    .toBeInTheDocument();
   await submit.click();
-  expect(String(body).trim()).toBe('## Updated body');
+  expect(String(body).trim()).toBe('## 저장된 제목 updated\n\n본문');
 });
 
 it('keeps the pending input available when adding it would exceed the limit', async () => {
