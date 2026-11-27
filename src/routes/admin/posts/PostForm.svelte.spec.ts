@@ -133,8 +133,13 @@ it('loads stored Markdown into Crepe and submits the latest edit', async () => {
     event.preventDefault();
     body = new FormData(form).get('body');
   });
-  await heading.click();
-  await userEvent.keyboard('{End} updated');
+  const headingEnd = document.createRange();
+  headingEnd.selectNodeContents(heading.element());
+  headingEnd.collapse(false);
+  const selection = window.getSelection()!;
+  selection.removeAllRanges();
+  selection.addRange(headingEnd);
+  await userEvent.keyboard(' updated');
   await expect
     .element(
       editor.getByRole('heading', { name: '저장된 제목 updated', level: 2 }),
