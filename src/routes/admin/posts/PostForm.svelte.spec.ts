@@ -7,6 +7,7 @@ const tagPrompt = '태그를 입력해 주세요. (최대 10개)';
 const tagTrigger = page.getByRole('button', { name: tagPrompt, exact: true });
 const addTag = page.getByRole('button', { name: '태그 추가', exact: true });
 const tagInput = page.getByRole('textbox', { name: '태그', exact: true });
+const tagList = page.getByRole('list', { name: '확정한 태그' });
 
 function renderForm(tags = '', body = '') {
   render(PostForm, {
@@ -16,7 +17,7 @@ function renderForm(tags = '', body = '') {
   });
 }
 
-it('commits tag chips without interrupting IME and removes the focused chip with Backspace', async () => {
+it('commits tags without interrupting IME and removes only the last tag without moving focus', async () => {
   renderForm();
   const input = tagInput;
   await expect.element(input).not.toBeInTheDocument();
@@ -27,7 +28,7 @@ it('commits tag chips without interrupting IME and removes the focused chip with
   await expect.element(tagTrigger).not.toBeInTheDocument();
   await input.fill('Svelte');
   await userEvent.keyboard(' ');
-  const chip = page.getByRole('button', { name: '태그 svelte 제거' });
+  const chip = tagList.getByText('svelte', { exact: true });
   await expect.element(chip).toBeInTheDocument();
   await expect.element(input).toHaveValue('');
 
@@ -42,22 +43,30 @@ it('commits tag chips without interrupting IME and removes the focused chip with
   );
   await expect.element(input).toHaveValue('한글');
   await userEvent.keyboard('{Enter}');
-  const korean = page.getByRole('button', { name: '태그 한글 제거' });
+  const korean = tagList.getByText('한글', { exact: true });
   await expect.element(korean).toBeInTheDocument();
+  await expect.element(tagList.getByRole('button')).not.toBeInTheDocument();
+  await input.fill('ab');
   await userEvent.keyboard('{Backspace}');
-  await expect.element(korean).toHaveFocus();
-  korean.element().dispatchEvent(
-    new KeyboardEvent('keydown', {
-      key: 'Backspace',
-      repeat: true,
-      bubbles: true,
-      cancelable: true,
-    }),
-  );
+  await expect.element(input).toHaveValue('a');
+  await input.fill('');
+  for (const options of [{ repeat: true }, { isComposing: true }]) {
+    input.element().dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Backspace',
+        bubbles: true,
+        cancelable: true,
+        ...options,
+      }),
+    );
+  }
   await expect.element(korean).toBeInTheDocument();
   await userEvent.keyboard('{Backspace}');
   await expect.element(korean).not.toBeInTheDocument();
+  await expect.element(chip).toBeInTheDocument();
   await expect.element(input).toHaveFocus();
+  await expect.element(input).toHaveValue('');
+  await expect.element(page.getByText('1/10개', { exact: true })).toBeVisible();
 });
 
 it('shows the tag prompt only when the inactive area has no confirmed tags', async () => {
@@ -76,7 +85,7 @@ it('shows the tag prompt only when the inactive area has no confirmed tags', asy
   await expect.element(title).toHaveFocus();
   await expect.element(tagTrigger).not.toBeInTheDocument();
   await expect
-    .element(page.getByRole('button', { name: '태그 한글태그 제거' }))
+    .element(tagList.getByText('한글태그', { exact: true }))
     .toBeVisible();
   await expect.element(page.getByText('2/10개', { exact: true })).toBeVisible();
   await addTag.click();
@@ -88,10 +97,15 @@ it('shows the tag prompt only when the inactive area has no confirmed tags', asy
     .element(page.getByText('중복된 태그를 제거해 주세요.'))
     .toBeVisible();
   await tagInput.fill('');
-  await title.click();
-  await page.getByRole('button', { name: '태그 existing 제거' }).click();
+  await tagList.getByText('existing', { exact: true }).click();
+  await expect.element(page.getByText('2/10개', { exact: true })).toBeVisible();
+  await addTag.click();
+  await userEvent.keyboard('{Backspace}');
   await expect.element(tagTrigger).not.toBeInTheDocument();
-  await page.getByRole('button', { name: '태그 한글태그 제거' }).click();
+  await userEvent.keyboard('{Backspace}');
+  await expect.element(tagInput).toHaveFocus();
+  await expect.element(tagTrigger).not.toBeInTheDocument();
+  await title.click();
   await expect.element(tagTrigger).toBeVisible();
   await expect.element(page.getByText('0/10개', { exact: true })).toBeVisible();
 });
@@ -133,7 +147,7 @@ it('keeps the pending input available when adding it would exceed the limit', as
     .toBeInTheDocument();
   await expect.element(input).toHaveValue('extra');
   await expect
-    .element(page.getByRole('button', { name: '태그 extra 제거' }))
+    .element(tagList.getByText('extra', { exact: true }))
     .not.toBeInTheDocument();
 });
 
@@ -163,4 +177,8 @@ it('includes valid pending tags on submit and keeps invalid pending input', asyn
   await expect
     .element(page.getByText('중복된 태그를 제거해 주세요.'))
     .toBeInTheDocument();
+  await input.fill('');
+  await userEvent.keyboard('{Backspace}');
+  form.requestSubmit();
+  expect(sent).toEqual(['preview', '']);
 });

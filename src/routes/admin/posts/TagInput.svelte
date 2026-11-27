@@ -20,7 +20,6 @@
   } = $props();
   let root: HTMLDivElement;
   let input = $state<HTMLInputElement>();
-  let entryButton = $state<HTMLButtonElement>();
   let enhanced = $state(false);
   let editing = $state(false);
   let tags = $state<string[]>([]);
@@ -77,20 +76,9 @@
       !event.repeat
     ) {
       event.preventDefault();
-      root.querySelector<HTMLButtonElement>('li:last-child button')?.focus();
+      tags = tags.slice(0, -1);
+      message = '';
     }
-  }
-
-  function remove(index: number) {
-    tags = tags.filter((_, position) => position !== index);
-    message = '';
-    (input ?? entryButton)?.focus();
-  }
-
-  function handleChipKey(event: KeyboardEvent, index: number) {
-    if (event.key !== 'Backspace' || event.repeat) return;
-    event.preventDefault();
-    remove(index);
   }
 
   onMount(() => {
@@ -132,7 +120,6 @@
         <button
           type="button"
           class="open-entry"
-          bind:this={entryButton}
           onclick={openInput}
           aria-label={tags.length ? '태그 추가' : promptText}
           aria-describedby="tag-help"
@@ -144,17 +131,7 @@
       {#if tags.length}
         <ul aria-label="확정한 태그">
           {#each tags as tag, index (`${index}:${tag}`)}
-            <li>
-              <button
-                type="button"
-                aria-label={`태그 ${tag} 제거`}
-                onclick={() => remove(index)}
-                onblur={finishEditing}
-                onkeydown={event => handleChipKey(event, index)}
-              >
-                {tag} ×
-              </button>
-            </li>
+            <li>{tag}</li>
           {/each}
         </ul>
       {/if}
@@ -171,13 +148,16 @@
             oncompositionend={() => (composing = false)}
             aria-invalid={!!message || invalid || undefined}
             aria-describedby={message
-              ? 'tag-help tag-error'
+              ? 'tag-help tag-keyboard-help tag-error'
               : invalid
-                ? 'tag-help post-errors'
-                : 'tag-help'}
+                ? 'tag-help tag-keyboard-help post-errors'
+                : 'tag-help tag-keyboard-help'}
             enterkeyhint="done"
           />
         </div>
+        <span id="tag-keyboard-help" hidden
+          >입력창이 비어 있을 때 Backspace를 누르면 마지막 태그가 삭제됩니다.</span
+        >
       {/if}
     </div>
     <small id="tag-help">{tags.length}/{postTagLimit}개</small>
@@ -262,11 +242,9 @@
   }
 
   ul {
-    position: relative;
     margin: 0;
     padding: 0;
     list-style: none;
-    pointer-events: none;
   }
 
   input {
@@ -274,8 +252,11 @@
     font: inherit;
   }
 
-  li button {
+  li {
+    border-radius: 0.25rem;
+    padding: 0.3rem 0.45rem;
+    background: ButtonFace;
+    color: ButtonText;
     overflow-wrap: anywhere;
-    pointer-events: auto;
   }
 </style>
