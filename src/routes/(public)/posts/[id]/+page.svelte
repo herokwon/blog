@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
+
   import PublishedDate from '../../PublishedDate.svelte';
   import TopicLinks from '../../TopicLinks.svelte';
   import type { PageProps } from './$types';
@@ -13,6 +15,15 @@
 
 <main>
   <h1>{post.title}</h1>
+  {#if data.signedIn}
+    <a
+      href={resolve('/admin/posts/[id]', { id: post.id })}
+      data-sveltekit-reload
+      data-sveltekit-preload-data="false"
+    >
+      관리자 상세 보기
+    </a>
+  {/if}
   <div class="metadata">
     {#if post.publishedAt}
       <PublishedDate value={post.publishedAt} />
