@@ -30,6 +30,14 @@
   {#if post}
     {@const state = states[post.status]}
     <div class="actions">
+      {#if post.status === 'published'}
+        <a
+          href={resolve('/(public)/posts/[id]', { id: post.id })}
+          data-sveltekit-preload-data="false"
+        >
+          공개 글 보기
+        </a>
+      {/if}
       <form method="POST" action={state.action} aria-label="게시글 상태 변경">
         <input type="hidden" name="version" value={post.version} />
         <button type="submit">{state.next}</button>

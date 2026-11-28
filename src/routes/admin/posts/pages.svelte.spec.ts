@@ -1,6 +1,7 @@
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 
+import PublicDetailPage from '../../(public)/posts/[id]/+page.svelte';
 import TrashPage from '../trash/+page.svelte';
 import DetailPage from './[id]/+page.svelte';
 import EditPage from './[id]/edit/+page.svelte';
@@ -29,6 +30,64 @@ const post = {
   updatedAt,
   deletedAt: null,
 };
+
+it.each(['draft', 'published', 'archived'] as const)(
+  'shows the public detail shortcut only for a published administrator post (%s)',
+  async status => {
+    render(DetailPage, {
+      params: route.params,
+      form: null,
+      data: {
+        ...layoutData,
+        post: {
+          ...post,
+          status,
+          publishedAt: status === 'draft' ? null : publishedAt,
+          html: '<p>본문</p>',
+        },
+      },
+    });
+    const link = page.getByRole('link', { name: '공개 글 보기' });
+    if (status === 'published') {
+      await expect.element(link).toHaveAttribute('href', '/posts/post');
+    } else {
+      await expect.element(link).not.toBeInTheDocument();
+    }
+  },
+);
+
+it.each([true, false])(
+  'uses the existing administrator session to show the protected shortcut (%s)',
+  async signedIn => {
+    render(PublicDetailPage, {
+      params: route.params,
+      form: null,
+      data: {
+        ...layoutData,
+        signedIn,
+        post: {
+          id: post.id,
+          title: post.title,
+          categoryName: post.categoryName,
+          categoryId: post.categoryId,
+          tags: post.tags,
+          publishedAt,
+          html: '<p>본문</p>',
+        },
+      },
+    });
+    const link = page.getByRole('link', { name: '관리자 상세 보기' });
+    if (signedIn) {
+      await expect.element(link).toHaveAttribute('href', '/admin/posts/post');
+      await expect.element(link).toHaveAttribute('data-sveltekit-reload');
+      await expect
+        .element(link)
+        .toHaveAttribute('data-sveltekit-preload-data', 'false');
+    } else {
+      await expect.element(link).not.toBeInTheDocument();
+    }
+  },
+);
 
 it('shows timestamps by post status and links directly to edit', async () => {
   render(PostsPage, {
