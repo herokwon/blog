@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, isNull, sql } from 'drizzle-orm';
 
 import { getDb } from './index';
 import { categories, posts, tags } from './schema';
@@ -19,12 +19,29 @@ const publicFields = {
   )`.mapWith((value: string): string[] => JSON.parse(value)),
 };
 
-export async function listPublishedPosts(d1: D1Database, page: number) {
-  const rows = await getDb(d1)
+export type PublishedTopic = { categoryId: number } | { tag: string };
+
+export async function listPublishedPosts(
+  d1: D1Database,
+  page: number,
+  topic?: PublishedTopic,
+) {
+  const db = getDb(d1);
+  const filter =
+    topic &&
+    ('categoryId' in topic
+      ? eq(posts.categoryId, topic.categoryId)
+      : exists(
+          db
+            .select({ name: tags.name })
+            .from(tags)
+            .where(and(eq(tags.postId, posts.id), eq(tags.name, topic.tag))),
+        ));
+  const rows = await db
     .select(publicFields)
     .from(posts)
     .innerJoin(categories, eq(posts.categoryId, categories.id))
-    .where(published)
+    .where(and(published, filter))
     .orderBy(desc(posts.publishedAt), desc(posts.id))
     .limit(publicPageSize + 1)
     .offset((page - 1) * publicPageSize);
@@ -32,6 +49,25 @@ export async function listPublishedPosts(d1: D1Database, page: number) {
     posts: rows.slice(0, publicPageSize),
     hasNext: rows.length > publicPageSize,
   };
+}
+
+export async function listPublishedTopics(d1: D1Database) {
+  const db = getDb(d1);
+  const [categoryRows, tagRows] = await db.batch([
+    db
+      .selectDistinct({ id: categories.id, name: categories.name })
+      .from(categories)
+      .innerJoin(posts, eq(posts.categoryId, categories.id))
+      .where(published)
+      .orderBy(asc(categories.name)),
+    db
+      .selectDistinct({ name: tags.name })
+      .from(tags)
+      .innerJoin(posts, eq(tags.postId, posts.id))
+      .where(published)
+      .orderBy(asc(tags.name)),
+  ]);
+  return { categories: categoryRows, tags: tagRows.map(({ name }) => name) };
 }
 
 export async function findPublishedPost(d1: D1Database, id: string) {
