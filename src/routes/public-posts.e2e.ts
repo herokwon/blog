@@ -71,3 +71,37 @@ test('returns a public 404 without exposing unavailable posts', async ({
     await expect(page).toHaveURL('http://localhost:4173/');
   }
 });
+
+test('follows category and Korean tag archives using public posts only', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/');
+  const topics = page.getByRole('navigation', { name: '글 주제' });
+  await expect(topics.getByRole('link', { name: '웹 개발' })).toBeVisible();
+  await expect(topics.getByRole('link', { name: '#스벨트' })).toBeVisible();
+  await expect(topics.getByText(/비공개 주제|숨은태그/)).toHaveCount(0);
+
+  await topics.getByRole('link', { name: '웹 개발' }).press('Enter');
+  await expect(page).toHaveURL(/\/categories\/1$/);
+  await expect(
+    page.getByRole('heading', { name: '웹 개발', level: 1 }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: '다음' }).click();
+  await expect(page).toHaveURL(/\/categories\/1\?page=2$/);
+  await page.getByRole('link', { name: '발행 글 01' }).click();
+  await page.getByRole('link', { name: '#스벨트' }).click();
+  await expect(
+    page.getByRole('heading', { name: '#스벨트', level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /^발행 글 / }),
+  ).toHaveText(['발행 글 21', '발행 글 01']);
+  for (const path of [
+    '/categories/2',
+    '/tags/숨은태그',
+    '/tags/스벨트?page=2',
+  ]) {
+    expect((await request.get(path)).status()).toBe(404);
+  }
+});

@@ -15,7 +15,11 @@ import {
   setPostDeletion,
   updatePost,
 } from './posts';
-import { findPublishedPost } from './public-posts';
+import {
+  findPublishedPost,
+  listPublishedPosts,
+  listPublishedTopics,
+} from './public-posts';
 
 const clock = new Date('2026-11-24T00:00:00Z');
 let proxy: Awaited<ReturnType<typeof createLocalD1>>;
@@ -31,6 +35,34 @@ afterAll(async () => {
 });
 
 describe('post storage on local D1', () => {
+  it('keeps the public category address after a rename', async () => {
+    const db = proxy.env.DB;
+    const id = (await createCategory(db, 'Original public topic'))!;
+    await createPost(
+      db,
+      {
+        id: 'public-topic',
+        title: 'Public topic',
+        body: 'Body',
+        categoryId: id,
+        tags: ['publictopic'],
+        status: 'published',
+      },
+      clock,
+    );
+
+    await renameCategory(db, id, 'Renamed public topic');
+    expect(
+      (await listPublishedPosts(db, 1, { categoryId: id })).posts,
+    ).toMatchObject([
+      { id: 'public-topic', categoryName: 'Renamed public topic' },
+    ]);
+    expect((await listPublishedTopics(db)).categories).toContainEqual({
+      id,
+      name: 'Renamed public topic',
+    });
+  });
+
   it('publishes the saved body and retains the public URL and first publication on republication', async () => {
     const db = proxy.env.DB;
     const id = 'public-lifecycle';

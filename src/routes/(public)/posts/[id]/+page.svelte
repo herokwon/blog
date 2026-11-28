@@ -1,5 +1,6 @@
 <script lang="ts">
   import PublishedDate from '../../PublishedDate.svelte';
+  import TopicLinks from '../../TopicLinks.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -16,10 +17,10 @@
     {#if post.publishedAt}
       <PublishedDate value={post.publishedAt} />
     {/if}
-    <span>{post.categoryName}</span>
-    {#each post.tags as tag (tag)}
-      <span>#{tag}</span>
-    {/each}
+    <TopicLinks
+      categories={[{ id: post.categoryId, name: post.categoryName }]}
+      tags={post.tags}
+    />
   </div>
   <article aria-label="게시글 본문">
     <!-- eslint-disable-next-line svelte/no-at-html-tags -- The server renderer sanitizes this HTML. -->

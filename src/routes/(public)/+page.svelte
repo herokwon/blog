@@ -3,6 +3,7 @@
 
   import type { PageProps } from './$types';
   import PostList from './PostList.svelte';
+  import TopicLinks from './TopicLinks.svelte';
 
   let { data }: PageProps = $props();
 </script>
@@ -13,5 +14,23 @@
 
 <main>
   <h1>최신 글</h1>
-  <PostList {...data} collectionHref={resolve('/(public)')} />
+  {#if data.topics.categories.length || data.topics.tags.length}
+    <nav aria-label="글 주제">
+      <TopicLinks {...data.topics} />
+    </nav>
+  {/if}
+  <PostList
+    posts={data.posts}
+    pageNumber={data.pageNumber}
+    hasNext={data.hasNext}
+    collectionHref={resolve('/(public)')}
+  />
 </main>
+
+<style>
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+</style>

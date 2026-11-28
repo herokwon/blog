@@ -3,6 +3,7 @@
 
   import type { PublishedPostSummary } from '../../lib/server/db/public-posts';
   import PublishedDate from './PublishedDate.svelte';
+  import TopicLinks from './TopicLinks.svelte';
 
   let {
     posts,
@@ -33,10 +34,10 @@
           {#if post.publishedAt}
             <PublishedDate value={post.publishedAt} />
           {/if}
-          <span>{post.categoryName}</span>
-          {#each post.tags as tag (tag)}
-            <span>#{tag}</span>
-          {/each}
+          <TopicLinks
+            categories={[{ id: post.categoryId, name: post.categoryName }]}
+            tags={post.tags}
+          />
         </div>
       </li>
     {/each}
