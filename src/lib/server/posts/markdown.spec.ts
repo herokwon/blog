@@ -1,6 +1,15 @@
 import { expect, it } from 'vitest';
 
-import { renderPostMarkdown } from './markdown';
+import { renderPostMarkdown, renderPublicPostMarkdown } from './markdown';
+
+it('reserves h1 for the public post title while keeping the Markdown heading hierarchy', () => {
+  const html = renderPublicPostMarkdown('# Section\n\n## Subsection');
+  expect(html).toContain('<h2>Section</h2>');
+  expect(html).toContain('<h3>Subsection</h3>');
+  expect(renderPublicPostMarkdown('## First heading')).toContain(
+    '<h2>First heading</h2>',
+  );
+});
 
 it('renders editor Markdown including a GFM table and escaped code', () => {
   const html = renderPostMarkdown(

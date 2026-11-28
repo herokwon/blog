@@ -65,8 +65,9 @@ test('returns a public 404 without exposing unavailable posts', async ({
   for (const path of ['/?page=0', '/?page=3', '/?page=invalid']) {
     expect((await request.get(path)).status()).toBe(404);
   }
-  expect((await page.goto('/posts/missing'))?.status()).toBe(404);
-  await expect(
-    page.getByRole('link', { name: '글 목록으로 돌아가기' }),
-  ).toHaveAttribute('href', '/');
+  for (const path of ['/posts/missing', '/posts']) {
+    expect((await page.goto(path))?.status()).toBe(404);
+    await page.getByRole('link', { name: '글 목록으로 돌아가기' }).click();
+    await expect(page).toHaveURL('http://localhost:4173/');
+  }
 });

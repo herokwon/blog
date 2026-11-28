@@ -31,12 +31,24 @@ const sanitizedMarkdown = unified()
 const renderer = sanitizedMarkdown().use(rehypeStringify).freeze();
 
 type HtmlRoot = Parameters<ReturnType<typeof rehypeSanitize>>[0];
+type ArticleNode = HtmlRoot | HtmlRoot['children'][number];
 
 function formatPublicArticle() {
   return (root: HtmlRoot) => {
-    function format(node: HtmlRoot | HtmlRoot['children'][number]): void {
+    function hasLevelOneHeading(node: ArticleNode): boolean {
+      return (
+        (node.type === 'element' && node.tagName === 'h1') ||
+        ('children' in node && node.children.some(hasLevelOneHeading))
+      );
+    }
+
+    const shiftHeadings = hasLevelOneHeading(root);
+
+    function format(node: ArticleNode): void {
       if (node.type === 'element') {
-        if (node.tagName === 'h1') node.tagName = 'h2';
+        if (shiftHeadings && /^h[1-5]$/.test(node.tagName)) {
+          node.tagName = `h${Number(node.tagName.charAt(1)) + 1}`;
+        }
         if (node.tagName === 'pre') {
           node.properties.tabIndex = 0;
           node.properties.role = 'region';
