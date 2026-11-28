@@ -16,9 +16,14 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm run build && pnpm run preview',
+    command: [
+      'pnpm run build',
+      'pnpm exec wrangler d1 migrations apply DB --env preview --local --persist-to .wrangler/e2e',
+      'pnpm exec wrangler d1 execute DB --env preview --local --persist-to .wrangler/e2e --file tests/support/public-posts.sql',
+      'pnpm run preview --persist-to .wrangler/e2e',
+    ].join(' && '),
     url: 'http://localhost:4173',
-    reuseExistingServer: !isCI,
+    reuseExistingServer: false,
   },
   testMatch: '**/*.e2e.{ts,js}',
 });

@@ -15,6 +15,7 @@ import {
   setPostDeletion,
   updatePost,
 } from './posts';
+import { findPublishedPost } from './public-posts';
 
 const clock = new Date('2026-11-24T00:00:00Z');
 let proxy: Awaited<ReturnType<typeof createLocalD1>>;
@@ -30,6 +31,57 @@ afterAll(async () => {
 });
 
 describe('post storage on local D1', () => {
+  it('publishes the saved body and retains the public URL and first publication on republication', async () => {
+    const db = proxy.env.DB;
+    const id = 'public-lifecycle';
+    const content = {
+      title: 'Public lifecycle',
+      body: 'Original',
+      categoryId,
+      tags: ['테스트'],
+    };
+    await createPost(db, { ...content, id, status: 'draft' }, clock);
+    expect(await findPublishedPost(db, id)).toBeUndefined();
+
+    await revisePost(db, { id, version: 1, action: 'publish' }, clock);
+    expect(await findPublishedPost(db, id)).toMatchObject({
+      id,
+      body: 'Original',
+      publishedAt: clock,
+      tags: ['테스트'],
+    });
+
+    const later = new Date('2026-11-25T00:00:00Z');
+    await revisePost(
+      db,
+      {
+        id,
+        version: 2,
+        action: 'save',
+        content: { ...content, body: 'Updated' },
+      },
+      later,
+    );
+    expect(await findPublishedPost(db, id)).toMatchObject({
+      body: 'Updated',
+      publishedAt: clock,
+    });
+
+    await revisePost(db, { id, version: 3, action: 'archive' }, later);
+    expect(await findPublishedPost(db, id)).toBeUndefined();
+    await revisePost(db, { id, version: 4, action: 'publish' }, later);
+    await setPostDeletion(db, id, 5, 'delete', later);
+    expect(await findPublishedPost(db, id)).toBeUndefined();
+    await setPostDeletion(db, id, 6, 'restore', later);
+    expect(await findPublishedPost(db, id)).toBeUndefined();
+    await revisePost(db, { id, version: 7, action: 'publish' }, later);
+    expect(await findPublishedPost(db, id)).toMatchObject({
+      id,
+      body: 'Updated',
+      publishedAt: clock,
+    });
+  });
+
   it('renders the stored post detail and excludes deleted posts', async () => {
     const db = proxy.env.DB;
     const id = 'render-detail';
