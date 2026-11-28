@@ -22,4 +22,6 @@
   returnTo={data.returnTo}
 />
 {@render children()}
-<DemoLinks />
+{#if path.startsWith('/demo/')}
+  <DemoLinks />
+{/if}

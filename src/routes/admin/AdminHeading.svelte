@@ -12,7 +12,9 @@
   <a
     href={postId
       ? resolve('/admin/posts/[id]', { id: postId })
-      : resolve(home ? '/' : '/admin/posts')}
+      : home
+        ? resolve('/(public)')
+        : resolve('/admin/posts')}
     aria-label={postId
       ? '게시글 상세로 돌아가기'
       : home

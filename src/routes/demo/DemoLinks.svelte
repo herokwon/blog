@@ -20,7 +20,7 @@
     {/each}
   </ul>
 
-  <a class="home" href={resolve('/')}>home</a>
+  <a class="home" href={resolve('/(public)')}>home</a>
 </div>
 
 <style>
